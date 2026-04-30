@@ -1,0 +1,17 @@
+"use client";
+import Link from "next/link";
+import { Badge } from "@/client/components/ui/badge";
+import { useHistoryErrors } from "@/client/hooks/useHistory";
+
+export function InstanceErrorSummary({ instanceId }: { instanceId: number }) {
+  const { data: errors } = useHistoryErrors(instanceId);
+  const count = errors?.length ?? 0;
+  if (count === 0) return null;
+
+  return (
+    <Link href={`/history?instanceId=${instanceId}&status=failed`} className="flex items-center gap-1">
+      <Badge variant="destructive">{count}</Badge>
+      <span className="text-xs text-muted-foreground">failed</span>
+    </Link>
+  );
+}

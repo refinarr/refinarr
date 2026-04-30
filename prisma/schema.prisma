@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Instance {
+  id        Int      @id @default(autoincrement())
+  type      String
+  name      String
+  url       String
+  apiKey    String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model AppConfig {
+  key   String @id
+  value String
+}
+
+model IgnoreEntry {
+  id         Int      @id @default(autoincrement())
+  instanceId Int
+  mediaId    Int
+  mediaType  String
+  title      String
+  ignoredAt  DateTime @default(now())
+
+  @@unique([instanceId, mediaId, mediaType])
+}
+
+model CfPreference {
+  id         Int    @id @default(autoincrement())
+  instanceId Int
+  cfId       Int
+  cfName     String
+
+  @@unique([instanceId, cfId])
+}
+
+model ActionLog {
+  id         Int      @id @default(autoincrement())
+  instanceId Int
+  action     String
+  mediaId    Int
+  title      String
+  isDryRun   Boolean  @default(false)
+  status     String
+  error      String?
+  payload    String?
+  createdAt  DateTime @default(now())
+}
