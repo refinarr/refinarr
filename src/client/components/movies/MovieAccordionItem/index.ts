@@ -1,0 +1,1 @@
+export { MovieAccordionItem } from "./MovieAccordionItem";
