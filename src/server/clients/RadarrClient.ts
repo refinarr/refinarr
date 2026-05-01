@@ -22,6 +22,7 @@ interface RadarrQualityProfile {
   name: string;
   minUpgradeFormatScore: number;
   cutoffFormatScore: number;
+  formatItems: Array<{ format: number; name: string; score: number }>;
 }
 
 const CHUNK = 200;

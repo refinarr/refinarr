@@ -31,10 +31,20 @@ export class MovieService extends MediaService {
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
     const client = ArrClientFactory.createArrClient(instance) as RadarrClient;
-    const [movies, scoringMode] = await Promise.all([
+    const [movies, profiles, scoringMode] = await Promise.all([
       client.getMovies(),
+      client.getQualityProfiles(),
       configRepository.get(`scoringMode:${instanceId}`),
     ]);
+
+    const profileMap = new Map(profiles.map((p) => [p.id, p]));
+    // profileId -> cfId -> score (from quality profile's formatItems)
+    const profileScoreMap = new Map<number, Map<number, number>>();
+    for (const p of profiles) {
+      const cfMap = new Map<number, number>();
+      for (const item of p.formatItems) cfMap.set(item.format, item.score);
+      profileScoreMap.set(p.id, cfMap);
+    }
 
     const fileIds = movies.filter((m) => m.hasFile && m.movieFileId > 0).map((m) => m.movieFileId);
     const movieFiles = await client.getMovieFilesByIds(fileIds);
@@ -50,8 +60,6 @@ export class MovieService extends MediaService {
     let flagged: FlaggedMovie[];
 
     if (mode === "profile") {
-      const profiles = await client.getQualityProfiles();
-      const profileMap = new Map(profiles.map((p) => [p.id, p]));
       flagged = movies
         .filter((m) => !ignoredSet.has(m.id) && m.hasFile)
         .filter((m) => {
@@ -64,12 +72,13 @@ export class MovieService extends MediaService {
           const profile = profileMap.get(m.qualityProfileId)!;
           const file = fileMap.get(m.id);
           const score = file?.customFormatScore ?? 0;
+          const cfScores = profileScoreMap.get(m.qualityProfileId) ?? new Map<number, number>();
           return {
             id: m.id,
             title: m.title,
             year: m.year,
             qualityProfileId: m.qualityProfileId,
-            customFormats: file?.customFormats ?? [],
+            customFormats: file?.customFormats?.map(cf => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) })) ?? [],
             customFormatScore: score,
             hasFile: m.hasFile,
             cfScore: scoreProfileCoverage(score, profile.cutoffFormatScore),
@@ -92,7 +101,8 @@ export class MovieService extends MediaService {
         })
         .map((m) => {
           const file = fileMap.get(m.id);
-          const formats = file?.customFormats ?? [];
+          const cfScores = profileScoreMap.get(m.qualityProfileId) ?? new Map<number, number>();
+          const formats = file?.customFormats?.map(cf => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) })) ?? [];
           return {
             id: m.id,
             title: m.title,

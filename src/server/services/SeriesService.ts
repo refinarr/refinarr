@@ -1,4 +1,4 @@
-import type { FlaggedSeries, ActionLog } from "@/shared/types/models";
+import type { FlaggedSeries, EpisodeFileEntry, ActionLog } from "@/shared/types/models";
 import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
@@ -31,10 +31,20 @@ export class SeriesService extends MediaService {
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
     const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
-    const [series, scoringMode] = await Promise.all([
+    const [series, profiles, scoringMode] = await Promise.all([
       client.getSeries(),
+      client.getQualityProfiles(),
       configRepository.get(`scoringMode:${instanceId}`),
     ]);
+
+    const profileMap = new Map(profiles.map((p) => [p.id, p]));
+    // profileId -> cfId -> score (from quality profile's formatItems)
+    const profileScoreMap = new Map<number, Map<number, number>>();
+    for (const p of profiles) {
+      const cfMap = new Map<number, number>();
+      for (const item of p.formatItems) cfMap.set(item.format, item.score);
+      profileScoreMap.set(p.id, cfMap);
+    }
 
     const mode = scoringMode ?? "manual";
     const ignoredSet = new Set(
@@ -49,8 +59,6 @@ export class SeriesService extends MediaService {
     let flagged: FlaggedSeries[];
 
     if (mode === "profile") {
-      const profiles = await client.getQualityProfiles();
-      const profileMap = new Map(profiles.map((p) => [p.id, p]));
       flagged = series
         .filter((s) => !ignoredSet.has(s.id))
         .filter((s) => {
@@ -69,6 +77,16 @@ export class SeriesService extends MediaService {
           const affectedEpisodeCount = files.filter(
             (f) => isBelowProfileScore(f.customFormatScore ?? 0, profile.cutoffFormatScore)
           ).length;
+          const cfScores = profileScoreMap.get(s.qualityProfileId) ?? new Map<number, number>();
+          const episodeFiles: EpisodeFileEntry[] = files.map((f) => ({
+            id: f.id,
+            seasonNumber: f.seasonNumber,
+            relativePath: f.relativePath,
+            customFormats: f.customFormats?.map(cf => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) })) ?? [],
+            customFormatScore: f.customFormatScore ?? 0,
+            missingFormats: [],
+            minProfileScore: profile.cutoffFormatScore,
+          }));
           return {
             id: s.id,
             title: s.title,
@@ -81,6 +99,7 @@ export class SeriesService extends MediaService {
             minProfileScore: profile.cutoffFormatScore,
             affectedEpisodeCount,
             totalEpisodeCount: files.length,
+            episodeFiles,
           };
         });
     } else {
@@ -112,6 +131,15 @@ export class SeriesService extends MediaService {
           const worstCoverage = files.length === 0
             ? 0
             : Math.min(...files.map((f) => scoreCfCoverage(f.customFormats ?? [], wantedIds)));
+          const cfScores = profileScoreMap.get(s.qualityProfileId) ?? new Map<number, number>();
+          const episodeFiles: EpisodeFileEntry[] = files.map((f) => ({
+            id: f.id,
+            seasonNumber: f.seasonNumber,
+            relativePath: f.relativePath,
+            customFormats: f.customFormats?.map(cf => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) })) ?? [],
+            customFormatScore: f.customFormatScore ?? 0,
+            missingFormats: getMissingFormats(f.customFormats ?? [], wantedCfs),
+          }));
           return {
             id: s.id,
             title: s.title,
@@ -123,6 +151,7 @@ export class SeriesService extends MediaService {
             missingFormats,
             affectedEpisodeCount,
             totalEpisodeCount: files.length,
+            episodeFiles,
           };
         });
     }

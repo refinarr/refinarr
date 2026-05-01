@@ -4,13 +4,12 @@ import { AppShell } from "@/client/components/layout/AppShell";
 import { FilterBar } from "@/client/components/media/FilterBar";
 import { BulkActionToolbar } from "@/client/components/media/BulkActionToolbar";
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
-import { CfBadge } from "@/client/components/media/CfBadge";
 import { AllClearState } from "@/client/components/states/AllClearState";
 import { NoCfsPrompt } from "@/client/components/states/NoCfsPrompt";
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/client/components/ui/table";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/client/components/ui/accordion";
 import { Checkbox } from "@/client/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { useInstances } from "@/client/hooks/useInstances";
@@ -23,6 +22,70 @@ import { api } from "@/client/lib/api";
 import { toast } from "sonner";
 import type { FlaggedMovie } from "@/shared/types/models";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+
+function ScoreLabel({ movie, scoringMode }: { movie: FlaggedMovie; scoringMode: string }) {
+  if (scoringMode === "profile" && movie.minProfileScore !== undefined) {
+    return <span className="tabular-nums text-sm text-muted-foreground">{movie.customFormatScore} / {movie.minProfileScore}</span>;
+  }
+  return <span className="tabular-nums text-sm text-muted-foreground">{Math.round(movie.cfScore * 100)}%</span>;
+}
+
+function MovieAccordionItem({
+  movie,
+  selected,
+  onToggle,
+  scoringMode,
+}: {
+  movie: FlaggedMovie;
+  selected: boolean;
+  onToggle: () => void;
+  scoringMode: string;
+}) {
+  const hasCfs = movie.customFormats.length > 0 || movie.missingFormats.length > 0;
+
+  return (
+    <AccordionItem value={`movie-${movie.id}`}>
+      <AccordionTrigger className="px-3">
+        <div className="flex w-full items-center justify-between gap-4 pr-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <span onClick={(e) => { e.stopPropagation(); onToggle(); }} className="shrink-0">
+              <Checkbox checked={selected} onCheckedChange={onToggle} />
+            </span>
+            <span className="font-medium truncate">{movie.title}</span>
+            <span className="text-muted-foreground text-sm shrink-0">{movie.year}</span>
+          </div>
+          <ScoreLabel movie={movie} scoringMode={scoringMode} />
+        </div>
+      </AccordionTrigger>
+      <AccordionContent>
+        <div className="px-4 py-2">
+          {!movie.hasFile ? (
+            <p className="text-sm text-muted-foreground">No file downloaded.</p>
+          ) : hasCfs ? (
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+              {movie.customFormats.map((cf) => (
+                <span key={cf.id}>
+                  <span className="text-foreground/80">{cf.name}</span>
+                  {cf.score !== undefined && (
+                    <span className={cf.score >= 0 ? "text-green-400" : "text-destructive"}>
+                      : {cf.score > 0 ? "+" : ""}{cf.score}
+                    </span>
+                  )}
+                </span>
+              ))}
+              {movie.missingFormats.map((cf) => (
+                <span key={cf.id} className="line-through text-destructive/70">{cf.name}</span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No custom format data.</p>
+          )}
+        </div>
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
 
 export default function MoviesPage() {
   const router = useRouter();
@@ -123,48 +186,25 @@ export default function MoviesPage() {
           )}
 
           {!isLoading && allMovies.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10" />
-                  <TableHead>Title</TableHead>
-                  <TableHead>Year</TableHead>
-                  <TableHead>Score</TableHead>
-                  <TableHead>Custom Formats</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allMovies.map((movie) => (
-                  <TableRow key={movie.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selected.has(movie.id)}
-                        onCheckedChange={() => toggle(movie.id)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{movie.title}</TableCell>
-                    <TableCell className="text-muted-foreground">{movie.year}</TableCell>
-                    <TableCell className="text-muted-foreground tabular-nums">
-                      {movie.minProfileScore !== undefined
-                        ? `${movie.customFormatScore} / ${movie.minProfileScore}`
-                        : `${Math.round(movie.cfScore * 100)}%`}
-                    </TableCell>
-                    <TableCell className="flex flex-wrap gap-1">
-                      {movie.customFormats.map((cf) => (
-                        <CfBadge key={cf.id} name={cf.name} />
-                      ))}
-                      {movie.missingFormats.map((cf) => (
-                        <CfBadge key={cf.id} name={cf.name} missing />
-                      ))}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <Accordion>
+              {allMovies.map((movie) => (
+                <MovieAccordionItem
+                  key={movie.id}
+                  movie={movie}
+                  selected={selected.has(movie.id)}
+                  onToggle={() => toggle(movie.id)}
+                  scoringMode={scoringMode}
+                />
+              ))}
+            </Accordion>
           )}
 
           <div ref={sentinelRef} className="h-4" />
-          {isFetchingNextPage && <MediaTableSkeleton rows={3} />}
+          {isFetchingNextPage && (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
         </div>
       </PageErrorBoundary>
     </AppShell>

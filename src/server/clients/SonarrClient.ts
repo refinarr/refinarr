@@ -11,6 +11,8 @@ interface SonarrSeries {
 export interface SonarrEpisodeFile {
   id: number;
   seriesId: number;
+  seasonNumber: number;
+  relativePath: string;
   customFormats?: Array<{ id: number; name: string }>;
   customFormatScore?: number;
 }
@@ -20,6 +22,7 @@ interface SonarrQualityProfile {
   name: string;
   minUpgradeFormatScore: number;
   cutoffFormatScore: number;
+  formatItems: Array<{ format: number; name: string; score: number }>;
 }
 
 const BATCH = 10;

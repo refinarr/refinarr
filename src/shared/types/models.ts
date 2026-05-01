@@ -17,6 +17,7 @@ export interface Instance {
 export interface CustomFormat {
   id: number;
   name: string;
+  score?: number;
 }
 
 export interface QualityProfile {
@@ -39,6 +40,16 @@ export interface FlaggedMovie {
   minProfileScore?: number;
 }
 
+export interface EpisodeFileEntry {
+  id: number;
+  seasonNumber: number;
+  relativePath: string;
+  customFormats: CustomFormat[];
+  customFormatScore: number;
+  missingFormats: CustomFormat[];
+  minProfileScore?: number;
+}
+
 export interface FlaggedSeries {
   id: number;
   title: string;
@@ -51,6 +62,7 @@ export interface FlaggedSeries {
   minProfileScore?: number;
   affectedEpisodeCount: number;
   totalEpisodeCount: number;
+  episodeFiles: EpisodeFileEntry[];
 }
 
 export interface ActionLog {
