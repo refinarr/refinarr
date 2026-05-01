@@ -101,6 +101,7 @@ export default function SettingsPage() {
       </div>
 
       <AddInstanceDialog
+        key={editing?.id ?? "new"}
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         editing={editing}

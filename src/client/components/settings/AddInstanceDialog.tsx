@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,15 +12,6 @@ import { useCreateInstance, useUpdateInstance } from "@/client/hooks/useInstance
 import { withToast } from "@/client/lib/with-toast";
 import type { Instance } from "@/shared/types/models";
 
-const schema = z.object({
-  type: z.enum(["radarr", "sonarr"]),
-  name: z.string().min(1),
-  url: z.string().url(),
-  apiKey: z.string().min(1),
-});
-
-type FormValues = z.infer<typeof schema>;
-
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -28,21 +19,42 @@ interface Props {
 }
 
 export function AddInstanceDialog({ open, onClose, editing }: Props) {
+  const isEdit = !!editing;
   const create = useCreateInstance();
   const update = useUpdateInstance();
   const [selectedType, setSelectedType] = useState<"radarr" | "sonarr">(editing?.type ?? "radarr");
 
+  const schema = useMemo(
+    () =>
+      z.object({
+        type: z.enum(["radarr", "sonarr"]),
+        name: z.string().min(1),
+        url: z.url(),
+        apiKey: isEdit ? z.string() : z.string().min(1),
+      }),
+    [isEdit]
+  );
+  type FormValues = z.infer<typeof schema>;
+
   const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: editing ?? { type: "radarr", name: "", url: "", apiKey: "" },
+    defaultValues: editing
+      ? { type: editing.type, name: editing.name, url: editing.url, apiKey: "" }
+      : { type: "radarr", name: "", url: "", apiKey: "" },
   });
 
   const runUpdate = withToast(update, { success: "Instance updated", error: "Failed to update instance" });
   const runCreate = withToast(create, { success: "Instance added", error: "Failed to add instance" });
 
   const onSubmit = async (data: FormValues) => {
-    if (editing) await runUpdate({ id: editing.id, data });
-    else await runCreate(data);
+    if (editing) {
+      const payload = data.apiKey.trim()
+        ? data
+        : { type: data.type, name: data.name, url: data.url };
+      await runUpdate({ id: editing.id, data: payload });
+    } else {
+      await runCreate(data);
+    }
     reset();
     onClose();
   };
@@ -87,7 +99,11 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>API Key</Label>
-            <Input {...register("apiKey")} type="password" placeholder="••••••••" />
+            <Input
+              {...register("apiKey")}
+              type="password"
+              placeholder={isEdit ? "•••••••• (leave blank to keep current)" : "••••••••"}
+            />
             {errors.apiKey && <p className="text-xs text-destructive">{errors.apiKey.message}</p>}
           </div>
           <DialogFooter>
