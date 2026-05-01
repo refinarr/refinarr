@@ -15,4 +15,5 @@ export const queryKeys = {
   customFormats: (type: "radarr" | "sonarr", instanceId: number) =>
     ["customFormats", type, instanceId] as const,
   health: () => ["health"] as const,
+  appLogs: (params?: object) => ["appLogs", params] as const,
 };

@@ -22,8 +22,11 @@ export const POST = createApiHandler(async (_req, ctx) => {
     result = await seriesService.triggerSearch(instanceId, mediaId, title);
   } else if (action === "search") {
     result = await movieService.triggerSearch(instanceId, mediaId, title);
-  } else if (action === "delete_blacklist") {
-    result = await movieService.deleteAndBlacklist(instanceId, mediaId, payload.fileId as number, title);
+  } else if ((action === "delete" || action === "delete_blacklist") && payload.type === "sonarr") {
+    const fileIds = payload.fileIds as number[];
+    result = await seriesService.deleteFiles(instanceId, mediaId, fileIds, title, !!(payload.triggerSearch));
+  } else if (action === "delete" || action === "delete_blacklist") {
+    result = await movieService.deleteFile(instanceId, mediaId, payload.fileId as number, title, payload.triggerSearch !== false);
   } else {
     return NextResponse.json({ error: "Cannot retry this action type" }, { status: 400 });
   }

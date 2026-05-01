@@ -20,6 +20,9 @@ interface SeriesQuery {
   sortBy: "score" | "title" | "added";
   order: "asc" | "desc";
   maxScore?: number;
+  q?: string;
+  profileId?: number;
+  missingCfId?: number;
 }
 
 export class SeriesService extends MediaService {
@@ -65,7 +68,7 @@ export class SeriesService extends MediaService {
           const profile = profileMap.get(s.qualityProfileId);
           if (!profile) return false;
           const files = episodeFilesMap.get(s.id) ?? [];
-          if (files.length === 0) return false;
+          if (files.length === 0) return profile.cutoffFormatScore > 0;
           return files.some((f) => isBelowProfileScore(f.customFormatScore ?? 0, profile.cutoffFormatScore));
         })
         .map((s) => {
@@ -160,6 +163,23 @@ export class SeriesService extends MediaService {
       flagged = flagged.filter((s) => s.cfScore <= query.maxScore!);
     }
 
+    if (query.q) {
+      const q = query.q.toLowerCase();
+      flagged = flagged.filter(
+        (s) =>
+          s.title.toLowerCase().includes(q) ||
+          s.missingFormats.some((cf) => cf.name.toLowerCase().includes(q))
+      );
+    }
+
+    if (query.profileId !== undefined) {
+      flagged = flagged.filter((s) => s.qualityProfileId === query.profileId);
+    }
+
+    if (query.missingCfId !== undefined) {
+      flagged = flagged.filter((s) => s.missingFormats.some((cf) => cf.id === query.missingCfId));
+    }
+
     flagged.sort((a, b) => {
       const dir = query.order === "asc" ? 1 : -1;
       if (query.sortBy === "score") return (a.cfScore - b.cfScore) * dir;
@@ -170,6 +190,32 @@ export class SeriesService extends MediaService {
     const total = flagged.length;
     const start = (query.page - 1) * query.limit;
     return { items: flagged.slice(start, start + query.limit), total };
+  }
+
+  async deleteFiles(
+    instanceId: number,
+    mediaId: number,
+    fileIds: number[],
+    title: string,
+    triggerSearch = false
+  ): Promise<ActionLog> {
+    const instance = await instanceRepository.findById(instanceId);
+    if (!instance) throw new Error(`Instance ${instanceId} not found`);
+    const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
+
+    return this.executeAction({
+      instanceId,
+      action: "delete",
+      mediaId,
+      title,
+      payload: { instanceId, action: "delete", mediaId, fileIds, title, triggerSearch, type: "sonarr" },
+      run: async () => {
+        for (const fileId of fileIds) {
+          await client.deleteEpisodeFile(fileId);
+        }
+        if (triggerSearch) await client.triggerSearch(mediaId);
+      },
+    });
   }
 
   async triggerSearch(instanceId: number, mediaId: number, title: string): Promise<ActionLog> {

@@ -5,7 +5,7 @@ import { Search, Trash2, EyeOff } from "lucide-react";
 interface Props {
   selectedCount: number;
   onSearch: () => void;
-  onDelete: () => void;
+  onDelete: (search: boolean) => void;
   onIgnore: () => void;
   disabled?: boolean;
 }
@@ -23,8 +23,11 @@ export function BulkActionToolbar({ selectedCount, onSearch, onDelete, onIgnore,
         <Button size="sm" variant="outline" onClick={onIgnore} disabled={disabled}>
           <EyeOff className="h-4 w-4 mr-1" /> Ignore
         </Button>
-        <Button size="sm" variant="destructive" onClick={onDelete} disabled={disabled}>
-          <Trash2 className="h-4 w-4 mr-1" /> Delete & Blacklist
+        <Button size="sm" variant="outline" onClick={() => onDelete(false)} disabled={disabled}>
+          <Trash2 className="h-4 w-4 mr-1 text-destructive" /> Delete
+        </Button>
+        <Button size="sm" variant="destructive" onClick={() => onDelete(true)} disabled={disabled}>
+          <Trash2 className="h-4 w-4 mr-1" /> Delete & Search
         </Button>
       </div>
     </div>

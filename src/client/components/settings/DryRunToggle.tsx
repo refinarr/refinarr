@@ -45,7 +45,7 @@ export function DryRunToggle() {
             <DialogTitle>Switch to Live Mode?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            In Live mode, search, delete, and blacklist actions will execute for real. Make sure
+            In Live mode, search, delete, and ignore actions will execute for real. Make sure
             you&apos;re ready.
           </p>
           <DialogFooter>

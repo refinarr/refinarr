@@ -7,14 +7,18 @@ import { useConfig } from "./useConfig";
 import { usePreferences } from "./usePreferences";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { useInfiniteScroll } from "./useInfiniteScroll";
+import { toast } from "sonner";
 import { api } from "@/client/lib/api";
 import { withToast } from "@/client/lib/with-toast";
-import type { FlaggedMovie, ScoringMode } from "@/shared/types/models";
+import type { ActionLog, FlaggedMovie, ScoringMode } from "@/shared/types/models";
 
 export interface MediaFilters {
   sortBy: "score" | "title" | "added";
   order: "asc" | "desc";
   maxScore: number;
+  q: string;
+  profileId: number | null;
+  missingCfId: number | null;
 }
 
 export function useMoviesPage() {
@@ -22,13 +26,22 @@ export function useMoviesPage() {
   const { data: instances, isLoading: loadingInstances } = useInstances();
   const [instanceId, setInstanceId] = useState<number>(0);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [filters, setFilters] = useState<MediaFilters>({ sortBy: "score", order: "asc", maxScore: 1 });
+  const [filters, setFilters] = useState<MediaFilters>({
+    sortBy: "score",
+    order: "asc",
+    maxScore: 1,
+    q: "",
+    profileId: null,
+    missingCfId: null,
+  });
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const activeInstance = instanceId || instances?.[0]?.id || 0;
   const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
+  const debouncedQ = useDebouncedValue(filters.q, 300);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } =
-    useMovies(activeInstance, { ...filters, maxScore: debouncedMaxScore });
+    useMovies(activeInstance, { ...filters, maxScore: debouncedMaxScore, q: debouncedQ });
   const { data: config } = useConfig();
   const { data: prefs } = usePreferences(activeInstance);
 
@@ -51,10 +64,21 @@ export function useMoviesPage() {
 
   const searchMutation = useMutation({
     mutationFn: async (movies: FlaggedMovie[]) => {
+      const results: ActionLog[] = [];
       for (const m of movies) {
-        await api.post(`/radarr/movies/search`, { instanceId: activeInstance, mediaId: m.id, title: m.title });
+        const r = await api.post<ActionLog>(`/radarr/movies/search`, { instanceId: activeInstance, mediaId: m.id, title: m.title });
+        results.push(r);
+      }
+      return results;
+    },
+    onSuccess: (results) => {
+      if (results.some((r) => r.isDryRun)) {
+        toast.info("[Dry Run] Search queued");
+      } else {
+        toast.success("Search triggered");
       }
     },
+    onError: () => toast.error("Failed to trigger search"),
   });
 
   const ignoreMutation = useMutation({
@@ -66,8 +90,36 @@ export function useMoviesPage() {
     onSuccess: () => refetch(),
   });
 
-  const runSearch = withToast(searchMutation, { success: "Search triggered", error: "Failed to trigger search" });
+  const deleteMutation = useMutation({
+    mutationFn: async ({ movies, search }: { movies: FlaggedMovie[]; search: boolean }) => {
+      const results: ActionLog[] = [];
+      for (const m of movies.filter((m) => m.hasFile && m.movieFileId > 0)) {
+        const r = await api.post<ActionLog>(`/radarr/movies/delete`, {
+          instanceId: activeInstance,
+          mediaId: m.id,
+          fileId: m.movieFileId,
+          title: m.title,
+          search,
+        });
+        results.push(r);
+      }
+      return { results, search };
+    },
+    onSuccess: ({ results, search }) => {
+      if (results.some((r) => r.isDryRun)) {
+        toast.info(search ? "[Dry Run] Delete & search queued" : "[Dry Run] Delete queued");
+      } else {
+        toast.success(search ? "File deleted, search triggered" : "File deleted");
+        void refetch();
+      }
+    },
+    onError: () => toast.error("Failed to delete file"),
+  });
+
+  const runSearch = (movies: FlaggedMovie[]) => searchMutation.mutateAsync(movies);
   const runIgnore = withToast(ignoreMutation, { success: "Items ignored", error: "Failed to ignore items" });
+  const runDelete = (movies: FlaggedMovie[], search: boolean) =>
+    deleteMutation.mutateAsync({ movies, search });
 
   const handleSearch = async () => {
     await runSearch(allMovies.filter((m) => selected.has(m.id)));
@@ -78,6 +130,16 @@ export function useMoviesPage() {
     await runIgnore(allMovies.filter((m) => selected.has(m.id)));
     setSelected(new Set());
   };
+
+  const handleDelete = async (search: boolean) => {
+    const toDelete = allMovies.filter((m) => selected.has(m.id) && m.hasFile && m.movieFileId > 0);
+    if (!toDelete.length) return;
+    if (!confirm(`Delete file for ${toDelete.length} movie(s)? This cannot be undone.`)) return;
+    await runDelete(toDelete, search);
+    setSelected(new Set());
+  };
+
+  const selectedItem = allMovies.find((m) => m.id === selectedId) ?? null;
 
   return {
     router,
@@ -90,6 +152,9 @@ export function useMoviesPage() {
     toggle,
     filters,
     setFilters,
+    selectedId,
+    setSelectedId,
+    selectedItem,
     allMovies,
     total,
     isLoading,
@@ -101,5 +166,9 @@ export function useMoviesPage() {
     noCfsConfigured,
     handleSearch,
     handleIgnore,
+    handleDelete,
+    runSearch,
+    runIgnore,
+    runDelete,
   };
 }

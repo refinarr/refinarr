@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Film, Tv2, LayoutDashboard, History, Settings } from "lucide-react";
+import { Film, Tv2, LayoutDashboard, History, Settings, EyeOff, AlertCircle } from "lucide-react";
 import { cn } from "@/client/lib/utils";
 import { HealthDot } from "./HealthDot";
 
@@ -9,7 +9,9 @@ const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/movies", label: "Movies", icon: Film },
   { href: "/shows", label: "Shows", icon: Tv2 },
+  { href: "/ignored", label: "Ignored", icon: EyeOff },
   { href: "/history", label: "History", icon: History },
+  { href: "/logs", label: "Logs", icon: AlertCircle },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

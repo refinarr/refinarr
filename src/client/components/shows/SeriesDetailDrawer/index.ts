@@ -1,0 +1,1 @@
+export { SeriesDetailDrawer } from "./SeriesDetailDrawer";

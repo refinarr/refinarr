@@ -53,3 +53,15 @@ model ActionLog {
   payload    String?
   createdAt  DateTime @default(now())
 }
+
+model AppLog {
+  id        Int      @id @default(autoincrement())
+  level     String
+  message   String
+  source    String?
+  context   String?
+  createdAt DateTime @default(now())
+
+  @@index([level])
+  @@index([createdAt])
+}

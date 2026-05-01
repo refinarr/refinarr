@@ -10,6 +10,9 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const sortBy = (s.get("sortBy") ?? "score") as "score" | "title" | "added";
   const order = (s.get("order") ?? "asc") as "asc" | "desc";
   const maxScore = s.has("maxScore") ? Number(s.get("maxScore")) : undefined;
+  const q = s.get("q") ?? undefined;
+  const profileId = s.has("profileId") ? Number(s.get("profileId")) : undefined;
+  const missingCfId = s.has("missingCfId") ? Number(s.get("missingCfId")) : undefined;
 
   const { items, total } = await movieService.getFlaggedMovies(instanceId, {
     page,
@@ -17,6 +20,9 @@ export const GET = createApiHandler(async (req: NextRequest) => {
     sortBy,
     order,
     maxScore,
+    q,
+    profileId,
+    missingCfId,
   });
 
   return NextResponse.json({

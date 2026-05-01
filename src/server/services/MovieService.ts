@@ -20,6 +20,9 @@ interface MovieQuery {
   sortBy: "score" | "title" | "added";
   order: "asc" | "desc";
   maxScore?: number;
+  q?: string;
+  profileId?: number;
+  missingCfId?: number;
 }
 
 export class MovieService extends MediaService {
@@ -61,7 +64,7 @@ export class MovieService extends MediaService {
 
     if (mode === "profile") {
       flagged = movies
-        .filter((m) => !ignoredSet.has(m.id) && m.hasFile)
+        .filter((m) => !ignoredSet.has(m.id))
         .filter((m) => {
           const profile = profileMap.get(m.qualityProfileId);
           if (!profile) return false;
@@ -78,6 +81,7 @@ export class MovieService extends MediaService {
             title: m.title,
             year: m.year,
             qualityProfileId: m.qualityProfileId,
+            movieFileId: m.movieFileId,
             customFormats: file?.customFormats?.map(cf => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) })) ?? [],
             customFormatScore: score,
             hasFile: m.hasFile,
@@ -108,6 +112,7 @@ export class MovieService extends MediaService {
             title: m.title,
             year: m.year,
             qualityProfileId: m.qualityProfileId,
+            movieFileId: m.movieFileId,
             customFormats: formats,
             customFormatScore: file?.customFormatScore ?? 0,
             hasFile: m.hasFile,
@@ -119,6 +124,23 @@ export class MovieService extends MediaService {
 
     if (query.maxScore !== undefined) {
       flagged = flagged.filter((m) => m.cfScore <= query.maxScore!);
+    }
+
+    if (query.q) {
+      const q = query.q.toLowerCase();
+      flagged = flagged.filter(
+        (m) =>
+          m.title.toLowerCase().includes(q) ||
+          m.missingFormats.some((cf) => cf.name.toLowerCase().includes(q))
+      );
+    }
+
+    if (query.profileId !== undefined) {
+      flagged = flagged.filter((m) => m.qualityProfileId === query.profileId);
+    }
+
+    if (query.missingCfId !== undefined) {
+      flagged = flagged.filter((m) => m.missingFormats.some((cf) => cf.id === query.missingCfId));
     }
 
     flagged.sort((a, b) => {
@@ -148,11 +170,12 @@ export class MovieService extends MediaService {
     });
   }
 
-  async deleteAndBlacklist(
+  async deleteFile(
     instanceId: number,
     mediaId: number,
     fileId: number,
-    title: string
+    title: string,
+    triggerSearch = true
   ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -160,13 +183,13 @@ export class MovieService extends MediaService {
 
     return this.executeAction({
       instanceId,
-      action: "delete_blacklist",
+      action: "delete",
       mediaId,
       title,
-      payload: { instanceId, action: "delete_blacklist", mediaId, fileId, title },
+      payload: { instanceId, action: "delete_blacklist", mediaId, fileId, title, triggerSearch },
       run: async () => {
         await client.deleteFile(fileId);
-        await client.blacklist(mediaId);
+        if (triggerSearch) await client.triggerSearch(mediaId);
       },
     });
   }

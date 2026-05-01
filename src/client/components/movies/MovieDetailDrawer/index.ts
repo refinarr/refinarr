@@ -1,0 +1,1 @@
+export { MovieDetailDrawer } from "./MovieDetailDrawer";

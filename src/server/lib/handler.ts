@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, seedDefaults } from "./db";
-import { logger } from "./logger";
+import { appLogger } from "./app-logger";
 
 let seeded = false;
 
@@ -50,7 +50,11 @@ export function createApiHandler(
       const resolvedParams = await ctx.params;
       return await handler(req, { params: resolvedParams });
     } catch (err) {
-      logger.error(err, "Unhandled API error");
+      appLogger.error("Unhandled API error", {
+        source: "api",
+        err,
+        context: { method: req.method, path: req.nextUrl.pathname },
+      });
       return NextResponse.json(
         { error: "Internal server error" },
         { status: 500 }

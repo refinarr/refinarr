@@ -69,7 +69,7 @@ function HistoryContent() {
             <SelectContent>
               <SelectItem value="">All</SelectItem>
               <SelectItem value="search">Search</SelectItem>
-              <SelectItem value="delete_blacklist">Delete & Blacklist</SelectItem>
+              <SelectItem value="delete">Delete</SelectItem>
               <SelectItem value="ignore">Ignore</SelectItem>
             </SelectContent>
           </Select>

@@ -62,13 +62,6 @@ export class RadarrClient extends ArrClient {
     await this.fetch(`/moviefile/${fileId}`, { method: "DELETE" });
   }
 
-  async blacklist(movieId: number): Promise<void> {
-    await this.fetch(`/blacklist`, {
-      method: "POST",
-      body: JSON.stringify({ movieId }),
-    });
-  }
-
   async getQualityProfiles(): Promise<RadarrQualityProfile[]> {
     return this.fetch<RadarrQualityProfile[]>("/qualityprofile");
   }

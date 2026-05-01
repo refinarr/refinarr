@@ -25,7 +25,17 @@ export class IgnoreRepository extends BaseRepository<IgnoreEntry> {
   }
 
   async create(data: Omit<IgnoreEntry, "id" | "ignoredAt">): Promise<IgnoreEntry> {
-    return this.db.ignoreEntry.create({ data }) as Promise<IgnoreEntry>;
+    return this.db.ignoreEntry.upsert({
+      where: {
+        instanceId_mediaId_mediaType: {
+          instanceId: data.instanceId,
+          mediaId: data.mediaId,
+          mediaType: data.mediaType,
+        },
+      },
+      update: {},
+      create: data,
+    }) as Promise<IgnoreEntry>;
   }
 
   async update(_id: number, _data: Partial<IgnoreEntry>): Promise<IgnoreEntry> {

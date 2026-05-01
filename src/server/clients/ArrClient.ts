@@ -1,5 +1,5 @@
 import type { Instance } from "@/shared/types/models";
-import { logger } from "@/server/lib/logger";
+import { appLogger } from "@/server/lib/app-logger";
 
 export abstract class ArrClient {
   protected readonly baseUrl: string;
@@ -25,10 +25,16 @@ export abstract class ArrClient {
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      logger.error({ url, status: res.status, body: text }, "Arr API error");
+      appLogger.warn(`Arr API error: ${this.instanceName}`, {
+        source: "arr-client",
+        context: { instance: this.instanceName, url, status: res.status, body: text.slice(0, 500) },
+      });
       throw new Error(`${this.instanceName} API error: ${res.status}`);
     }
 
+    const ct = res.headers.get("content-type") ?? "";
+    const len = res.headers.get("content-length");
+    if (!ct.includes("application/json") || len === "0") return undefined as T;
     return res.json() as Promise<T>;
   }
 

@@ -1,6 +1,6 @@
 export type ArrType = "radarr" | "sonarr";
 export type ScoringMode = "manual" | "profile";
-export type ActionType = "search" | "delete_blacklist" | "ignore";
+export type ActionType = "search" | "delete" | "ignore";
 export type ActionStatus = "success" | "failed" | "dry_run" | "pending";
 export type MediaType = "movie" | "series";
 
@@ -32,6 +32,7 @@ export interface FlaggedMovie {
   title: string;
   year: number;
   qualityProfileId: number;
+  movieFileId: number;
   customFormats: CustomFormat[];
   customFormatScore: number;
   hasFile: boolean;
@@ -83,6 +84,17 @@ export interface CfPreference {
   instanceId: number;
   cfId: number;
   cfName: string;
+}
+
+export type LogLevel = "warn" | "error";
+
+export interface AppLogEntry {
+  id: number;
+  level: LogLevel;
+  message: string;
+  source: string | null;
+  context: string | null;
+  createdAt: Date;
 }
 
 export interface IgnoreEntry {

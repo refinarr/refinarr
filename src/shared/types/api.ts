@@ -34,7 +34,7 @@ export interface SetPreferencesDto {
 export interface BulkActionDto {
   instanceId: number;
   mediaIds: number[];
-  action: "search" | "delete_blacklist" | "ignore";
+  action: "search" | "delete" | "ignore";
 }
 
 export interface HistoryQuery {
@@ -52,4 +52,7 @@ export interface MediaQuery {
   sortBy?: "score" | "title" | "added";
   order?: "asc" | "desc";
   maxScore?: number;
+  q?: string;
+  profileId?: number;
+  missingCfId?: number;
 }
