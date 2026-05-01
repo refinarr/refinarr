@@ -6,16 +6,26 @@ import { InstanceCard } from "@/client/components/settings/InstanceCard";
 import { DryRunToggle } from "@/client/components/settings/DryRunToggle";
 import { ApiKeyCard } from "@/client/components/settings/ApiKeyCard";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
+import { CfPreferencePicker } from "@/client/components/settings/CfPreferencePicker";
 import { Button } from "@/client/components/ui/button";
 import { Separator } from "@/client/components/ui/separator";
 import { useInstances } from "@/client/hooks/useInstances";
+import { useConfig } from "@/client/hooks/useConfig";
 import type { Instance } from "@/shared/types/models";
 import { Plus } from "lucide-react";
 
 export default function SettingsPage() {
   const { data: instances } = useInstances();
+  const { data: config } = useConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Instance | null>(null);
+
+  const manualInstances = (instances ?? []).filter(
+    (i) => {
+      console.log(`Instance ${i.id} scoring mode:`, config?.scoringModes[`scoringMode:${i.id}`]);
+      return (config?.scoringModes[`scoringMode:${i.id}`] ?? "manual") === "manual";
+    }
+  );
 
   return (
     <AppShell>
@@ -60,7 +70,26 @@ export default function SettingsPage() {
 
         <Separator />
 
-        {/* Section 3: Dry Run */}
+        {/* Section 3: Wanted Custom Formats (manual mode only) */}
+        {manualInstances.length > 0 && (
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Wanted Custom Formats</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Select which Custom Formats each instance should have. Media missing any of these will be flagged.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {manualInstances.map((inst) => (
+                <CfPreferencePicker key={inst.id} instance={inst} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <Separator />
+
+        {/* Section 4: Dry Run */}
         <section className="space-y-4">
           <h2 className="text-lg font-semibold">Dry Run Mode</h2>
           <DryRunToggle />
@@ -68,7 +97,7 @@ export default function SettingsPage() {
 
         <Separator />
 
-        {/* Section 4: API Access */}
+        {/* Section 5: API Access */}
         <section>
           <ApiKeyCard />
         </section>

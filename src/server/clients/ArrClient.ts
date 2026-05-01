@@ -41,6 +41,10 @@ export abstract class ArrClient {
     }
   }
 
+  async getCustomFormats(): Promise<Array<{ id: number; name: string }>> {
+    return this.fetch<Array<{ id: number; name: string }>>("/customformat");
+  }
+
   abstract getQualityProfiles(): Promise<
     Array<{ id: number; name: string; minUpgradeFormatScore: number }>
   >;

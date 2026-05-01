@@ -23,6 +23,7 @@ export interface QualityProfile {
   id: number;
   name: string;
   minUpgradeFormatScore: number;
+  cutoffFormatScore: number;
 }
 
 export interface FlaggedMovie {
@@ -35,7 +36,7 @@ export interface FlaggedMovie {
   hasFile: boolean;
   cfScore: number;
   missingFormats: CustomFormat[];
-  scoreDelta?: number;
+  minProfileScore?: number;
 }
 
 export interface FlaggedSeries {
@@ -47,7 +48,9 @@ export interface FlaggedSeries {
   customFormatScore: number;
   cfScore: number;
   missingFormats: CustomFormat[];
-  scoreDelta?: number;
+  minProfileScore?: number;
+  affectedEpisodeCount: number;
+  totalEpisodeCount: number;
 }
 
 export interface ActionLog {

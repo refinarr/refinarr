@@ -6,15 +6,23 @@ interface SonarrSeries {
   title: string;
   year: number;
   qualityProfileId: number;
-  customFormats: Array<{ id: number; name: string }>;
-  customFormatScore: number;
+}
+
+export interface SonarrEpisodeFile {
+  id: number;
+  seriesId: number;
+  customFormats?: Array<{ id: number; name: string }>;
+  customFormatScore?: number;
 }
 
 interface SonarrQualityProfile {
   id: number;
   name: string;
   minUpgradeFormatScore: number;
+  cutoffFormatScore: number;
 }
+
+const BATCH = 10;
 
 export class SonarrClient extends ArrClient {
   constructor(instance: Instance) {
@@ -25,15 +33,25 @@ export class SonarrClient extends ArrClient {
     return this.fetch<SonarrSeries[]>("/series");
   }
 
+  async getEpisodeFiles(seriesId: number): Promise<SonarrEpisodeFile[]> {
+    return this.fetch<SonarrEpisodeFile[]>(`/episodefile?seriesId=${seriesId}`);
+  }
+
+  async getAllEpisodeFiles(seriesIds: number[]): Promise<Map<number, SonarrEpisodeFile[]>> {
+    const map = new Map<number, SonarrEpisodeFile[]>();
+    for (let i = 0; i < seriesIds.length; i += BATCH) {
+      const batch = seriesIds.slice(i, i + BATCH);
+      const results = await Promise.all(batch.map((id) => this.getEpisodeFiles(id)));
+      batch.forEach((id, idx) => map.set(id, results[idx] ?? []));
+    }
+    return map;
+  }
+
   async triggerSearch(seriesId: number): Promise<void> {
     await this.fetch("/command", {
       method: "POST",
       body: JSON.stringify({ name: "SeriesSearch", seriesId }),
     });
-  }
-
-  async getEpisodeFiles(seriesId: number): Promise<Array<{ id: number }>> {
-    return this.fetch<Array<{ id: number }>>(`/episodefile?seriesId=${seriesId}`);
   }
 
   async deleteEpisodeFile(fileId: number): Promise<void> {

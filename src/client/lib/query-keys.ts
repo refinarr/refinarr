@@ -12,5 +12,7 @@ export const queryKeys = {
   historyErrors: (instanceId: number) => ["history", "errors", instanceId] as const,
   qualityProfiles: (type: "radarr" | "sonarr", instanceId: number) =>
     ["qualityProfiles", type, instanceId] as const,
+  customFormats: (type: "radarr" | "sonarr", instanceId: number) =>
+    ["customFormats", type, instanceId] as const,
   health: () => ["health"] as const,
 };

@@ -43,6 +43,9 @@ export class SeriesService extends MediaService {
         .map((e) => e.mediaId)
     );
 
+    const seriesIds = series.filter((s) => !ignoredSet.has(s.id)).map((s) => s.id);
+    const episodeFilesMap = await client.getAllEpisodeFiles(seriesIds);
+
     let flagged: FlaggedSeries[];
 
     if (mode === "profile") {
@@ -53,20 +56,31 @@ export class SeriesService extends MediaService {
         .filter((s) => {
           const profile = profileMap.get(s.qualityProfileId);
           if (!profile) return false;
-          return isBelowProfileScore(s.customFormatScore, profile.minUpgradeFormatScore);
+          const files = episodeFilesMap.get(s.id) ?? [];
+          if (files.length === 0) return false;
+          return files.some((f) => isBelowProfileScore(f.customFormatScore ?? 0, profile.cutoffFormatScore));
         })
         .map((s) => {
           const profile = profileMap.get(s.qualityProfileId)!;
+          const files = episodeFilesMap.get(s.id) ?? [];
+          const worstScore = files.length
+            ? Math.min(...files.map((f) => f.customFormatScore ?? 0))
+            : 0;
+          const affectedEpisodeCount = files.filter(
+            (f) => isBelowProfileScore(f.customFormatScore ?? 0, profile.cutoffFormatScore)
+          ).length;
           return {
             id: s.id,
             title: s.title,
             year: s.year,
             qualityProfileId: s.qualityProfileId,
-            customFormats: s.customFormats,
-            customFormatScore: s.customFormatScore,
-            cfScore: scoreProfileCoverage(s.customFormatScore, profile.minUpgradeFormatScore),
+            customFormats: [],
+            customFormatScore: worstScore,
+            cfScore: scoreProfileCoverage(worstScore, profile.cutoffFormatScore),
             missingFormats: [],
-            scoreDelta: profile.minUpgradeFormatScore - s.customFormatScore,
+            minProfileScore: profile.cutoffFormatScore,
+            affectedEpisodeCount,
+            totalEpisodeCount: files.length,
           };
         });
     } else {
@@ -78,17 +92,39 @@ export class SeriesService extends MediaService {
 
       flagged = series
         .filter((s) => !ignoredSet.has(s.id))
-        .filter((s) => isMissingWantedFormats(s.customFormats, wantedIds))
-        .map((s) => ({
-          id: s.id,
-          title: s.title,
-          year: s.year,
-          qualityProfileId: s.qualityProfileId,
-          customFormats: s.customFormats,
-          customFormatScore: s.customFormatScore,
-          cfScore: scoreCfCoverage(s.customFormats, wantedIds),
-          missingFormats: getMissingFormats(s.customFormats, wantedCfs),
-        }));
+        .filter((s) => {
+          const files = episodeFilesMap.get(s.id) ?? [];
+          if (files.length === 0) return true;
+          return files.some((f) => isMissingWantedFormats(f.customFormats ?? [], wantedIds));
+        })
+        .map((s) => {
+          const files = episodeFilesMap.get(s.id) ?? [];
+          const allMissingIds = new Set<number>();
+          let affectedEpisodeCount = 0;
+          for (const f of files) {
+            const missing = getMissingFormats(f.customFormats ?? [], wantedCfs);
+            if (missing.length > 0) {
+              affectedEpisodeCount++;
+              missing.forEach((cf) => allMissingIds.add(cf.id));
+            }
+          }
+          const missingFormats = wantedCfs.filter((cf) => allMissingIds.has(cf.id));
+          const worstCoverage = files.length === 0
+            ? 0
+            : Math.min(...files.map((f) => scoreCfCoverage(f.customFormats ?? [], wantedIds)));
+          return {
+            id: s.id,
+            title: s.title,
+            year: s.year,
+            qualityProfileId: s.qualityProfileId,
+            customFormats: [],
+            customFormatScore: 0,
+            cfScore: worstCoverage,
+            missingFormats,
+            affectedEpisodeCount,
+            totalEpisodeCount: files.length,
+          };
+        });
     }
 
     if (query.maxScore !== undefined) {

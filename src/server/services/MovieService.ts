@@ -36,6 +36,10 @@ export class MovieService extends MediaService {
       configRepository.get(`scoringMode:${instanceId}`),
     ]);
 
+    const fileIds = movies.filter((m) => m.hasFile && m.movieFileId > 0).map((m) => m.movieFileId);
+    const movieFiles = await client.getMovieFilesByIds(fileIds);
+    const fileMap = new Map(movieFiles.map((f) => [f.movieId, f]));
+
     const mode = scoringMode ?? "manual";
     const ignoredSet = new Set(
       (await ignoreRepository.findByInstance(instanceId))
@@ -49,25 +53,28 @@ export class MovieService extends MediaService {
       const profiles = await client.getQualityProfiles();
       const profileMap = new Map(profiles.map((p) => [p.id, p]));
       flagged = movies
-        .filter((m) => !ignoredSet.has(m.id))
+        .filter((m) => !ignoredSet.has(m.id) && m.hasFile)
         .filter((m) => {
           const profile = profileMap.get(m.qualityProfileId);
           if (!profile) return false;
-          return isBelowProfileScore(m.customFormatScore, profile.minUpgradeFormatScore);
+          const score = fileMap.get(m.id)?.customFormatScore ?? 0;
+          return isBelowProfileScore(score, profile.cutoffFormatScore);
         })
         .map((m) => {
           const profile = profileMap.get(m.qualityProfileId)!;
+          const file = fileMap.get(m.id);
+          const score = file?.customFormatScore ?? 0;
           return {
             id: m.id,
             title: m.title,
             year: m.year,
             qualityProfileId: m.qualityProfileId,
-            customFormats: m.customFormats,
-            customFormatScore: m.customFormatScore,
+            customFormats: file?.customFormats ?? [],
+            customFormatScore: score,
             hasFile: m.hasFile,
-            cfScore: scoreProfileCoverage(m.customFormatScore, profile.minUpgradeFormatScore),
+            cfScore: scoreProfileCoverage(score, profile.cutoffFormatScore),
             missingFormats: [],
-            scoreDelta: profile.minUpgradeFormatScore - m.customFormatScore,
+            minProfileScore: profile.cutoffFormatScore,
           };
         });
     } else {
@@ -79,18 +86,25 @@ export class MovieService extends MediaService {
 
       flagged = movies
         .filter((m) => !ignoredSet.has(m.id))
-        .filter((m) => !m.hasFile || isMissingWantedFormats(m.customFormats, wantedIds))
-        .map((m) => ({
-          id: m.id,
-          title: m.title,
-          year: m.year,
-          qualityProfileId: m.qualityProfileId,
-          customFormats: m.customFormats,
-          customFormatScore: m.customFormatScore,
-          hasFile: m.hasFile,
-          cfScore: m.hasFile ? scoreCfCoverage(m.customFormats, wantedIds) : 0,
-          missingFormats: getMissingFormats(m.customFormats, wantedCfs),
-        }));
+        .filter((m) => {
+          if (!m.hasFile) return true;
+          return isMissingWantedFormats(fileMap.get(m.id)?.customFormats ?? [], wantedIds);
+        })
+        .map((m) => {
+          const file = fileMap.get(m.id);
+          const formats = file?.customFormats ?? [];
+          return {
+            id: m.id,
+            title: m.title,
+            year: m.year,
+            qualityProfileId: m.qualityProfileId,
+            customFormats: formats,
+            customFormatScore: file?.customFormatScore ?? 0,
+            hasFile: m.hasFile,
+            cfScore: m.hasFile ? scoreCfCoverage(formats, wantedIds) : 0,
+            missingFormats: getMissingFormats(formats, wantedCfs),
+          };
+        });
     }
 
     if (query.maxScore !== undefined) {

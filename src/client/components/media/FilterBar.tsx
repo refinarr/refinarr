@@ -67,8 +67,8 @@ export function FilterBar({ filters, onChange }: Props) {
           min={0}
           max={1}
           step={0.01}
-          value={[filters.maxScore]}
-          onValueChange={(vals) => onChange({ maxScore: (vals as number[])[0] })}
+          value={filters.maxScore}
+          onValueChange={(v) => onChange({ maxScore: v as number })}
         />
       </div>
     </div>

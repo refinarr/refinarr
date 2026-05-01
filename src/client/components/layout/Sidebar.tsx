@@ -18,7 +18,7 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-56 flex-col border-r border-border bg-card px-3 py-4">
       <div className="mb-6 flex items-center gap-2 px-3">
-        <span className="text-lg font-bold tracking-tight">remedarr</span>
+        <span className="text-lg font-bold tracking-tight">{"Remedarr"}</span>
         <HealthDot />
       </div>
       <nav className="flex flex-col gap-1">

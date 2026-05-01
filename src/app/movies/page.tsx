@@ -15,7 +15,10 @@ import { Checkbox } from "@/client/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { useInstances } from "@/client/hooks/useInstances";
 import { useMovies } from "@/client/hooks/useMovies";
+import { useDebouncedValue } from "@/client/hooks/useDebouncedValue";
 import { useInfiniteScroll } from "@/client/hooks/useInfiniteScroll";
+import { useConfig } from "@/client/hooks/useConfig";
+import { usePreferences } from "@/client/hooks/usePreferences";
 import { api } from "@/client/lib/api";
 import { toast } from "sonner";
 import type { FlaggedMovie } from "@/shared/types/models";
@@ -29,8 +32,13 @@ export default function MoviesPage() {
   const [filters, setFilters] = useState<{ sortBy: "score" | "title" | "added"; order: "asc" | "desc"; maxScore: number }>({ sortBy: "score", order: "asc", maxScore: 1 });
 
   const activeInstance = instanceId || instances?.[0]?.id || 0;
+  const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } =
-    useMovies(activeInstance, filters);
+    useMovies(activeInstance, { ...filters, maxScore: debouncedMaxScore });
+  const { data: config } = useConfig();
+  const { data: prefs } = usePreferences(activeInstance);
+  const scoringMode = config?.scoringModes[`scoringMode:${activeInstance}`] ?? "manual";
+  const noCfsConfigured = scoringMode === "manual" && (prefs?.length ?? 0) === 0;
 
   const sentinelRef = useInfiniteScroll(fetchNextPage, !!hasNextPage);
 
@@ -109,7 +117,9 @@ export default function MoviesPage() {
           {(isLoading || loadingInstances) && <MediaTableSkeleton />}
           {isError && <MediaErrorCard onRetry={refetch} />}
           {!loadingInstances && !isLoading && !isError && allMovies.length === 0 && (
-            activeInstance ? <AllClearState /> : <NoCfsPrompt />
+            activeInstance
+              ? noCfsConfigured ? <NoCfsPrompt /> : <AllClearState />
+              : <NoCfsPrompt />
           )}
 
           {!isLoading && allMovies.length > 0 && (
@@ -120,7 +130,7 @@ export default function MoviesPage() {
                   <TableHead>Title</TableHead>
                   <TableHead>Year</TableHead>
                   <TableHead>Score</TableHead>
-                  <TableHead>Missing CFs</TableHead>
+                  <TableHead>Custom Formats</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -134,8 +144,15 @@ export default function MoviesPage() {
                     </TableCell>
                     <TableCell className="font-medium">{movie.title}</TableCell>
                     <TableCell className="text-muted-foreground">{movie.year}</TableCell>
-                    <TableCell>{Math.round(movie.cfScore * 100)}%</TableCell>
+                    <TableCell className="text-muted-foreground tabular-nums">
+                      {movie.minProfileScore !== undefined
+                        ? `${movie.customFormatScore} / ${movie.minProfileScore}`
+                        : `${Math.round(movie.cfScore * 100)}%`}
+                    </TableCell>
                     <TableCell className="flex flex-wrap gap-1">
+                      {movie.customFormats.map((cf) => (
+                        <CfBadge key={cf.id} name={cf.name} />
+                      ))}
                       {movie.missingFormats.map((cf) => (
                         <CfBadge key={cf.id} name={cf.name} missing />
                       ))}

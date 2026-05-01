@@ -15,6 +15,9 @@ import { Checkbox } from "@/client/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { useInstances } from "@/client/hooks/useInstances";
 import { useSeries } from "@/client/hooks/useSeries";
+import { useDebouncedValue } from "@/client/hooks/useDebouncedValue";
+import { useConfig } from "@/client/hooks/useConfig";
+import { usePreferences } from "@/client/hooks/usePreferences";
 import { useInfiniteScroll } from "@/client/hooks/useInfiniteScroll";
 import { api } from "@/client/lib/api";
 import { toast } from "sonner";
@@ -29,8 +32,13 @@ export default function ShowsPage() {
   const [filters, setFilters] = useState<{ sortBy: "score" | "title" | "added"; order: "asc" | "desc"; maxScore: number }>({ sortBy: "score", order: "asc", maxScore: 1 });
 
   const activeInstance = instanceId || instances?.find((i) => i.type === "sonarr")?.id || 0;
+  const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } =
-    useSeries(activeInstance, filters);
+    useSeries(activeInstance, { ...filters, maxScore: debouncedMaxScore });
+  const { data: config } = useConfig();
+  const { data: prefs } = usePreferences(activeInstance);
+  const scoringMode = config?.scoringModes[`scoringMode:${activeInstance}`] ?? "manual";
+  const noCfsConfigured = scoringMode === "manual" && (prefs?.length ?? 0) === 0;
 
   const sentinelRef = useInfiniteScroll(fetchNextPage, !!hasNextPage);
 
@@ -109,7 +117,9 @@ export default function ShowsPage() {
           {(isLoading || loadingInstances) && <MediaTableSkeleton />}
           {isError && <MediaErrorCard onRetry={refetch} />}
           {!loadingInstances && !isLoading && !isError && allSeries.length === 0 && (
-            activeInstance ? <AllClearState /> : <NoCfsPrompt />
+            activeInstance
+              ? noCfsConfigured ? <NoCfsPrompt /> : <AllClearState />
+              : <NoCfsPrompt />
           )}
 
           {!isLoading && allSeries.length > 0 && (
@@ -134,11 +144,22 @@ export default function ShowsPage() {
                     </TableCell>
                     <TableCell className="font-medium">{series.title}</TableCell>
                     <TableCell className="text-muted-foreground">{series.year}</TableCell>
-                    <TableCell>{Math.round(series.cfScore * 100)}%</TableCell>
-                    <TableCell className="flex flex-wrap gap-1">
-                      {series.missingFormats.map((cf) => (
-                        <CfBadge key={cf.id} name={cf.name} missing />
-                      ))}
+                    <TableCell className="text-muted-foreground tabular-nums">
+                      {series.minProfileScore !== undefined
+                        ? `${series.customFormatScore} / ${series.minProfileScore}`
+                        : `${Math.round(series.cfScore * 100)}%`}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {series.missingFormats.map((cf) => (
+                          <CfBadge key={cf.id} name={cf.name} missing />
+                        ))}
+                      </div>
+                      {series.totalEpisodeCount > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {series.affectedEpisodeCount} / {series.totalEpisodeCount} episodes
+                        </p>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

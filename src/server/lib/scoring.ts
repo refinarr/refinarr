@@ -40,5 +40,5 @@ export function scoreProfileCoverage(
   minScore: number
 ): number {
   if (minScore === 0) return 1;
-  return Math.min(currentScore / minScore, 1);
+  return Math.max(0, Math.min(currentScore / minScore, 1));
 }

@@ -7,16 +7,24 @@ interface RadarrMovie {
   year: number;
   qualityProfileId: number;
   hasFile: boolean;
-  customFormats: Array<{ id: number; name: string }>;
-  customFormatScore: number;
-  movieFile?: { id: number };
+  movieFileId: number;
+}
+
+export interface RadarrMovieFile {
+  id: number;
+  movieId: number;
+  customFormats?: Array<{ id: number; name: string }>;
+  customFormatScore?: number;
 }
 
 interface RadarrQualityProfile {
   id: number;
   name: string;
   minUpgradeFormatScore: number;
+  cutoffFormatScore: number;
 }
+
+const CHUNK = 200;
 
 export class RadarrClient extends ArrClient {
   constructor(instance: Instance) {
@@ -25,6 +33,21 @@ export class RadarrClient extends ArrClient {
 
   async getMovies(): Promise<RadarrMovie[]> {
     return this.fetch<RadarrMovie[]>("/movie");
+  }
+
+  async getMovieFilesByIds(fileIds: number[]): Promise<RadarrMovieFile[]> {
+    if (fileIds.length === 0) return [];
+    const chunks: number[][] = [];
+    for (let i = 0; i < fileIds.length; i += CHUNK) {
+      chunks.push(fileIds.slice(i, i + CHUNK));
+    }
+    const results = await Promise.all(
+      chunks.map((chunk) => {
+        const qs = chunk.map((id) => `movieFileIds=${id}`).join("&");
+        return this.fetch<RadarrMovieFile[]>(`/moviefile?${qs}`);
+      })
+    );
+    return results.flat();
   }
 
   async triggerSearch(movieId: number): Promise<void> {
