@@ -36,12 +36,12 @@ export function MovieDetailDrawer({
   if (!movie) return null;
 
   const score = scoringMode === "profile" ? movie.customFormatScore : movie.cfScore;
-  const severity = getSeverity(score, movie.minProfileScore, scoringMode);
+  const severity = getSeverity(score, movie.minProfileScore, scoringMode, movie.hasFile);
   const hasCfs = movie.customFormats.length > 0 || movie.missingFormats.length > 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md flex flex-col gap-0">
+      <SheetContent className="w-full sm:max-w-xl flex flex-col gap-0">
         <SheetHeader className="border-b">
           <div className="flex items-center gap-2">
             <SeverityDot severity={severity} />
@@ -70,7 +70,7 @@ export function MovieDetailDrawer({
           </div>
         </div>
 
-        <SheetFooter className="border-t flex-row gap-2 justify-end">
+        <SheetFooter className="border-t flex-row flex-wrap gap-2 justify-end">
           <Button variant="outline" size="sm" onClick={() => onIgnore(movie)}>
             <EyeOff className="h-4 w-4 mr-1" /> Ignore
           </Button>
@@ -80,7 +80,7 @@ export function MovieDetailDrawer({
                 <Trash2 className="h-4 w-4 mr-1 text-destructive" /> Delete
               </Button>
               <Button variant="outline" size="sm" onClick={() => onDelete(movie, true)}>
-                <Trash2 className="h-4 w-4 mr-1 text-destructive" /> Delete & Search
+                <Trash2 className="h-4 w-4 mr-1 text-destructive" /> Delete + Search
               </Button>
             </>
           )}

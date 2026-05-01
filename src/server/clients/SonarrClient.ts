@@ -13,6 +13,7 @@ export interface SonarrEpisodeFile {
   seriesId: number;
   seasonNumber: number;
   relativePath: string;
+  size?: number;
   customFormats?: Array<{ id: number; name: string }>;
   customFormatScore?: number;
 }
@@ -55,6 +56,24 @@ export class SonarrClient extends ArrClient {
       method: "POST",
       body: JSON.stringify({ name: "SeriesSearch", seriesId }),
     });
+  }
+
+  async triggerSeasonSearch(seriesId: number, seasonNumber: number): Promise<void> {
+    await this.fetch("/command", {
+      method: "POST",
+      body: JSON.stringify({ name: "SeasonSearch", seriesId, seasonNumber }),
+    });
+  }
+
+  async triggerEpisodeSearch(episodeIds: number[]): Promise<void> {
+    await this.fetch("/command", {
+      method: "POST",
+      body: JSON.stringify({ name: "EpisodeSearch", episodeIds }),
+    });
+  }
+
+  async getEpisodes(seriesId: number): Promise<Array<{ id: number; episodeFileId: number; seasonNumber: number; episodeNumber: number }>> {
+    return this.fetch(`/episode?seriesId=${seriesId}`);
   }
 
   async deleteEpisodeFile(fileId: number): Promise<void> {

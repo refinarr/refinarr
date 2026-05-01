@@ -1,4 +1,5 @@
 "use client";
+import { Suspense } from "react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { BulkActionToolbar } from "@/client/components/media/BulkActionToolbar";
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
@@ -16,30 +17,46 @@ import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { MovieDetailDrawer } from "@/client/components/movies/MovieDetailDrawer";
+import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { useMoviesPage } from "@/client/hooks/useMoviesPage";
 import { useQualityProfiles } from "@/client/hooks/useQualityProfiles";
 import { usePreferences } from "@/client/hooks/usePreferences";
-import { useCustomFormats } from "@/client/hooks/useCustomFormats";
 import { getSeverity } from "@/client/lib/severity";
+import { formatBytes } from "@/client/lib/format";
 import type { FlaggedMovie } from "@/shared/types/models";
 import { Loader2 } from "lucide-react";
 
 export default function MoviesPage() {
+  return (
+    <Suspense fallback={<AppShell><MediaTableSkeleton rows={8} /></AppShell>}>
+      <MoviesPageContent />
+    </Suspense>
+  );
+}
+
+function MoviesPageContent() {
   const {
     router, instances, loadingInstances, radarrInstances,
     activeInstance, setInstanceId, selected, toggle,
     filters, setFilters, selectedId, setSelectedId, selectedItem,
-    allMovies, total, isLoading, isError, isFetchingNextPage,
+    allMovies, total, isLoading, isFetching, isError, isFetchingNextPage,
     refetch, sentinelRef, scoringMode, noCfsConfigured,
     handleSearch, handleIgnore, handleDelete, runSearch, runIgnore, runDelete,
   } = useMoviesPage();
 
   const { data: profiles } = useQualityProfiles("radarr", activeInstance);
   const { data: prefs } = usePreferences(activeInstance);
-  const { data: cfs } = useCustomFormats("radarr", activeInstance);
-  const cfOptions = scoringMode === "manual"
-    ? (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }))
-    : (cfs ?? []);
+
+  const wantedCfOptions = (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }));
+  const negativeCfOptions = (() => {
+    const seen = new Map<number, string>();
+    for (const p of profiles ?? []) {
+      for (const item of p.formatItems ?? []) {
+        if (item.score < 0) seen.set(item.format, item.name);
+      }
+    }
+    return Array.from(seen, ([id, name]) => ({ id, name }));
+  })();
 
   if (!loadingInstances && !instances?.length) {
     return (
@@ -56,7 +73,7 @@ export default function MoviesPage() {
       className: "w-8",
       render: (m) => {
         const score = scoringMode === "profile" ? m.customFormatScore : m.cfScore;
-        return <SeverityDot severity={getSeverity(score, m.minProfileScore, scoringMode)} />;
+        return <SeverityDot severity={getSeverity(score, m.minProfileScore, scoringMode, m.hasFile)} />;
       },
     },
     {
@@ -84,32 +101,48 @@ export default function MoviesPage() {
       key: "score",
       header: "Score",
       sortKey: "score",
-      className: "w-32",
-      render: (m) => (
-        <ScoreLabel
-          score={scoringMode === "profile" ? m.customFormatScore : m.cfScore}
-          minProfileScore={m.minProfileScore}
-        />
-      ),
+      className: "w-36 whitespace-nowrap",
+      render: (m) => {
+        if (scoringMode === "profile" && !m.hasFile)
+          return <span className="text-xs text-muted-foreground">No file</span>;
+        return (
+          <ScoreLabel
+            score={scoringMode === "profile" ? m.customFormatScore : m.cfScore}
+            minProfileScore={m.minProfileScore}
+          />
+        );
+      },
     },
     {
-      key: "missing",
-      header: "Missing",
-      render: (m) => (
-        <div className="flex flex-wrap gap-1">
-          {m.missingFormats.slice(0, 3).map((cf) => (
-            <CfBadge key={cf.id} name={cf.name} missing />
-          ))}
-          {m.missingFormats.length > 3 && (
-            <span className="text-xs text-muted-foreground">+{m.missingFormats.length - 3}</span>
-          )}
-        </div>
-      ),
+      key: "size",
+      header: "Size",
+      sortKey: "size",
+      className: "w-24 text-xs text-muted-foreground tabular-nums whitespace-nowrap",
+      render: (m) => formatBytes(m.sizeOnDisk),
+    },
+    {
+      key: "issues",
+      header: scoringMode === "profile" ? "Penalties" : "Missing",
+      render: (m) => {
+        const items = scoringMode === "profile" ? m.unwantedFormats : m.missingFormats;
+        if (!items.length) return null;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {items.slice(0, 3).map((cf) => (
+              <CfBadge key={cf.id} name={cf.name} missing />
+            ))}
+            {items.length > 3 && (
+              <span className="text-xs text-muted-foreground">+{items.length - 3}</span>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
   const profileName = profiles?.find((p) => p.id === filters.profileId)?.name;
-  const cfName = cfOptions.find((c) => c.id === filters.missingCfId)?.name;
+  const missingCfName = wantedCfOptions.find((c) => c.id === filters.missingCfId)?.name;
+  const penaltyCfName = negativeCfOptions.find((c) => c.id === filters.hasNegativeCfId)?.name;
 
   const chips: FilterChip[] = [
     filters.q && {
@@ -122,10 +155,15 @@ export default function MoviesPage() {
       label: `Profile: ${profileName}`,
       onRemove: () => setFilters((f) => ({ ...f, profileId: null })),
     },
-    filters.missingCfId !== null && cfName && {
+    filters.missingCfId !== null && missingCfName && {
       key: "cf",
-      label: `Missing: ${cfName}`,
+      label: `Missing: ${missingCfName}`,
       onRemove: () => setFilters((f) => ({ ...f, missingCfId: null })),
+    },
+    filters.hasNegativeCfId !== null && penaltyCfName && {
+      key: "ncf",
+      label: `Has: ${penaltyCfName}`,
+      onRemove: () => setFilters((f) => ({ ...f, hasNegativeCfId: null })),
     },
   ].filter(Boolean) as FilterChip[];
 
@@ -137,25 +175,29 @@ export default function MoviesPage() {
             <div>
               <h1 className="text-2xl font-bold">Movies</h1>
               {!isLoading && (
-                <p className="text-muted-foreground text-sm mt-1">
+                <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1.5">
                   {total} flagged{selected.size > 0 ? ` · ${selected.size} selected` : ""}
+                  {isFetching && <Loader2 className="h-3 w-3 animate-spin" />}
                 </p>
               )}
             </div>
-            {radarrInstances.length > 1 && (
-              <Select value={String(activeInstance)} onValueChange={(v) => setInstanceId(Number(v ?? 0))}>
-                <SelectTrigger className="w-44">
-                  <SelectValue>
-                    {radarrInstances.find((i) => i.id === activeInstance)?.name ?? "Select instance"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {radarrInstances.map((i) => (
-                    <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <div className="flex items-center gap-3">
+              {activeInstance > 0 && <ScoringModeSelector instanceId={activeInstance} />}
+              {radarrInstances.length > 1 && (
+                <Select value={String(activeInstance)} onValueChange={(v) => setInstanceId(Number(v ?? 0))}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue>
+                      {radarrInstances.find((i) => i.id === activeInstance)?.name ?? "Select instance"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {radarrInstances.map((i) => (
+                      <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           <MediaSearchBar
@@ -184,28 +226,30 @@ export default function MoviesPage() {
           )}
 
           {!isLoading && allMovies.length > 0 && (
-            <MediaTable
-              rows={allMovies}
-              columns={columns}
-              selectedIds={selected}
-              onToggleSelect={toggle}
-              onRowClick={setSelectedId}
-              sortBy={filters.sortBy}
-              order={filters.order}
-              onSortChange={(key) =>
-                setFilters((f) => ({
-                  ...f,
-                  sortBy: key,
-                  order: f.sortBy === key && f.order === "asc" ? "desc" : "asc",
-                }))
-              }
-              rowActions={(m) => (
-                <RowHoverActions
-                  onSearch={() => runSearch([m])}
-                  onIgnore={async () => { await runIgnore([m]); }}
-                />
-              )}
-            />
+            <div className={isFetching ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+              <MediaTable
+                rows={allMovies}
+                columns={columns}
+                selectedIds={selected}
+                onToggleSelect={toggle}
+                onRowClick={setSelectedId}
+                sortBy={filters.sortBy}
+                order={filters.order}
+                onSortChange={(key) =>
+                  setFilters((f) => ({
+                    ...f,
+                    sortBy: key,
+                    order: f.sortBy === key && f.order === "asc" ? "desc" : "asc",
+                  }))
+                }
+                rowActions={(m) => (
+                  <RowHoverActions
+                    onSearch={() => runSearch([m])}
+                    onIgnore={async () => { await runIgnore([m]); }}
+                  />
+                )}
+              />
+            </div>
           )}
 
           <div ref={sentinelRef} className="h-4" />

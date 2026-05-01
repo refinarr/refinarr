@@ -47,6 +47,19 @@ export class LogRepository extends BaseRepository<ActionLog> {
     }) as Promise<ActionLog[]>;
   }
 
+  async countByStatusSince(status: ActionStatus, since: Date): Promise<number> {
+    return this.db.actionLog.count({
+      where: { status, createdAt: { gte: since } },
+    });
+  }
+
+  async findRecent(limit: number): Promise<ActionLog[]> {
+    return this.db.actionLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    }) as Promise<ActionLog[]>;
+  }
+
   async create(
     data: Omit<ActionLog, "id" | "createdAt">
   ): Promise<ActionLog> {

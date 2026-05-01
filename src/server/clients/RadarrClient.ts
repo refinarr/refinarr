@@ -13,6 +13,7 @@ interface RadarrMovie {
 export interface RadarrMovieFile {
   id: number;
   movieId: number;
+  size?: number;
   customFormats?: Array<{ id: number; name: string }>;
   customFormatScore?: number;
 }

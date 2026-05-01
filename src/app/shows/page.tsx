@@ -1,4 +1,5 @@
 "use client";
+import { Suspense } from "react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { BulkActionToolbar } from "@/client/components/media/BulkActionToolbar";
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
@@ -16,30 +17,47 @@ import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { SeriesDetailDrawer } from "@/client/components/shows/SeriesDetailDrawer";
+import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { useShowsPage } from "@/client/hooks/useShowsPage";
 import { useQualityProfiles } from "@/client/hooks/useQualityProfiles";
 import { usePreferences } from "@/client/hooks/usePreferences";
-import { useCustomFormats } from "@/client/hooks/useCustomFormats";
 import { getSeverity } from "@/client/lib/severity";
+import { formatBytes } from "@/client/lib/format";
 import type { FlaggedSeries } from "@/shared/types/models";
 import { Loader2 } from "lucide-react";
 
 export default function ShowsPage() {
+  return (
+    <Suspense fallback={<AppShell><MediaTableSkeleton rows={8} /></AppShell>}>
+      <ShowsPageContent />
+    </Suspense>
+  );
+}
+
+function ShowsPageContent() {
   const {
     router, instances, loadingInstances, sonarrInstances,
     activeInstance, setInstanceId, selected, toggle,
     filters, setFilters, selectedId, setSelectedId, selectedItem,
-    allSeries, total, isLoading, isError, isFetchingNextPage,
+    allSeries, total, isLoading, isFetching, isError, isFetchingNextPage,
     refetch, sentinelRef, scoringMode, noCfsConfigured,
-    handleSearch, handleIgnore, handleDelete, runSearch, runIgnore, runDelete,
+    handleSearch, handleIgnore, handleDelete, runSearch, runIgnore,
+    runSearchSeason, runSearchEpisode, runDeleteSeason, runDeleteEpisode,
   } = useShowsPage();
 
   const { data: profiles } = useQualityProfiles("sonarr", activeInstance);
   const { data: prefs } = usePreferences(activeInstance);
-  const { data: cfs } = useCustomFormats("sonarr", activeInstance);
-  const cfOptions = scoringMode === "manual"
-    ? (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }))
-    : (cfs ?? []);
+
+  const wantedCfOptions = (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }));
+  const negativeCfOptions = (() => {
+    const seen = new Map<number, string>();
+    for (const p of profiles ?? []) {
+      for (const item of p.formatItems ?? []) {
+        if (item.score < 0) seen.set(item.format, item.name);
+      }
+    }
+    return Array.from(seen, ([id, name]) => ({ id, name }));
+  })();
 
   if (!loadingInstances && !instances?.length) {
     return (
@@ -56,7 +74,8 @@ export default function ShowsPage() {
       className: "w-8",
       render: (s) => {
         const score = scoringMode === "profile" ? s.customFormatScore : s.cfScore;
-        return <SeverityDot severity={getSeverity(score, s.minProfileScore, scoringMode)} />;
+        const hasFile = s.episodeFiles.length > 0;
+        return <SeverityDot severity={getSeverity(score, s.minProfileScore, scoringMode, hasFile)} />;
       },
     },
     {
@@ -84,13 +103,24 @@ export default function ShowsPage() {
       key: "score",
       header: "Score",
       sortKey: "score",
-      className: "w-32",
-      render: (s) => (
-        <ScoreLabel
-          score={scoringMode === "profile" ? s.customFormatScore : s.cfScore}
-          minProfileScore={s.minProfileScore}
-        />
-      ),
+      className: "w-36 whitespace-nowrap",
+      render: (s) => {
+        if (scoringMode === "profile" && s.episodeFiles.length === 0)
+          return <span className="text-xs text-muted-foreground">No file</span>;
+        return (
+          <ScoreLabel
+            score={scoringMode === "profile" ? s.customFormatScore : s.cfScore}
+            minProfileScore={s.minProfileScore}
+          />
+        );
+      },
+    },
+    {
+      key: "size",
+      header: "Size",
+      sortKey: "size",
+      className: "w-24 text-xs text-muted-foreground tabular-nums whitespace-nowrap",
+      render: (s) => formatBytes(s.sizeOnDisk),
     },
     {
       key: "episodes",
@@ -99,23 +129,28 @@ export default function ShowsPage() {
       render: (s) => `${s.affectedEpisodeCount} / ${s.totalEpisodeCount}`,
     },
     {
-      key: "missing",
-      header: "Missing",
-      render: (s) => (
-        <div className="flex flex-wrap gap-1">
-          {s.missingFormats.slice(0, 3).map((cf) => (
-            <CfBadge key={cf.id} name={cf.name} missing />
-          ))}
-          {s.missingFormats.length > 3 && (
-            <span className="text-xs text-muted-foreground">+{s.missingFormats.length - 3}</span>
-          )}
-        </div>
-      ),
+      key: "issues",
+      header: scoringMode === "profile" ? "Penalties" : "Missing",
+      render: (s) => {
+        const items = scoringMode === "profile" ? s.unwantedFormats : s.missingFormats;
+        if (!items.length) return null;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {items.slice(0, 3).map((cf) => (
+              <CfBadge key={cf.id} name={cf.name} missing />
+            ))}
+            {items.length > 3 && (
+              <span className="text-xs text-muted-foreground">+{items.length - 3}</span>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
   const profileName = profiles?.find((p) => p.id === filters.profileId)?.name;
-  const cfName = cfOptions.find((c) => c.id === filters.missingCfId)?.name;
+  const missingCfName = wantedCfOptions.find((c) => c.id === filters.missingCfId)?.name;
+  const penaltyCfName = negativeCfOptions.find((c) => c.id === filters.hasNegativeCfId)?.name;
 
   const chips: FilterChip[] = [
     filters.q && {
@@ -128,10 +163,15 @@ export default function ShowsPage() {
       label: `Profile: ${profileName}`,
       onRemove: () => setFilters((f) => ({ ...f, profileId: null })),
     },
-    filters.missingCfId !== null && cfName && {
+    filters.missingCfId !== null && missingCfName && {
       key: "cf",
-      label: `Missing: ${cfName}`,
+      label: `Missing: ${missingCfName}`,
       onRemove: () => setFilters((f) => ({ ...f, missingCfId: null })),
+    },
+    filters.hasNegativeCfId !== null && penaltyCfName && {
+      key: "ncf",
+      label: `Has: ${penaltyCfName}`,
+      onRemove: () => setFilters((f) => ({ ...f, hasNegativeCfId: null })),
     },
   ].filter(Boolean) as FilterChip[];
 
@@ -143,25 +183,29 @@ export default function ShowsPage() {
             <div>
               <h1 className="text-2xl font-bold">Shows</h1>
               {!isLoading && (
-                <p className="text-muted-foreground text-sm mt-1">
+                <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1.5">
                   {total} flagged{selected.size > 0 ? ` · ${selected.size} selected` : ""}
+                  {isFetching && <Loader2 className="h-3 w-3 animate-spin" />}
                 </p>
               )}
             </div>
-            {sonarrInstances.length > 1 && (
-              <Select value={String(activeInstance)} onValueChange={(v) => setInstanceId(Number(v ?? 0))}>
-                <SelectTrigger className="w-44">
-                  <SelectValue>
-                    {sonarrInstances.find((i) => i.id === activeInstance)?.name ?? "Select instance"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {sonarrInstances.map((i) => (
-                    <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <div className="flex items-center gap-3">
+              {activeInstance > 0 && <ScoringModeSelector instanceId={activeInstance} />}
+              {sonarrInstances.length > 1 && (
+                <Select value={String(activeInstance)} onValueChange={(v) => setInstanceId(Number(v ?? 0))}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue>
+                      {sonarrInstances.find((i) => i.id === activeInstance)?.name ?? "Select instance"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sonarrInstances.map((i) => (
+                      <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           <MediaSearchBar
@@ -190,28 +234,30 @@ export default function ShowsPage() {
           )}
 
           {!isLoading && allSeries.length > 0 && (
-            <MediaTable
-              rows={allSeries}
-              columns={columns}
-              selectedIds={selected}
-              onToggleSelect={toggle}
-              onRowClick={setSelectedId}
-              sortBy={filters.sortBy}
-              order={filters.order}
-              onSortChange={(key) =>
-                setFilters((f) => ({
-                  ...f,
-                  sortBy: key,
-                  order: f.sortBy === key && f.order === "asc" ? "desc" : "asc",
-                }))
-              }
-              rowActions={(s) => (
-                <RowHoverActions
-                  onSearch={() => runSearch([s])}
-                  onIgnore={async () => { await runIgnore([s]); }}
-                />
-              )}
-            />
+            <div className={isFetching ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+              <MediaTable
+                rows={allSeries}
+                columns={columns}
+                selectedIds={selected}
+                onToggleSelect={toggle}
+                onRowClick={setSelectedId}
+                sortBy={filters.sortBy}
+                order={filters.order}
+                onSortChange={(key) =>
+                  setFilters((f) => ({
+                    ...f,
+                    sortBy: key,
+                    order: f.sortBy === key && f.order === "asc" ? "desc" : "asc",
+                  }))
+                }
+                rowActions={(s) => (
+                  <RowHoverActions
+                    onSearch={() => runSearch([s])}
+                    onIgnore={async () => { await runIgnore([s]); }}
+                  />
+                )}
+              />
+            </div>
           )}
 
           <div ref={sentinelRef} className="h-4" />
@@ -227,13 +273,11 @@ export default function ShowsPage() {
           open={selectedId !== null}
           onOpenChange={(open) => !open && setSelectedId(null)}
           scoringMode={scoringMode}
-          onSearch={async (s) => { await runSearch([s]); setSelectedId(null); }}
           onIgnore={async (s) => { await runIgnore([s]); setSelectedId(null); }}
-          onDelete={async (s, triggerSearch) => {
-            if (!confirm(`Delete all files for "${s.title}"? This cannot be undone.`)) return;
-            await runDelete([s], triggerSearch);
-            setSelectedId(null);
-          }}
+          onSearchSeason={runSearchSeason}
+          onSearchEpisode={runSearchEpisode}
+          onDeleteSeason={runDeleteSeason}
+          onDeleteEpisode={runDeleteEpisode}
         />
       </PageErrorBoundary>
     </AppShell>

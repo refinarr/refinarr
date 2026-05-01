@@ -1,27 +1,38 @@
+import { useState } from "react";
+import { CfScore } from "@/client/components/media/CfScore";
 import type { CustomFormat } from "@/shared/types/models";
 
 interface Props {
   formats: CustomFormat[];
   missingFormats: CustomFormat[];
+  collapseMissingAfter?: number;
 }
 
-export function CfScoreList({ formats, missingFormats }: Props) {
+export function CfScoreList({ formats, missingFormats, collapseMissingAfter = 8 }: Props) {
+  const [showAllMissing, setShowAllMissing] = useState(false);
   if (formats.length === 0 && missingFormats.length === 0) return null;
+
+  const sortedFormats = [...formats].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  const visibleMissing = showAllMissing ? missingFormats : missingFormats.slice(0, collapseMissingAfter);
+  const hiddenCount = missingFormats.length - visibleMissing.length;
+
   return (
-    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs mt-0.5">
-      {formats.map((cf) => (
-        <span key={cf.id}>
-          <span className="text-foreground/80">{`${cf.name}: `}</span>
-          {cf.score !== undefined && (
-            <span className={cf.score >= 0 ? "text-green-400" : "text-destructive"}>
-              {cf.score > 0 ? "+" : ""}{cf.score}
-            </span>
-          )}
-        </span>
+    <div className="flex flex-wrap gap-1 mt-1">
+      {sortedFormats.map((cf) => (
+        <CfScore key={`p-${cf.id}`} name={cf.name} score={cf.score} />
       ))}
-      {missingFormats.map((cf) => (
-        <span key={cf.id} className="line-through text-destructive/70">{cf.name}</span>
+      {visibleMissing.map((cf) => (
+        <CfScore key={`m-${cf.id}`} name={cf.name} variant="missing" />
       ))}
+      {hiddenCount > 0 && (
+        <button
+          type="button"
+          className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline px-1.5"
+          onClick={() => setShowAllMissing(true)}
+        >
+          +{hiddenCount} more
+        </button>
+      )}
     </div>
   );
 }

@@ -13,6 +13,20 @@ import { useInstances } from "@/client/hooks/useInstances";
 import { useInfiniteScroll } from "@/client/hooks/useInfiniteScroll";
 import type { ActionLog } from "@/shared/types/models";
 
+const STATUS_LABELS: Record<string, string> = {
+  "": "All",
+  success: "Success",
+  failed: "Failed",
+  dry_run: "Dry Run",
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  "": "All",
+  search: "Search",
+  delete: "Delete",
+  ignore: "Ignore",
+};
+
 function HistoryContent() {
   const searchParams = useSearchParams();
   const { data: instances } = useInstances();
@@ -53,7 +67,9 @@ function HistoryContent() {
         <div className="flex flex-col gap-1">
           <Label>Status</Label>
           <Select value={status} onValueChange={(v) => setStatus(v ?? "")}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="All" /></SelectTrigger>
+            <SelectTrigger className="w-36">
+              <SelectValue>{STATUS_LABELS[status] ?? "All"}</SelectValue>
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="">All</SelectItem>
               <SelectItem value="success">Success</SelectItem>
@@ -65,7 +81,9 @@ function HistoryContent() {
         <div className="flex flex-col gap-1">
           <Label>Action</Label>
           <Select value={action} onValueChange={(v) => setAction(v ?? "")}>
-            <SelectTrigger className="w-40"><SelectValue placeholder="All" /></SelectTrigger>
+            <SelectTrigger className="w-40">
+              <SelectValue>{ACTION_LABELS[action] ?? "All"}</SelectValue>
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="">All</SelectItem>
               <SelectItem value="search">Search</SelectItem>

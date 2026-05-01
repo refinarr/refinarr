@@ -6,7 +6,7 @@ interface Props {
 export function ScoreLabel({ score, minProfileScore }: Props) {
   if (minProfileScore !== undefined) {
     return (
-      <span className="tabular-nums text-sm text-muted-foreground">
+      <span className="tabular-nums text-sm text-muted-foreground whitespace-nowrap">
         {score} / {minProfileScore}
       </span>
     );

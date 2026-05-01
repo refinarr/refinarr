@@ -1,3 +1,4 @@
+export type Severity = "critical" | "low" | "warning" | "ok" | "missing";
 export type ArrType = "radarr" | "sonarr";
 export type ScoringMode = "manual" | "profile";
 export type ActionType = "search" | "delete" | "ignore";
@@ -25,6 +26,7 @@ export interface QualityProfile {
   name: string;
   minUpgradeFormatScore: number;
   cutoffFormatScore: number;
+  formatItems: Array<{ format: number; name: string; score: number }>;
 }
 
 export interface FlaggedMovie {
@@ -38,7 +40,9 @@ export interface FlaggedMovie {
   hasFile: boolean;
   cfScore: number;
   missingFormats: CustomFormat[];
+  unwantedFormats: CustomFormat[];
   minProfileScore?: number;
+  sizeOnDisk: number;
 }
 
 export interface EpisodeFileEntry {
@@ -48,7 +52,9 @@ export interface EpisodeFileEntry {
   customFormats: CustomFormat[];
   customFormatScore: number;
   missingFormats: CustomFormat[];
+  unwantedFormats: CustomFormat[];
   minProfileScore?: number;
+  size: number;
 }
 
 export interface FlaggedSeries {
@@ -60,10 +66,12 @@ export interface FlaggedSeries {
   customFormatScore: number;
   cfScore: number;
   missingFormats: CustomFormat[];
+  unwantedFormats: CustomFormat[];
   minProfileScore?: number;
   affectedEpisodeCount: number;
   totalEpisodeCount: number;
   episodeFiles: EpisodeFileEntry[];
+  sizeOnDisk: number;
 }
 
 export interface ActionLog {

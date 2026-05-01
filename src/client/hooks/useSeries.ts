@@ -1,17 +1,19 @@
 "use client";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
-import type { FlaggedSeries } from "@/shared/types/models";
+import type { FlaggedSeries, ScoringMode } from "@/shared/types/models";
 import type { PaginatedResponse } from "@/shared/types/api";
 
 interface SeriesFilters {
-  sortBy?: "score" | "title" | "added";
+  sortBy?: "score" | "title" | "added" | "size";
   order?: "asc" | "desc";
   maxScore?: number;
   q?: string;
   profileId?: number | null;
   missingCfId?: number | null;
+  hasNegativeCfId?: number | null;
+  scoringMode?: ScoringMode;
 }
 
 export function useSeries(instanceId: number, filters: SeriesFilters = {}) {
@@ -31,6 +33,7 @@ export function useSeries(instanceId: number, filters: SeriesFilters = {}) {
       api.get<PaginatedResponse<FlaggedSeries>>(`/sonarr/series?${params}&page=${pageParam}`),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
+    placeholderData: keepPreviousData,
     enabled: instanceId > 0,
   });
 }

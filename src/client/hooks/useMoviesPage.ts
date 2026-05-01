@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useInstances } from "./useInstances";
 import { useMovies } from "./useMovies";
@@ -13,18 +13,23 @@ import { withToast } from "@/client/lib/with-toast";
 import type { ActionLog, FlaggedMovie, ScoringMode } from "@/shared/types/models";
 
 export interface MediaFilters {
-  sortBy: "score" | "title" | "added";
+  sortBy: "score" | "title" | "added" | "size";
   order: "asc" | "desc";
   maxScore: number;
   q: string;
   profileId: number | null;
   missingCfId: number | null;
+  hasNegativeCfId: number | null;
 }
 
 export function useMoviesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: instances, isLoading: loadingInstances } = useInstances();
-  const [instanceId, setInstanceId] = useState<number>(0);
+  const [instanceId, setInstanceId] = useState<number>(() => {
+    const fromUrl = Number(searchParams.get("instanceId") ?? "0");
+    return Number.isFinite(fromUrl) && fromUrl > 0 ? fromUrl : 0;
+  });
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [filters, setFilters] = useState<MediaFilters>({
     sortBy: "score",
@@ -33,6 +38,7 @@ export function useMoviesPage() {
     q: "",
     profileId: null,
     missingCfId: null,
+    hasNegativeCfId: null,
   });
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -40,13 +46,25 @@ export function useMoviesPage() {
   const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
   const debouncedQ = useDebouncedValue(filters.q, 300);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } =
-    useMovies(activeInstance, { ...filters, maxScore: debouncedMaxScore, q: debouncedQ });
   const { data: config } = useConfig();
   const { data: prefs } = usePreferences(activeInstance);
 
   const scoringMode = (config?.scoringModes[`scoringMode:${activeInstance}`] ?? "manual") as ScoringMode;
   const noCfsConfigured = scoringMode === "manual" && (prefs?.length ?? 0) === 0;
+
+  const [isModeTransitioning, setIsModeTransitioning] = useState(false);
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching, isError, refetch } =
+    useMovies(activeInstance, { ...filters, maxScore: debouncedMaxScore, q: debouncedQ, scoringMode });
+
+  useEffect(() => {
+    setIsModeTransitioning(true);
+    setFilters((f) => ({ ...f, missingCfId: null, hasNegativeCfId: null, maxScore: 1 }));
+  }, [scoringMode]);
+
+  useEffect(() => {
+    if (!isFetching) setIsModeTransitioning(false);
+  }, [isFetching]);
 
   const sentinelRef = useInfiniteScroll(fetchNextPage, !!hasNextPage);
   const allMovies: FlaggedMovie[] = data?.pages.flatMap((p) => p.items) ?? [];
@@ -157,8 +175,9 @@ export function useMoviesPage() {
     selectedItem,
     allMovies,
     total,
-    isLoading,
+    isLoading: isLoading || isModeTransitioning,
     isError,
+    isFetching,
     isFetchingNextPage,
     refetch,
     sentinelRef,

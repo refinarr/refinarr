@@ -1,4 +1,6 @@
 import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
+import { Button } from "@/client/components/ui/button";
+import { Search, Trash2 } from "lucide-react";
 import { ScoreLabel } from "@/client/components/media/ScoreLabel";
 import { CfScoreList } from "@/client/components/media/CfScoreList";
 import { filename } from "../utils";
@@ -6,9 +8,11 @@ import { filename } from "../utils";
 interface Props {
   file: EpisodeFileEntry;
   scoringMode: ScoringMode;
+  onSearch: () => Promise<unknown>;
+  onDelete: (search: boolean) => Promise<unknown>;
 }
 
-export function EpisodeFileRow({ file, scoringMode }: Props) {
+export function EpisodeFileRow({ file, scoringMode, onSearch, onDelete }: Props) {
   const name = filename(file.relativePath);
   const isBad =
     scoringMode === "profile"
@@ -17,7 +21,7 @@ export function EpisodeFileRow({ file, scoringMode }: Props) {
 
   return (
     <div
-      className={`rounded-md border px-3 py-2 ${
+      className={`group rounded-md border px-3 py-2 ${
         isBad ? "border-destructive/30 bg-destructive/5" : "bg-muted/20"
       }`}
     >
@@ -28,9 +32,31 @@ export function EpisodeFileRow({ file, scoringMode }: Props) {
         >
           {name}
         </span>
-        {scoringMode === "profile" && (
-          <ScoreLabel score={file.customFormatScore} minProfileScore={file.minProfileScore} />
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {scoringMode === "profile" && (
+            <ScoreLabel score={file.customFormatScore} minProfileScore={file.minProfileScore} />
+          )}
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Search this episode"
+              onClick={() => onSearch()}
+            >
+              <Search className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Delete this file"
+              onClick={() => onDelete(false)}
+            >
+              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+            </Button>
+          </div>
+        </div>
       </div>
       <CfScoreList formats={file.customFormats} missingFormats={file.missingFormats} />
     </div>

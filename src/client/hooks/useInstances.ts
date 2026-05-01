@@ -46,3 +46,14 @@ export function useTestConnection() {
     },
   });
 }
+
+export function useInstanceHealth(id: number) {
+  return useQuery({
+    queryKey: ["instance-health", id],
+    queryFn: () => api.post<{ ok: boolean }>(`/instances/${id}/test`, {}),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+    enabled: id > 0,
+  });
+}

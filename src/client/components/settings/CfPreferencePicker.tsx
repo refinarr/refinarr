@@ -48,6 +48,12 @@ export function CfPreferencePicker({ instance }: Props) {
     setOverrides(new Map());
   };
 
+  const clearAll = () => {
+    const next = new Map<number, boolean>();
+    for (const cf of available ?? []) next.set(cf.id, false);
+    setOverrides(next);
+  };
+
   if (loadingCfs) {
     return (
       <Card>
@@ -75,7 +81,12 @@ export function CfPreferencePicker({ instance }: Props) {
           <CardTitle className="text-sm font-medium">{instance.name}</CardTitle>
           <div className="flex items-center gap-2">
             {selectedCount > 0 && (
-              <Badge variant="secondary">{selectedCount} selected</Badge>
+              <>
+                <Badge variant="secondary">{selectedCount} selected</Badge>
+                <Button size="sm" variant="ghost" onClick={clearAll}>
+                  Clear
+                </Button>
+              </>
             )}
             <Button size="sm" onClick={save} disabled={setPreferences.isPending}>
               Save

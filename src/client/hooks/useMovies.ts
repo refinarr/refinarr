@@ -1,17 +1,19 @@
 "use client";
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { FlaggedMovie, ScoringMode } from "@/shared/types/models";
 import type { PaginatedResponse } from "@/shared/types/api";
 
 interface MovieFilters {
-  sortBy?: "score" | "title" | "added";
+  sortBy?: "score" | "title" | "added" | "size";
   order?: "asc" | "desc";
   maxScore?: number;
   q?: string;
   profileId?: number | null;
   missingCfId?: number | null;
+  hasNegativeCfId?: number | null;
+  scoringMode?: ScoringMode;
 }
 
 export function useMovies(instanceId: number, filters: MovieFilters = {}) {
@@ -31,6 +33,7 @@ export function useMovies(instanceId: number, filters: MovieFilters = {}) {
       api.get<PaginatedResponse<FlaggedMovie>>(`/radarr/movies?${params}&page=${pageParam}`),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
+    placeholderData: keepPreviousData,
     enabled: instanceId > 0,
   });
 }

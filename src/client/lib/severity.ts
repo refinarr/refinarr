@@ -1,12 +1,14 @@
-import type { ScoringMode } from "@/shared/types/models";
+import type { ScoringMode, Severity } from "@/shared/types/models";
 
-export type Severity = "critical" | "low" | "warning" | "ok";
+export type { Severity };
 
 export function getSeverity(
   score: number,
   target: number | undefined,
-  mode: ScoringMode
+  mode: ScoringMode,
+  hasFile = true,
 ): Severity {
+  if (!hasFile) return "missing";
   if (mode === "profile" && target !== undefined && target > 0) {
     if (score < 0) return "critical";
     if (score < target * 0.5) return "low";
@@ -24,6 +26,7 @@ export const severityClass: Record<Severity, string> = {
   low: "bg-orange-500",
   warning: "bg-yellow-500",
   ok: "bg-green-500",
+  missing: "bg-slate-500",
 };
 
 export const severityLabel: Record<Severity, string> = {
@@ -31,4 +34,5 @@ export const severityLabel: Record<Severity, string> = {
   low: "Low",
   warning: "Warning",
   ok: "OK",
+  missing: "No file",
 };

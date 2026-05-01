@@ -17,12 +17,13 @@ import {
 interface MovieQuery {
   page: number;
   limit: number;
-  sortBy: "score" | "title" | "added";
+  sortBy: "score" | "title" | "added" | "size";
   order: "asc" | "desc";
   maxScore?: number;
   q?: string;
   profileId?: number;
   missingCfId?: number;
+  hasNegativeCfId?: number;
 }
 
 export class MovieService extends MediaService {
@@ -43,10 +44,16 @@ export class MovieService extends MediaService {
     const profileMap = new Map(profiles.map((p) => [p.id, p]));
     // profileId -> cfId -> score (from quality profile's formatItems)
     const profileScoreMap = new Map<number, Map<number, number>>();
+    // profileId -> positive-score CFs (for missingFormats in profile mode)
+    const profileFormatMap = new Map<number, Array<{ id: number; name: string }>>();
     for (const p of profiles) {
       const cfMap = new Map<number, number>();
       for (const item of p.formatItems) cfMap.set(item.format, item.score);
       profileScoreMap.set(p.id, cfMap);
+      profileFormatMap.set(
+        p.id,
+        p.formatItems.filter((item) => item.score > 0).map((item) => ({ id: item.format, name: item.name }))
+      );
     }
 
     const fileIds = movies.filter((m) => m.hasFile && m.movieFileId > 0).map((m) => m.movieFileId);
@@ -76,18 +83,26 @@ export class MovieService extends MediaService {
           const file = fileMap.get(m.id);
           const score = file?.customFormatScore ?? 0;
           const cfScores = profileScoreMap.get(m.qualityProfileId) ?? new Map<number, number>();
+          const positiveProfileCfs = profileFormatMap.get(m.qualityProfileId) ?? [];
+          const fileCfs = file?.customFormats ?? [];
+          const fileCfIds = new Set(fileCfs.map((cf) => cf.id));
+          const unwantedFormats = fileCfs
+            .filter((cf) => (cfScores.get(cf.id) ?? 0) < 0)
+            .map((cf) => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) }));
           return {
             id: m.id,
             title: m.title,
             year: m.year,
             qualityProfileId: m.qualityProfileId,
             movieFileId: m.movieFileId,
-            customFormats: file?.customFormats?.map(cf => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) })) ?? [],
+            customFormats: fileCfs.map((cf) => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) })),
             customFormatScore: score,
             hasFile: m.hasFile,
             cfScore: scoreProfileCoverage(score, profile.cutoffFormatScore),
-            missingFormats: [],
+            missingFormats: positiveProfileCfs.filter((cf) => !fileCfIds.has(cf.id)),
+            unwantedFormats,
             minProfileScore: profile.cutoffFormatScore,
+            sizeOnDisk: file?.size ?? 0,
           };
         });
     } else {
@@ -118,6 +133,8 @@ export class MovieService extends MediaService {
             hasFile: m.hasFile,
             cfScore: m.hasFile ? scoreCfCoverage(formats, wantedIds) : 0,
             missingFormats: getMissingFormats(formats, wantedCfs),
+            unwantedFormats: [],
+            sizeOnDisk: file?.size ?? 0,
           };
         });
     }
@@ -143,10 +160,24 @@ export class MovieService extends MediaService {
       flagged = flagged.filter((m) => m.missingFormats.some((cf) => cf.id === query.missingCfId));
     }
 
+    if (query.hasNegativeCfId !== undefined) {
+      flagged = flagged.filter((m) => m.unwantedFormats.some((cf) => cf.id === query.hasNegativeCfId));
+    }
+
     flagged.sort((a, b) => {
       const dir = query.order === "asc" ? 1 : -1;
-      if (query.sortBy === "score") return (a.cfScore - b.cfScore) * dir;
+      if (query.sortBy === "score" || query.sortBy === "size") {
+        if (!a.hasFile && !b.hasFile) return 0;
+        if (!a.hasFile) return 1;
+        if (!b.hasFile) return -1;
+      }
+      if (query.sortBy === "score") {
+        const aScore = mode === "profile" ? a.customFormatScore : a.cfScore;
+        const bScore = mode === "profile" ? b.customFormatScore : b.cfScore;
+        return (aScore - bScore) * dir;
+      }
       if (query.sortBy === "title") return a.title.localeCompare(b.title) * dir;
+      if (query.sortBy === "size") return (a.sizeOnDisk - b.sizeOnDisk) * dir;
       return 0;
     });
 

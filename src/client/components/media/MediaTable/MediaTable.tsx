@@ -6,7 +6,7 @@ export type SortDirection = "asc" | "desc";
 export interface ColumnDef<T> {
   key: string;
   header: ReactNode;
-  sortKey?: "score" | "title" | "added";
+  sortKey?: "score" | "title" | "added" | "size";
   className?: string;
   render: (row: T) => ReactNode;
 }
@@ -17,9 +17,9 @@ interface Props<T extends { id: number }> {
   selectedIds: Set<number>;
   onToggleSelect: (id: number) => void;
   onRowClick: (id: number) => void;
-  sortBy: "score" | "title" | "added";
+  sortBy: "score" | "title" | "added" | "size";
   order: SortDirection;
-  onSortChange: (key: "score" | "title" | "added") => void;
+  onSortChange: (key: "score" | "title" | "added" | "size") => void;
   rowActions?: (row: T) => ReactNode;
   emptyState?: ReactNode;
 }
@@ -60,14 +60,13 @@ export function MediaTable<T extends { id: number }>({
                 </th>
               );
             })}
-            {rowActions && <th className="w-32 px-3 py-2.5" />}
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr
               key={row.id}
-              className="group border-t hover:bg-muted/40 cursor-pointer transition-colors"
+              className="group relative border-t hover:bg-muted/40 cursor-pointer transition-colors"
               onClick={() => onRowClick(row.id)}
             >
               <td
@@ -83,12 +82,10 @@ export function MediaTable<T extends { id: number }>({
               ))}
               {rowActions && (
                 <td
-                  className="px-3 py-2 align-middle text-right"
+                  className="absolute right-0 top-0 h-full px-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-muted/60"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    {rowActions(row)}
-                  </div>
+                  {rowActions(row)}
                 </td>
               )}
             </tr>

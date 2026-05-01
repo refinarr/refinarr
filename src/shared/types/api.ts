@@ -56,3 +56,23 @@ export interface MediaQuery {
   profileId?: number;
   missingCfId?: number;
 }
+
+export interface DashboardInstanceSummary {
+  id: number;
+  type: "radarr" | "sonarr";
+  name: string;
+  enabled: boolean;
+  flaggedCount: number;
+  failedActionsCount: number;
+  hasPreferences: boolean;
+}
+
+export interface DashboardSummary {
+  perInstance: DashboardInstanceSummary[];
+  totals: {
+    flaggedMovies: number;
+    flaggedSeries: number;
+    failedActions24h: number;
+  };
+  recentActivity: import("./models").ActionLog[];
+}
