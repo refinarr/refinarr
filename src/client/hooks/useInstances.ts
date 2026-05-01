@@ -39,6 +39,10 @@ export function useDeleteInstance() {
 
 export function useTestConnection() {
   return useMutation({
-    mutationFn: (id: number) => api.post<{ ok: boolean }>(`/instances/${id}/test`),
+    mutationFn: async (id: number) => {
+      const result = await api.post<{ ok: boolean }>(`/instances/${id}/test`);
+      if (!result.ok) throw new Error("Connection failed");
+      return result;
+    },
   });
 }

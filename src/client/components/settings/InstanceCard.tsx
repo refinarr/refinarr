@@ -1,11 +1,10 @@
 "use client";
-import { useState } from "react";
 import { Card, CardContent } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
 import { Edit2, Trash2, Plug } from "lucide-react";
 import { useDeleteInstance, useTestConnection } from "@/client/hooks/useInstances";
-import { toast } from "sonner";
+import { withToast } from "@/client/lib/with-toast";
 import type { Instance } from "@/shared/types/models";
 
 interface Props {
@@ -15,25 +14,20 @@ interface Props {
 }
 
 export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
-  const [testing, setTesting] = useState(false);
   const deleteInstance = useDeleteInstance();
   const test = useTestConnection();
 
-  const handleTest = async () => {
-    setTesting(true);
-    try {
-      const { ok } = await test.mutateAsync(instance.id);
-      if (ok) toast.success(`${instance.name}: connected`);
-      else toast.error(`${instance.name}: connection failed`);
-    } finally {
-      setTesting(false);
-    }
-  };
+  const runTest = withToast(test, {
+    success: `${instance.name}: connected`,
+    error: `${instance.name}: connection failed`,
+  });
+  const runDelete = withToast(deleteInstance, {
+    success: "Instance deleted",
+    error: "Failed to delete instance",
+  });
 
-  const handleDelete = async () => {
-    await deleteInstance.mutateAsync(instance.id);
-    toast.success("Instance deleted");
-  };
+  const handleTest = () => runTest(instance.id);
+  const handleDelete = () => runDelete(instance.id);
 
   return (
     <Card>
@@ -47,7 +41,7 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
           <Badge variant="destructive">{failedCount} failed</Badge>
         )}
         <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={handleTest} disabled={testing}>
+          <Button variant="outline" size="icon" onClick={handleTest} disabled={test.isPending}>
             <Plug className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="icon" onClick={onEdit}>

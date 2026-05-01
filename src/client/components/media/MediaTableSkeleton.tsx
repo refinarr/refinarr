@@ -1,7 +1,11 @@
 "use client";
 import { Skeleton } from "@/client/components/ui/skeleton";
 
-export function MediaTableSkeleton({ rows = 10 }: { rows?: number }) {
+interface Props {
+  rows?: number;
+}
+
+export function MediaTableSkeleton({ rows = 10 }: Props) {
   return (
     <div className="flex flex-col gap-2">
       {Array.from({ length: rows }).map((_, i) => (

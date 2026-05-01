@@ -2,7 +2,11 @@
 import { type ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 
-export function AppShell({ children }: { children: ReactNode }) {
+interface Props {
+  children: ReactNode;
+}
+
+export function AppShell({ children }: Props) {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />

@@ -21,10 +21,7 @@ export default function SettingsPage() {
   const [editing, setEditing] = useState<Instance | null>(null);
 
   const manualInstances = (instances ?? []).filter(
-    (i) => {
-      console.log(`Instance ${i.id} scoring mode:`, config?.scoringModes[`scoringMode:${i.id}`]);
-      return (config?.scoringModes[`scoringMode:${i.id}`] ?? "manual") === "manual";
-    }
+    (i) => (config?.scoringModes[`scoringMode:${i.id}`] ?? "manual") === "manual"
   );
 
   return (

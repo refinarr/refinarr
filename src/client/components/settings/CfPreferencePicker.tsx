@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
 import { Button } from "@/client/components/ui/button";
 import { Badge } from "@/client/components/ui/badge";
@@ -8,7 +8,7 @@ import { Label } from "@/client/components/ui/label";
 import { useCustomFormats } from "@/client/hooks/useCustomFormats";
 import { usePreferences, useSetPreferences } from "@/client/hooks/usePreferences";
 import type { Instance } from "@/shared/types/models";
-import { toast } from "sonner";
+import { withToast } from "@/client/lib/with-toast";
 import { Loader2 } from "lucide-react";
 
 interface Props {
@@ -21,26 +21,31 @@ export function CfPreferencePicker({ instance }: Props) {
   const { data: saved } = usePreferences(instance.id);
   const setPreferences = useSetPreferences();
 
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [overrides, setOverrides] = useState<Map<number, boolean>>(new Map());
 
-  useEffect(() => {
-    if (saved) setSelected(new Set(saved.map((p) => p.cfId)));
-  }, [saved]);
+  const savedIds = new Set((saved ?? []).map((p) => p.cfId));
+  const isSelected = (id: number) => overrides.get(id) ?? savedIds.has(id);
+  const selectedCount = (available ?? []).filter((cf) => isSelected(cf.id)).length;
 
   const toggle = (id: number) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+    setOverrides((prev) => {
+      const next = new Map(prev);
+      next.set(id, !isSelected(id));
       return next;
     });
   };
 
+  const savePrefs = withToast(setPreferences, {
+    success: "Custom Formats saved",
+    error: "Failed to save Custom Formats",
+  });
+
   const save = async () => {
     const cfs = (available ?? [])
-      .filter((cf) => selected.has(cf.id))
+      .filter((cf) => isSelected(cf.id))
       .map((cf) => ({ cfId: cf.id, cfName: cf.name }));
-    await setPreferences.mutateAsync({ instanceId: instance.id, cfs });
-    toast.success("Custom Formats saved");
+    await savePrefs({ instanceId: instance.id, cfs });
+    setOverrides(new Map());
   };
 
   if (loadingCfs) {
@@ -69,8 +74,8 @@ export function CfPreferencePicker({ instance }: Props) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">{instance.name}</CardTitle>
           <div className="flex items-center gap-2">
-            {selected.size > 0 && (
-              <Badge variant="secondary">{selected.size} selected</Badge>
+            {selectedCount > 0 && (
+              <Badge variant="secondary">{selectedCount} selected</Badge>
             )}
             <Button size="sm" onClick={save} disabled={setPreferences.isPending}>
               Save
@@ -84,7 +89,7 @@ export function CfPreferencePicker({ instance }: Props) {
             <div key={cf.id} className="flex items-center gap-2">
               <Checkbox
                 id={`cf-${instance.id}-${cf.id}`}
-                checked={selected.has(cf.id)}
+                checked={isSelected(cf.id)}
                 onCheckedChange={() => toggle(cf.id)}
               />
               <Label htmlFor={`cf-${instance.id}-${cf.id}`} className="text-sm cursor-pointer">

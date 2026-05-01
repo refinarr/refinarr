@@ -4,7 +4,12 @@ import { RotateCcw } from "lucide-react";
 import { useRetryAction } from "@/client/hooks/useRetryAction";
 import { toast } from "sonner";
 
-export function RetryButton({ logId, title }: { logId: number; title: string }) {
+interface Props {
+  logId: number;
+  title: string;
+}
+
+export function RetryButton({ logId, title }: Props) {
   const retry = useRetryAction();
 
   const handleRetry = async () => {

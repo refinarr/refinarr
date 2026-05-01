@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
 import { useInstances } from "./useInstances";
 import { useSeries } from "./useSeries";
 import { useConfig } from "./useConfig";
@@ -7,7 +8,7 @@ import { usePreferences } from "./usePreferences";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { useInfiniteScroll } from "./useInfiniteScroll";
 import { api } from "@/client/lib/api";
-import { toast } from "sonner";
+import { withToast } from "@/client/lib/with-toast";
 import type { FlaggedSeries, ScoringMode } from "@/shared/types/models";
 import type { MediaFilters } from "./useMoviesPage";
 
@@ -37,28 +38,40 @@ export function useShowsPage() {
   const toggle = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
+  const searchMutation = useMutation({
+    mutationFn: async (series: FlaggedSeries[]) => {
+      for (const s of series) {
+        await api.post(`/sonarr/series/search`, { instanceId: activeInstance, mediaId: s.id, title: s.title });
+      }
+    },
+  });
+
+  const ignoreMutation = useMutation({
+    mutationFn: async (series: FlaggedSeries[]) => {
+      for (const s of series) {
+        await api.post(`/ignore`, { instanceId: activeInstance, mediaId: s.id, mediaType: "series", title: s.title });
+      }
+    },
+    onSuccess: () => refetch(),
+  });
+
+  const runSearch = withToast(searchMutation, { success: "Search triggered", error: "Failed to trigger search" });
+  const runIgnore = withToast(ignoreMutation, { success: "Items ignored", error: "Failed to ignore items" });
+
   const handleSearch = async () => {
-    const selectedSeries = allSeries.filter((s) => selected.has(s.id));
-    for (const s of selectedSeries) {
-      await api.post(`/sonarr/series/search`, { instanceId: activeInstance, mediaId: s.id, title: s.title });
-    }
-    toast.success("Search triggered");
+    await runSearch(allSeries.filter((s) => selected.has(s.id)));
     setSelected(new Set());
   };
 
   const handleIgnore = async () => {
-    const selectedSeries = allSeries.filter((s) => selected.has(s.id));
-    for (const s of selectedSeries) {
-      await api.post(`/ignore`, { instanceId: activeInstance, mediaId: s.id, mediaType: "series", title: s.title });
-    }
-    toast.success("Items ignored");
+    await runIgnore(allSeries.filter((s) => selected.has(s.id)));
     setSelected(new Set());
-    refetch();
   };
 
   return {

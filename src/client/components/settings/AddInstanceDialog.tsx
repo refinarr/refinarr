@@ -9,7 +9,7 @@ import { Input } from "@/client/components/ui/input";
 import { Label } from "@/client/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { useCreateInstance, useUpdateInstance } from "@/client/hooks/useInstances";
-import { toast } from "sonner";
+import { withToast } from "@/client/lib/with-toast";
 import type { Instance } from "@/shared/types/models";
 
 const schema = z.object({
@@ -37,20 +37,14 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
     defaultValues: editing ?? { type: "radarr", name: "", url: "", apiKey: "" },
   });
 
+  const runUpdate = withToast(update, { success: "Instance updated", error: "Failed to update instance" });
+  const runCreate = withToast(create, { success: "Instance added", error: "Failed to add instance" });
+
   const onSubmit = async (data: FormValues) => {
-    try {
-      if (editing) {
-        await update.mutateAsync({ id: editing.id, data });
-        toast.success("Instance updated");
-      } else {
-        await create.mutateAsync(data);
-        toast.success("Instance added");
-      }
-      reset();
-      onClose();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save instance");
-    }
+    if (editing) await runUpdate({ id: editing.id, data });
+    else await runCreate(data);
+    reset();
+    onClose();
   };
 
   return (

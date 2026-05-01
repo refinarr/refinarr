@@ -16,6 +16,10 @@ const labels: Record<ActionStatus, string> = {
   pending: "Pending",
 };
 
-export function ActionStatusBadge({ status }: { status: ActionStatus }) {
+interface Props {
+  status: ActionStatus;
+}
+
+export function ActionStatusBadge({ status }: Props) {
   return <Badge variant={variants[status]}>{labels[status]}</Badge>;
 }

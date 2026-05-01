@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
 import { useInstances } from "./useInstances";
 import { useMovies } from "./useMovies";
 import { useConfig } from "./useConfig";
@@ -7,7 +8,7 @@ import { usePreferences } from "./usePreferences";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { useInfiniteScroll } from "./useInfiniteScroll";
 import { api } from "@/client/lib/api";
-import { toast } from "sonner";
+import { withToast } from "@/client/lib/with-toast";
 import type { FlaggedMovie, ScoringMode } from "@/shared/types/models";
 
 export interface MediaFilters {
@@ -42,28 +43,40 @@ export function useMoviesPage() {
   const toggle = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
+  const searchMutation = useMutation({
+    mutationFn: async (movies: FlaggedMovie[]) => {
+      for (const m of movies) {
+        await api.post(`/radarr/movies/search`, { instanceId: activeInstance, mediaId: m.id, title: m.title });
+      }
+    },
+  });
+
+  const ignoreMutation = useMutation({
+    mutationFn: async (movies: FlaggedMovie[]) => {
+      for (const m of movies) {
+        await api.post(`/ignore`, { instanceId: activeInstance, mediaId: m.id, mediaType: "movie", title: m.title });
+      }
+    },
+    onSuccess: () => refetch(),
+  });
+
+  const runSearch = withToast(searchMutation, { success: "Search triggered", error: "Failed to trigger search" });
+  const runIgnore = withToast(ignoreMutation, { success: "Items ignored", error: "Failed to ignore items" });
+
   const handleSearch = async () => {
-    const selectedMovies = allMovies.filter((m) => selected.has(m.id));
-    for (const m of selectedMovies) {
-      await api.post(`/radarr/movies/search`, { instanceId: activeInstance, mediaId: m.id, title: m.title });
-    }
-    toast.success("Search triggered");
+    await runSearch(allMovies.filter((m) => selected.has(m.id)));
     setSelected(new Set());
   };
 
   const handleIgnore = async () => {
-    const selectedMovies = allMovies.filter((m) => selected.has(m.id));
-    for (const m of selectedMovies) {
-      await api.post(`/ignore`, { instanceId: activeInstance, mediaId: m.id, mediaType: "movie", title: m.title });
-    }
-    toast.success("Items ignored");
+    await runIgnore(allMovies.filter((m) => selected.has(m.id)));
     setSelected(new Set());
-    refetch();
   };
 
   return {

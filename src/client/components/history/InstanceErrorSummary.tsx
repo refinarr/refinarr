@@ -3,7 +3,11 @@ import Link from "next/link";
 import { Badge } from "@/client/components/ui/badge";
 import { useHistoryErrors } from "@/client/hooks/useHistory";
 
-export function InstanceErrorSummary({ instanceId }: { instanceId: number }) {
+interface Props {
+  instanceId: number;
+}
+
+export function InstanceErrorSummary({ instanceId }: Props) {
   const { data: errors } = useHistoryErrors(instanceId);
   const count = errors?.length ?? 0;
   if (count === 0) return null;

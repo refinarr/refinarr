@@ -19,7 +19,7 @@ export interface CreateInstanceDto {
   enabled?: boolean;
 }
 
-export interface UpdateInstanceDto extends Partial<CreateInstanceDto> {}
+export type UpdateInstanceDto = Partial<CreateInstanceDto>;
 
 export interface SetConfigDto {
   key: string;
