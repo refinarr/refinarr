@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
@@ -55,7 +55,7 @@ describe("createApiHandler", () => {
         {
           code: "invalid_type",
           expected: "string",
-          received: "number",
+          input: 42,
           path: ["name"],
           message: "Expected string",
         },

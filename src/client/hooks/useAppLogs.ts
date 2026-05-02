@@ -53,6 +53,9 @@ export function useAppLogs(filters: AppLogFilters = {}) {
   }, [filters.level, filters.q]);
 
   useEffect(() => {
+    // SSE subscribe-to-external-system pattern. connect() opens an EventSource
+    // and resets the entry buffer; that's exactly what effects are for.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     connect();
     return () => {
       esRef.current?.close();

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -56,19 +56,17 @@ export function useMoviesPage() {
   const scoringMode = (config?.scoringModes[`scoringMode:${activeInstance}`] ?? "manual") as ScoringMode;
   const noCfsConfigured = scoringMode === "manual" && (prefs?.length ?? 0) === 0;
 
-  const [isModeTransitioning, setIsModeTransitioning] = useState(false);
+  // Reset mode-specific filters when the user toggles scoring mode. Adjust
+  // state during render — React aborts and restarts so there's no commit
+  // between, no flash, and no setState-in-effect cascade.
+  const [trackedMode, setTrackedMode] = useState(scoringMode);
+  if (trackedMode !== scoringMode) {
+    setTrackedMode(scoringMode);
+    setFilters((f) => ({ ...f, missingCfId: null, hasNegativeCfId: null, maxScore: 1 }));
+  }
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching, isError, refetch } =
     useMovies(activeInstance, { ...filters, maxScore: debouncedMaxScore, q: debouncedQ, scoringMode });
-
-  useEffect(() => {
-    setIsModeTransitioning(true);
-    setFilters((f) => ({ ...f, missingCfId: null, hasNegativeCfId: null, maxScore: 1 }));
-  }, [scoringMode]);
-
-  useEffect(() => {
-    if (!isFetching) setIsModeTransitioning(false);
-  }, [isFetching]);
 
   const sentinelRef = useInfiniteScroll(fetchNextPage, !!hasNextPage);
   const allMovies: FlaggedMovie[] = data?.pages.flatMap((p) => p.items) ?? [];
@@ -183,7 +181,7 @@ export function useMoviesPage() {
     selectedItem,
     allMovies,
     total,
-    isLoading: isLoading || isModeTransitioning,
+    isLoading,
     isError,
     isFetching,
     isFetchingNextPage,
