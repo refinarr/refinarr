@@ -1,5 +1,7 @@
 import type { Instance } from "@/shared/types/models";
 import { appLogger } from "@/server/lib/app-logger";
+import { assertSafeArrUrl } from "@/server/lib/url-guard";
+import { redactString } from "@/server/lib/redact";
 
 export abstract class ArrClient {
   protected readonly baseUrl: string;
@@ -7,6 +9,9 @@ export abstract class ArrClient {
   protected readonly instanceName: string;
 
   constructor(instance: Instance) {
+    // Defense in depth: even if a row was tampered with, refuse to fetch
+    // unsafe URLs. The primary check happens at write time in InstanceService.
+    assertSafeArrUrl(instance.url);
     this.baseUrl = instance.url.replace(/\/$/, "");
     this.apiKey = instance.apiKey;
     this.instanceName = instance.name;
@@ -27,7 +32,12 @@ export abstract class ArrClient {
       const text = await res.text().catch(() => "");
       appLogger.warn(`Arr API error: ${this.instanceName}`, {
         source: "arr-client",
-        context: { instance: this.instanceName, url, status: res.status, body: text.slice(0, 500) },
+        context: {
+          instance: this.instanceName,
+          url,
+          status: res.status,
+          body: redactString(text).slice(0, 500),
+        },
       });
       throw new Error(`${this.instanceName} API error: ${res.status}`);
     }

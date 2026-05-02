@@ -2,10 +2,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Film, Tv2, LayoutDashboard, History, Settings, EyeOff, AlertCircle } from "lucide-react";
+import { Film, Tv2, LayoutDashboard, History, Settings, EyeOff, AlertCircle, LogOut } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/client/lib/utils";
 import { HealthDot } from "./HealthDot";
+import { useMe, useLogout } from "@/client/hooks/useMe";
 
 interface NavLink {
   href: string;
@@ -27,6 +28,9 @@ export function Sidebar() {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const tApp = useTranslations();
+  const tAuth = useTranslations("auth");
+  const { data: me } = useMe();
+  const logout = useLogout();
   return (
     <aside className="flex h-screen w-56 flex-col border-r border-border bg-card px-3 py-4">
       <div className="mb-6 flex items-center gap-2 px-3">
@@ -50,6 +54,24 @@ export function Sidebar() {
           </Link>
         ))}
       </nav>
+      <div className="mt-auto px-3 pt-4 border-t border-border">
+        {me && (
+          <p className="text-xs text-muted-foreground truncate mb-2" title={me.username}>
+            {me.username}
+          </p>
+        )}
+        {me?.source === "session" && (
+          <button
+            type="button"
+            onClick={() => logout.mutate()}
+            disabled={logout.isPending}
+            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            {tAuth("logout")}
+          </button>
+        )}
+      </div>
     </aside>
   );
 }

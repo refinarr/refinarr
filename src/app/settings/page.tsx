@@ -6,6 +6,7 @@ import { AddInstanceDialog } from "@/client/components/settings/AddInstanceDialo
 import { InstanceCard } from "@/client/components/settings/InstanceCard";
 import { DryRunToggle } from "@/client/components/settings/DryRunToggle";
 import { ApiKeyCard } from "@/client/components/settings/ApiKeyCard";
+import { PasswordChangeCard } from "@/client/components/settings/PasswordChangeCard";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { CfPreferencePicker } from "@/client/components/settings/CfPreferencePicker";
 import { Button } from "@/client/components/ui/button";
@@ -97,6 +98,13 @@ export default function SettingsPage() {
         {/* Section 5: API Access */}
         <section>
           <ApiKeyCard />
+        </section>
+
+        <Separator />
+
+        {/* Section 6: Account password */}
+        <section>
+          <PasswordChangeCard />
         </section>
       </div>
 

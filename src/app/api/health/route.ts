@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { createApiHandler } from "@/server/lib/handler";
 
-export const GET = createApiHandler(
-  async () => NextResponse.json({ status: "ok" }),
-  { skipAuth: true }
-);
+// /api/health is whitelisted in middleware, so no createApiHandler wrap needed.
+export async function GET() {
+  return NextResponse.json({ status: "ok" });
+}

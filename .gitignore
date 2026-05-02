@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# at-rest encryption key — must never be committed
+.encryption-key
 
 # vercel
 .vercel

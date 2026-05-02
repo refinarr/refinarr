@@ -30,4 +30,16 @@ export async function seedDefaults() {
     const generated = crypto.randomBytes(16).toString("hex");
     await prisma.appConfig.create({ data: { key: "apiKey", value: generated } });
   }
+
+  // One-shot migration: encrypt any pre-existing instance.apiKey rows that
+  // were stored as plaintext before the v1: encryption-at-rest change.
+  const { instanceRepository } = await import("@/server/repositories/InstanceRepository");
+  const migrated = await instanceRepository.migrateUnencrypted();
+  if (migrated > 0) {
+    const { appLogger } = await import("./app-logger");
+    appLogger.info("Encrypted existing instance API keys at rest", {
+      source: "db",
+      context: { count: migrated },
+    });
+  }
 }

@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import { redactContext } from "./redact";
 import type { LogLevel } from "@/shared/types/models";
 
 interface LogFields {
@@ -10,13 +11,15 @@ interface LogFields {
 function persist(level: LogLevel, message: string, fields?: LogFields) {
   if (!logger.isLevelEnabled(level)) return;
 
-  const ctx: Record<string, unknown> = { ...(fields?.context ?? {}) };
+  const rawCtx: Record<string, unknown> = { ...(fields?.context ?? {}) };
   if (fields?.err instanceof Error) {
-    ctx.errorMessage = fields.err.message;
-    ctx.stack = fields.err.stack;
+    rawCtx.errorMessage = fields.err.message;
+    rawCtx.stack = fields.err.stack;
   } else if (fields?.err !== undefined) {
-    ctx.errorMessage = String(fields.err);
+    rawCtx.errorMessage = String(fields.err);
   }
+
+  const ctx = redactContext(rawCtx) ?? {};
 
   const data = {
     level,

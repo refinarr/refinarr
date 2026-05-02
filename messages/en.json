@@ -1,5 +1,44 @@
 {
   "appName": "Remedarr",
+  "auth": {
+    "setup": {
+      "title": "Welcome to Remedarr",
+      "subtitle": "Create the admin account that will manage this instance.",
+      "username": "Username",
+      "password": "Password",
+      "passwordHint": "At least 12 characters.",
+      "confirmPassword": "Confirm password",
+      "submit": "Create account",
+      "mismatch": "Passwords do not match.",
+      "tooShort": "Password must be at least 12 characters.",
+      "failed": "Couldn't create account. Try again."
+    },
+    "login": {
+      "title": "Sign in to Remedarr",
+      "username": "Username",
+      "password": "Password",
+      "submit": "Sign in",
+      "failed": "Invalid username or password.",
+      "tooManyAttempts": "Too many attempts. Wait a few minutes."
+    },
+    "logout": "Sign out",
+    "password": {
+      "title": "Change password",
+      "description": "Change the password for your remedarr account. All other signed-in sessions will be signed out.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "newPasswordHint": "At least 12 characters. Must differ from your current password.",
+      "confirmNewPassword": "Confirm new password",
+      "submit": "Change password",
+      "changed": "Password changed. Other sessions have been signed out.",
+      "wrongCurrent": "Current password is wrong.",
+      "tooShort": "New password must be at least 12 characters.",
+      "mismatch": "New passwords do not match.",
+      "sameAsCurrent": "New password must differ from current password.",
+      "tooManyAttempts": "Too many attempts. Wait a few minutes.",
+      "failed": "Couldn't change password. Try again."
+    }
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -164,6 +203,20 @@
     "noCfsConfigured": "No Custom Formats configured",
     "dryRunMode": "Dry Run Mode",
     "apiAccess": "API Access",
+    "apiKey": {
+      "description": "Use this key in the X-Api-Key header for scripted access. Reveal or rotate requires your password.",
+      "passwordPrompt": "Enter your password to continue",
+      "reveal": "Reveal",
+      "hide": "Hide",
+      "copy": "Copy",
+      "rotate": "Rotate",
+      "rotateConfirmTitle": "Rotate API key?",
+      "rotateConfirmBody": "Any scripts using the current key will stop working until you update them.",
+      "wrongPassword": "Wrong password.",
+      "tooManyAttempts": "Too many attempts. Try again later.",
+      "copied": "API key copied",
+      "rotated": "API key rotated"
+    },
     "instanceForm": {
       "addTitle": "Add Instance",
       "editTitle": "Edit Instance",

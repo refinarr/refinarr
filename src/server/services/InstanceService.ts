@@ -2,6 +2,7 @@ import type { Instance, ArrType } from "@/shared/types/models";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { appLogger } from "@/server/lib/app-logger";
+import { assertSafeArrUrl } from "@/server/lib/url-guard";
 
 export class InstanceService {
   async getAll(): Promise<Instance[]> {
@@ -19,6 +20,7 @@ export class InstanceService {
     apiKey: string;
     enabled?: boolean;
   }): Promise<Instance> {
+    assertSafeArrUrl(data.url);
     const created = await instanceRepository.create({ ...data, enabled: data.enabled ?? true });
     appLogger.info("Instance created", {
       source: "instance-service",
@@ -28,6 +30,7 @@ export class InstanceService {
   }
 
   async update(id: number, data: Partial<Instance>): Promise<Instance> {
+    if (typeof data.url === "string") assertSafeArrUrl(data.url);
     const updated = await instanceRepository.update(id, data);
     appLogger.info("Instance updated", {
       source: "instance-service",

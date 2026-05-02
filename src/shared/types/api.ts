@@ -21,6 +21,18 @@ export interface CreateInstanceDto {
 
 export type UpdateInstanceDto = Partial<CreateInstanceDto>;
 
+/**
+ * Shape sent to the browser. Never includes apiKey — that's a server-only secret.
+ */
+export interface InstanceListItem {
+  id: number;
+  type: "radarr" | "sonarr";
+  name: string;
+  url: string;
+  enabled: boolean;
+  createdAt: string | Date;
+}
+
 export interface SetConfigDto {
   key: string;
   value: string;
