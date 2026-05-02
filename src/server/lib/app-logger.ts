@@ -1,4 +1,5 @@
 import { logger } from "./logger";
+import type { LogLevel } from "@/shared/types/models";
 
 interface LogFields {
   source?: string;
@@ -6,7 +7,9 @@ interface LogFields {
   err?: unknown;
 }
 
-function persist(level: "warn" | "error", message: string, fields?: LogFields) {
+function persist(level: LogLevel, message: string, fields?: LogFields) {
+  if (!logger.isLevelEnabled(level)) return;
+
   const ctx: Record<string, unknown> = { ...(fields?.context ?? {}) };
   if (fields?.err instanceof Error) {
     ctx.errorMessage = fields.err.message;
@@ -22,7 +25,6 @@ function persist(level: "warn" | "error", message: string, fields?: LogFields) {
     context: Object.keys(ctx).length ? JSON.stringify(ctx) : null,
   };
 
-  // Lazy import avoids circular-dep and stale-module issues at startup
   import("@/server/repositories/AppLogRepository")
     .then(({ appLogRepository }) =>
       appLogRepository.create(data).catch((e: unknown) => logger.error(e, "AppLog persist failed"))
@@ -31,11 +33,13 @@ function persist(level: "warn" | "error", message: string, fields?: LogFields) {
 }
 
 export const appLogger = {
-  info(msg: string, fields?: LogFields) {
-    logger.info(fields?.context, msg);
-  },
   debug(msg: string, fields?: LogFields) {
     logger.debug(fields?.context, msg);
+    persist("debug", msg, fields);
+  },
+  info(msg: string, fields?: LogFields) {
+    logger.info(fields?.context, msg);
+    persist("info", msg, fields);
   },
   warn(msg: string, fields?: LogFields) {
     logger.warn(fields?.context, msg);

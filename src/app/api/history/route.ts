@@ -19,3 +19,8 @@ export const GET = createApiHandler(async (req: NextRequest) => {
 
   return NextResponse.json({ items, total, page, limit, hasMore: page * limit < total });
 });
+
+export const DELETE = createApiHandler(async () => {
+  await logRepository.clearAll();
+  return NextResponse.json({ ok: true });
+});

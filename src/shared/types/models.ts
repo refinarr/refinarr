@@ -94,7 +94,7 @@ export interface CfPreference {
   cfName: string;
 }
 
-export type LogLevel = "warn" | "error";
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export interface AppLogEntry {
   id: number;

@@ -3,18 +3,13 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
 import { ActionStatusBadge } from "@/client/components/history/ActionStatusBadge";
+import { ActionTypeBadge } from "@/client/components/history/ActionTypeBadge";
 import { formatRelative } from "@/client/lib/format";
 import type { ActionLog } from "@/shared/types/models";
 
 interface Props {
   logs: ActionLog[];
 }
-
-const actionLabel: Record<string, string> = {
-  search: "Search",
-  delete: "Delete",
-  ignore: "Ignore",
-};
 
 export function RecentActivityList({ logs }: Props) {
   return (
@@ -32,10 +27,12 @@ export function RecentActivityList({ logs }: Props) {
           <ul className="divide-y">
             {logs.map((log) => (
               <li key={log.id} className="py-2 flex items-center gap-3">
-                <ActionStatusBadge status={log.status} />
-                <span className="text-xs text-muted-foreground w-16 shrink-0">
-                  {actionLabel[log.action] ?? log.action}
-                </span>
+                <div className="w-20 shrink-0">
+                  <ActionStatusBadge status={log.status} />
+                </div>
+                <div className="w-24 shrink-0">
+                  <ActionTypeBadge action={log.action} />
+                </div>
                 <span className="text-sm truncate flex-1" title={log.title}>{log.title}</span>
                 <span className="text-xs text-muted-foreground tabular-nums shrink-0">
                   {formatRelative(log.createdAt)}

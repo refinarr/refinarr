@@ -26,7 +26,7 @@ interface SonarrQualityProfile {
   formatItems: Array<{ format: number; name: string; score: number }>;
 }
 
-const BATCH = 10;
+const BATCH = 20;
 
 export class SonarrClient extends ArrClient {
   constructor(instance: Instance) {

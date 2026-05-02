@@ -42,7 +42,7 @@ export function useMoviesPage() {
   });
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  const activeInstance = instanceId || instances?.[0]?.id || 0;
+  const activeInstance = instanceId || instances?.find((i) => i.type === "radarr")?.id || 0;
   const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
   const debouncedQ = useDebouncedValue(filters.q, 300);
 

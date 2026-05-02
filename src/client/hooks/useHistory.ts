@@ -1,5 +1,5 @@
 "use client";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
 import type { ActionLog } from "@/shared/types/models";
@@ -34,5 +34,13 @@ export function useHistoryErrors(instanceId: number) {
     queryKey: queryKeys.historyErrors(instanceId),
     queryFn: () => api.get<ActionLog[]>(`/history/errors?instanceId=${instanceId}`),
     enabled: instanceId > 0,
+  });
+}
+
+export function useClearHistory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete<{ ok: boolean }>("/history"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["history"] }),
   });
 }

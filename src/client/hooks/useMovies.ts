@@ -35,6 +35,8 @@ export function useMovies(instanceId: number, filters: MovieFilters = {}) {
     getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
     placeholderData: keepPreviousData,
     enabled: instanceId > 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 

@@ -1,6 +1,8 @@
 import type { ActionLog, ActionStatus, ActionType } from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
 
+const RETENTION_CAP = 5000;
+
 interface LogFilter {
   instanceId?: number;
   status?: ActionStatus;
@@ -63,7 +65,9 @@ export class LogRepository extends BaseRepository<ActionLog> {
   async create(
     data: Omit<ActionLog, "id" | "createdAt">
   ): Promise<ActionLog> {
-    return this.db.actionLog.create({ data }) as Promise<ActionLog>;
+    const created = (await this.db.actionLog.create({ data })) as ActionLog;
+    void this.trim();
+    return created;
   }
 
   async update(id: number, data: Partial<ActionLog>): Promise<ActionLog> {
@@ -72,6 +76,22 @@ export class LogRepository extends BaseRepository<ActionLog> {
 
   async delete(id: number): Promise<void> {
     await this.db.actionLog.delete({ where: { id } });
+  }
+
+  async clearAll(): Promise<void> {
+    await this.db.actionLog.deleteMany({});
+  }
+
+  private async trim(): Promise<void> {
+    const total = await this.db.actionLog.count();
+    if (total <= RETENTION_CAP) return;
+    const overflow = total - RETENTION_CAP;
+    const oldest = await this.db.actionLog.findMany({
+      orderBy: { createdAt: "asc" },
+      take: overflow,
+      select: { id: true },
+    });
+    await this.db.actionLog.deleteMany({ where: { id: { in: oldest.map((e) => e.id) } } });
   }
 }
 

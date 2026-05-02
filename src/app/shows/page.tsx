@@ -21,10 +21,12 @@ import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSel
 import { useShowsPage } from "@/client/hooks/useShowsPage";
 import { useQualityProfiles } from "@/client/hooks/useQualityProfiles";
 import { usePreferences } from "@/client/hooks/usePreferences";
+import { useRefreshInstance } from "@/client/hooks/useRefreshInstance";
 import { getSeverity } from "@/client/lib/severity";
 import { formatBytes } from "@/client/lib/format";
+import { Button } from "@/client/components/ui/button";
 import type { FlaggedSeries } from "@/shared/types/models";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 export default function ShowsPage() {
   return (
@@ -47,6 +49,7 @@ function ShowsPageContent() {
 
   const { data: profiles } = useQualityProfiles("sonarr", activeInstance);
   const { data: prefs } = usePreferences(activeInstance);
+  const refreshMutation = useRefreshInstance();
 
   const wantedCfOptions = (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }));
   const negativeCfOptions = (() => {
@@ -190,6 +193,17 @@ function ShowsPageContent() {
               )}
             </div>
             <div className="flex items-center gap-3">
+              {activeInstance > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => refreshMutation.mutate(activeInstance)}
+                  disabled={refreshMutation.isPending || activeInstance <= 0}
+                  title="Pull fresh data from Sonarr"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
+                </Button>
+              )}
               {activeInstance > 0 && <ScoringModeSelector instanceId={activeInstance} />}
               {sonarrInstances.length > 1 && (
                 <Select value={String(activeInstance)} onValueChange={(v) => setInstanceId(Number(v ?? 0))}>

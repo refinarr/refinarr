@@ -1,8 +1,9 @@
 "use client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/client/components/ui/table";
 import { ActionStatusBadge } from "./ActionStatusBadge";
+import { ActionTypeBadge } from "./ActionTypeBadge";
 import { RetryButton } from "./RetryButton";
-import type { ActionLog } from "@/shared/types/models";
+import type { ActionLog, ActionStatus } from "@/shared/types/models";
 
 interface Props {
   logs: ActionLog[];
@@ -16,7 +17,6 @@ export function HistoryTable({ logs }: Props) {
           <TableHead>Date</TableHead>
           <TableHead>Action</TableHead>
           <TableHead>Title</TableHead>
-          <TableHead>Dry Run</TableHead>
           <TableHead>Status</TableHead>
           <TableHead />
         </TableRow>
@@ -27,11 +27,12 @@ export function HistoryTable({ logs }: Props) {
             <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
               {new Date(log.createdAt).toLocaleString()}
             </TableCell>
-            <TableCell className="capitalize text-sm">{log.action.replace("_", " ")}</TableCell>
-            <TableCell className="text-sm">{log.title}</TableCell>
-            <TableCell>{log.isDryRun ? "Yes" : "No"}</TableCell>
             <TableCell>
-              <ActionStatusBadge status={log.status as import("@/shared/types/models").ActionStatus} />
+              <ActionTypeBadge action={log.action} />
+            </TableCell>
+            <TableCell className="text-sm">{log.title}</TableCell>
+            <TableCell>
+              <ActionStatusBadge status={log.status as ActionStatus} />
             </TableCell>
             <TableCell>
               {log.status === "failed" && log.payload && (

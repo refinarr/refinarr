@@ -4,6 +4,7 @@ import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
 import { Edit2, Trash2, Plug } from "lucide-react";
 import { useDeleteInstance, useTestConnection } from "@/client/hooks/useInstances";
+import { usePreferences } from "@/client/hooks/usePreferences";
 import { withToast } from "@/client/lib/with-toast";
 import type { Instance } from "@/shared/types/models";
 
@@ -16,6 +17,8 @@ interface Props {
 export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
   const deleteInstance = useDeleteInstance();
   const test = useTestConnection();
+  const { data: prefs } = usePreferences(instance.id);
+  const noCfs = (prefs?.length ?? 0) === 0 && instance.enabled;
 
   const runTest = withToast(test, {
     success: `${instance.name}: connected`,
@@ -36,6 +39,9 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
         <div className="flex-1">
           <p className="font-medium">{instance.name}</p>
           <p className="text-xs text-muted-foreground">{instance.url}</p>
+          {noCfs && (
+            <p className="text-xs text-yellow-400 mt-0.5">No Custom Formats configured</p>
+          )}
         </div>
         {failedCount > 0 && (
           <Badge variant="destructive">{failedCount} failed</Badge>

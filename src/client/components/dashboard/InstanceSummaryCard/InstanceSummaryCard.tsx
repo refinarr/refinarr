@@ -55,19 +55,15 @@ export function InstanceSummaryCard({ instance }: Props) {
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
         </Link>
 
-        <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center text-xs">
           <InstanceErrorSummary instanceId={instance.id} />
           <Link
             href="/settings"
-            className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+            className="ml-auto flex items-center gap-1 text-muted-foreground hover:text-foreground"
           >
             <Settings className="h-3 w-3" /> Settings
           </Link>
         </div>
-
-        {!instance.hasPreferences && instance.enabled && (
-          <p className="text-xs text-yellow-400">No Custom Formats configured</p>
-        )}
       </CardContent>
     </Card>
   );

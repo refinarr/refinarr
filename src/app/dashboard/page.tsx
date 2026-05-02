@@ -8,7 +8,6 @@ import { KpiCard } from "@/client/components/dashboard/KpiCard";
 import { InstanceSummaryCard } from "@/client/components/dashboard/InstanceSummaryCard";
 import { RecentActivityList } from "@/client/components/dashboard/RecentActivityList";
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
-import { NoCfsPrompt } from "@/client/components/states/NoCfsPrompt";
 import { AllClearState } from "@/client/components/states/AllClearState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { useInstances } from "@/client/hooks/useInstances";
@@ -32,8 +31,6 @@ export default function DashboardPage() {
   const totals = summary?.totals;
   const totalFlagged = (totals?.flaggedMovies ?? 0) + (totals?.flaggedSeries ?? 0);
   const enabledInstances = (summary?.perInstance ?? []).filter((i) => i.enabled);
-  const noCfsAnywhere =
-    enabledInstances.length > 0 && enabledInstances.every((i) => !i.hasPreferences);
 
   return (
     <AppShell>
@@ -83,8 +80,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          {!loadingSummary && noCfsAnywhere && <NoCfsPrompt />}
-          {!loadingSummary && !noCfsAnywhere && totalFlagged === 0 && enabledInstances.length > 0 && (
+          {!loadingSummary && totalFlagged === 0 && enabledInstances.length > 0 && (
             <AllClearState />
           )}
 

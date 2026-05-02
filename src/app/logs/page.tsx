@@ -13,6 +13,12 @@ import type { LogLevel } from "@/shared/types/models";
 import { Loader2, Trash2, Search, Wifi, WifiOff } from "lucide-react";
 
 const ALL = "__all__";
+const LEVEL_LABELS: Record<LogLevel, string> = {
+  debug: "Debug",
+  info: "Info",
+  warn: "Warnings",
+  error: "Errors",
+};
 
 export default function LogsPage() {
   const [level, setLevel] = useState<LogLevel | null>(null);
@@ -78,12 +84,14 @@ export default function LogsPage() {
               onValueChange={(v) => setLevel(v === ALL ? null : (v as LogLevel))}
             >
               <SelectTrigger className="w-32">
-                <SelectValue>{level === null ? "All levels" : level === "error" ? "Errors" : "Warnings"}</SelectValue>
+                <SelectValue>{level === null ? "All levels" : LEVEL_LABELS[level]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>All levels</SelectItem>
                 <SelectItem value="error">Errors</SelectItem>
                 <SelectItem value="warn">Warnings</SelectItem>
+                <SelectItem value="info">Info</SelectItem>
+                <SelectItem value="debug">Debug</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -96,7 +104,7 @@ export default function LogsPage() {
 
           {!isLoading && entries.length === 0 && (
             <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
-              No logs yet — errors and warnings will appear here as the app runs.
+              No logs yet — application logs will appear here as the app runs.
             </div>
           )}
 

@@ -8,9 +8,12 @@ import { EmptyLogs } from "@/client/components/states/EmptyLogs";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { Label } from "@/client/components/ui/label";
-import { useHistory } from "@/client/hooks/useHistory";
+import { Button } from "@/client/components/ui/button";
+import { Trash2 } from "lucide-react";
+import { useHistory, useClearHistory } from "@/client/hooks/useHistory";
 import { useInstances } from "@/client/hooks/useInstances";
 import { useInfiniteScroll } from "@/client/hooks/useInfiniteScroll";
+import { withToast } from "@/client/lib/with-toast";
 import type { ActionLog } from "@/shared/types/models";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -44,6 +47,11 @@ function HistoryContent() {
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useHistory(filters);
   const sentinelRef = useInfiniteScroll(fetchNextPage, !!hasNextPage);
+  const clear = useClearHistory();
+  const runClear = withToast(clear, { success: "History cleared", error: "Failed to clear history" });
+  const handleClear = () => {
+    if (confirm("Clear all history? This cannot be undone.")) runClear(undefined);
+  };
 
   const allLogs: ActionLog[] = data?.pages.flatMap((p) => p.items) ?? [];
 
@@ -91,6 +99,16 @@ function HistoryContent() {
               <SelectItem value="ignore">Ignore</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="ml-auto self-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClear}
+            disabled={clear.isPending || allLogs.length === 0}
+          >
+            <Trash2 className="h-4 w-4 mr-1 text-destructive" /> Clear history
+          </Button>
         </div>
       </div>
 

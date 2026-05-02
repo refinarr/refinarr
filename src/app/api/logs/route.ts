@@ -3,6 +3,8 @@ import { createApiHandler } from "@/server/lib/handler";
 import { appLogRepository } from "@/server/repositories/AppLogRepository";
 import type { LogLevel } from "@/shared/types/models";
 
+const LOG_LEVELS: readonly LogLevel[] = ["debug", "info", "warn", "error"];
+
 export const GET = createApiHandler(async (req: NextRequest) => {
   const s = req.nextUrl.searchParams;
   const level = s.get("level");
@@ -11,7 +13,7 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const limit = Number(s.get("limit") ?? "50");
 
   const filter = {
-    level: level === "warn" || level === "error" ? (level as LogLevel) : undefined,
+    level: LOG_LEVELS.includes(level as LogLevel) ? (level as LogLevel) : undefined,
     q,
   };
 

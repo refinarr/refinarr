@@ -11,8 +11,8 @@ export function getSeverity(
   if (!hasFile) return "missing";
   if (mode === "profile" && target !== undefined && target > 0) {
     if (score < 0) return "critical";
-    if (score < target * 0.5) return "low";
-    if (score < target * 0.8) return "warning";
+    if (score < target * 0.33) return "low";
+    if (score < target * 0.75) return "warning";
     return "ok";
   }
   if (score < 0.3) return "critical";

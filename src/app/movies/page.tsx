@@ -21,10 +21,12 @@ import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSel
 import { useMoviesPage } from "@/client/hooks/useMoviesPage";
 import { useQualityProfiles } from "@/client/hooks/useQualityProfiles";
 import { usePreferences } from "@/client/hooks/usePreferences";
+import { useRefreshInstance } from "@/client/hooks/useRefreshInstance";
 import { getSeverity } from "@/client/lib/severity";
 import { formatBytes } from "@/client/lib/format";
+import { Button } from "@/client/components/ui/button";
 import type { FlaggedMovie } from "@/shared/types/models";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 export default function MoviesPage() {
   return (
@@ -46,6 +48,7 @@ function MoviesPageContent() {
 
   const { data: profiles } = useQualityProfiles("radarr", activeInstance);
   const { data: prefs } = usePreferences(activeInstance);
+  const refreshMutation = useRefreshInstance();
 
   const wantedCfOptions = (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }));
   const negativeCfOptions = (() => {
@@ -182,6 +185,17 @@ function MoviesPageContent() {
               )}
             </div>
             <div className="flex items-center gap-3">
+              {activeInstance > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => refreshMutation.mutate(activeInstance)}
+                  disabled={refreshMutation.isPending || activeInstance <= 0}
+                  title="Pull fresh data from Radarr"
+                >
+                  <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
+                </Button>
+              )}
               {activeInstance > 0 && <ScoringModeSelector instanceId={activeInstance} />}
               {radarrInstances.length > 1 && (
                 <Select value={String(activeInstance)} onValueChange={(v) => setInstanceId(Number(v ?? 0))}>
