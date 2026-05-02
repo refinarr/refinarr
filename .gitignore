@@ -12,9 +12,14 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
+/e2e/.auth/
+*.zip
 
 # next.js
 /.next/
+/.next-e2e/
 /out/
 
 # production
@@ -47,4 +52,6 @@ next-env.d.ts
 /src/generated/prisma
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 plan-v1.md

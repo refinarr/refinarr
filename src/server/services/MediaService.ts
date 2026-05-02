@@ -1,4 +1,4 @@
-import type { ActionLog, ActionStatus, ActionType } from "@/shared/types/models";
+import type { ActionLog, ActionType } from "@/shared/types/models";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { dryRunService } from "./DryRunService";
 import { appLogger } from "@/server/lib/app-logger";
@@ -44,9 +44,5 @@ export abstract class MediaService {
       });
       return logRepository.update(logEntry.id, { status: "failed", error });
     }
-  }
-
-  protected resolveStatus(isDryRun: boolean): ActionStatus {
-    return isDryRun ? "dry_run" : "pending";
   }
 }

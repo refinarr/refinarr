@@ -43,6 +43,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Allow E2E tests to use a separate dist dir so a second `next dev` on a
+  // different port doesn't collide with the primary dev server's lock file.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   async headers() {
     return [
       {

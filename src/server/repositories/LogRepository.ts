@@ -1,7 +1,7 @@
 import type { ActionLog, ActionStatus, ActionType } from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
 
-const RETENTION_CAP = 5000;
+const RETENTION_CAP = Number(process.env.ACTION_LOG_RETENTION_CAP) || 5000;
 
 interface LogFilter {
   instanceId?: number;

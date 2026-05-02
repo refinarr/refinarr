@@ -1,7 +1,7 @@
 import type { AppLogEntry, LogLevel } from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
 
-const RETENTION_CAP = 5000;
+const RETENTION_CAP = Number(process.env.LOG_RETENTION_CAP) || 5000;
 
 interface AppLogFilter {
   level?: LogLevel;

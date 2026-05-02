@@ -92,18 +92,19 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>{t("name")}</Label>
-            <Input {...register("name")} placeholder={t("namePlaceholder")} />
+            <Label htmlFor="instance-name">{t("name")}</Label>
+            <Input id="instance-name" {...register("name")} placeholder={t("namePlaceholder")} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>{t("url")}</Label>
-            <Input {...register("url")} placeholder={t("urlPlaceholder")} />
+            <Label htmlFor="instance-url">{t("url")}</Label>
+            <Input id="instance-url" {...register("url")} placeholder={t("urlPlaceholder")} />
             {errors.url && <p className="text-xs text-destructive">{errors.url.message}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>{t("apiKey")}</Label>
+            <Label htmlFor="instance-apikey">{t("apiKey")}</Label>
             <Input
+              id="instance-apikey"
               {...register("apiKey")}
               type="password"
               placeholder={isEdit ? t("apiKeyPlaceholderEdit") : t("apiKeyPlaceholderNew")}

@@ -3,13 +3,15 @@
 // could contain a secret. But when Sonarr/Radarr echoes back errors that
 // quote our request, this scrubs the obvious patterns.
 
-const PATTERNS: Array<{ name: string; re: RegExp }> = [
+type Pattern = { name: string; re: RegExp; fn: (...args: string[]) => string };
+
+const PATTERNS: Pattern[] = [
   // querystring & body forms: apikey=…, api_key=…, apiKey=…
-  { name: "apiKey", re: /([?&;\s]?(?:api[_-]?key|apikey)\s*[=:]\s*)([^\s&"'<>]+)/gi },
-  // X-Api-Key: AAA…  /  Authorization: Bearer …
-  { name: "header", re: /((?:x-api-key|authorization)\s*:\s*)([^\s,;"']+)/gi },
+  { name: "apiKey", re: /([?&;\s]?(?:api[_-]?key|apikey)\s*[=:]\s*)([^\s&"'<>]+)/gi, fn: (_, p) => `${p}***` },
+  // X-Api-Key: value  /  Authorization: Bearer token  — capture entire rest of value
+  { name: "header", re: /((?:x-api-key|authorization)\s*:\s*)(.+)/gi, fn: (_, p) => `${p}***` },
   // 32-character hex tokens (typical Sonarr/Radarr API key shape)
-  { name: "hex32", re: /\b[a-f0-9]{32}\b/gi },
+  { name: "hex32", re: /\b[a-f0-9]{32}\b/gi, fn: () => "***" },
 ];
 
 const RESERVED_KEYS = new Set<string>([
@@ -28,8 +30,8 @@ const RESERVED_KEYS = new Set<string>([
 
 export function redactString(input: string): string {
   let out = input;
-  for (const { re } of PATTERNS) {
-    out = out.replace(re, (_m, prefix) => `${prefix}***`);
+  for (const { re, fn } of PATTERNS) {
+    out = out.replace(re, fn as Parameters<string["replace"]>[1]);
   }
   return out;
 }

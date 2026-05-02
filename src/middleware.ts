@@ -52,6 +52,10 @@ export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const isApi = path.startsWith("/api/");
 
+  // Health endpoint is always public — must bypass userExists() so the webServer
+  // health check resolves to 200 before any user is created.
+  if (path === "/api/health") return NextResponse.next();
+
   // First-run state: no User row yet → force everything to /setup
   const hasUser = await userExists();
   if (!hasUser) {

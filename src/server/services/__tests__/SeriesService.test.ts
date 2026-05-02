@@ -1,0 +1,425 @@
+import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
+import { seriesService } from "@/server/services/SeriesService";
+import { instanceService } from "@/server/services/InstanceService";
+import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
+import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
+import { configRepository } from "@/server/repositories/ConfigRepository";
+
+const fetchMock = vi.fn();
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+afterEach(() => {
+  fetchMock.mockReset();
+  vi.unstubAllGlobals();
+});
+
+const baseInstance = {
+  type: "sonarr" as const,
+  name: "Test Sonarr",
+  url: "http://192.168.1.10:8989",
+  apiKey: "abcd1234abcd1234abcd1234abcd1234",
+};
+
+interface SonarrSeries { id: number; title: string; year: number; qualityProfileId: number; }
+interface SonarrFile {
+  id: number; seriesId: number; seasonNumber: number; relativePath: string; size: number;
+  customFormats: Array<{ id: number; name: string }>; customFormatScore: number;
+}
+interface SonarrProfile {
+  id: number; name: string; minUpgradeFormatScore: number; cutoffFormatScore: number;
+  formatItems: Array<{ format: number; name: string; score: number }>;
+}
+
+function jsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200, headers: { "Content-Type": "application/json" },
+  });
+}
+
+function setupSonarrMocks(opts: {
+  series: SonarrSeries[];
+  files: Map<number, SonarrFile[]>;
+  profiles: SonarrProfile[];
+  episodes?: Array<{ id: number; episodeFileId: number; seasonNumber: number; episodeNumber: number }>;
+}) {
+  fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url.endsWith("/api/v3/series")) return jsonResponse(opts.series);
+    if (url.endsWith("/api/v3/qualityprofile")) return jsonResponse(opts.profiles);
+    if (url.includes("/api/v3/episodefile?seriesId=")) {
+      const id = Number(url.split("seriesId=")[1]);
+      return jsonResponse(opts.files.get(id) ?? []);
+    }
+    if (url.includes("/api/v3/episodefile/")) return new Response("", { status: 200 });
+    if (url.includes("/api/v3/command")) return jsonResponse({ id: 1 });
+    if (url.includes("/api/v3/episode?seriesId=")) {
+      return jsonResponse(opts.episodes ?? []);
+    }
+    return new Response("not mocked: " + url + " " + init?.method, { status: 404 });
+  });
+}
+
+const profile: SonarrProfile = {
+  id: 1, name: "HD-1080p", minUpgradeFormatScore: 0, cutoffFormatScore: 100,
+  formatItems: [
+    { format: 10, name: "HDR", score: 50 },
+    { format: 11, name: "Atmos", score: 30 },
+    { format: 12, name: "x265", score: -10 },
+  ],
+};
+
+describe("SeriesService.getFlaggedSeries — manual mode", () => {
+  test("returns empty when no preferences are set", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
+    const result = await seriesService.getFlaggedSeries(instance.id, {
+      page: 1, limit: 50, sortBy: "score", order: "asc",
+    });
+    expect(result.items).toEqual([]);
+  });
+
+  test("flags series with episode files missing wanted CFs", async () => {
+    const instance = await instanceService.create(baseInstance);
+    await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
+    setupSonarrMocks({
+      series: [{ id: 1, title: "Show A", year: 2024, qualityProfileId: 1 }],
+      files: new Map([[1, [
+        { id: 100, seriesId: 1, seasonNumber: 1, relativePath: "S01E01.mkv", size: 1024, customFormats: [], customFormatScore: 0 },
+      ]]]),
+      profiles: [profile],
+    });
+    const result = await seriesService.getFlaggedSeries(instance.id, {
+      page: 1, limit: 50, sortBy: "title", order: "asc",
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].title).toBe("Show A");
+    expect(result.items[0].episodeFiles).toHaveLength(1);
+  });
+
+  test("flags series with no episode files", async () => {
+    const instance = await instanceService.create(baseInstance);
+    await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
+    setupSonarrMocks({
+      series: [{ id: 1, title: "Empty", year: 2024, qualityProfileId: 1 }],
+      files: new Map([[1, []]]),
+      profiles: [profile],
+    });
+    const result = await seriesService.getFlaggedSeries(instance.id, {
+      page: 1, limit: 50, sortBy: "title", order: "asc",
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].episodeFiles).toEqual([]);
+  });
+
+  test("excludes ignored series", async () => {
+    const instance = await instanceService.create(baseInstance);
+    await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
+    await ignoreRepository.create({ instanceId: instance.id, mediaId: 1, mediaType: "series", title: "Show A" });
+    setupSonarrMocks({
+      series: [{ id: 1, title: "Show A", year: 2024, qualityProfileId: 1 }],
+      files: new Map([[1, [
+        { id: 100, seriesId: 1, seasonNumber: 1, relativePath: "S01E01.mkv", size: 1024, customFormats: [], customFormatScore: 0 },
+      ]]]),
+      profiles: [profile],
+    });
+    const result = await seriesService.getFlaggedSeries(instance.id, {
+      page: 1, limit: 50, sortBy: "score", order: "asc",
+    });
+    expect(result.items).toEqual([]);
+  });
+});
+
+describe("SeriesService.getFlaggedSeries — profile mode", () => {
+  test("flags series whose worst episode score is below cutoff", async () => {
+    const instance = await instanceService.create(baseInstance);
+    await configRepository.set(`scoringMode:${instance.id}`, "profile");
+    setupSonarrMocks({
+      series: [{ id: 1, title: "BelowCut", year: 2024, qualityProfileId: 1 }],
+      files: new Map([[1, [
+        { id: 100, seriesId: 1, seasonNumber: 1, relativePath: "S01E01.mkv", size: 1024, customFormats: [], customFormatScore: 50 },
+      ]]]),
+      profiles: [profile],
+    });
+    const result = await seriesService.getFlaggedSeries(instance.id, {
+      page: 1, limit: 50, sortBy: "score", order: "asc",
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].minProfileScore).toBe(100);
+  });
+
+  test("flags fileless series when profile cutoff > 0", async () => {
+    const instance = await instanceService.create(baseInstance);
+    await configRepository.set(`scoringMode:${instance.id}`, "profile");
+    setupSonarrMocks({
+      series: [{ id: 1, title: "NoFiles", year: 2024, qualityProfileId: 1 }],
+      files: new Map([[1, []]]),
+      profiles: [profile],
+    });
+    const result = await seriesService.getFlaggedSeries(instance.id, {
+      page: 1, limit: 50, sortBy: "score", order: "asc",
+    });
+    expect(result.items).toHaveLength(1);
+  });
+
+  test("populates unwantedFormats from negative-score CFs in episode files", async () => {
+    const instance = await instanceService.create(baseInstance);
+    await configRepository.set(`scoringMode:${instance.id}`, "profile");
+    setupSonarrMocks({
+      series: [{ id: 1, title: "BadFile", year: 2024, qualityProfileId: 1 }],
+      files: new Map([[1, [
+        {
+          id: 100, seriesId: 1, seasonNumber: 1, relativePath: "S01E01.mkv", size: 1024,
+          customFormats: [{ id: 12, name: "x265" }, { id: 10, name: "HDR" }],
+          customFormatScore: 40,
+        },
+      ]]]),
+      profiles: [profile],
+    });
+    const result = await seriesService.getFlaggedSeries(instance.id, {
+      page: 1, limit: 50, sortBy: "score", order: "asc",
+    });
+    expect(result.items[0].unwantedFormats.map((c) => c.name)).toEqual(["x265"]);
+    // Episode file customFormats should include score lookup from the profile.
+    const ef = result.items[0].episodeFiles[0];
+    expect(ef.customFormats.find((c) => c.id === 10)?.score).toBe(50);
+    expect(ef.unwantedFormats.find((c) => c.id === 12)?.score).toBe(-10);
+  });
+
+  test("manual mode populates episodeFiles[].customFormats with profile scores", async () => {
+    const instance = await instanceService.create(baseInstance);
+    await preferenceRepository.setForInstance(instance.id, [{ cfId: 11, cfName: "Atmos" }]);
+    setupSonarrMocks({
+      series: [{ id: 1, title: "Show", year: 2024, qualityProfileId: 1 }],
+      files: new Map([[1, [
+        {
+          id: 100, seriesId: 1, seasonNumber: 1, relativePath: "S01E01.mkv", size: 1024,
+          customFormats: [{ id: 10, name: "HDR" }], customFormatScore: 50,
+        },
+      ]]]),
+      profiles: [profile],
+    });
+    const result = await seriesService.getFlaggedSeries(instance.id, {
+      page: 1, limit: 50, sortBy: "score", order: "asc",
+    });
+    const ef = result.items[0].episodeFiles[0];
+    expect(ef.customFormats.find((c) => c.id === 10)?.score).toBe(50);
+  });
+});
+
+describe("SeriesService — query application", () => {
+  beforeEach(async () => {
+    const instance = await instanceService.create(baseInstance);
+    await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
+    setupSonarrMocks({
+      series: [
+        { id: 1, title: "Alpha", year: 2024, qualityProfileId: 1 },
+        { id: 2, title: "Bravo", year: 2024, qualityProfileId: 1 },
+      ],
+      files: new Map([
+        [1, [{ id: 10, seriesId: 1, seasonNumber: 1, relativePath: "a.mkv", size: 100, customFormats: [], customFormatScore: 0 }]],
+        [2, [{ id: 20, seriesId: 2, seasonNumber: 1, relativePath: "b.mkv", size: 500, customFormats: [], customFormatScore: 0 }]],
+      ]),
+      profiles: [profile],
+    });
+  });
+
+  test("filters by query string", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await seriesService.getFlaggedSeries(inst.id, {
+      page: 1, limit: 50, sortBy: "title", order: "asc", q: "alpha",
+    });
+    expect(result.items.map((s) => s.title)).toEqual(["Alpha"]);
+  });
+
+  test("filters by maxScore", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await seriesService.getFlaggedSeries(inst.id, {
+      page: 1, limit: 50, sortBy: "score", order: "asc", maxScore: 0.1,
+    });
+    expect(result.items.length).toBeGreaterThan(0);
+  });
+
+  test("sorts by size descending", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await seriesService.getFlaggedSeries(inst.id, {
+      page: 1, limit: 50, sortBy: "size", order: "desc",
+    });
+    expect(result.items.map((s) => s.title)).toEqual(["Bravo", "Alpha"]);
+  });
+});
+
+describe("SeriesService — actions", () => {
+  test("triggerSearch creates a success log", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
+    const log = await seriesService.triggerSearch(instance.id, 1, "Show");
+    expect(log.status).toBe("success");
+  });
+
+  test("triggerSeasonSearch creates a success log", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
+    const log = await seriesService.triggerSeasonSearch(instance.id, 1, 2, "Show");
+    expect(log.status).toBe("success");
+  });
+
+  test("triggerEpisodeFileSearch resolves episodes for the given file", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupSonarrMocks({
+      series: [], files: new Map(), profiles: [],
+      episodes: [
+        { id: 100, episodeFileId: 999, seasonNumber: 1, episodeNumber: 1 },
+        { id: 101, episodeFileId: 1000, seasonNumber: 1, episodeNumber: 2 },
+      ],
+    });
+    const log = await seriesService.triggerEpisodeFileSearch(instance.id, 1, 999, "Show");
+    expect(log.status).toBe("success");
+  });
+
+  test("triggerEpisodeFileSearch fails when no matching episode exists", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupSonarrMocks({
+      series: [], files: new Map(), profiles: [],
+      episodes: [{ id: 100, episodeFileId: 1, seasonNumber: 1, episodeNumber: 1 }],
+    });
+    const log = await seriesService.triggerEpisodeFileSearch(instance.id, 1, 999, "Show");
+    expect(log.status).toBe("failed");
+    expect(log.error).toMatch(/not found/i);
+  });
+
+  test("deleteFiles deletes each fileId and optionally triggers a search", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
+    const log = await seriesService.deleteFiles(instance.id, 1, [10, 11], "Show", true);
+    expect(log.status).toBe("success");
+    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(calls.filter((u) => u.includes("/episodefile/")).length).toBe(2);
+    expect(calls.some((u) => u.includes("/command"))).toBe(true);
+  });
+
+  test("deleteFiles skips the search by default", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
+    await seriesService.deleteFiles(instance.id, 1, [10], "Show");
+    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(calls.some((u) => u.includes("/command"))).toBe(false);
+  });
+
+  test("triggerSearch throws when instance is missing", async () => {
+    await expect(seriesService.triggerSearch(99999, 1, "Show")).rejects.toThrow(/not found/);
+  });
+
+  test("triggerSeasonSearch throws when instance is missing", async () => {
+    await expect(seriesService.triggerSeasonSearch(99999, 1, 1, "Show")).rejects.toThrow(/not found/);
+  });
+
+  test("triggerEpisodeFileSearch throws when instance is missing", async () => {
+    await expect(seriesService.triggerEpisodeFileSearch(99999, 1, 1, "Show")).rejects.toThrow(/not found/);
+  });
+
+  test("deleteFiles throws when instance is missing", async () => {
+    await expect(seriesService.deleteFiles(99999, 1, [1], "Show")).rejects.toThrow(/not found/);
+  });
+
+  test("getFlaggedSeries throws when instance is missing", async () => {
+    await expect(
+      seriesService.getFlaggedSeries(99999, { page: 1, limit: 50, sortBy: "score", order: "asc" }),
+    ).rejects.toThrow(/not found/);
+  });
+});
+
+describe("SeriesService — manual mode with file lacking customFormats", () => {
+  test("treats undefined customFormats as empty array on episode files", async () => {
+    const instance = await instanceService.create(baseInstance);
+    await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
+    setupSonarrMocks({
+      series: [{ id: 1, title: "ShowMissingCfs", year: 2024, qualityProfileId: 1 }],
+      // Mock returns a file with no customFormats field at all.
+      files: new Map([[1, [
+        { id: 100, seriesId: 1, seasonNumber: 1, relativePath: "S01E01.mkv", size: 1024 } as never,
+      ]]]),
+      profiles: [profile],
+    });
+    const result = await seriesService.getFlaggedSeries(instance.id, {
+      page: 1, limit: 50, sortBy: "score", order: "asc",
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].episodeFiles[0].customFormats).toEqual([]);
+  });
+});
+
+describe("SeriesService — sort edge cases", () => {
+  beforeEach(async () => {
+    const instance = await instanceService.create(baseInstance);
+    await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
+    setupSonarrMocks({
+      series: [
+        { id: 1, title: "WithFiles", year: 2024, qualityProfileId: 1 },
+        { id: 2, title: "NoFiles", year: 2024, qualityProfileId: 1 },
+      ],
+      files: new Map([
+        [1, [{ id: 10, seriesId: 1, seasonNumber: 1, relativePath: "a.mkv", size: 100, customFormats: [], customFormatScore: 0 }]],
+        [2, []],
+      ]),
+      profiles: [profile],
+    });
+  });
+
+  test("score sort pushes fileless series to the end", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await seriesService.getFlaggedSeries(inst.id, {
+      page: 1, limit: 50, sortBy: "score", order: "asc",
+    });
+    expect(result.items[result.items.length - 1].title).toBe("NoFiles");
+  });
+
+  test("'added' sort uses default no-op comparator", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await seriesService.getFlaggedSeries(inst.id, {
+      page: 1, limit: 50, sortBy: "added", order: "asc",
+    });
+    expect(result.items).toHaveLength(2);
+  });
+
+  test("filters by profileId", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await seriesService.getFlaggedSeries(inst.id, {
+      page: 1, limit: 50, sortBy: "title", order: "asc", profileId: 999,
+    });
+    expect(result.items).toEqual([]);
+  });
+
+  test("filters by missingCfId", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await seriesService.getFlaggedSeries(inst.id, {
+      page: 1, limit: 50, sortBy: "title", order: "asc", missingCfId: 10,
+    });
+    expect(result.items.length).toBeGreaterThan(0);
+  });
+
+  test("filters by hasNegativeCfId", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await seriesService.getFlaggedSeries(inst.id, {
+      page: 1, limit: 50, sortBy: "title", order: "asc", hasNegativeCfId: 999,
+    });
+    expect(result.items).toEqual([]);
+  });
+});
+
+describe("SeriesService — cache reuse", () => {
+  test("second call within TTL returns cached data", async () => {
+    const instance = await instanceService.create(baseInstance);
+    await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
+    setupSonarrMocks({
+      series: [{ id: 1, title: "Show", year: 2024, qualityProfileId: 1 }],
+      files: new Map([[1, [{ id: 10, seriesId: 1, seasonNumber: 1, relativePath: "a.mkv", size: 100, customFormats: [], customFormatScore: 0 }]]]),
+      profiles: [profile],
+    });
+    await seriesService.getFlaggedSeries(instance.id, { page: 1, limit: 50, sortBy: "score", order: "asc" });
+    const callsAfterFirst = fetchMock.mock.calls.length;
+    await seriesService.getFlaggedSeries(instance.id, { page: 1, limit: 50, sortBy: "score", order: "asc" });
+    expect(fetchMock.mock.calls.length).toBe(callsAfterFirst);
+  });
+});
