@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { AddInstanceDialog } from "@/client/components/settings/AddInstanceDialog";
 import { InstanceCard } from "@/client/components/settings/InstanceCard";
@@ -15,6 +16,7 @@ import type { Instance } from "@/shared/types/models";
 import { Plus } from "lucide-react";
 
 export default function SettingsPage() {
+  const t = useTranslations("settings");
   const { data: instances } = useInstances();
   const { data: config } = useConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -27,14 +29,14 @@ export default function SettingsPage() {
   return (
     <AppShell>
       <div className="max-w-2xl space-y-8">
-        <h1 className="text-2xl font-bold">Settings</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
 
         {/* Section 1: Instances */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Instances</h2>
+            <h2 className="text-lg font-semibold">{t("instances")}</h2>
             <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
-              <Plus className="h-4 w-4 mr-1" /> Add Instance
+              <Plus className="h-4 w-4 mr-1" /> {t("addInstance")}
             </Button>
           </div>
           <div className="space-y-2">
@@ -53,7 +55,7 @@ export default function SettingsPage() {
         {/* Section 2: Scoring Mode per instance */}
         {(instances ?? []).length > 0 && (
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold">Scoring Mode</h2>
+            <h2 className="text-lg font-semibold">{t("scoringMode")}</h2>
             <div className="space-y-3">
               {(instances ?? []).map((inst) => (
                 <div key={inst.id} className="flex items-center gap-4">
@@ -71,10 +73,8 @@ export default function SettingsPage() {
         {manualInstances.length > 0 && (
           <section className="space-y-4">
             <div>
-              <h2 className="text-lg font-semibold">Wanted Custom Formats</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Select which Custom Formats each instance should have. Media missing any of these will be flagged.
-              </p>
+              <h2 className="text-lg font-semibold">{t("wantedCfs")}</h2>
+              <p className="text-sm text-muted-foreground mt-1">{t("wantedCfsHelp")}</p>
             </div>
             <div className="space-y-3">
               {manualInstances.map((inst) => (
@@ -88,7 +88,7 @@ export default function SettingsPage() {
 
         {/* Section 4: Dry Run */}
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Dry Run Mode</h2>
+          <h2 className="text-lg font-semibold">{t("dryRunMode")}</h2>
           <DryRunToggle />
         </section>
 

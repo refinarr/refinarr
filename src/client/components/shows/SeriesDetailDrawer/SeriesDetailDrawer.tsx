@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import {
   Sheet,
   SheetContent,
@@ -14,6 +15,7 @@ import { SeverityDot } from "@/client/components/media/SeverityDot";
 import { SeasonAccordion } from "@/client/components/shows/SeasonAccordion";
 import { groupBySeason, filename } from "@/client/components/shows/utils";
 import { getSeverity } from "@/client/lib/severity";
+import { useConfirm } from "@/client/hooks/useConfirm";
 import type { FlaggedSeries, ScoringMode } from "@/shared/types/models";
 
 interface Props {
@@ -39,6 +41,10 @@ export function SeriesDetailDrawer({
   onDeleteSeason,
   onDeleteEpisode,
 }: Props) {
+  const tSeason = useTranslations("confirm.deleteSeason");
+  const tEpisode = useTranslations("confirm.deleteEpisode");
+  const tShows = useTranslations("shows");
+  const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
   if (!series) return null;
 
   const score = scoringMode === "profile" ? series.customFormatScore : series.cfScore;
@@ -87,7 +93,12 @@ export function SeriesDetailDrawer({
                       onSearch={() => onSearchSeason(series, season)}
                       onDelete={async (search) => {
                         if (affectedFileIds.length === 0) return;
-                        if (!confirm(`Delete ${affectedFileIds.length} file(s) in Season ${season}?`)) return;
+                        const ok = await askConfirm({
+                          title: tSeason("title"),
+                          body: tSeason("body", { count: affectedFileIds.length, season }),
+                          destructive: true,
+                        });
+                        if (!ok) return;
                         await onDeleteSeason(series, season, affectedFileIds, search);
                       }}
                       onSearchFile={(fileId, relativePath) =>
@@ -95,7 +106,12 @@ export function SeriesDetailDrawer({
                       }
                       onDeleteFile={async (fileId, relativePath, search) => {
                         const label = filename(relativePath);
-                        if (!confirm(`Delete this file?\n${label}`)) return;
+                        const ok = await askConfirm({
+                          title: tEpisode("title"),
+                          body: tEpisode("body", { label }),
+                          destructive: true,
+                        });
+                        if (!ok) return;
                         await onDeleteEpisode(series, fileId, label, search);
                       }}
                       affectedCount={affectedFileIds.length}
@@ -104,7 +120,7 @@ export function SeriesDetailDrawer({
                 })}
               </Accordion>
             ) : (
-              <p className="text-muted-foreground text-sm">No episode files found.</p>
+              <p className="text-muted-foreground text-sm">{tShows("noEpisodeFiles")}</p>
             )}
           </div>
         </div>
@@ -114,6 +130,7 @@ export function SeriesDetailDrawer({
             <EyeOff className="h-4 w-4 mr-1" /> Ignore
           </Button>
         </SheetFooter>
+        {confirmDialog}
       </SheetContent>
     </Sheet>
   );

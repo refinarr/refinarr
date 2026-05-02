@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useInstances } from "./useInstances";
 import { useSeries } from "./useSeries";
 import { useConfig } from "./useConfig";
@@ -14,6 +15,9 @@ import type { ActionLog, FlaggedSeries, ScoringMode } from "@/shared/types/model
 import type { MediaFilters } from "./useMoviesPage";
 
 export function useShowsPage() {
+  const tSearch = useTranslations("toast.search");
+  const tDelete = useTranslations("toast.delete");
+  const tIgnore = useTranslations("toast.ignore");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: instances, isLoading: loadingInstances } = useInstances();
@@ -82,12 +86,12 @@ export function useShowsPage() {
     },
     onSuccess: (results) => {
       if (results.some((r) => r.isDryRun)) {
-        toast.info("[Dry Run] Search queued");
+        toast.info(tSearch("queuedDryRun"));
       } else {
-        toast.success("Search triggered");
+        toast.success(tSearch("started"));
       }
     },
-    onError: () => toast.error("Failed to trigger search"),
+    onError: () => toast.error(tSearch("failed")),
   });
 
   const ignoreMutation = useMutation({
@@ -116,17 +120,17 @@ export function useShowsPage() {
     },
     onSuccess: ({ results, search }) => {
       if (results.some((r) => r.isDryRun)) {
-        toast.info(search ? "[Dry Run] Delete & search queued" : "[Dry Run] Delete queued");
+        toast.info(search ? tDelete("queuedAndSearchDryRun") : tDelete("queuedDryRun"));
       } else {
-        toast.success(search ? "Files deleted, search triggered" : "Files deleted");
+        toast.success(search ? tDelete("filesDoneAndSearch") : tDelete("filesDone"));
         void refetch();
       }
     },
-    onError: () => toast.error("Failed to delete files"),
+    onError: () => toast.error(tDelete("filesFailed")),
   });
 
   const runSearch = (series: FlaggedSeries[]) => searchMutation.mutateAsync(series);
-  const runIgnore = withToast(ignoreMutation, { success: "Items ignored", error: "Failed to ignore items" });
+  const runIgnore = withToast(ignoreMutation, { success: tIgnore("done"), error: tIgnore("failed") });
   const runDelete = (series: FlaggedSeries[], search: boolean) => deleteMutation.mutateAsync({ series, search });
 
   const seasonSearchMutation = useMutation({
@@ -139,10 +143,10 @@ export function useShowsPage() {
       });
     },
     onSuccess: (r) => {
-      if (r.isDryRun) toast.info("[Dry Run] Season search queued");
-      else toast.success("Season search triggered");
+      if (r.isDryRun) toast.info(tSearch("seasonQueuedDryRun"));
+      else toast.success(tSearch("seasonStarted"));
     },
-    onError: () => toast.error("Failed to trigger season search"),
+    onError: () => toast.error(tSearch("seasonFailed")),
   });
 
   const episodeSearchMutation = useMutation({
@@ -155,10 +159,10 @@ export function useShowsPage() {
       });
     },
     onSuccess: (r) => {
-      if (r.isDryRun) toast.info("[Dry Run] Episode search queued");
-      else toast.success("Episode search triggered");
+      if (r.isDryRun) toast.info(tSearch("episodeQueuedDryRun"));
+      else toast.success(tSearch("episodeStarted"));
     },
-    onError: (e: Error) => toast.error(e.message || "Failed to trigger episode search"),
+    onError: (e: Error) => toast.error(e.message || tSearch("episodeFailed")),
   });
 
   const seasonDeleteMutation = useMutation({
@@ -174,10 +178,10 @@ export function useShowsPage() {
       });
     },
     onSuccess: (r, vars) => {
-      if (r.isDryRun) toast.info(vars.search ? "[Dry Run] Season delete & search queued" : "[Dry Run] Season delete queued");
-      else { toast.success(vars.search ? "Season files deleted, search triggered" : "Season files deleted"); void refetch(); }
+      if (r.isDryRun) toast.info(vars.search ? tDelete("queuedAndSearchDryRun") : tDelete("queuedDryRun"));
+      else { toast.success(vars.search ? tDelete("seasonDoneAndSearch") : tDelete("seasonDone")); void refetch(); }
     },
-    onError: () => toast.error("Failed to delete season files"),
+    onError: () => toast.error(tDelete("seasonFailed")),
   });
 
   const episodeDeleteMutation = useMutation({
@@ -193,10 +197,10 @@ export function useShowsPage() {
       });
     },
     onSuccess: (r, vars) => {
-      if (r.isDryRun) toast.info(vars.search ? "[Dry Run] Delete & search queued" : "[Dry Run] Delete queued");
-      else { toast.success(vars.search ? "File deleted, search triggered" : "File deleted"); void refetch(); }
+      if (r.isDryRun) toast.info(vars.search ? tDelete("queuedAndSearchDryRun") : tDelete("queuedDryRun"));
+      else { toast.success(vars.search ? tDelete("fileDoneAndSearch") : tDelete("fileDone")); void refetch(); }
     },
-    onError: () => toast.error("Failed to delete file"),
+    onError: () => toast.error(tDelete("fileFailed")),
   });
 
   const runSearchSeason = (series: FlaggedSeries, seasonNumber: number) =>
@@ -218,13 +222,17 @@ export function useShowsPage() {
     setSelected(new Set());
   };
 
+  const deletableSelected = () =>
+    allSeries.filter((s) => selected.has(s.id) && s.episodeFiles.length > 0);
+
   const handleDelete = async (search: boolean) => {
-    const toDelete = allSeries.filter((s) => selected.has(s.id) && s.episodeFiles.length > 0);
+    const toDelete = deletableSelected();
     if (!toDelete.length) return;
-    if (!confirm(`Delete all files for ${toDelete.length} series? This cannot be undone.`)) return;
     await runDelete(toDelete, search);
     setSelected(new Set());
   };
+
+  const deletableCount = () => deletableSelected().length;
 
   const selectedItem = allSeries.find((s) => s.id === selectedId) ?? null;
 
@@ -255,6 +263,7 @@ export function useShowsPage() {
     handleSearch,
     handleIgnore,
     handleDelete,
+    deletableCount,
     runSearch,
     runIgnore,
     runDelete,

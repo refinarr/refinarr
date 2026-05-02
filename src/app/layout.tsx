@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import { Toaster } from "@/client/components/ui/sonner";
 import Providers from "./providers";
 import "./globals.css";
@@ -9,15 +11,19 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: "Remedarr",
-  description: "CF upgrade dashboard for Radarr & Sonarr",
+  description: "Custom Format upgrade dashboard for Radarr & Sonarr",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}>
+    <html lang={locale} className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}>
       <body className="min-h-full bg-background text-foreground">
-        <Providers>{children}</Providers>
-        <Toaster richColors />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <Providers>{children}</Providers>
+          <Toaster richColors />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Switch } from "@/client/components/ui/switch";
 import { Label } from "@/client/components/ui/label";
 import { Badge } from "@/client/components/ui/badge";
@@ -9,6 +10,9 @@ import { useConfig, useUpdateConfig } from "@/client/hooks/useConfig";
 import { toast } from "sonner";
 
 export function DryRunToggle() {
+  const t = useTranslations("settings.dryRun");
+  const tToast = useTranslations("toast.dryRun");
+  const tCommon = useTranslations("common");
   const { data: config } = useConfig();
   const updateConfig = useUpdateConfig();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -20,13 +24,13 @@ export function DryRunToggle() {
       setConfirmOpen(true);
     } else {
       updateConfig.mutate({ dryRun: "true" });
-      toast.info("Dry Run mode enabled");
+      toast.info(tToast("enabled"));
     }
   };
 
   const goLive = async () => {
     await updateConfig.mutateAsync({ dryRun: "false" });
-    toast.warning("Live mode enabled — actions will execute for real");
+    toast.warning(tToast("disabled"));
     setConfirmOpen(false);
   };
 
@@ -34,23 +38,20 @@ export function DryRunToggle() {
     <>
       <div className="flex items-center gap-4">
         <Switch checked={isDryRun} onCheckedChange={handleToggle} />
-        <Label>Dry Run Mode</Label>
+        <Label>{t("label")}</Label>
         <Badge variant={isDryRun ? "outline" : "destructive"}>
-          {isDryRun ? "Dry Run" : "Live"}
+          {isDryRun ? t("badgeOn") : t("badgeOff")}
         </Badge>
       </div>
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Switch to Live Mode?</DialogTitle>
+            <DialogTitle>{t("switchTitle")}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            In Live mode, search, delete, and ignore actions will execute for real. Make sure
-            you&apos;re ready.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("switchBody")}</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={goLive}>Go Live</Button>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>{tCommon("cancel")}</Button>
+            <Button variant="destructive" onClick={goLive}>{t("switchConfirm")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

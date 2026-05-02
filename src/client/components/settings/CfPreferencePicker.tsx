@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
 import { Button } from "@/client/components/ui/button";
 import { Badge } from "@/client/components/ui/badge";
@@ -16,6 +17,9 @@ interface Props {
 }
 
 export function CfPreferencePicker({ instance }: Props) {
+  const t = useTranslations("settings.cfPicker");
+  const tToast = useTranslations("toast.cfs");
+  const tCommon = useTranslations("common");
   const type = instance.type === "radarr" ? "radarr" : "sonarr";
   const { data: available, isLoading: loadingCfs } = useCustomFormats(type, instance.id);
   const { data: saved } = usePreferences(instance.id);
@@ -36,8 +40,8 @@ export function CfPreferencePicker({ instance }: Props) {
   };
 
   const savePrefs = withToast(setPreferences, {
-    success: "Custom Formats saved",
-    error: "Failed to save Custom Formats",
+    success: tToast("saved"),
+    error: tToast("saveFailed"),
   });
 
   const save = async () => {
@@ -58,7 +62,7 @@ export function CfPreferencePicker({ instance }: Props) {
     return (
       <Card>
         <CardContent className="flex items-center gap-2 py-4 text-muted-foreground text-sm">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading custom formats…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}
         </CardContent>
       </Card>
     );
@@ -68,7 +72,7 @@ export function CfPreferencePicker({ instance }: Props) {
     return (
       <Card>
         <CardContent className="py-4 text-sm text-muted-foreground">
-          No custom formats found in {instance.name}.
+          {t("empty", { name: instance.name })}
         </CardContent>
       </Card>
     );
@@ -82,14 +86,14 @@ export function CfPreferencePicker({ instance }: Props) {
           <div className="flex items-center gap-2">
             {selectedCount > 0 && (
               <>
-                <Badge variant="secondary">{selectedCount} selected</Badge>
+                <Badge variant="secondary">{t("selectedCount", { count: selectedCount })}</Badge>
                 <Button size="sm" variant="ghost" onClick={clearAll}>
-                  Clear
+                  {tCommon("clear")}
                 </Button>
               </>
             )}
             <Button size="sm" onClick={save} disabled={setPreferences.isPending}>
-              Save
+              {tCommon("save")}
             </Button>
           </div>
         </div>

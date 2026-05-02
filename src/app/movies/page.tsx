@@ -14,6 +14,7 @@ import { AllClearState } from "@/client/components/states/AllClearState";
 import { NoCfsPrompt } from "@/client/components/states/NoCfsPrompt";
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
+import { NoFilterMatchState } from "@/client/components/states/NoFilterMatchState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { MovieDetailDrawer } from "@/client/components/movies/MovieDetailDrawer";
@@ -22,9 +23,11 @@ import { useMoviesPage } from "@/client/hooks/useMoviesPage";
 import { useQualityProfiles } from "@/client/hooks/useQualityProfiles";
 import { usePreferences } from "@/client/hooks/usePreferences";
 import { useRefreshInstance } from "@/client/hooks/useRefreshInstance";
+import { useConfirm } from "@/client/hooks/useConfirm";
 import { getSeverity } from "@/client/lib/severity";
 import { formatBytes } from "@/client/lib/format";
 import { Button } from "@/client/components/ui/button";
+import { useTranslations } from "next-intl";
 import type { FlaggedMovie } from "@/shared/types/models";
 import { Loader2, RefreshCw } from "lucide-react";
 
@@ -37,18 +40,24 @@ export default function MoviesPage() {
 }
 
 function MoviesPageContent() {
+  const t = useTranslations("movies");
+  const tCols = useTranslations("movies.columns");
+  const tFilters = useTranslations("filters");
+  const tConfirmDeleteFile = useTranslations("confirm.deleteFile");
+  const tConfirmDeleteMovies = useTranslations("confirm.deleteMovies");
   const {
     router, instances, loadingInstances, radarrInstances,
     activeInstance, setInstanceId, selected, toggle,
     filters, setFilters, selectedId, setSelectedId, selectedItem,
     allMovies, total, isLoading, isFetching, isError, isFetchingNextPage,
     refetch, sentinelRef, scoringMode, noCfsConfigured,
-    handleSearch, handleIgnore, handleDelete, runSearch, runIgnore, runDelete,
+    handleSearch, handleIgnore, handleDelete, deletableCount, runSearch, runIgnore, runDelete,
   } = useMoviesPage();
 
   const { data: profiles } = useQualityProfiles("radarr", activeInstance);
   const { data: prefs } = usePreferences(activeInstance);
   const refreshMutation = useRefreshInstance();
+  const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
 
   const wantedCfOptions = (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }));
   const negativeCfOptions = (() => {
@@ -81,7 +90,7 @@ function MoviesPageContent() {
     },
     {
       key: "title",
-      header: "Title",
+      header: tCols("title"),
       sortKey: "title",
       render: (m) => (
         <div className="flex items-baseline gap-2 min-w-0">
@@ -92,7 +101,7 @@ function MoviesPageContent() {
     },
     {
       key: "profile",
-      header: "Profile",
+      header: tCols("profile"),
       className: "w-36 text-muted-foreground",
       render: (m) => (
         <span className="truncate text-xs">
@@ -102,12 +111,12 @@ function MoviesPageContent() {
     },
     {
       key: "score",
-      header: "Score",
+      header: tCols("score"),
       sortKey: "score",
       className: "w-36 whitespace-nowrap",
       render: (m) => {
         if (scoringMode === "profile" && !m.hasFile)
-          return <span className="text-xs text-muted-foreground">No file</span>;
+          return <span className="text-xs text-muted-foreground">{t("noFile")}</span>;
         return (
           <ScoreLabel
             score={scoringMode === "profile" ? m.customFormatScore : m.cfScore}
@@ -118,14 +127,14 @@ function MoviesPageContent() {
     },
     {
       key: "size",
-      header: "Size",
+      header: tCols("size"),
       sortKey: "size",
       className: "w-24 text-xs text-muted-foreground tabular-nums whitespace-nowrap",
       render: (m) => formatBytes(m.sizeOnDisk),
     },
     {
       key: "issues",
-      header: scoringMode === "profile" ? "Penalties" : "Missing",
+      header: scoringMode === "profile" ? tCols("penalties") : tCols("missing"),
       render: (m) => {
         const items = scoringMode === "profile" ? m.unwantedFormats : m.missingFormats;
         if (!items.length) return null;
@@ -150,22 +159,22 @@ function MoviesPageContent() {
   const chips: FilterChip[] = [
     filters.q && {
       key: "q",
-      label: `“${filters.q}”`,
+      label: tFilters("queryLabel", { q: filters.q }),
       onRemove: () => setFilters((f) => ({ ...f, q: "" })),
     },
     filters.profileId !== null && profileName && {
       key: "profile",
-      label: `Profile: ${profileName}`,
+      label: tFilters("profileLabel", { name: profileName }),
       onRemove: () => setFilters((f) => ({ ...f, profileId: null })),
     },
     filters.missingCfId !== null && missingCfName && {
       key: "cf",
-      label: `Missing: ${missingCfName}`,
+      label: tFilters("missingLabel", { name: missingCfName }),
       onRemove: () => setFilters((f) => ({ ...f, missingCfId: null })),
     },
     filters.hasNegativeCfId !== null && penaltyCfName && {
       key: "ncf",
-      label: `Has: ${penaltyCfName}`,
+      label: tFilters("penaltyLabel", { name: penaltyCfName }),
       onRemove: () => setFilters((f) => ({ ...f, hasNegativeCfId: null })),
     },
   ].filter(Boolean) as FilterChip[];
@@ -176,10 +185,10 @@ function MoviesPageContent() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Movies</h1>
+              <h1 className="text-2xl font-bold">{t("title")}</h1>
               {!isLoading && (
                 <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1.5">
-                  {total} flagged{selected.size > 0 ? ` · ${selected.size} selected` : ""}
+                  {t("flaggedSummary", { total, selected: selected.size })}
                   {isFetching && <Loader2 className="h-3 w-3 animate-spin" />}
                 </p>
               )}
@@ -191,7 +200,8 @@ function MoviesPageContent() {
                   variant="ghost"
                   onClick={() => refreshMutation.mutate(activeInstance)}
                   disabled={refreshMutation.isPending || activeInstance <= 0}
-                  title="Pull fresh data from Radarr"
+                  title={t("refreshTitle")}
+                  aria-label={t("refreshTitle")}
                 >
                   <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
                 </Button>
@@ -227,7 +237,16 @@ function MoviesPageContent() {
           <BulkActionToolbar
             selectedCount={selected.size}
             onSearch={handleSearch}
-            onDelete={handleDelete}
+            onDelete={async (search) => {
+              const count = deletableCount();
+              if (count === 0) return;
+              const ok = await askConfirm({
+                title: tConfirmDeleteMovies("title"),
+                body: tConfirmDeleteMovies("body", { count }),
+                destructive: true,
+              });
+              if (ok) handleDelete(search);
+            }}
             onIgnore={handleIgnore}
           />
 
@@ -235,7 +254,11 @@ function MoviesPageContent() {
           {isError && <MediaErrorCard onRetry={refetch} />}
           {!loadingInstances && !isLoading && !isError && allMovies.length === 0 && (
             activeInstance
-              ? noCfsConfigured ? <NoCfsPrompt /> : <AllClearState />
+              ? noCfsConfigured
+                ? <NoCfsPrompt />
+                : (chips.length > 0
+                    ? <NoFilterMatchState onClear={() => setFilters((f) => ({ ...f, q: "", profileId: null, missingCfId: null, hasNegativeCfId: null, maxScore: 1 }))} />
+                    : <AllClearState />)
               : <NoCfsPrompt />
           )}
 
@@ -282,11 +305,17 @@ function MoviesPageContent() {
           onSearch={async (m) => { await runSearch([m]); setSelectedId(null); }}
           onIgnore={async (m) => { await runIgnore([m]); setSelectedId(null); }}
           onDelete={async (m, triggerSearch) => {
-            if (!confirm(`Delete file for "${m.title}"? This cannot be undone.`)) return;
+            const ok = await askConfirm({
+              title: tConfirmDeleteFile("title"),
+              body: tConfirmDeleteFile("body", { title: m.title }),
+              destructive: true,
+            });
+            if (!ok) return;
             await runDelete([m], triggerSearch);
             setSelectedId(null);
           }}
         />
+        {confirmDialog}
       </PageErrorBoundary>
     </AppShell>
   );

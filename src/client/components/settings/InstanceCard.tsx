@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
@@ -15,18 +16,21 @@ interface Props {
 }
 
 export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
+  const t = useTranslations("settings");
+  const tToast = useTranslations("toast.instance");
+  const tCommon = useTranslations("common");
   const deleteInstance = useDeleteInstance();
   const test = useTestConnection();
   const { data: prefs } = usePreferences(instance.id);
   const noCfs = (prefs?.length ?? 0) === 0 && instance.enabled;
 
   const runTest = withToast(test, {
-    success: `${instance.name}: connected`,
-    error: `${instance.name}: connection failed`,
+    success: tToast("testOk", { name: instance.name }),
+    error: tToast("testFailed", { name: instance.name }),
   });
   const runDelete = withToast(deleteInstance, {
-    success: "Instance deleted",
-    error: "Failed to delete instance",
+    success: tToast("deleted"),
+    error: tToast("deleteFailed"),
   });
 
   const handleTest = () => runTest(instance.id);
@@ -40,20 +44,20 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
           <p className="font-medium">{instance.name}</p>
           <p className="text-xs text-muted-foreground">{instance.url}</p>
           {noCfs && (
-            <p className="text-xs text-yellow-400 mt-0.5">No Custom Formats configured</p>
+            <p className="text-xs text-yellow-400 mt-0.5">{t("noCfsConfigured")}</p>
           )}
         </div>
         {failedCount > 0 && (
           <Badge variant="destructive">{failedCount} failed</Badge>
         )}
         <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={handleTest} disabled={test.isPending}>
+          <Button variant="outline" size="icon" onClick={handleTest} disabled={test.isPending} aria-label={tCommon("test")}>
             <Plug className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" onClick={onEdit}>
+          <Button variant="outline" size="icon" onClick={onEdit} aria-label={tCommon("edit")}>
             <Edit2 className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" onClick={handleDelete} disabled={deleteInstance.isPending}>
+          <Button variant="outline" size="icon" onClick={handleDelete} disabled={deleteInstance.isPending} aria-label={tCommon("delete")}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>

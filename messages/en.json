@@ -1,0 +1,339 @@
+{
+  "appName": "Remedarr",
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "search": "Search",
+    "ignore": "Ignore",
+    "refresh": "Refresh",
+    "clear": "Clear",
+    "loading": "Loading…",
+    "all": "All",
+    "edit": "Edit",
+    "test": "Test",
+    "yes": "Yes",
+    "no": "No",
+    "viewAll": "View all"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "movies": "Movies",
+    "shows": "Shows",
+    "ignored": "Ignored",
+    "history": "History",
+    "logs": "Logs",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Overview of your instances and recent activity",
+    "addInstance": "Add instance",
+    "kpi": {
+      "instances": "Instances",
+      "flaggedMovies": "Flagged movies",
+      "flaggedSeries": "Flagged series",
+      "failed24h": "Failed (24h)"
+    },
+    "instances": "Instances",
+    "recentActivity": "Recent activity",
+    "noRecentActions": "No recent actions.",
+    "instanceCard": {
+      "connected": "Connected",
+      "unreachable": "Unreachable",
+      "checking": "Checking…",
+      "disabled": "Disabled",
+      "flaggedMoviesNoun": "{count, plural, one {flagged movie} other {flagged movies}}",
+      "flaggedSeriesNoun": "{count, plural, one {flagged series} other {flagged series}}",
+      "settings": "Settings"
+    }
+  },
+  "movies": {
+    "title": "Movies",
+    "flaggedSummary": "{total} flagged{selected, select, 0 {} other { · {selected} selected}}",
+    "refreshTitle": "Refresh from Radarr",
+    "columns": {
+      "title": "Title",
+      "profile": "Profile",
+      "score": "Score",
+      "size": "Size",
+      "missing": "Missing",
+      "penalties": "Penalties"
+    },
+    "noFile": "No file"
+  },
+  "shows": {
+    "title": "Shows",
+    "flaggedSummary": "{total} flagged{selected, select, 0 {} other { · {selected} selected}}",
+    "refreshTitle": "Refresh from Sonarr",
+    "columns": {
+      "title": "Title",
+      "profile": "Profile",
+      "score": "Score",
+      "size": "Size",
+      "episodes": "Eps",
+      "missing": "Missing",
+      "penalties": "Penalties"
+    },
+    "noFile": "No file",
+    "season": "Season {season}",
+    "seasonProgress": "{affected} / {total} episodes",
+    "noEpisodeFiles": "No episode files found.",
+    "searchSeasonAria": "Search Season {season}",
+    "deleteSeasonAria": "Delete affected files in Season {season}"
+  },
+  "filters": {
+    "allProfiles": "All profiles",
+    "anyMissingFormat": "Any missing Custom Format",
+    "anyPenaltyFormat": "Any penalty Custom Format",
+    "missingLabel": "Missing: {name}",
+    "penaltyLabel": "Penalty: {name}",
+    "profileLabel": "Profile: {name}",
+    "queryLabel": "“{q}”",
+    "searchPlaceholder": "Search title or Custom Format…",
+    "maxScore": "Max score",
+    "active": "Active:",
+    "removeChip": "Remove {label}"
+  },
+  "bulk": {
+    "selected": "{count} selected",
+    "search": "Search",
+    "ignore": "Ignore",
+    "delete": "Delete",
+    "deleteAndSearch": "Delete and search"
+  },
+  "history": {
+    "title": "History",
+    "filters": {
+      "instance": "Instance",
+      "status": "Status",
+      "action": "Action"
+    },
+    "statusLabels": {
+      "success": "Success",
+      "dryRun": "Dry Run",
+      "failed": "Failed",
+      "pending": "Pending"
+    },
+    "actionLabels": {
+      "search": "Search",
+      "delete": "Delete",
+      "ignore": "Ignore"
+    },
+    "columns": {
+      "date": "Date",
+      "action": "Action",
+      "title": "Title",
+      "status": "Status"
+    },
+    "clear": "Clear history"
+  },
+  "logs": {
+    "title": "Logs",
+    "live": "Live",
+    "reconnecting": "Reconnecting…",
+    "entries": "{count, plural, one {# entry} other {# entries}}",
+    "clearAll": "Clear all",
+    "searchPlaceholder": "Search messages…",
+    "levelLabels": {
+      "all": "All levels",
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warnings",
+      "error": "Errors"
+    },
+    "columns": {
+      "time": "Time",
+      "level": "Level",
+      "source": "Source",
+      "message": "Message"
+    },
+    "empty": "No logs recorded yet — application logs will appear here as the app runs."
+  },
+  "settings": {
+    "title": "Settings",
+    "instances": "Instances",
+    "addInstance": "Add Instance",
+    "scoringMode": "Scoring Mode",
+    "scoringModeOptions": {
+      "manual": "Manual",
+      "profile": "Profile"
+    },
+    "wantedCfs": "Wanted Custom Formats",
+    "wantedCfsHelp": "Select which Custom Formats each instance should have. Media missing any of these will be flagged.",
+    "noCfsConfigured": "No Custom Formats configured",
+    "dryRunMode": "Dry Run Mode",
+    "apiAccess": "API Access",
+    "instanceForm": {
+      "addTitle": "Add Instance",
+      "editTitle": "Edit Instance",
+      "type": "Type",
+      "name": "Name",
+      "namePlaceholder": "My Radarr",
+      "url": "URL",
+      "urlPlaceholder": "http://localhost:7878",
+      "apiKey": "API Key",
+      "apiKeyPlaceholderEdit": "•••••••• (leave blank to keep current)",
+      "apiKeyPlaceholderNew": "••••••••"
+    },
+    "cfPicker": {
+      "loading": "Loading Custom Formats…",
+      "empty": "No Custom Formats found in {name}.",
+      "selectedCount": "{count} selected"
+    },
+    "dryRun": {
+      "label": "Dry Run Mode",
+      "badgeOn": "Dry Run",
+      "badgeOff": "Live",
+      "switchTitle": "Switch to Live mode?",
+      "switchBody": "In Live mode, search, delete, and ignore actions will execute against your *arr instances.",
+      "switchConfirm": "Switch to Live mode"
+    }
+  },
+  "states": {
+    "noInstances": {
+      "title": "No instances configured",
+      "body": "Add a Radarr or Sonarr instance to get started.",
+      "cta": "Add instance"
+    },
+    "noCfs": {
+      "title": "No Custom Formats configured",
+      "body": "Go to Settings and pick the Custom Formats you want for this instance."
+    },
+    "allClear": {
+      "title": "All clear!",
+      "body": "Every item meets your Custom Format targets."
+    },
+    "noFilterMatch": {
+      "title": "No matches",
+      "body": "Try adjusting or clearing your filters.",
+      "cta": "Clear filters"
+    },
+    "mediaError": {
+      "title": "Couldn't load data",
+      "body": "Try again, or check the Logs page for details.",
+      "retry": "Retry"
+    },
+    "emptyLogs": {
+      "title": "No history yet",
+      "body": "Actions you take will appear here."
+    }
+  },
+  "ignored": {
+    "title": "Ignored",
+    "summary": "{count, plural, one {# item hidden from triage} other {# items hidden from triage}}",
+    "empty": "Nothing ignored. Items you ignore from Movies or Shows will appear here.",
+    "unignore": "Unignore",
+    "selectInstance": "Select instance",
+    "columns": {
+      "type": "Type",
+      "title": "Title",
+      "ignored": "Ignored"
+    }
+  },
+  "toast": {
+    "search": {
+      "started": "Search started",
+      "queuedDryRun": "Search queued (dry run)",
+      "failed": "Couldn't start search",
+      "seasonStarted": "Season search started",
+      "seasonQueuedDryRun": "Season search queued (dry run)",
+      "seasonFailed": "Couldn't start season search",
+      "episodeStarted": "Episode search started",
+      "episodeQueuedDryRun": "Episode search queued (dry run)",
+      "episodeFailed": "Couldn't start episode search"
+    },
+    "delete": {
+      "fileDone": "File deleted",
+      "fileDoneAndSearch": "File deleted; search started",
+      "filesDone": "Files deleted",
+      "filesDoneAndSearch": "Files deleted; search started",
+      "seasonDone": "Season files deleted",
+      "seasonDoneAndSearch": "Season files deleted; search started",
+      "queuedDryRun": "Delete queued (dry run)",
+      "queuedAndSearchDryRun": "Delete and search queued (dry run)",
+      "fileFailed": "Couldn't delete file",
+      "filesFailed": "Couldn't delete files",
+      "seasonFailed": "Couldn't delete season files"
+    },
+    "ignore": {
+      "done": "Items ignored",
+      "failed": "Couldn't ignore items",
+      "removed": "Removed from Ignored",
+      "removeFailed": "Couldn't remove from Ignored"
+    },
+    "refresh": {
+      "done": "Refreshed from Sonarr/Radarr",
+      "failed": "Couldn't refresh"
+    },
+    "instance": {
+      "added": "Instance added",
+      "updated": "Instance updated",
+      "deleted": "Instance deleted",
+      "addFailed": "Couldn't add instance",
+      "updateFailed": "Couldn't update instance",
+      "deleteFailed": "Couldn't delete instance",
+      "testOk": "{name}: connected",
+      "testFailed": "{name}: connection failed"
+    },
+    "cfs": {
+      "saved": "Custom Formats saved",
+      "saveFailed": "Couldn't save Custom Formats"
+    },
+    "history": {
+      "cleared": "History cleared",
+      "clearFailed": "Couldn't clear history"
+    },
+    "logs": {
+      "cleared": "Logs cleared",
+      "clearFailed": "Couldn't clear logs"
+    },
+    "dryRun": {
+      "enabled": "Dry Run mode enabled",
+      "disabled": "Live mode on. Actions will execute against your *arr instances."
+    },
+    "scoringMode": "Scoring mode set to {mode}",
+    "apiKey": {
+      "copied": "API key copied",
+      "regenerated": "API key regenerated"
+    },
+    "retry": {
+      "running": "Retrying {title}…",
+      "succeeded": "Retry succeeded",
+      "failed": "Retry failed"
+    },
+    "genericError": "Something went wrong. Check the Logs page for details."
+  },
+  "confirm": {
+    "deleteFile": {
+      "title": "Delete file?",
+      "body": "Delete the file for “{title}”? This cannot be undone."
+    },
+    "deleteMovies": {
+      "title": "Delete files?",
+      "body": "Delete files for {count, plural, one {# movie} other {# movies}}? This cannot be undone."
+    },
+    "deleteSeries": {
+      "title": "Delete files?",
+      "body": "Delete all files for {count, plural, one {# series} other {# series}}? This cannot be undone."
+    },
+    "deleteSeason": {
+      "title": "Delete season?",
+      "body": "Delete {count, plural, one {# file} other {# files}} in Season {season}? This cannot be undone."
+    },
+    "deleteEpisode": {
+      "title": "Delete file?",
+      "body": "Delete this file? {label}"
+    },
+    "clearHistory": {
+      "title": "Clear history?",
+      "body": "Clear all history? This cannot be undone."
+    },
+    "clearLogs": {
+      "title": "Clear logs?",
+      "body": "Clear all log entries? This cannot be undone."
+    },
+    "confirmLabel": "Confirm",
+    "cancelLabel": "Cancel"
+  }
+}

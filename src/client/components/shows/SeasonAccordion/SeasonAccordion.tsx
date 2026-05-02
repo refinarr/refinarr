@@ -1,3 +1,5 @@
+"use client";
+import { useTranslations } from "next-intl";
 import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
 import { AccordionItem, AccordionTrigger, AccordionContent } from "@/client/components/ui/accordion";
 import { Button } from "@/client/components/ui/button";
@@ -25,14 +27,15 @@ export function SeasonAccordion({
   onSearchFile,
   onDeleteFile,
 }: Props) {
+  const t = useTranslations("shows");
   return (
     <AccordionItem value={`season-${season}`}>
       <div className="relative">
         <AccordionTrigger className="px-3 pr-24">
           <div className="flex w-full items-center justify-between pr-2 gap-2">
-            <span className="text-sm font-medium">Season {season}</span>
+            <span className="text-sm font-medium">{t("season", { season })}</span>
             <span className="text-xs text-muted-foreground">
-              {affectedCount} / {files.length} episodes
+              {t("seasonProgress", { affected: affectedCount, total: files.length })}
             </span>
           </div>
         </AccordionTrigger>
@@ -42,7 +45,8 @@ export function SeasonAccordion({
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              title={`Search Season ${season}`}
+              title={t("searchSeasonAria", { season })}
+              aria-label={t("searchSeasonAria", { season })}
               onClick={() => onSearch()}
             >
               <Search className="h-3.5 w-3.5" />
@@ -51,7 +55,8 @@ export function SeasonAccordion({
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              title={`Delete affected files in Season ${season}`}
+              title={t("deleteSeasonAria", { season })}
+              aria-label={t("deleteSeasonAria", { season })}
               onClick={() => onDelete(false)}
             >
               <Trash2 className="h-3.5 w-3.5 text-destructive" />

@@ -1,6 +1,7 @@
 "use client";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { HistoryTable } from "@/client/components/history/HistoryTable";
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
@@ -13,24 +14,17 @@ import { Trash2 } from "lucide-react";
 import { useHistory, useClearHistory } from "@/client/hooks/useHistory";
 import { useInstances } from "@/client/hooks/useInstances";
 import { useInfiniteScroll } from "@/client/hooks/useInfiniteScroll";
+import { useConfirm } from "@/client/hooks/useConfirm";
 import { withToast } from "@/client/lib/with-toast";
 import type { ActionLog } from "@/shared/types/models";
 
-const STATUS_LABELS: Record<string, string> = {
-  "": "All",
-  success: "Success",
-  failed: "Failed",
-  dry_run: "Dry Run",
-};
-
-const ACTION_LABELS: Record<string, string> = {
-  "": "All",
-  search: "Search",
-  delete: "Delete",
-  ignore: "Ignore",
-};
-
 function HistoryContent() {
+  const t = useTranslations("history");
+  const tStatus = useTranslations("history.statusLabels");
+  const tAction = useTranslations("history.actionLabels");
+  const tCommon = useTranslations("common");
+  const tToast = useTranslations("toast.history");
+  const tConfirm = useTranslations("confirm.clearHistory");
   const searchParams = useSearchParams();
   const { data: instances } = useInstances();
   const [instanceId, setInstanceId] = useState<string>(
@@ -48,24 +42,49 @@ function HistoryContent() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useHistory(filters);
   const sentinelRef = useInfiniteScroll(fetchNextPage, !!hasNextPage);
   const clear = useClearHistory();
-  const runClear = withToast(clear, { success: "History cleared", error: "Failed to clear history" });
-  const handleClear = () => {
-    if (confirm("Clear all history? This cannot be undone.")) runClear(undefined);
+  const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
+  const runClear = withToast(clear, { success: tToast("cleared"), error: tToast("clearFailed") });
+  const handleClear = async () => {
+    if (await askConfirm({
+      title: tConfirm("title"),
+      body: tConfirm("body"),
+      confirmLabel: t("clear"),
+      destructive: true,
+    })) runClear(undefined);
   };
 
   const allLogs: ActionLog[] = data?.pages.flatMap((p) => p.items) ?? [];
+
+  const statusLabel = (key: string) =>
+    key === "" ? tCommon("all")
+      : key === "success" ? tStatus("success")
+      : key === "failed" ? tStatus("failed")
+      : key === "dry_run" ? tStatus("dryRun")
+      : key === "pending" ? tStatus("pending")
+      : tCommon("all");
+
+  const actionLabel = (key: string) =>
+    key === "" ? tCommon("all")
+      : key === "search" ? tAction("search")
+      : key === "delete" ? tAction("delete")
+      : key === "ignore" ? tAction("ignore")
+      : tCommon("all");
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex flex-col gap-1">
-          <Label>Instance</Label>
+          <Label>{t("filters.instance")}</Label>
           <Select value={instanceId} onValueChange={(v) => setInstanceId(v ?? "")}>
             <SelectTrigger className="w-40">
-              <SelectValue>{instanceId ? (instances ?? []).find((i) => String(i.id) === instanceId)?.name ?? "All" : "All"}</SelectValue>
+              <SelectValue>
+                {instanceId
+                  ? (instances ?? []).find((i) => String(i.id) === instanceId)?.name ?? tCommon("all")
+                  : tCommon("all")}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All</SelectItem>
+              <SelectItem value="">{tCommon("all")}</SelectItem>
               {(instances ?? []).map((i) => (
                 <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
               ))}
@@ -73,30 +92,30 @@ function HistoryContent() {
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <Label>Status</Label>
+          <Label>{t("filters.status")}</Label>
           <Select value={status} onValueChange={(v) => setStatus(v ?? "")}>
             <SelectTrigger className="w-36">
-              <SelectValue>{STATUS_LABELS[status] ?? "All"}</SelectValue>
+              <SelectValue>{statusLabel(status)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All</SelectItem>
-              <SelectItem value="success">Success</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-              <SelectItem value="dry_run">Dry Run</SelectItem>
+              <SelectItem value="">{tCommon("all")}</SelectItem>
+              <SelectItem value="success">{tStatus("success")}</SelectItem>
+              <SelectItem value="failed">{tStatus("failed")}</SelectItem>
+              <SelectItem value="dry_run">{tStatus("dryRun")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <Label>Action</Label>
+          <Label>{t("filters.action")}</Label>
           <Select value={action} onValueChange={(v) => setAction(v ?? "")}>
             <SelectTrigger className="w-40">
-              <SelectValue>{ACTION_LABELS[action] ?? "All"}</SelectValue>
+              <SelectValue>{actionLabel(action)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All</SelectItem>
-              <SelectItem value="search">Search</SelectItem>
-              <SelectItem value="delete">Delete</SelectItem>
-              <SelectItem value="ignore">Ignore</SelectItem>
+              <SelectItem value="">{tCommon("all")}</SelectItem>
+              <SelectItem value="search">{tAction("search")}</SelectItem>
+              <SelectItem value="delete">{tAction("delete")}</SelectItem>
+              <SelectItem value="ignore">{tAction("ignore")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -107,7 +126,7 @@ function HistoryContent() {
             onClick={handleClear}
             disabled={clear.isPending || allLogs.length === 0}
           >
-            <Trash2 className="h-4 w-4 mr-1 text-destructive" /> Clear history
+            <Trash2 className="h-4 w-4 mr-1 text-destructive" /> {t("clear")}
           </Button>
         </div>
       </div>
@@ -118,16 +137,18 @@ function HistoryContent() {
 
       <div ref={sentinelRef} className="h-4" />
       {isFetchingNextPage && <MediaTableSkeleton rows={3} />}
+      {confirmDialog}
     </div>
   );
 }
 
 export default function HistoryPage() {
+  const t = useTranslations("history");
   return (
     <AppShell>
       <PageErrorBoundary>
         <div className="space-y-4">
-          <h1 className="text-2xl font-bold">History</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
           <Suspense fallback={<MediaTableSkeleton />}>
             <HistoryContent />
           </Suspense>

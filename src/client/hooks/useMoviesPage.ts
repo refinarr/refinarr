@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useInstances } from "./useInstances";
 import { useMovies } from "./useMovies";
 import { useConfig } from "./useConfig";
@@ -23,6 +24,9 @@ export interface MediaFilters {
 }
 
 export function useMoviesPage() {
+  const tSearch = useTranslations("toast.search");
+  const tDelete = useTranslations("toast.delete");
+  const tIgnore = useTranslations("toast.ignore");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: instances, isLoading: loadingInstances } = useInstances();
@@ -91,12 +95,12 @@ export function useMoviesPage() {
     },
     onSuccess: (results) => {
       if (results.some((r) => r.isDryRun)) {
-        toast.info("[Dry Run] Search queued");
+        toast.info(tSearch("queuedDryRun"));
       } else {
-        toast.success("Search triggered");
+        toast.success(tSearch("started"));
       }
     },
-    onError: () => toast.error("Failed to trigger search"),
+    onError: () => toast.error(tSearch("failed")),
   });
 
   const ignoreMutation = useMutation({
@@ -125,17 +129,17 @@ export function useMoviesPage() {
     },
     onSuccess: ({ results, search }) => {
       if (results.some((r) => r.isDryRun)) {
-        toast.info(search ? "[Dry Run] Delete & search queued" : "[Dry Run] Delete queued");
+        toast.info(search ? tDelete("queuedAndSearchDryRun") : tDelete("queuedDryRun"));
       } else {
-        toast.success(search ? "File deleted, search triggered" : "File deleted");
+        toast.success(search ? tDelete("fileDoneAndSearch") : tDelete("fileDone"));
         void refetch();
       }
     },
-    onError: () => toast.error("Failed to delete file"),
+    onError: () => toast.error(tDelete("fileFailed")),
   });
 
   const runSearch = (movies: FlaggedMovie[]) => searchMutation.mutateAsync(movies);
-  const runIgnore = withToast(ignoreMutation, { success: "Items ignored", error: "Failed to ignore items" });
+  const runIgnore = withToast(ignoreMutation, { success: tIgnore("done"), error: tIgnore("failed") });
   const runDelete = (movies: FlaggedMovie[], search: boolean) =>
     deleteMutation.mutateAsync({ movies, search });
 
@@ -149,13 +153,17 @@ export function useMoviesPage() {
     setSelected(new Set());
   };
 
+  const deletableSelected = () =>
+    allMovies.filter((m) => selected.has(m.id) && m.hasFile && m.movieFileId > 0);
+
   const handleDelete = async (search: boolean) => {
-    const toDelete = allMovies.filter((m) => selected.has(m.id) && m.hasFile && m.movieFileId > 0);
+    const toDelete = deletableSelected();
     if (!toDelete.length) return;
-    if (!confirm(`Delete file for ${toDelete.length} movie(s)? This cannot be undone.`)) return;
     await runDelete(toDelete, search);
     setSelected(new Set());
   };
+
+  const deletableCount = () => deletableSelected().length;
 
   const selectedItem = allMovies.find((m) => m.id === selectedId) ?? null;
 
@@ -186,6 +194,7 @@ export function useMoviesPage() {
     handleSearch,
     handleIgnore,
     handleDelete,
+    deletableCount,
     runSearch,
     runIgnore,
     runDelete,

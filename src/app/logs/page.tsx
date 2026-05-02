@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { AppLogRow } from "@/client/components/logs/AppLogRow";
@@ -8,19 +9,19 @@ import { Input } from "@/client/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { useAppLogs, useClearAppLogs } from "@/client/hooks/useAppLogs";
 import { useDebouncedValue } from "@/client/hooks/useDebouncedValue";
+import { useConfirm } from "@/client/hooks/useConfirm";
 import { withToast } from "@/client/lib/with-toast";
 import type { LogLevel } from "@/shared/types/models";
 import { Loader2, Trash2, Search, Wifi, WifiOff } from "lucide-react";
 
 const ALL = "__all__";
-const LEVEL_LABELS: Record<LogLevel, string> = {
-  debug: "Debug",
-  info: "Info",
-  warn: "Warnings",
-  error: "Errors",
-};
 
 export default function LogsPage() {
+  const t = useTranslations("logs");
+  const tLevel = useTranslations("logs.levelLabels");
+  const tCols = useTranslations("logs.columns");
+  const tToast = useTranslations("toast.logs");
+  const tConfirm = useTranslations("confirm.clearLogs");
   const [level, setLevel] = useState<LogLevel | null>(null);
   const [q, setQ] = useState("");
   const debouncedQ = useDebouncedValue(q, 300);
@@ -31,13 +32,22 @@ export default function LogsPage() {
   });
 
   const clear = useClearAppLogs();
-  const runClear = withToast(clear, { success: "Logs cleared", error: "Failed to clear logs" });
+  const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
+  const runClear = withToast(clear, { success: tToast("cleared"), error: tToast("clearFailed") });
 
   const handleClear = async () => {
-    if (!confirm("Clear all log entries? This cannot be undone.")) return;
+    const ok = await askConfirm({
+      title: tConfirm("title"),
+      body: tConfirm("body"),
+      confirmLabel: t("clearAll"),
+      destructive: true,
+    });
+    if (!ok) return;
     await runClear(undefined as unknown as void);
     reconnect();
   };
+
+  const levelLabel = level === null ? tLevel("all") : tLevel(level);
 
   return (
     <AppShell>
@@ -45,15 +55,15 @@ export default function LogsPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Logs</h1>
+              <h1 className="text-2xl font-bold">{t("title")}</h1>
               <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1.5">
                 {isConnected ? (
                   <Wifi className="h-3 w-3 text-green-500" />
                 ) : (
                   <WifiOff className="h-3 w-3 text-destructive" />
                 )}
-                {isConnected ? "Live" : "Reconnecting…"}
-                {total > 0 && <span className="ml-1">· {total} entr{total === 1 ? "y" : "ies"}</span>}
+                {isConnected ? t("live") : t("reconnecting")}
+                {total > 0 && <span className="ml-1">· {t("entries", { count: total })}</span>}
               </p>
             </div>
             <div className="flex gap-2">
@@ -64,7 +74,7 @@ export default function LogsPage() {
                 disabled={total === 0 || clear.isPending}
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1 text-destructive" />
-                Clear all
+                {t("clearAll")}
               </Button>
             </div>
           </div>
@@ -75,7 +85,7 @@ export default function LogsPage() {
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search messages…"
+                placeholder={t("searchPlaceholder")}
                 className="pl-9"
               />
             </div>
@@ -84,14 +94,14 @@ export default function LogsPage() {
               onValueChange={(v) => setLevel(v === ALL ? null : (v as LogLevel))}
             >
               <SelectTrigger className="w-32">
-                <SelectValue>{level === null ? "All levels" : LEVEL_LABELS[level]}</SelectValue>
+                <SelectValue>{levelLabel}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>All levels</SelectItem>
-                <SelectItem value="error">Errors</SelectItem>
-                <SelectItem value="warn">Warnings</SelectItem>
-                <SelectItem value="info">Info</SelectItem>
-                <SelectItem value="debug">Debug</SelectItem>
+                <SelectItem value={ALL}>{tLevel("all")}</SelectItem>
+                <SelectItem value="error">{tLevel("error")}</SelectItem>
+                <SelectItem value="warn">{tLevel("warn")}</SelectItem>
+                <SelectItem value="info">{tLevel("info")}</SelectItem>
+                <SelectItem value="debug">{tLevel("debug")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -104,7 +114,7 @@ export default function LogsPage() {
 
           {!isLoading && entries.length === 0 && (
             <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
-              No logs yet — application logs will appear here as the app runs.
+              {t("empty")}
             </div>
           )}
 
@@ -114,10 +124,10 @@ export default function LogsPage() {
                 <thead className="bg-background border-b">
                   <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="w-6 px-3 py-2.5" />
-                    <th className="w-44 px-3 py-2.5 font-medium">Time</th>
-                    <th className="w-20 px-3 py-2.5 font-medium">Level</th>
-                    <th className="w-32 px-3 py-2.5 font-medium">Source</th>
-                    <th className="px-3 py-2.5 font-medium">Message</th>
+                    <th className="w-44 px-3 py-2.5 font-medium">{tCols("time")}</th>
+                    <th className="w-20 px-3 py-2.5 font-medium">{tCols("level")}</th>
+                    <th className="w-32 px-3 py-2.5 font-medium">{tCols("source")}</th>
+                    <th className="px-3 py-2.5 font-medium">{tCols("message")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -128,6 +138,7 @@ export default function LogsPage() {
               </table>
             </div>
           )}
+          {confirmDialog}
         </div>
       </PageErrorBoundary>
     </AppShell>

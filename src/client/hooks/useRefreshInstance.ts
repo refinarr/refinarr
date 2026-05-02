@@ -1,9 +1,11 @@
 "use client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/client/lib/api";
 
 export function useRefreshInstance() {
+  const t = useTranslations("toast.refresh");
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (instanceId: number) =>
@@ -12,8 +14,8 @@ export function useRefreshInstance() {
       qc.invalidateQueries({ queryKey: ["movies", instanceId] });
       qc.invalidateQueries({ queryKey: ["series", instanceId] });
       qc.invalidateQueries({ queryKey: ["dashboard-summary"] });
-      toast.success("Refreshed from Sonarr/Radarr");
+      toast.success(t("done"));
     },
-    onError: () => toast.error("Failed to refresh"),
+    onError: () => toast.error(t("failed")),
   });
 }

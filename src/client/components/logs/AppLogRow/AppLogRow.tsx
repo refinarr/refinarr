@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/client/components/ui/badge";
 import { LogLevelBadge } from "@/client/components/logs/LogLevelBadge";
+import { formatRelative } from "@/client/lib/format";
 import type { AppLogEntry } from "@/shared/types/models";
 
 interface Props {
@@ -34,8 +35,11 @@ export function AppLogRow({ entry }: Props) {
             expanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
           ) : null}
         </td>
-        <td className="px-3 py-2 align-middle w-44 text-xs text-muted-foreground tabular-nums">
-          {new Date(entry.createdAt).toLocaleString()}
+        <td
+          className="px-3 py-2 align-middle w-44 text-xs text-muted-foreground tabular-nums"
+          title={new Date(entry.createdAt).toLocaleString()}
+        >
+          {formatRelative(entry.createdAt)}
         </td>
         <td className="px-3 py-2 align-middle w-20">
           <LogLevelBadge level={entry.level} />

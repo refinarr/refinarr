@@ -1,5 +1,6 @@
 "use client";
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/client/components/ui/input";
 import { Slider } from "@/client/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
@@ -20,6 +21,7 @@ interface Props {
 const ALL = "__all__";
 
 export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onChange }: Props) {
+  const t = useTranslations("filters");
   const { data: profiles } = useQualityProfiles(arrType, instanceId);
   const { data: prefs } = usePreferences(instanceId);
 
@@ -45,7 +47,7 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
         <Input
           value={filters.q}
           onChange={(e) => onChange({ q: e.target.value })}
-          placeholder="Search title or CF…"
+          placeholder={t("searchPlaceholder")}
           className="pl-9"
         />
       </div>
@@ -57,12 +59,12 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
         <SelectTrigger className="w-44">
           <SelectValue>
             {filters.profileId === null
-              ? "All profiles"
+              ? t("allProfiles")
               : profiles?.find((p) => p.id === filters.profileId)?.name ?? "Profile"}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL}>All profiles</SelectItem>
+          <SelectItem value={ALL}>{t("allProfiles")}</SelectItem>
           {(profiles ?? []).map((p) => (
             <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
           ))}
@@ -74,15 +76,15 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
           value={filters.missingCfId === null ? ALL : String(filters.missingCfId)}
           onValueChange={(v) => onChange({ missingCfId: v === ALL ? null : Number(v) })}
         >
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-56">
             <SelectValue>
               {filters.missingCfId === null
-                ? "Any missing CF"
-                : `Missing: ${wantedCfOptions.find((c) => c.id === filters.missingCfId)?.name ?? "CF"}`}
+                ? t("anyMissingFormat")
+                : t("missingLabel", { name: wantedCfOptions.find((c) => c.id === filters.missingCfId)?.name ?? "" })}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Any missing CF</SelectItem>
+            <SelectItem value={ALL}>{t("anyMissingFormat")}</SelectItem>
             {wantedCfOptions.map((cf) => (
               <SelectItem key={cf.id} value={String(cf.id)}>{cf.name}</SelectItem>
             ))}
@@ -93,15 +95,15 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
           value={filters.hasNegativeCfId === null ? ALL : String(filters.hasNegativeCfId)}
           onValueChange={(v) => onChange({ hasNegativeCfId: v === ALL ? null : Number(v) })}
         >
-          <SelectTrigger className="w-52">
+          <SelectTrigger className="w-56">
             <SelectValue>
               {filters.hasNegativeCfId === null
-                ? "Any penalty CF"
-                : `Has: ${negativeCfOptions.find((c) => c.id === filters.hasNegativeCfId)?.name ?? "CF"}`}
+                ? t("anyPenaltyFormat")
+                : t("penaltyLabel", { name: negativeCfOptions.find((c) => c.id === filters.hasNegativeCfId)?.name ?? "" })}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Any penalty CF</SelectItem>
+            <SelectItem value={ALL}>{t("anyPenaltyFormat")}</SelectItem>
             {negativeCfOptions.map((cf) => (
               <SelectItem key={cf.id} value={String(cf.id)}>{cf.name}</SelectItem>
             ))}
@@ -111,7 +113,7 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
 
       {scoringMode === "manual" && (
         <div className="flex items-center gap-2 min-w-48">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Max score</span>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">{t("maxScore")}</span>
           <Slider
             value={filters.maxScore}
             onValueChange={(v) => onChange({ maxScore: v as number })}

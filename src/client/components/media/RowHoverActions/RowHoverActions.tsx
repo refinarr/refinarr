@@ -1,3 +1,5 @@
+"use client";
+import { useTranslations } from "next-intl";
 import { Button } from "@/client/components/ui/button";
 import { Search, EyeOff } from "lucide-react";
 
@@ -9,12 +11,14 @@ interface Props {
 }
 
 export function RowHoverActions({ onSearch, onIgnore, searchPending, ignorePending }: Props) {
+  const t = useTranslations("common");
   return (
     <div className="inline-flex items-center gap-1">
       <Button
         variant="ghost"
         size="icon-sm"
-        title="Trigger search"
+        title={t("search")}
+        aria-label={t("search")}
         disabled={searchPending}
         onClick={onSearch}
       >
@@ -23,7 +27,8 @@ export function RowHoverActions({ onSearch, onIgnore, searchPending, ignorePendi
       <Button
         variant="ghost"
         size="icon-sm"
-        title="Ignore"
+        title={t("ignore")}
+        aria-label={t("ignore")}
         disabled={ignorePending}
         onClick={onIgnore}
       >

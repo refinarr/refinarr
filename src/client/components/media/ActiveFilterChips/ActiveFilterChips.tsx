@@ -1,3 +1,5 @@
+"use client";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/client/components/ui/badge";
 import { X } from "lucide-react";
 
@@ -12,10 +14,11 @@ interface Props {
 }
 
 export function ActiveFilterChips({ chips }: Props) {
+  const t = useTranslations("filters");
   if (chips.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-xs text-muted-foreground">Active:</span>
+      <span className="text-xs text-muted-foreground">{t("active")}</span>
       {chips.map((chip) => (
         <Badge key={chip.key} variant="secondary" className="gap-1 pl-2 pr-1 py-0.5">
           <span className="text-xs">{chip.label}</span>
@@ -23,7 +26,7 @@ export function ActiveFilterChips({ chips }: Props) {
             type="button"
             onClick={chip.onRemove}
             className="rounded hover:bg-background/40 p-0.5"
-            aria-label={`Remove ${chip.label}`}
+            aria-label={t("removeChip", { label: chip.label })}
           >
             <X className="h-3 w-3" />
           </button>

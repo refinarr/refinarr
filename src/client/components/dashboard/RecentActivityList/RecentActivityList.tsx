@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
 import { ActionStatusBadge } from "@/client/components/history/ActionStatusBadge";
@@ -12,17 +13,19 @@ interface Props {
 }
 
 export function RecentActivityList({ logs }: Props) {
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
   return (
     <Card>
       <CardHeader className="pb-2 flex-row items-center justify-between">
-        <CardTitle className="text-sm font-medium">Recent activity</CardTitle>
+        <CardTitle className="text-sm font-medium">{t("recentActivity")}</CardTitle>
         <Link href="/history" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
-          View all <ArrowRight className="h-3 w-3" />
+          {tc("viewAll")} <ArrowRight className="h-3 w-3" />
         </Link>
       </CardHeader>
       <CardContent>
         {logs.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">No recent actions.</p>
+          <p className="text-sm text-muted-foreground py-4 text-center">{t("noRecentActions")}</p>
         ) : (
           <ul className="divide-y">
             {logs.map((log) => (

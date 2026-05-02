@@ -1,5 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { Badge } from "@/client/components/ui/badge";
@@ -16,6 +17,8 @@ import { useConfig } from "@/client/hooks/useConfig";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const t = useTranslations("dashboard");
+  const tDryRun = useTranslations("settings.dryRun");
   const { data: instances, isLoading: loadingInstances } = useInstances();
   const { data: summary, isLoading: loadingSummary } = useDashboardSummary();
   const { data: config } = useConfig();
@@ -38,41 +41,39 @@ export default function DashboardPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Dashboard</h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Overview of your instances and recent activity
-              </p>
+              <h1 className="text-2xl font-bold">{t("title")}</h1>
+              <p className="text-muted-foreground text-sm mt-1">{t("subtitle")}</p>
             </div>
             <div className="flex items-center gap-3">
-              {config?.dryRun && <Badge variant="secondary">Dry Run</Badge>}
+              {config?.dryRun && <Badge variant="secondary">{tDryRun("badgeOn")}</Badge>}
               <Button size="sm" variant="outline" onClick={() => router.push("/settings")}>
-                <Plus className="h-4 w-4 mr-1" /> Add instance
+                <Plus className="h-4 w-4 mr-1" /> {t("addInstance")}
               </Button>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard
-              label="Instances"
+              label={t("kpi.instances")}
               value={summary?.perInstance.length ?? 0}
               loading={loadingSummary}
             />
             <KpiCard
-              label="Flagged movies"
+              label={t("kpi.flaggedMovies")}
               value={totals?.flaggedMovies ?? 0}
               href="/movies"
               tone={(totals?.flaggedMovies ?? 0) > 0 ? "warning" : "default"}
               loading={loadingSummary}
             />
             <KpiCard
-              label="Flagged series"
+              label={t("kpi.flaggedSeries")}
               value={totals?.flaggedSeries ?? 0}
               href="/shows"
               tone={(totals?.flaggedSeries ?? 0) > 0 ? "warning" : "default"}
               loading={loadingSummary}
             />
             <KpiCard
-              label="Failed (24h)"
+              label={t("kpi.failed24h")}
               value={totals?.failedActions24h ?? 0}
               href="/history?status=failed"
               tone={(totals?.failedActions24h ?? 0) > 0 ? "destructive" : "default"}
@@ -85,7 +86,7 @@ export default function DashboardPage() {
           )}
 
           <div>
-            <h2 className="text-lg font-semibold mb-3">Instances</h2>
+            <h2 className="text-lg font-semibold mb-3">{t("instances")}</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {(summary?.perInstance ?? []).map((inst) => (
                 <InstanceSummaryCard key={inst.id} instance={inst} />

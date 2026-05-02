@@ -14,6 +14,7 @@ import { AllClearState } from "@/client/components/states/AllClearState";
 import { NoCfsPrompt } from "@/client/components/states/NoCfsPrompt";
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
+import { NoFilterMatchState } from "@/client/components/states/NoFilterMatchState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { SeriesDetailDrawer } from "@/client/components/shows/SeriesDetailDrawer";
@@ -22,9 +23,11 @@ import { useShowsPage } from "@/client/hooks/useShowsPage";
 import { useQualityProfiles } from "@/client/hooks/useQualityProfiles";
 import { usePreferences } from "@/client/hooks/usePreferences";
 import { useRefreshInstance } from "@/client/hooks/useRefreshInstance";
+import { useConfirm } from "@/client/hooks/useConfirm";
 import { getSeverity } from "@/client/lib/severity";
 import { formatBytes } from "@/client/lib/format";
 import { Button } from "@/client/components/ui/button";
+import { useTranslations } from "next-intl";
 import type { FlaggedSeries } from "@/shared/types/models";
 import { Loader2, RefreshCw } from "lucide-react";
 
@@ -37,15 +40,20 @@ export default function ShowsPage() {
 }
 
 function ShowsPageContent() {
+  const t = useTranslations("shows");
+  const tCols = useTranslations("shows.columns");
+  const tFilters = useTranslations("filters");
+  const tConfirmDeleteSeries = useTranslations("confirm.deleteSeries");
   const {
     router, instances, loadingInstances, sonarrInstances,
     activeInstance, setInstanceId, selected, toggle,
     filters, setFilters, selectedId, setSelectedId, selectedItem,
     allSeries, total, isLoading, isFetching, isError, isFetchingNextPage,
     refetch, sentinelRef, scoringMode, noCfsConfigured,
-    handleSearch, handleIgnore, handleDelete, runSearch, runIgnore,
+    handleSearch, handleIgnore, handleDelete, deletableCount, runSearch, runIgnore,
     runSearchSeason, runSearchEpisode, runDeleteSeason, runDeleteEpisode,
   } = useShowsPage();
+  const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
 
   const { data: profiles } = useQualityProfiles("sonarr", activeInstance);
   const { data: prefs } = usePreferences(activeInstance);
@@ -83,7 +91,7 @@ function ShowsPageContent() {
     },
     {
       key: "title",
-      header: "Title",
+      header: tCols("title"),
       sortKey: "title",
       render: (s) => (
         <div className="flex items-baseline gap-2 min-w-0">
@@ -94,7 +102,7 @@ function ShowsPageContent() {
     },
     {
       key: "profile",
-      header: "Profile",
+      header: tCols("profile"),
       className: "w-32 text-muted-foreground",
       render: (s) => (
         <span className="truncate text-xs">
@@ -104,12 +112,12 @@ function ShowsPageContent() {
     },
     {
       key: "score",
-      header: "Score",
+      header: tCols("score"),
       sortKey: "score",
       className: "w-36 whitespace-nowrap",
       render: (s) => {
         if (scoringMode === "profile" && s.episodeFiles.length === 0)
-          return <span className="text-xs text-muted-foreground">No file</span>;
+          return <span className="text-xs text-muted-foreground">{t("noFile")}</span>;
         return (
           <ScoreLabel
             score={scoringMode === "profile" ? s.customFormatScore : s.cfScore}
@@ -120,20 +128,20 @@ function ShowsPageContent() {
     },
     {
       key: "size",
-      header: "Size",
+      header: tCols("size"),
       sortKey: "size",
       className: "w-24 text-xs text-muted-foreground tabular-nums whitespace-nowrap",
       render: (s) => formatBytes(s.sizeOnDisk),
     },
     {
       key: "episodes",
-      header: "Eps",
+      header: tCols("episodes"),
       className: "w-20 text-xs text-muted-foreground tabular-nums",
       render: (s) => `${s.affectedEpisodeCount} / ${s.totalEpisodeCount}`,
     },
     {
       key: "issues",
-      header: scoringMode === "profile" ? "Penalties" : "Missing",
+      header: scoringMode === "profile" ? tCols("penalties") : tCols("missing"),
       render: (s) => {
         const items = scoringMode === "profile" ? s.unwantedFormats : s.missingFormats;
         if (!items.length) return null;
@@ -158,22 +166,22 @@ function ShowsPageContent() {
   const chips: FilterChip[] = [
     filters.q && {
       key: "q",
-      label: `“${filters.q}”`,
+      label: tFilters("queryLabel", { q: filters.q }),
       onRemove: () => setFilters((f) => ({ ...f, q: "" })),
     },
     filters.profileId !== null && profileName && {
       key: "profile",
-      label: `Profile: ${profileName}`,
+      label: tFilters("profileLabel", { name: profileName }),
       onRemove: () => setFilters((f) => ({ ...f, profileId: null })),
     },
     filters.missingCfId !== null && missingCfName && {
       key: "cf",
-      label: `Missing: ${missingCfName}`,
+      label: tFilters("missingLabel", { name: missingCfName }),
       onRemove: () => setFilters((f) => ({ ...f, missingCfId: null })),
     },
     filters.hasNegativeCfId !== null && penaltyCfName && {
       key: "ncf",
-      label: `Has: ${penaltyCfName}`,
+      label: tFilters("penaltyLabel", { name: penaltyCfName }),
       onRemove: () => setFilters((f) => ({ ...f, hasNegativeCfId: null })),
     },
   ].filter(Boolean) as FilterChip[];
@@ -184,10 +192,10 @@ function ShowsPageContent() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Shows</h1>
+              <h1 className="text-2xl font-bold">{t("title")}</h1>
               {!isLoading && (
                 <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1.5">
-                  {total} flagged{selected.size > 0 ? ` · ${selected.size} selected` : ""}
+                  {t("flaggedSummary", { total, selected: selected.size })}
                   {isFetching && <Loader2 className="h-3 w-3 animate-spin" />}
                 </p>
               )}
@@ -199,7 +207,8 @@ function ShowsPageContent() {
                   variant="ghost"
                   onClick={() => refreshMutation.mutate(activeInstance)}
                   disabled={refreshMutation.isPending || activeInstance <= 0}
-                  title="Pull fresh data from Sonarr"
+                  title={t("refreshTitle")}
+                  aria-label={t("refreshTitle")}
                 >
                   <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
                 </Button>
@@ -235,7 +244,16 @@ function ShowsPageContent() {
           <BulkActionToolbar
             selectedCount={selected.size}
             onSearch={handleSearch}
-            onDelete={handleDelete}
+            onDelete={async (search) => {
+              const count = deletableCount();
+              if (count === 0) return;
+              const ok = await askConfirm({
+                title: tConfirmDeleteSeries("title"),
+                body: tConfirmDeleteSeries("body", { count }),
+                destructive: true,
+              });
+              if (ok) handleDelete(search);
+            }}
             onIgnore={handleIgnore}
           />
 
@@ -243,7 +261,11 @@ function ShowsPageContent() {
           {isError && <MediaErrorCard onRetry={refetch} />}
           {!loadingInstances && !isLoading && !isError && allSeries.length === 0 && (
             activeInstance
-              ? noCfsConfigured ? <NoCfsPrompt /> : <AllClearState />
+              ? noCfsConfigured
+                ? <NoCfsPrompt />
+                : (chips.length > 0
+                    ? <NoFilterMatchState onClear={() => setFilters((f) => ({ ...f, q: "", profileId: null, missingCfId: null, hasNegativeCfId: null, maxScore: 1 }))} />
+                    : <AllClearState />)
               : <NoCfsPrompt />
           )}
 
@@ -293,6 +315,7 @@ function ShowsPageContent() {
           onDeleteSeason={runDeleteSeason}
           onDeleteEpisode={runDeleteEpisode}
         />
+        {confirmDialog}
       </PageErrorBoundary>
     </AppShell>
   );

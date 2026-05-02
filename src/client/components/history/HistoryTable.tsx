@@ -1,8 +1,10 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/client/components/ui/table";
 import { ActionStatusBadge } from "./ActionStatusBadge";
 import { ActionTypeBadge } from "./ActionTypeBadge";
 import { RetryButton } from "./RetryButton";
+import { formatRelative } from "@/client/lib/format";
 import type { ActionLog, ActionStatus } from "@/shared/types/models";
 
 interface Props {
@@ -10,22 +12,26 @@ interface Props {
 }
 
 export function HistoryTable({ logs }: Props) {
+  const tCols = useTranslations("history.columns");
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Action</TableHead>
-          <TableHead>Title</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>{tCols("date")}</TableHead>
+          <TableHead>{tCols("action")}</TableHead>
+          <TableHead>{tCols("title")}</TableHead>
+          <TableHead>{tCols("status")}</TableHead>
           <TableHead />
         </TableRow>
       </TableHeader>
       <TableBody>
         {logs.map((log) => (
           <TableRow key={log.id}>
-            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-              {new Date(log.createdAt).toLocaleString()}
+            <TableCell
+              className="text-xs text-muted-foreground whitespace-nowrap"
+              title={new Date(log.createdAt).toLocaleString()}
+            >
+              {formatRelative(log.createdAt)}
             </TableCell>
             <TableCell>
               <ActionTypeBadge action={log.action} />

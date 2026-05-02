@@ -1,3 +1,5 @@
+"use client";
+import { useTranslations } from "next-intl";
 import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
 import { Button } from "@/client/components/ui/button";
 import { Search, Trash2 } from "lucide-react";
@@ -13,6 +15,7 @@ interface Props {
 }
 
 export function EpisodeFileRow({ file, scoringMode, onSearch, onDelete }: Props) {
+  const t = useTranslations("common");
   const name = filename(file.relativePath);
   const isBad =
     scoringMode === "profile"
@@ -41,7 +44,8 @@ export function EpisodeFileRow({ file, scoringMode, onSearch, onDelete }: Props)
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              title="Search this episode"
+              title={t("search")}
+              aria-label={t("search")}
               onClick={() => onSearch()}
             >
               <Search className="h-3.5 w-3.5" />
@@ -50,7 +54,8 @@ export function EpisodeFileRow({ file, scoringMode, onSearch, onDelete }: Props)
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              title="Delete this file"
+              title={t("delete")}
+              aria-label={t("delete")}
               onClick={() => onDelete(false)}
             >
               <Trash2 className="h-3.5 w-3.5 text-destructive" />
