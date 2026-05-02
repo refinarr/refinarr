@@ -1,0 +1,74 @@
+import { describe, test, expect } from "vitest";
+import { NextRequest } from "next/server";
+import { GET, DELETE as clearAll } from "@/app/api/history/route";
+import { logRepository } from "@/server/repositories/LogRepository";
+
+const ctxNone = { params: Promise.resolve({}) };
+
+const baseLog = {
+  instanceId: 1,
+  action: "search" as const,
+  mediaId: 100,
+  title: "Movie",
+  isDryRun: false,
+  status: "success" as const,
+  error: null,
+  payload: null,
+};
+
+function getReq(qs: string) {
+  return new NextRequest(`http://localhost/api/history?${qs}`, { method: "GET" });
+}
+
+describe("GET /api/history", () => {
+  test("returns paginated wrapped shape", async () => {
+    for (let i = 0; i < 3; i += 1) {
+      await logRepository.create({ ...baseLog, mediaId: i });
+    }
+    const res = await GET(getReq("page=1&limit=50"), ctxNone);
+    const body = await res.json();
+    expect(body.items).toHaveLength(3);
+    expect(body.total).toBe(3);
+    expect(body.hasMore).toBe(false);
+  });
+
+  test("hasMore is true when more pages exist", async () => {
+    // ACTION_LOG_RETENTION_CAP=5 in tests, so the trim caps the rows. Insert
+    // exactly 4 to keep them all and still have a partial second page.
+    for (let i = 0; i < 4; i += 1) {
+      await logRepository.create({ ...baseLog, mediaId: i });
+    }
+    const res = await GET(getReq("page=1&limit=2"), ctxNone);
+    const body = await res.json();
+    expect(body.items).toHaveLength(2);
+    expect(body.total).toBe(4);
+    expect(body.hasMore).toBe(true);
+  });
+
+  test("filter by status returns only matching rows", async () => {
+    await logRepository.create({ ...baseLog, status: "success" });
+    await logRepository.create({ ...baseLog, status: "failed", error: "boom" });
+    const res = await GET(getReq("status=failed"), ctxNone);
+    const body = await res.json();
+    expect(body.total).toBe(1);
+    expect(body.items[0].status).toBe("failed");
+  });
+
+  test("filter by instanceId scopes results", async () => {
+    await logRepository.create({ ...baseLog, instanceId: 1 });
+    await logRepository.create({ ...baseLog, instanceId: 2 });
+    const res = await GET(getReq("instanceId=1"), ctxNone);
+    const body = await res.json();
+    expect(body.total).toBe(1);
+  });
+});
+
+describe("DELETE /api/history", () => {
+  test("clears all action log rows", async () => {
+    await logRepository.create(baseLog);
+    await logRepository.create(baseLog);
+    const res = await clearAll(new NextRequest("http://localhost/api/history", { method: "DELETE" }), ctxNone);
+    expect(res.status).toBe(200);
+    expect(await logRepository.findAll()).toHaveLength(0);
+  });
+});
