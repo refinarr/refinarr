@@ -35,7 +35,6 @@ export function CommandPalette() {
   const router = useRouter();
   const t = useTranslations("commandPalette");
   const tNav = useTranslations("nav");
-  const tInstSel = useTranslations("instanceSelector");
   const { data: instances } = useInstances();
   const { data: config } = useConfig();
 
@@ -102,15 +101,6 @@ export function CommandPalette() {
 
             {radarrInstances.length > 0 && (
               <CommandGroup heading={t("groups.radarrInstance")}>
-                {radarrInstances.length > 1 && (
-                  <CommandItem
-                    keywords={["all", "radarr"]}
-                    onSelect={() => go("/movies?instanceId=all")}
-                  >
-                    <Film className="h-4 w-4" />
-                    {tInstSel("allRadarr")}
-                  </CommandItem>
-                )}
                 {radarrInstances.map((i) => (
                   <CommandItem
                     key={i.id}
@@ -126,15 +116,6 @@ export function CommandPalette() {
 
             {sonarrInstances.length > 0 && (
               <CommandGroup heading={t("groups.sonarrInstance")}>
-                {sonarrInstances.length > 1 && (
-                  <CommandItem
-                    keywords={["all", "sonarr"]}
-                    onSelect={() => go("/shows?instanceId=all")}
-                  >
-                    <Tv2 className="h-4 w-4" />
-                    {tInstSel("allSonarr")}
-                  </CommandItem>
-                )}
                 {sonarrInstances.map((i) => (
                   <CommandItem
                     key={i.id}

@@ -10,9 +10,8 @@ export const isAbortError = (e: unknown): boolean =>
   e instanceof Error && e.name === "AbortError";
 
 // Page hooks share this pattern: each bulk handler creates a fresh
-// AbortController, threads its signal into runMultiInstanceBulk via a
-// mutation, and clears the ref on settle. cancelBulk fires .abort() on
-// whatever's active.
+// AbortController, threads its signal into the bulk mutation, and clears
+// the ref on settle. cancel fires .abort() on whatever's active.
 export function useBulkAbort(): BulkAbort {
   const ref = useRef<AbortController | null>(null);
   return {

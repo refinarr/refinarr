@@ -38,14 +38,12 @@ import { useFlaggedMoviesData } from "@/client/hooks/media/useFlaggedMoviesData"
 import { useBulkAbort } from "@/client/hooks/media/useBulkAbort";
 import { useBulkMediaActions, type BulkActionsConfig } from "@/client/hooks/media/useBulkMediaActions";
 import { useBulkHandlers } from "@/client/hooks/media/useBulkHandlers";
-import type { FlaggedMovieWithInstance } from "@/client/hooks/media/useMoviesAll";
-import { buildInstanceBreakdown } from "@/client/lib/multi-instance-bulk";
 import { getSeverity } from "@/client/lib/severity";
 import { formatBytes } from "@/client/lib/format";
-import type { ScoringMode } from "@/shared/types/models";
+import type { FlaggedMovie, ScoringMode } from "@/shared/types/models";
 
 type MovieBulkConfig = Pick<
-  BulkActionsConfig<FlaggedMovieWithInstance>,
+  BulkActionsConfig<FlaggedMovie>,
   "mediaType" | "search" | "ignore" | "delete"
 >;
 
@@ -87,39 +85,38 @@ function MoviesPageContent() {
 
   const inst = useInstanceSelection("radarr");
   const { data: config } = useConfig();
-  const { data: prefs } = usePreferences(inst.helperInstance);
-  const { data: profiles } = useQualityProfiles("radarr", inst.helperInstance);
+  const { data: prefs } = usePreferences(inst.activeInstance);
+  const { data: profiles } = useQualityProfiles("radarr", inst.activeInstance);
   const refreshMutation = useRefreshInstance();
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
 
-  const scoringMode = (config?.scoringModes[`scoringMode:${inst.helperInstance}`] ?? "manual") as ScoringMode;
-  const noCfsConfigured = !inst.isAllMode && scoringMode === "manual" && (prefs?.length ?? 0) === 0;
+  const scoringMode = (config?.scoringModes[`scoringMode:${inst.activeInstance}`] ?? "manual") as ScoringMode;
+  const noCfsConfigured = scoringMode === "manual" && (prefs?.length ?? 0) === 0;
 
   const filters = useMediaFilters(scoringMode);
   const data = useFlaggedMoviesData({
     activeInstance: inst.activeInstance,
-    instanceIds: inst.typedInstanceIds,
     filters: filters.forQuery,
   });
   const sentinelRef = useInfiniteScroll(data.fetchNextPage, data.hasNextPage);
-  const selection = useMediaSelection<FlaggedMovieWithInstance>(data.allMovies, MOVIE_BULK_CONFIG.delete.isDeletable);
-  const drawer = useDetailDrawer<FlaggedMovieWithInstance>(data.allMovies);
+  const selection = useMediaSelection<FlaggedMovie>(data.allMovies, MOVIE_BULK_CONFIG.delete.isDeletable);
+  const drawer = useDetailDrawer<FlaggedMovie>(data.allMovies);
 
   const [bulkProgress, setBulkProgress] = useState<BulkProgress | null>(null);
   const abort = useBulkAbort();
-  const actions = useBulkMediaActions<FlaggedMovieWithInstance>({
+  const actions = useBulkMediaActions<FlaggedMovie>({
     ...MOVIE_BULK_CONFIG,
+    instanceId: inst.activeInstance,
     setProgress: setBulkProgress,
     refetch: data.refetch,
   });
-  const handlers = useBulkHandlers<FlaggedMovieWithInstance>({ selection, abort, actions });
+  const handlers = useBulkHandlers<FlaggedMovie>({ selection, abort, actions });
 
-  // Single-item runners used by RowHoverActions and the detail drawer.
-  const runSearch = (m: FlaggedMovieWithInstance) =>
+  const runSearch = (m: FlaggedMovie) =>
     actions.searchMutation.mutateAsync({ items: [m], isBulk: false });
-  const runIgnore = (m: FlaggedMovieWithInstance) =>
+  const runIgnore = (m: FlaggedMovie) =>
     actions.ignoreWithToast({ items: [m], isBulk: false });
-  const runDelete = (m: FlaggedMovieWithInstance, search: boolean) =>
+  const runDelete = (m: FlaggedMovie, search: boolean) =>
     actions.deleteMutation.mutateAsync({ items: [m], isBulk: false, search });
 
   const wantedCfOptions = (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }));
@@ -141,7 +138,7 @@ function MoviesPageContent() {
     );
   }
 
-  const columns: ColumnDef<FlaggedMovieWithInstance>[] = [
+  const columns: ColumnDef<FlaggedMovie>[] = [
     {
       key: "severity",
       header: "",
@@ -257,11 +254,11 @@ function MoviesPageContent() {
               )}
             </div>
             <div className="flex items-center gap-3">
-              {!inst.isAllMode && typeof inst.activeInstance === "number" && inst.activeInstance > 0 && (
+              {inst.activeInstance > 0 && (
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => refreshMutation.mutate(inst.activeInstance as number)}
+                  onClick={() => refreshMutation.mutate(inst.activeInstance)}
                   disabled={refreshMutation.isPending}
                   title={t("refreshTitle")}
                   aria-label={t("refreshTitle")}
@@ -269,23 +266,20 @@ function MoviesPageContent() {
                   <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
                 </Button>
               )}
-              {!inst.isAllMode && typeof inst.activeInstance === "number" && inst.activeInstance > 0 && (
+              {inst.activeInstance > 0 && (
                 <ScoringModeSelector instanceId={inst.activeInstance} />
               )}
               {inst.typedInstances.length > 1 && (
                 <Select
-                  value={inst.isAllMode ? "all" : String(inst.activeInstance)}
-                  onValueChange={(v) => inst.setInstanceId(v === "all" ? "all" : Number(v ?? 0))}
+                  value={String(inst.activeInstance)}
+                  onValueChange={(v) => inst.setInstanceId(Number(v ?? 0))}
                 >
                   <SelectTrigger className="w-44">
                     <SelectValue>
-                      {inst.isAllMode
-                        ? tInstSel("allRadarr")
-                        : (inst.typedInstances.find((i) => i.id === inst.activeInstance)?.name ?? tInstSel("selectInstance"))}
+                      {inst.typedInstances.find((i) => i.id === inst.activeInstance)?.name ?? tInstSel("selectInstance")}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{tInstSel("allRadarr")}</SelectItem>
                     {inst.typedInstances.map((i) => (
                       <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
                     ))}
@@ -297,19 +291,13 @@ function MoviesPageContent() {
 
           <MediaSearchBar
             arrType="radarr"
-            instanceId={inst.helperInstance}
+            instanceId={inst.activeInstance}
             scoringMode={scoringMode}
             filters={filters.filters}
             onChange={(next) => filters.setFilters((prev) => ({ ...prev, ...next }))}
           />
 
           <ActiveFilterChips chips={chips} />
-
-          {inst.isAllMode && data.truncated && (
-            <p className="rounded-md border border-yellow-500/30 bg-yellow-500/5 px-3 py-2 text-xs text-yellow-300">
-              {tInstSel("truncatedHint", { limit: data.perInstanceLimit, total: data.total })}
-            </p>
-          )}
 
           <BulkActionToolbar
             selectedCount={selection.selected.size}
@@ -319,16 +307,9 @@ function MoviesPageContent() {
             onDelete={async (search) => {
               const items = selection.deletableSelected;
               if (!items.length) return;
-              const breakdown = buildInstanceBreakdown(items, (id) => inst.instances?.find((i) => i.id === id)?.name ?? `#${id}`);
-              const body = breakdown.length > 1
-                ? tConfirmDeleteMovies("bodyMulti", {
-                    instanceCount: breakdown.length,
-                    breakdown: breakdown.map((b) => `${b.count} from ${b.name}`).join(", "),
-                  })
-                : tConfirmDeleteMovies("body", { count: items.length });
               const ok = await askConfirm({
                 title: tConfirmDeleteMovies("title"),
-                body,
+                body: tConfirmDeleteMovies("body", { count: items.length }),
                 destructive: true,
               });
               if (ok) handlers.handleDelete(search);
@@ -339,7 +320,7 @@ function MoviesPageContent() {
           {(data.isLoading || inst.loadingInstances) && <MediaTableSkeleton />}
           {data.isError && <MediaErrorCard onRetry={data.refetch} />}
           {!inst.loadingInstances && !data.isLoading && !data.isError && data.allMovies.length === 0 && (
-            (inst.isAllMode || inst.activeInstance)
+            inst.activeInstance > 0
               ? noCfsConfigured
                 ? <NoCfsPrompt />
                 : (chips.length > 0
