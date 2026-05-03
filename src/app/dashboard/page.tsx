@@ -11,9 +11,9 @@ import { RecentActivityList } from "@/client/components/dashboard/RecentActivity
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { AllClearState } from "@/client/components/states/AllClearState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
-import { useInstances } from "@/client/hooks/useInstances";
-import { useDashboardSummary } from "@/client/hooks/useDashboardSummary";
-import { useConfig } from "@/client/hooks/useConfig";
+import { useInstances } from "@/client/hooks/data/useInstances";
+import { useDashboardSummary } from "@/client/hooks/data/useDashboardSummary";
+import { useConfig } from "@/client/hooks/data/useConfig";
 
 export default function DashboardPage() {
   const router = useRouter();

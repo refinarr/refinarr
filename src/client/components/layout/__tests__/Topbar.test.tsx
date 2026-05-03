@@ -7,12 +7,12 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
 }));
 
-vi.mock("@/client/hooks/useMe", () => ({
+vi.mock("@/client/hooks/data/useMe", () => ({
   useMe: () => ({ data: { username: "admin", source: "session" } }),
   useLogout: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-vi.mock("@/client/hooks/useHealth", () => ({
+vi.mock("@/client/hooks/data/useHealth", () => ({
   useHealth: () => ({ data: { status: "ok" }, isError: false }),
 }));
 

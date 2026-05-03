@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/client/components/ui/button";
 import { RotateCcw } from "lucide-react";
-import { useRetryAction } from "@/client/hooks/useRetryAction";
+import { useRetryAction } from "@/client/hooks/data/useRetryAction";
 import { toast } from "sonner";
 
 interface Props {

@@ -2,7 +2,7 @@
 import { useTranslations } from "next-intl";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { Label } from "@/client/components/ui/label";
-import { useConfig, useUpdateConfig } from "@/client/hooks/useConfig";
+import { useConfig, useUpdateConfig } from "@/client/hooks/data/useConfig";
 import { toast } from "sonner";
 
 interface Props {

@@ -10,7 +10,7 @@ import { Input } from "@/client/components/ui/input";
 import { Label } from "@/client/components/ui/label";
 import { FormField } from "@/client/components/ui/form-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
-import { useCreateInstance, useUpdateInstance } from "@/client/hooks/useInstances";
+import { useCreateInstance, useUpdateInstance } from "@/client/hooks/data/useInstances";
 import { withToast } from "@/client/lib/with-toast";
 import type { Instance } from "@/shared/types/models";
 import { Loader2 } from "lucide-react";

@@ -6,7 +6,7 @@ import { Label } from "@/client/components/ui/label";
 import { Badge } from "@/client/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/client/components/ui/dialog";
 import { Button } from "@/client/components/ui/button";
-import { useConfig, useUpdateConfig } from "@/client/hooks/useConfig";
+import { useConfig, useUpdateConfig } from "@/client/hooks/data/useConfig";
 import { toast } from "sonner";
 
 export function DryRunToggle() {
