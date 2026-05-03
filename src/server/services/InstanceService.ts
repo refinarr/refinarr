@@ -60,6 +60,7 @@ export class InstanceService {
         id,
         name: instance.name,
         type: instance.type,
+        url: instance.url,
         ok: result.ok,
         ...(result.error ? { error: result.error } : {}),
       },
@@ -85,6 +86,7 @@ export class InstanceService {
       source: "instance-service",
       context: {
         type: data.type,
+        url: data.url,
         ok: result.ok,
         ...(result.error ? { error: result.error } : {}),
       },
