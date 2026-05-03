@@ -1,7 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
 import { Button } from "@/client/components/ui/button";
-import { Search, Trash2, EyeOff } from "lucide-react";
+import { Search, Trash2, EyeOff, X } from "lucide-react";
 
 export type BulkAction = "search" | "ignore" | "delete";
 
@@ -18,6 +18,7 @@ interface Props {
   onIgnore: () => void;
   disabled?: boolean;
   progress?: BulkProgress | null;
+  onCancel?: () => void;
 }
 
 export function BulkActionToolbar({
@@ -27,6 +28,7 @@ export function BulkActionToolbar({
   onIgnore,
   disabled,
   progress,
+  onCancel,
 }: Props) {
   const t = useTranslations("bulk");
   if (selectedCount === 0 && !progress) return null;
@@ -41,12 +43,22 @@ export function BulkActionToolbar({
         <div role="status" aria-live="polite" className="text-sm font-medium">
           {t(`progress.${progress.action}`, { current: progress.current, total: progress.total })}
         </div>
-        <div className="ml-auto h-1 w-32 overflow-hidden rounded bg-muted-foreground/20">
+        <div className="ml-auto h-1 w-24 overflow-hidden rounded bg-muted-foreground/20">
           <div
             className="h-full rounded bg-primary transition-all"
             style={{ width: `${pct}%` }}
           />
         </div>
+        {onCancel && (
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            onClick={onCancel}
+            aria-label={t("cancel")}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     );
   }

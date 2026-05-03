@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "@/test/render";
 import { BulkActionToolbar } from "../BulkActionToolbar";
 
@@ -59,5 +60,36 @@ describe("BulkActionToolbar", () => {
       />
     );
     expect(screen.getByRole("status")).toHaveTextContent(/deleting 5\/5/i);
+  });
+
+  it("renders a Cancel button in progress mode and fires onCancel when clicked", async () => {
+    const onCancel = vi.fn();
+    renderWithProviders(
+      <BulkActionToolbar
+        selectedCount={5}
+        progress={{ current: 2, total: 5, action: "search" }}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+        onCancel={onCancel}
+      />
+    );
+    const cancelBtn = screen.getByRole("button", { name: /^cancel$/i });
+    expect(cancelBtn).toBeInTheDocument();
+    await userEvent.click(cancelBtn);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render a Cancel button in progress mode when onCancel is not provided", () => {
+    renderWithProviders(
+      <BulkActionToolbar
+        selectedCount={5}
+        progress={{ current: 2, total: 5, action: "search" }}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+      />
+    );
+    expect(screen.queryByRole("button", { name: /^cancel$/i })).not.toBeInTheDocument();
   });
 });

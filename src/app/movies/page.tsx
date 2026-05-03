@@ -45,17 +45,24 @@ function MoviesPageContent() {
   const tFilters = useTranslations("filters");
   const tConfirmDeleteFile = useTranslations("confirm.deleteFile");
   const tConfirmDeleteMovies = useTranslations("confirm.deleteMovies");
+  const tInstSel = useTranslations("instanceSelector");
   const {
     router, instances, loadingInstances, radarrInstances,
-    activeInstance, setInstanceId, selected, toggle,
+    activeInstance, isAllMode, setInstanceId, selected, toggle,
     filters, setFilters, selectedId, setSelectedId, selectedItem,
-    allMovies, total, isLoading, isFetching, isError, isFetchingNextPage,
-    refetch, sentinelRef, scoringMode, noCfsConfigured, bulkProgress,
-    handleSearch, handleIgnore, handleDelete, deletableCount, runSearch, runIgnore, runDelete,
+    allMovies, total, truncated, perInstanceLimit,
+    isLoading, isFetching, isError, isFetchingNextPage,
+    refetch, sentinelRef, scoringMode, noCfsConfigured, bulkProgress, cancelBulk,
+    handleSearch, handleIgnore, handleDelete, deletableSelected,
+    instanceBreakdown, runSearch, runIgnore, runDelete,
   } = useMoviesPage();
 
-  const { data: profiles } = useQualityProfiles("radarr", activeInstance);
-  const { data: prefs } = usePreferences(activeInstance);
+  // For helper queries that take a single instance, fall back to the first
+  // Radarr in "All" mode. The profile/CF dropdowns will reflect that instance;
+  // good enough for V2 since most users keep configs in sync across instances.
+  const helperInstance = isAllMode ? (radarrInstances[0]?.id ?? 0) : (activeInstance as number);
+  const { data: profiles } = useQualityProfiles("radarr", helperInstance);
+  const { data: prefs } = usePreferences(helperInstance);
   const refreshMutation = useRefreshInstance();
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
 
@@ -194,27 +201,35 @@ function MoviesPageContent() {
               )}
             </div>
             <div className="flex items-center gap-3">
-              {activeInstance > 0 && (
+              {!isAllMode && typeof activeInstance === "number" && activeInstance > 0 && (
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => refreshMutation.mutate(activeInstance)}
-                  disabled={refreshMutation.isPending || activeInstance <= 0}
+                  disabled={refreshMutation.isPending}
                   title={t("refreshTitle")}
                   aria-label={t("refreshTitle")}
                 >
                   <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
                 </Button>
               )}
-              {activeInstance > 0 && <ScoringModeSelector instanceId={activeInstance} />}
+              {!isAllMode && typeof activeInstance === "number" && activeInstance > 0 && (
+                <ScoringModeSelector instanceId={activeInstance} />
+              )}
               {radarrInstances.length > 1 && (
-                <Select value={String(activeInstance)} onValueChange={(v) => setInstanceId(Number(v ?? 0))}>
+                <Select
+                  value={isAllMode ? "all" : String(activeInstance)}
+                  onValueChange={(v) => setInstanceId(v === "all" ? "all" : Number(v ?? 0))}
+                >
                   <SelectTrigger className="w-44">
                     <SelectValue>
-                      {radarrInstances.find((i) => i.id === activeInstance)?.name ?? "Select instance"}
+                      {isAllMode
+                        ? tInstSel("allRadarr")
+                        : (radarrInstances.find((i) => i.id === activeInstance)?.name ?? tInstSel("selectInstance"))}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">{tInstSel("allRadarr")}</SelectItem>
                     {radarrInstances.map((i) => (
                       <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
                     ))}
@@ -226,7 +241,7 @@ function MoviesPageContent() {
 
           <MediaSearchBar
             arrType="radarr"
-            instanceId={activeInstance}
+            instanceId={helperInstance}
             scoringMode={scoringMode}
             filters={filters}
             onChange={(next) => setFilters((prev) => ({ ...prev, ...next }))}
@@ -234,16 +249,30 @@ function MoviesPageContent() {
 
           <ActiveFilterChips chips={chips} />
 
+          {isAllMode && truncated && (
+            <p className="rounded-md border border-yellow-500/30 bg-yellow-500/5 px-3 py-2 text-xs text-yellow-300">
+              {tInstSel("truncatedHint", { limit: perInstanceLimit, total })}
+            </p>
+          )}
+
           <BulkActionToolbar
             selectedCount={selected.size}
             progress={bulkProgress}
+            onCancel={cancelBulk}
             onSearch={handleSearch}
             onDelete={async (search) => {
-              const count = deletableCount();
-              if (count === 0) return;
+              const items = deletableSelected();
+              if (!items.length) return;
+              const breakdown = instanceBreakdown(items);
+              const body = breakdown.length > 1
+                ? tConfirmDeleteMovies("bodyMulti", {
+                    instanceCount: breakdown.length,
+                    breakdown: breakdown.map((b) => `${b.count} from ${b.name}`).join(", "),
+                  })
+                : tConfirmDeleteMovies("body", { count: items.length });
               const ok = await askConfirm({
                 title: tConfirmDeleteMovies("title"),
-                body: tConfirmDeleteMovies("body", { count }),
+                body,
                 destructive: true,
               });
               if (ok) handleDelete(search);
@@ -254,7 +283,7 @@ function MoviesPageContent() {
           {(isLoading || loadingInstances) && <MediaTableSkeleton />}
           {isError && <MediaErrorCard onRetry={refetch} />}
           {!loadingInstances && !isLoading && !isError && allMovies.length === 0 && (
-            activeInstance
+            (isAllMode || activeInstance)
               ? noCfsConfigured
                 ? <NoCfsPrompt />
                 : (chips.length > 0
