@@ -24,8 +24,10 @@ interface MovieQuery {
   maxScore?: number;
   q?: string;
   profileId?: number;
-  missingCfId?: number;
-  hasNegativeCfId?: number;
+  missingCfIds?: number[];
+  missingCfMatch?: "any" | "all";
+  hasNegativeCfIds?: number[];
+  hasNegativeCfMatch?: "any" | "all";
 }
 
 export class MovieService extends MediaService {
@@ -193,12 +195,22 @@ export class MovieService extends MediaService {
       flagged = flagged.filter((m) => m.qualityProfileId === query.profileId);
     }
 
-    if (query.missingCfId !== undefined) {
-      flagged = flagged.filter((m) => m.missingFormats.some((cf) => cf.id === query.missingCfId));
+    if (query.missingCfIds && query.missingCfIds.length > 0) {
+      const wanted = query.missingCfIds;
+      const matchAll = (query.missingCfMatch ?? "all") === "all";
+      flagged = flagged.filter((m) => {
+        const have = new Set(m.missingFormats.map((cf) => cf.id));
+        return matchAll ? wanted.every((id) => have.has(id)) : wanted.some((id) => have.has(id));
+      });
     }
 
-    if (query.hasNegativeCfId !== undefined) {
-      flagged = flagged.filter((m) => m.unwantedFormats.some((cf) => cf.id === query.hasNegativeCfId));
+    if (query.hasNegativeCfIds && query.hasNegativeCfIds.length > 0) {
+      const wanted = query.hasNegativeCfIds;
+      const matchAll = (query.hasNegativeCfMatch ?? "all") === "all";
+      flagged = flagged.filter((m) => {
+        const have = new Set(m.unwantedFormats.map((cf) => cf.id));
+        return matchAll ? wanted.every((id) => have.has(id)) : wanted.some((id) => have.has(id));
+      });
     }
 
     const sorted = [...flagged].sort((a, b) => {

@@ -2,10 +2,11 @@
 import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { BulkActionToolbar, type BulkProgress } from "@/client/components/media/BulkActionToolbar";
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
+import { MediaPageHeader } from "@/client/components/media/MediaPageHeader";
 import { MediaSearchBar } from "@/client/components/media/MediaSearchBar";
 import { MediaTable, type ColumnDef } from "@/client/components/media/MediaTable";
 import { ActiveFilterChips, type FilterChip } from "@/client/components/media/ActiveFilterChips";
@@ -19,10 +20,7 @@ import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt"
 import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
 import { NoFilterMatchState } from "@/client/components/states/NoFilterMatchState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
-import { Button } from "@/client/components/ui/button";
 import { MovieDetailDrawer } from "@/client/components/movies/MovieDetailDrawer";
-import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 
 import { useConfig } from "@/client/hooks/data/useConfig";
 import { usePreferences } from "@/client/hooks/data/usePreferences";
@@ -80,7 +78,6 @@ function MoviesPageContent() {
   const tFilters = useTranslations("filters");
   const tConfirmDeleteFile = useTranslations("confirm.deleteFile");
   const tConfirmDeleteMovies = useTranslations("confirm.deleteMovies");
-  const tInstSel = useTranslations("instanceSelector");
   const router = useRouter();
 
   const inst = useInstanceSelection("radarr");
@@ -93,7 +90,7 @@ function MoviesPageContent() {
   const scoringMode = (config?.scoringModes[`scoringMode:${inst.activeInstance}`] ?? "manual") as ScoringMode;
   const noCfsConfigured = scoringMode === "manual" && (prefs?.length ?? 0) === 0;
 
-  const filters = useMediaFilters(scoringMode);
+  const filters = useMediaFilters(scoringMode, inst.activeInstance);
   const data = useFlaggedMoviesData({
     activeInstance: inst.activeInstance,
     filters: filters.forQuery,
@@ -213,8 +210,38 @@ function MoviesPageContent() {
   ];
 
   const profileName = profiles?.find((p) => p.id === filters.filters.profileId)?.name;
-  const missingCfName = wantedCfOptions.find((c) => c.id === filters.filters.missingCfId)?.name;
-  const penaltyCfName = negativeCfOptions.find((c) => c.id === filters.filters.hasNegativeCfId)?.name;
+
+  const missingChips: FilterChip[] = filters.filters.missingCfIds
+    .map((id) => {
+      const name = wantedCfOptions.find((c) => c.id === id)?.name;
+      if (!name) return null;
+      return {
+        key: `cf-${id}`,
+        label: tFilters("missingLabel", { name }),
+        onRemove: () =>
+          filters.setFilters((f) => ({
+            ...f,
+            missingCfIds: f.missingCfIds.filter((x) => x !== id),
+          })),
+      } satisfies FilterChip;
+    })
+    .filter((c): c is FilterChip => c !== null);
+
+  const penaltyChips: FilterChip[] = filters.filters.hasNegativeCfIds
+    .map((id) => {
+      const name = negativeCfOptions.find((c) => c.id === id)?.name;
+      if (!name) return null;
+      return {
+        key: `ncf-${id}`,
+        label: tFilters("penaltyLabel", { name }),
+        onRemove: () =>
+          filters.setFilters((f) => ({
+            ...f,
+            hasNegativeCfIds: f.hasNegativeCfIds.filter((x) => x !== id),
+          })),
+      } satisfies FilterChip;
+    })
+    .filter((c): c is FilterChip => c !== null);
 
   const chips: FilterChip[] = [
     filters.filters.q && {
@@ -227,67 +254,27 @@ function MoviesPageContent() {
       label: tFilters("profileLabel", { name: profileName }),
       onRemove: () => filters.setFilters((f) => ({ ...f, profileId: null })),
     },
-    filters.filters.missingCfId !== null && missingCfName && {
-      key: "cf",
-      label: tFilters("missingLabel", { name: missingCfName }),
-      onRemove: () => filters.setFilters((f) => ({ ...f, missingCfId: null })),
-    },
-    filters.filters.hasNegativeCfId !== null && penaltyCfName && {
-      key: "ncf",
-      label: tFilters("penaltyLabel", { name: penaltyCfName }),
-      onRemove: () => filters.setFilters((f) => ({ ...f, hasNegativeCfId: null })),
-    },
+    ...missingChips,
+    ...penaltyChips,
   ].filter(Boolean) as FilterChip[];
 
   return (
     <AppShell>
       <PageErrorBoundary>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">{t("title")}</h1>
-              {!data.isLoading && (
-                <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1.5">
-                  {t("flaggedSummary", { total: data.total, selected: selection.selected.size })}
-                  {data.isFetching && <Loader2 className="h-3 w-3 animate-spin" />}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              {inst.activeInstance > 0 && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => refreshMutation.mutate(inst.activeInstance)}
-                  disabled={refreshMutation.isPending}
-                  title={t("refreshTitle")}
-                  aria-label={t("refreshTitle")}
-                >
-                  <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
-                </Button>
-              )}
-              {inst.activeInstance > 0 && (
-                <ScoringModeSelector instanceId={inst.activeInstance} />
-              )}
-              {inst.typedInstances.length > 1 && (
-                <Select
-                  value={String(inst.activeInstance)}
-                  onValueChange={(v) => inst.setInstanceId(Number(v ?? 0))}
-                >
-                  <SelectTrigger className="w-44">
-                    <SelectValue>
-                      {inst.typedInstances.find((i) => i.id === inst.activeInstance)?.name ?? tInstSel("selectInstance")}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {inst.typedInstances.map((i) => (
-                      <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          </div>
+          <MediaPageHeader
+            title={t("title")}
+            total={data.total}
+            selected={selection.selected.size}
+            activeInstance={inst.activeInstance}
+            activeInstanceName={inst.typedInstances.find((i) => i.id === inst.activeInstance)?.name ?? null}
+            typedInstances={inst.typedInstances}
+            onSetInstance={inst.setInstanceId}
+            onRefresh={() => refreshMutation.mutate(inst.activeInstance)}
+            refreshPending={refreshMutation.isPending}
+            isLoading={data.isLoading}
+            isFetching={data.isFetching}
+          />
 
           <MediaSearchBar
             arrType="radarr"
@@ -324,7 +311,7 @@ function MoviesPageContent() {
               ? noCfsConfigured
                 ? <NoCfsPrompt />
                 : (chips.length > 0
-                    ? <NoFilterMatchState onClear={() => filters.setFilters((f) => ({ ...f, q: "", profileId: null, missingCfId: null, hasNegativeCfId: null, maxScore: 1 }))} />
+                    ? <NoFilterMatchState onClear={() => filters.setFilters((f) => ({ ...f, q: "", profileId: null, missingCfIds: [], hasNegativeCfIds: [], maxScore: 1 }))} />
                     : <AllClearState />)
               : <NoCfsPrompt />
           )}

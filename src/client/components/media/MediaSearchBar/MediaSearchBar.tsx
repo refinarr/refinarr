@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Input } from "@/client/components/ui/input";
 import { Slider } from "@/client/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
+import { MultiSelect } from "@/client/components/ui/multi-select";
 import { Button } from "@/client/components/ui/button";
 import {
   Sheet,
@@ -74,43 +75,39 @@ function FilterControls({
       </Select>
 
       {scoringMode === "manual" ? (
-        <Select
-          value={filters.missingCfId === null ? ALL : String(filters.missingCfId)}
-          onValueChange={(v) => onChange({ missingCfId: v === ALL ? null : Number(v) })}
-        >
-          <SelectTrigger className="w-full md:w-56">
-            <SelectValue>
-              {filters.missingCfId === null
-                ? t("anyMissingFormat")
-                : t("missingLabel", { name: wantedCfOptions.find((c) => c.id === filters.missingCfId)?.name ?? "" })}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>{t("anyMissingFormat")}</SelectItem>
-            {wantedCfOptions.map((cf) => (
-              <SelectItem key={cf.id} value={String(cf.id)}>{cf.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelect
+          options={wantedCfOptions}
+          selected={filters.missingCfIds}
+          onChange={(next) => onChange({ missingCfIds: next })}
+          placeholder={t("anyMissingFormat")}
+          label={t("missingHeading")}
+          singleLabel={(name) => t("missingLabel", { name })}
+          multiLabel={(count) => t("missingMultiLabel", { count })}
+          matchMode={filters.missingCfMatch}
+          onMatchModeChange={(m) => onChange({ missingCfMatch: m })}
+          matchAnyLabel={t("matchAny")}
+          matchAllLabel={t("matchAll")}
+          matchAnySuffix={t("matchAnySuffix")}
+          matchAllSuffix={t("matchAllSuffix")}
+          triggerClassName="w-full md:w-56"
+        />
       ) : (
-        <Select
-          value={filters.hasNegativeCfId === null ? ALL : String(filters.hasNegativeCfId)}
-          onValueChange={(v) => onChange({ hasNegativeCfId: v === ALL ? null : Number(v) })}
-        >
-          <SelectTrigger className="w-full md:w-56">
-            <SelectValue>
-              {filters.hasNegativeCfId === null
-                ? t("anyPenaltyFormat")
-                : t("penaltyLabel", { name: negativeCfOptions.find((c) => c.id === filters.hasNegativeCfId)?.name ?? "" })}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>{t("anyPenaltyFormat")}</SelectItem>
-            {negativeCfOptions.map((cf) => (
-              <SelectItem key={cf.id} value={String(cf.id)}>{cf.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelect
+          options={negativeCfOptions}
+          selected={filters.hasNegativeCfIds}
+          onChange={(next) => onChange({ hasNegativeCfIds: next })}
+          placeholder={t("anyPenaltyFormat")}
+          label={t("penaltyHeading")}
+          singleLabel={(name) => t("penaltyLabel", { name })}
+          multiLabel={(count) => t("penaltyMultiLabel", { count })}
+          matchMode={filters.hasNegativeCfMatch}
+          onMatchModeChange={(m) => onChange({ hasNegativeCfMatch: m })}
+          matchAnyLabel={t("matchAny")}
+          matchAllLabel={t("matchAll")}
+          matchAnySuffix={t("matchAnySuffix")}
+          matchAllSuffix={t("matchAllSuffix")}
+          triggerClassName="w-full md:w-56"
+        />
       )}
 
       {scoringMode === "manual" && (
@@ -134,8 +131,8 @@ function FilterControls({
 function activeFilterCount(filters: MediaFilters, scoringMode: ScoringMode): number {
   let n = 0;
   if (filters.profileId !== null) n++;
-  if (scoringMode === "manual" && filters.missingCfId !== null) n++;
-  if (scoringMode === "profile" && filters.hasNegativeCfId !== null) n++;
+  if (scoringMode === "manual" && filters.missingCfIds.length > 0) n++;
+  if (scoringMode === "profile" && filters.hasNegativeCfIds.length > 0) n++;
   if (scoringMode === "manual" && filters.maxScore < 1) n++;
   return n;
 }
