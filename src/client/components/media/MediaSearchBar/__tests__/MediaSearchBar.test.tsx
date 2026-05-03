@@ -12,7 +12,7 @@ vi.mock("@/client/hooks/usePreferences", () => ({
 }));
 
 import { MediaSearchBar } from "../MediaSearchBar";
-import type { MediaFilters } from "@/client/hooks/useMoviesPage";
+import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 
 const baseFilters: MediaFilters = {
   sortBy: "score",

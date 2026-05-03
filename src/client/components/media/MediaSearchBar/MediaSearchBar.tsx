@@ -16,7 +16,7 @@ import { Search, SlidersHorizontal } from "lucide-react";
 import { useQualityProfiles } from "@/client/hooks/useQualityProfiles";
 import { usePreferences } from "@/client/hooks/usePreferences";
 import type { ArrType, ScoringMode } from "@/shared/types/models";
-import type { MediaFilters } from "@/client/hooks/useMoviesPage";
+import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 import type { QualityProfile } from "@/shared/types/models";
 
 interface Props {
