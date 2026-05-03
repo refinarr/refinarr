@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { AddInstanceDialog } from "@/client/components/settings/AddInstanceDialog";
@@ -17,12 +17,26 @@ import { useConfig } from "@/client/hooks/data/useConfig";
 import type { Instance } from "@/shared/types/models";
 import { Plus } from "lucide-react";
 
+const KNOWN_ANCHORS = new Set(["dry-run"]);
+
 export default function SettingsPage() {
   const t = useTranslations("settings");
   const { data: instances, isLoading: loadingInstances } = useInstances();
   const { data: config } = useConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Instance | null>(null);
+
+  // App Router doesn't reliably auto-scroll to a hash anchor when the target
+  // element renders post-mount (each settings section depends on async hooks).
+  // Read the hash on mount and scroll to it after a short paint delay.
+  useEffect(() => {
+    const id = window.location.hash.replace(/^#/, "");
+    if (!KNOWN_ANCHORS.has(id)) return;
+    const t = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+    return () => clearTimeout(t);
+  }, []);
 
   const manualInstances = (instances ?? []).filter(
     (i) => (config?.scoringModes[`scoringMode:${i.id}`] ?? "manual") === "manual"
@@ -33,7 +47,15 @@ export default function SettingsPage() {
       <div className="max-w-2xl space-y-8">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
 
-        {/* Section 1: Instances */}
+        {/* Dry Run — first so live-mode warning catches the eye */}
+        <section id="dry-run" className="space-y-4 scroll-mt-20">
+          <h2 className="text-lg font-semibold">{t("dryRunMode")}</h2>
+          <DryRunToggle prominent />
+        </section>
+
+        <Separator />
+
+        {/* Instances */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">{t("instances")}</h2>
@@ -58,7 +80,7 @@ export default function SettingsPage() {
 
         <Separator />
 
-        {/* Section 2: Scoring Mode per instance */}
+        {/* Scoring Mode per instance */}
         {(instances ?? []).length > 0 && (
           <section className="space-y-4">
             <h2 className="text-lg font-semibold">{t("scoringMode")}</h2>
@@ -75,7 +97,7 @@ export default function SettingsPage() {
 
         <Separator />
 
-        {/* Section 3: Wanted Custom Formats (manual mode only) */}
+        {/* Wanted Custom Formats (manual mode only) */}
         {manualInstances.length > 0 && (
           <section className="space-y-4">
             <div>
@@ -92,22 +114,14 @@ export default function SettingsPage() {
 
         <Separator />
 
-        {/* Section 4: Dry Run */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold">{t("dryRunMode")}</h2>
-          <DryRunToggle />
-        </section>
-
-        <Separator />
-
-        {/* Section 5: API Access */}
+        {/* API Access */}
         <section>
           <ApiKeyCard />
         </section>
 
         <Separator />
 
-        {/* Section 6: Account password */}
+        {/* Account password */}
         <section>
           <PasswordChangeCard />
         </section>

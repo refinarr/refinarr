@@ -275,7 +275,9 @@
       "urlPlaceholder": "http://localhost:7878",
       "apiKey": "API Key",
       "apiKeyPlaceholderEdit": "•••••••• (leave blank to keep current)",
-      "apiKeyPlaceholderNew": "••••••••"
+      "apiKeyPlaceholderNew": "••••••••",
+      "testConnection": "Test connection",
+      "testFallbackName": "Instance"
     },
     "cfPicker": {
       "loading": "Loading Custom Formats…",
@@ -288,7 +290,11 @@
       "badgeOff": "Live",
       "switchTitle": "Switch to Live mode?",
       "switchBody": "In Live mode, search, delete, and ignore actions will execute against your *arr instances.",
-      "switchConfirm": "Switch to Live mode"
+      "switchConfirm": "Switch to Live mode",
+      "prominentTitleDry": "Dry Run is on",
+      "prominentBodyDry": "All search, delete, and ignore actions are simulated. Nothing reaches your *arr instances.",
+      "prominentTitleLive": "Live mode is on",
+      "prominentBodyLive": "Actions execute against your *arr instances and cannot be undone."
     }
   },
   "states": {

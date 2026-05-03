@@ -26,6 +26,12 @@ export const instanceUpdateSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
+export const instanceTestSchema = z.object({
+  type: z.enum(["radarr", "sonarr"]),
+  url: z.string().min(1).max(2048),
+  apiKey: z.string().min(1).max(256),
+});
+
 export const ignoreCreateSchema = z.object({
   instanceId: z.number().int().positive(),
   mediaId: z.number().int().positive(),

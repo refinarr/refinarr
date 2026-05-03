@@ -59,6 +59,26 @@ export class InstanceService {
     });
     return ok;
   }
+
+  async testCredentials(data: { type: ArrType; url: string; apiKey: string }): Promise<boolean> {
+    assertSafeArrUrl(data.url);
+    const transient: Instance = {
+      id: 0,
+      type: data.type,
+      name: "(test)",
+      url: data.url,
+      apiKey: data.apiKey,
+      enabled: true,
+      createdAt: new Date(),
+    };
+    const client = ArrClientFactory.createArrClient(transient);
+    const ok = await client.testConnection();
+    appLogger.info("Credentials test", {
+      source: "instance-service",
+      context: { type: data.type, ok },
+    });
+    return ok;
+  }
 }
 
 export const instanceService = new InstanceService();
