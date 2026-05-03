@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { configRepository } from "@/server/repositories/ConfigRepository";
+import { dataCache } from "@/server/lib/DataCache";
 import { configUpdateSchema } from "@/shared/types/schemas";
 
 export const GET = createApiHandler(async () => {
@@ -27,10 +28,16 @@ export const PUT = createApiHandler(async (req: NextRequest) => {
   }
   // Defense-in-depth: never let a config PUT modify the API key or other reserved keys.
   const RESERVED = new Set(["apiKey"]);
-  await Promise.all(
-    Object.entries(parsed.data)
-      .filter(([key]) => !RESERVED.has(key))
-      .map(([key, value]) => configRepository.set(key, String(value)))
-  );
+  const writes = Object.entries(parsed.data).filter(([key]) => !RESERVED.has(key));
+  await Promise.all(writes.map(([key, value]) => configRepository.set(key, String(value))));
+
+  // Scoring-mode changes the flagging logic, so the per-instance flagged-movies
+  // / flagged-series cache must be dropped or the page would keep showing the
+  // old mode's results until the 5-minute TTL expires.
+  for (const [key] of writes) {
+    const match = /^scoringMode:(\d+)$/.exec(key);
+    if (match) dataCache.invalidate(Number(match[1]));
+  }
+
   return NextResponse.json({ ok: true });
 });

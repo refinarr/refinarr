@@ -4,6 +4,7 @@ import { GET, POST } from "@/app/api/instances/route";
 import { GET as getOne, PUT, DELETE } from "@/app/api/instances/[id]/route";
 import { prisma } from "@/server/lib/db";
 import { isEncrypted } from "@/server/lib/crypto";
+import { dataCache } from "@/server/lib/DataCache";
 
 const ctxFor = (id: number) => ({ params: Promise.resolve({ id: String(id) }) });
 
@@ -134,5 +135,31 @@ describe("GET / PUT / DELETE /api/instances/[id]", () => {
     const res = await DELETE(delReq(id), ctxFor(id));
     expect(res.status).toBe(200);
     expect(await prisma.instance.findUnique({ where: { id } })).toBeNull();
+  });
+
+  test("PUT invalidates that instance's flagged-media cache", async () => {
+    const created = await POST(postReq(valid), { params: Promise.resolve({}) });
+    const { id } = await created.json();
+    dataCache.set(`movies:${id}:manual`, ["stale"]);
+    dataCache.set(`series:${id}:profile`, ["stale"]);
+    dataCache.set(`movies:9999:manual`, ["other"]);
+
+    const res = await PUT(putReq(id, { name: "Renamed" }), ctxFor(id));
+    expect(res.status).toBe(200);
+    expect(dataCache.get(`movies:${id}:manual`, 60_000)).toBeNull();
+    expect(dataCache.get(`series:${id}:profile`, 60_000)).toBeNull();
+    expect(dataCache.get(`movies:9999:manual`, 60_000)).toEqual(["other"]);
+  });
+
+  test("DELETE invalidates that instance's flagged-media cache", async () => {
+    const created = await POST(postReq(valid), { params: Promise.resolve({}) });
+    const { id } = await created.json();
+    dataCache.set(`movies:${id}:manual`, ["stale"]);
+    dataCache.set(`movies:9999:manual`, ["other"]);
+
+    const res = await DELETE(delReq(id), ctxFor(id));
+    expect(res.status).toBe(200);
+    expect(dataCache.get(`movies:${id}:manual`, 60_000)).toBeNull();
+    expect(dataCache.get(`movies:9999:manual`, 60_000)).toEqual(["other"]);
   });
 });
