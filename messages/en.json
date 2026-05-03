@@ -137,7 +137,10 @@
     "searchPlaceholder": "Search title or Custom Format…",
     "maxScore": "Max score",
     "active": "Active:",
-    "removeChip": "Remove {label}"
+    "removeChip": "Remove {label}",
+    "title": "Filters",
+    "openFilters": "Filters",
+    "applyFilters": "Apply"
   },
   "bulk": {
     "selected": "{count} selected",
