@@ -67,7 +67,18 @@
     "openMenu": "Open navigation menu"
   },
   "instanceSelector": {
-    "selectInstance": "Select instance"
+    "selectInstance": "Select instance",
+    "scoringLabel": "Scoring",
+    "instanceLabel": "Instance",
+    "flaggedTile": "Flagged",
+    "selectedTile": "Selected",
+    "flaggedSummary": "{total} flagged{selected, select, 0 {} other { · {selected} selected}}",
+    "scoringModeBanner": "{mode} mode"
+  },
+  "instanceHealth": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "checking": "Checking…"
   },
   "commandPalette": {
     "title": "Command palette",
@@ -163,8 +174,16 @@
     "allProfiles": "All profiles",
     "anyMissingFormat": "Any missing Custom Format",
     "anyPenaltyFormat": "Any penalty Custom Format",
+    "missingHeading": "Missing Custom Format",
+    "penaltyHeading": "Penalty Custom Format",
     "missingLabel": "Missing: {name}",
     "penaltyLabel": "Penalty: {name}",
+    "missingMultiLabel": "{count} missing formats",
+    "penaltyMultiLabel": "{count} penalty formats",
+    "matchAny": "Match any",
+    "matchAll": "Match all (default)",
+    "matchAnySuffix": "any",
+    "matchAllSuffix": "all",
     "profileLabel": "Profile: {name}",
     "queryLabel": "“{q}”",
     "searchPlaceholder": "Search title or Custom Format…",
@@ -275,7 +294,9 @@
       "urlPlaceholder": "http://localhost:7878",
       "apiKey": "API Key",
       "apiKeyPlaceholderEdit": "•••••••• (leave blank to keep current)",
-      "apiKeyPlaceholderNew": "••••••••"
+      "apiKeyPlaceholderNew": "••••••••",
+      "testConnection": "Test connection",
+      "testFallbackName": "Instance"
     },
     "cfPicker": {
       "loading": "Loading Custom Formats…",
@@ -288,7 +309,11 @@
       "badgeOff": "Live",
       "switchTitle": "Switch to Live mode?",
       "switchBody": "In Live mode, search, delete, and ignore actions will execute against your *arr instances.",
-      "switchConfirm": "Switch to Live mode"
+      "switchConfirm": "Switch to Live mode",
+      "prominentTitleDry": "Dry Run is on",
+      "prominentBodyDry": "All search, delete, and ignore actions are simulated. Nothing reaches your *arr instances.",
+      "prominentTitleLive": "Live mode is on",
+      "prominentBodyLive": "Actions execute against your *arr instances and cannot be undone."
     }
   },
   "states": {

@@ -2,14 +2,18 @@ import { useState } from "react";
 import { useDebouncedValue } from "../ui/useDebouncedValue";
 import type { ScoringMode } from "@/shared/types/models";
 
+export type MatchMode = "any" | "all";
+
 export interface MediaFilters {
   sortBy: "score" | "title" | "added" | "size";
   order: "asc" | "desc";
   maxScore: number;
   q: string;
   profileId: number | null;
-  missingCfId: number | null;
-  hasNegativeCfId: number | null;
+  missingCfIds: number[];
+  missingCfMatch: MatchMode;
+  hasNegativeCfIds: number[];
+  hasNegativeCfMatch: MatchMode;
 }
 
 export const defaultMediaFilters: MediaFilters = {
@@ -18,23 +22,19 @@ export const defaultMediaFilters: MediaFilters = {
   maxScore: 1,
   q: "",
   profileId: null,
-  missingCfId: null,
-  hasNegativeCfId: null,
+  missingCfIds: [],
+  missingCfMatch: "all",
+  hasNegativeCfIds: [],
+  hasNegativeCfMatch: "all",
 };
 
 export interface MediaFiltersResult {
   filters: MediaFilters;
   setFilters: React.Dispatch<React.SetStateAction<MediaFilters>>;
-  // The data-fetching hook receives a copy with maxScore + q debounced and
-  // the active scoringMode merged in.
   forQuery: MediaFilters & { scoringMode: ScoringMode };
 }
 
-// Filters state with debounce on the slider/search inputs and an automatic
-// reset of mode-specific fields when scoringMode toggles. Adjust during
-// render — React aborts and restarts so there's no commit between, no
-// flash, and no setState-in-effect cascade.
-export function useMediaFilters(scoringMode: ScoringMode): MediaFiltersResult {
+export function useMediaFilters(scoringMode: ScoringMode, instanceId: number): MediaFiltersResult {
   const [filters, setFilters] = useState<MediaFilters>(defaultMediaFilters);
   const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
   const debouncedQ = useDebouncedValue(filters.q, 300);
@@ -42,7 +42,30 @@ export function useMediaFilters(scoringMode: ScoringMode): MediaFiltersResult {
   const [trackedMode, setTrackedMode] = useState(scoringMode);
   if (trackedMode !== scoringMode) {
     setTrackedMode(scoringMode);
-    setFilters((f) => ({ ...f, missingCfId: null, hasNegativeCfId: null, maxScore: 1 }));
+    setFilters((f) => ({
+      ...f,
+      missingCfIds: [],
+      missingCfMatch: "all",
+      hasNegativeCfIds: [],
+      hasNegativeCfMatch: "all",
+      maxScore: 1,
+    }));
+  }
+
+  // CF IDs and quality-profile IDs are per-instance, so switching instance
+  // leaves stale IDs in the filter that point at unrelated entities. Clear
+  // them when the active instance changes.
+  const [trackedInstance, setTrackedInstance] = useState(instanceId);
+  if (trackedInstance !== instanceId) {
+    setTrackedInstance(instanceId);
+    setFilters((f) => ({
+      ...f,
+      profileId: null,
+      missingCfIds: [],
+      missingCfMatch: "all",
+      hasNegativeCfIds: [],
+      hasNegativeCfMatch: "all",
+    }));
   }
 
   return {

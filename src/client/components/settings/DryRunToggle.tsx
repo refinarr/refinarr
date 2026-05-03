@@ -4,12 +4,21 @@ import { useTranslations } from "next-intl";
 import { Switch } from "@/client/components/ui/switch";
 import { Label } from "@/client/components/ui/label";
 import { Badge } from "@/client/components/ui/badge";
+import { Card } from "@/client/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/client/components/ui/dialog";
 import { Button } from "@/client/components/ui/button";
 import { useConfig, useUpdateConfig } from "@/client/hooks/data/useConfig";
+import { cn } from "@/client/lib/utils";
 import { toast } from "sonner";
+import { AlertTriangle, ShieldCheck } from "lucide-react";
 
-export function DryRunToggle() {
+interface Props {
+  // When true, render inside a prominent Card with state-aware styling
+  // (warning border when live mode is on). Used at the top of /settings.
+  prominent?: boolean;
+}
+
+export function DryRunToggle({ prominent = false }: Props) {
   const t = useTranslations("settings.dryRun");
   const tToast = useTranslations("toast.dryRun");
   const tCommon = useTranslations("common");
@@ -34,15 +43,45 @@ export function DryRunToggle() {
     setConfirmOpen(false);
   };
 
+  const row = (
+    <div className="flex items-center gap-4">
+      <Switch checked={isDryRun} onCheckedChange={handleToggle} />
+      <Label>{t("label")}</Label>
+      <Badge variant={isDryRun ? "outline" : "destructive"}>
+        {isDryRun ? t("badgeOn") : t("badgeOff")}
+      </Badge>
+    </div>
+  );
+
   return (
     <>
-      <div className="flex items-center gap-4">
-        <Switch checked={isDryRun} onCheckedChange={handleToggle} />
-        <Label>{t("label")}</Label>
-        <Badge variant={isDryRun ? "outline" : "destructive"}>
-          {isDryRun ? t("badgeOn") : t("badgeOff")}
-        </Badge>
-      </div>
+      {prominent ? (
+        <Card
+          className={cn(
+            "p-4 transition-colors",
+            !isDryRun && "border-destructive/40 bg-destructive/5",
+          )}
+        >
+          <div className="flex items-start gap-3">
+            {isDryRun ? (
+              <ShieldCheck className="h-5 w-5 mt-0.5 shrink-0 text-emerald-400" aria-hidden />
+            ) : (
+              <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0 text-destructive" aria-hidden />
+            )}
+            <div className="flex-1 space-y-2">
+              <div>
+                <p className="font-medium">{isDryRun ? t("prominentTitleDry") : t("prominentTitleLive")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {isDryRun ? t("prominentBodyDry") : t("prominentBodyLive")}
+                </p>
+              </div>
+              {row}
+            </div>
+          </div>
+        </Card>
+      ) : (
+        row
+      )}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>

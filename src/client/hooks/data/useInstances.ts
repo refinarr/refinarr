@@ -47,6 +47,16 @@ export function useTestConnection() {
   });
 }
 
+export function useTestCredentials() {
+  return useMutation({
+    mutationFn: async (data: { type: "radarr" | "sonarr"; url: string; apiKey: string }) => {
+      const result = await api.post<{ ok: boolean }>("/instances/test", data);
+      if (!result.ok) throw new Error("Connection failed");
+      return result;
+    },
+  });
+}
+
 export function useInstanceHealth(id: number) {
   return useQuery({
     queryKey: ["instance-health", id],

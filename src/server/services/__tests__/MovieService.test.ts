@@ -275,11 +275,30 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
     expect(result.items).toEqual([]);
   });
 
-  test("filters by missingCfId", async () => {
+  test("filters by missingCfIds (single id)", async () => {
     const inst = (await instanceService.getAll())[0];
     const result = await movieService.getFlaggedMovies(inst.id, {
-      page: 1, limit: 50, sortBy: "title", order: "asc", missingCfId: 10,
+      page: 1, limit: 50, sortBy: "title", order: "asc", missingCfIds: [10],
     });
+    expect(result.items.length).toBeGreaterThan(0);
+  });
+
+  test("filters by missingCfIds (multiple ids — ALL match, default)", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await movieService.getFlaggedMovies(inst.id, {
+      page: 1, limit: 50, sortBy: "title", order: "asc", missingCfIds: [10, 999],
+    });
+    // 999 doesn't exist on any item; default ALL-match empties the result.
+    expect(result.items).toEqual([]);
+  });
+
+  test("filters by missingCfIds (multiple ids — ANY match)", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await movieService.getFlaggedMovies(inst.id, {
+      page: 1, limit: 50, sortBy: "title", order: "asc",
+      missingCfIds: [10, 999], missingCfMatch: "any",
+    });
+    // ANY-match: items missing 10 still pass, even though 999 doesn't exist.
     expect(result.items.length).toBeGreaterThan(0);
   });
 });
@@ -331,10 +350,10 @@ describe("MovieService.getFlaggedMovies — sort edge cases", () => {
     expect(result.items).toHaveLength(3);
   });
 
-  test("hasNegativeCfId filter excludes movies without any unwanted CF", async () => {
+  test("hasNegativeCfIds filter excludes movies without any unwanted CF", async () => {
     const inst = (await instanceService.getAll())[0];
     const result = await movieService.getFlaggedMovies(inst.id, {
-      page: 1, limit: 50, sortBy: "title", order: "asc", hasNegativeCfId: 12,
+      page: 1, limit: 50, sortBy: "title", order: "asc", hasNegativeCfIds: [12],
     });
     expect(result.items).toEqual([]);
   });

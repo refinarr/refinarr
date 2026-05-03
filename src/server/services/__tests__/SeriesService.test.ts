@@ -391,18 +391,37 @@ describe("SeriesService — sort edge cases", () => {
     expect(result.items).toEqual([]);
   });
 
-  test("filters by missingCfId", async () => {
+  test("filters by missingCfIds (single)", async () => {
     const inst = (await instanceService.getAll())[0];
     const result = await seriesService.getFlaggedSeries(inst.id, {
-      page: 1, limit: 50, sortBy: "title", order: "asc", missingCfId: 10,
+      page: 1, limit: 50, sortBy: "title", order: "asc", missingCfIds: [10],
     });
     expect(result.items.length).toBeGreaterThan(0);
   });
 
-  test("filters by hasNegativeCfId", async () => {
+  test("filters by missingCfIds (multiple — ALL match, default)", async () => {
     const inst = (await instanceService.getAll())[0];
     const result = await seriesService.getFlaggedSeries(inst.id, {
-      page: 1, limit: 50, sortBy: "title", order: "asc", hasNegativeCfId: 999,
+      page: 1, limit: 50, sortBy: "title", order: "asc", missingCfIds: [10, 999],
+    });
+    // 999 doesn't exist on any series; default ALL-match returns empty.
+    expect(result.items).toEqual([]);
+  });
+
+  test("filters by missingCfIds (multiple — ANY match)", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await seriesService.getFlaggedSeries(inst.id, {
+      page: 1, limit: 50, sortBy: "title", order: "asc",
+      missingCfIds: [10, 999], missingCfMatch: "any",
+    });
+    // ANY-match: series missing 10 still pass.
+    expect(result.items.length).toBeGreaterThan(0);
+  });
+
+  test("filters by hasNegativeCfIds (no match → empty)", async () => {
+    const inst = (await instanceService.getAll())[0];
+    const result = await seriesService.getFlaggedSeries(inst.id, {
+      page: 1, limit: 50, sortBy: "title", order: "asc", hasNegativeCfIds: [999],
     });
     expect(result.items).toEqual([]);
   });

@@ -37,8 +37,10 @@ test("Cmd+K opens the command palette and Enter on a command navigates", async (
 
 test("? opens the keyboard help dialog", async ({ page }) => {
   await page.goto("/dashboard");
-  // Dispatch a real "?" keydown on the body so the document listener picks it
-  // up (page.keyboard.press("Shift+/") gets swallowed before reaching document).
+  // Wait until the dashboard sidebar is visible — proxy for "client hydrated
+  // and document keydown listener attached". Without this, the dispatched
+  // keydown can fire before KeyboardHelpDialog's effect has subscribed.
+  await page.getByRole("link", { name: /^Dashboard$/ }).waitFor({ state: "visible" });
   await page.evaluate(() => {
     document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }));
   });

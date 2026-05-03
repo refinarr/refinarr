@@ -11,8 +11,10 @@ interface MovieFilters {
   maxScore?: number;
   q?: string;
   profileId?: number | null;
-  missingCfId?: number | null;
-  hasNegativeCfId?: number | null;
+  missingCfIds?: number[];
+  missingCfMatch?: "any" | "all";
+  hasNegativeCfIds?: number[];
+  hasNegativeCfMatch?: "any" | "all";
   scoringMode?: ScoringMode;
 }
 
@@ -20,12 +22,15 @@ export function useMovies(instanceId: number, filters: MovieFilters = {}) {
   const params = new URLSearchParams({
     instanceId: String(instanceId),
     limit: "50",
-    ...Object.fromEntries(
-      Object.entries(filters)
-        .filter(([, v]) => v !== undefined && v !== null && v !== "")
-        .map(([k, v]) => [k, String(v)])
-    ),
   });
+  for (const [k, v] of Object.entries(filters)) {
+    if (v === undefined || v === null || v === "") continue;
+    if (Array.isArray(v)) {
+      if (v.length > 0) params.set(k, v.join(","));
+    } else {
+      params.set(k, String(v));
+    }
+  }
 
   return useInfiniteQuery({
     queryKey: queryKeys.movies(instanceId, filters),

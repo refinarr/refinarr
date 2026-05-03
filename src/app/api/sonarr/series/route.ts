@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { seriesService } from "@/server/services/SeriesService";
 
+function parseIdList(raw: string | null): number[] | undefined {
+  if (!raw) return undefined;
+  const ids = raw.split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0);
+  return ids.length > 0 ? ids : undefined;
+}
+
+function parseMatchMode(raw: string | null): "any" | "all" {
+  return raw === "any" ? "any" : "all";
+}
+
 export const GET = createApiHandler(async (req: NextRequest) => {
   const s = req.nextUrl.searchParams;
   const instanceId = Number(s.get("instanceId"));
@@ -12,8 +22,10 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const maxScore = s.has("maxScore") ? Number(s.get("maxScore")) : undefined;
   const q = s.get("q") ?? undefined;
   const profileId = s.has("profileId") ? Number(s.get("profileId")) : undefined;
-  const missingCfId = s.has("missingCfId") ? Number(s.get("missingCfId")) : undefined;
-  const hasNegativeCfId = s.has("hasNegativeCfId") ? Number(s.get("hasNegativeCfId")) : undefined;
+  const missingCfIds = parseIdList(s.get("missingCfIds"));
+  const missingCfMatch = parseMatchMode(s.get("missingCfMatch"));
+  const hasNegativeCfIds = parseIdList(s.get("hasNegativeCfIds"));
+  const hasNegativeCfMatch = parseMatchMode(s.get("hasNegativeCfMatch"));
 
   const { items, total } = await seriesService.getFlaggedSeries(instanceId, {
     page,
@@ -23,8 +35,10 @@ export const GET = createApiHandler(async (req: NextRequest) => {
     maxScore,
     q,
     profileId,
-    missingCfId,
-    hasNegativeCfId,
+    missingCfIds,
+    missingCfMatch,
+    hasNegativeCfIds,
+    hasNegativeCfMatch,
   });
 
   return NextResponse.json({

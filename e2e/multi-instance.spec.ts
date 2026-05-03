@@ -79,9 +79,11 @@ test("instance switcher reloads the table with the chosen instance's movies", as
     page.getByTestId("media-table-body").getByText(/Movie 100 \(Main\)/),
   ).toBeVisible({ timeout: 10_000 });
 
-  // Open the instance Select and switch to Radarr-4K.
-  await page.getByText("Radarr-Main", { exact: true }).first().click();
-  await page.getByText("Radarr-4K", { exact: true }).click();
+  // Open the instance Select and switch to Radarr-4K. The header banner
+  // also renders the instance name above the dropdown — target the trigger
+  // by testid to disambiguate.
+  await page.getByTestId("instance-switcher").click();
+  await page.getByRole("option", { name: "Radarr-4K" }).click();
 
   // Table now reflects Radarr-4K only — no "All" view exists.
   await expect(

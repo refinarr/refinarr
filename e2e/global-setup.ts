@@ -16,8 +16,8 @@ function hashPassword(password: string): string {
 }
 
 export default async function globalSetup() {
-  // Wipe the E2E test DB so every run starts from a known-empty state.
-  for (const f of ["e2e-test.db", "e2e-test.db-journal", "e2e-test.db-wal", "e2e-test.db-shm"]) {
+  // Wipe the E2E test DB + encryption key so every run starts fresh.
+  for (const f of ["e2e-test.db", "e2e-test.db-journal", "e2e-test.db-wal", "e2e-test.db-shm", ".encryption-key.e2e"]) {
     await rm(f, { force: true });
   }
 

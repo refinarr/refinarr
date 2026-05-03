@@ -5,40 +5,45 @@ import { useMediaFilters, defaultMediaFilters } from "../useMediaFilters";
 
 describe("useMediaFilters", () => {
   it("starts with the default filter set", () => {
-    const { result } = renderHook(() => useMediaFilters("manual"));
+    const { result } = renderHook(() => useMediaFilters("manual", 1));
     expect(result.current.filters).toEqual(defaultMediaFilters);
   });
 
   it("merges scoringMode into forQuery", () => {
-    const { result } = renderHook(() => useMediaFilters("profile"));
+    const { result } = renderHook(() => useMediaFilters("profile", 1));
     expect(result.current.forQuery.scoringMode).toBe("profile");
   });
 
   it("resets mode-specific filters when scoringMode toggles", () => {
     const { result, rerender } = renderHook(
-      ({ mode }: { mode: "manual" | "profile" }) => useMediaFilters(mode),
+      ({ mode }: { mode: "manual" | "profile" }) => useMediaFilters(mode, 1),
       { initialProps: { mode: "manual" } },
     );
     act(() => {
       result.current.setFilters((f) => ({
         ...f,
-        missingCfId: 10,
-        hasNegativeCfId: 20,
+        missingCfIds: [10, 11],
+        missingCfMatch: "any",
+        hasNegativeCfIds: [20],
+        hasNegativeCfMatch: "any",
         maxScore: 0.5,
       }));
     });
-    expect(result.current.filters.missingCfId).toBe(10);
+    expect(result.current.filters.missingCfIds).toEqual([10, 11]);
+    expect(result.current.filters.missingCfMatch).toBe("any");
     expect(result.current.filters.maxScore).toBe(0.5);
 
     rerender({ mode: "profile" });
-    expect(result.current.filters.missingCfId).toBeNull();
-    expect(result.current.filters.hasNegativeCfId).toBeNull();
+    expect(result.current.filters.missingCfIds).toEqual([]);
+    expect(result.current.filters.hasNegativeCfIds).toEqual([]);
+    expect(result.current.filters.missingCfMatch).toBe("all");
+    expect(result.current.filters.hasNegativeCfMatch).toBe("all");
     expect(result.current.filters.maxScore).toBe(1);
   });
 
   it("preserves non-mode-specific filter fields across mode changes", () => {
     const { result, rerender } = renderHook(
-      ({ mode }: { mode: "manual" | "profile" }) => useMediaFilters(mode),
+      ({ mode }: { mode: "manual" | "profile" }) => useMediaFilters(mode, 1),
       { initialProps: { mode: "manual" } },
     );
     act(() => {
@@ -47,5 +52,33 @@ describe("useMediaFilters", () => {
     rerender({ mode: "profile" });
     expect(result.current.filters.q).toBe("alpha");
     expect(result.current.filters.profileId).toBe(5);
+  });
+
+  it("resets per-instance filters (profile + CF ids + match modes) when instanceId changes", () => {
+    const { result, rerender } = renderHook(
+      ({ id }: { id: number }) => useMediaFilters("profile", id),
+      { initialProps: { id: 1 } },
+    );
+    act(() => {
+      result.current.setFilters((f) => ({
+        ...f,
+        profileId: 7,
+        missingCfIds: [10],
+        missingCfMatch: "any",
+        hasNegativeCfIds: [20, 21],
+        hasNegativeCfMatch: "any",
+        q: "stay",
+      }));
+    });
+    expect(result.current.filters.profileId).toBe(7);
+
+    rerender({ id: 2 });
+    expect(result.current.filters.profileId).toBeNull();
+    expect(result.current.filters.missingCfIds).toEqual([]);
+    expect(result.current.filters.hasNegativeCfIds).toEqual([]);
+    expect(result.current.filters.missingCfMatch).toBe("all");
+    expect(result.current.filters.hasNegativeCfMatch).toBe("all");
+    // Cross-instance fields like the search query persist.
+    expect(result.current.filters.q).toBe("stay");
   });
 });

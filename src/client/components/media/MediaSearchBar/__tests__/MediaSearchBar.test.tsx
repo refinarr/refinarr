@@ -20,8 +20,10 @@ const baseFilters: MediaFilters = {
   maxScore: 1,
   q: "",
   profileId: null,
-  missingCfId: null,
-  hasNegativeCfId: null,
+  missingCfIds: [],
+  missingCfMatch: "all",
+  hasNegativeCfIds: [],
+  hasNegativeCfMatch: "all",
 };
 
 describe("MediaSearchBar", () => {

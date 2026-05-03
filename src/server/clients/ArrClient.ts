@@ -3,6 +3,20 @@ import { appLogger } from "@/server/lib/app-logger";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { redactString } from "@/server/lib/redact";
 
+// Node's fetch wraps the underlying network error and surfaces a generic
+// "fetch failed" message. The real diagnostic (ECONNREFUSED / ENOTFOUND /
+// ETIMEDOUT / TLS errors) is on `error.cause`. Pull it forward so the user
+// sees something actionable in the log context.
+function describeFetchError(e: unknown): string {
+  if (!(e instanceof Error)) return String(e);
+  const cause = (e as Error & { cause?: unknown }).cause;
+  if (cause instanceof Error) {
+    const code = (cause as Error & { code?: string }).code;
+    return code ? `${cause.message} (${code})` : cause.message;
+  }
+  return e.message;
+}
+
 export abstract class ArrClient {
   protected readonly baseUrl: string;
   protected readonly apiKey: string;
@@ -48,12 +62,12 @@ export abstract class ArrClient {
     return res.json() as Promise<T>;
   }
 
-  async testConnection(): Promise<boolean> {
+  async testConnection(): Promise<{ ok: boolean; error?: string }> {
     try {
       await this.fetch("/system/status");
-      return true;
-    } catch {
-      return false;
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: describeFetchError(e) };
     }
   }
 

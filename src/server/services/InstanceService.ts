@@ -52,12 +52,46 @@ export class InstanceService {
     const instance = await instanceRepository.findById(id);
     if (!instance) return false;
     const client = ArrClientFactory.createArrClient(instance);
-    const ok = await client.testConnection();
-    appLogger.info("Connection test", {
+    const result = await client.testConnection();
+    const log = result.ok ? appLogger.info : appLogger.error;
+    log.call(appLogger, "Connection test", {
       source: "instance-service",
-      context: { id, name: instance.name, type: instance.type, ok },
+      context: {
+        id,
+        name: instance.name,
+        type: instance.type,
+        url: instance.url,
+        ok: result.ok,
+        ...(result.error ? { error: result.error } : {}),
+      },
     });
-    return ok;
+    return result.ok;
+  }
+
+  async testCredentials(data: { type: ArrType; url: string; apiKey: string }): Promise<boolean> {
+    assertSafeArrUrl(data.url);
+    const transient: Instance = {
+      id: 0,
+      type: data.type,
+      name: "(test)",
+      url: data.url,
+      apiKey: data.apiKey,
+      enabled: true,
+      createdAt: new Date(),
+    };
+    const client = ArrClientFactory.createArrClient(transient);
+    const result = await client.testConnection();
+    const log = result.ok ? appLogger.info : appLogger.error;
+    log.call(appLogger, "Credentials test", {
+      source: "instance-service",
+      context: {
+        type: data.type,
+        url: data.url,
+        ok: result.ok,
+        ...(result.error ? { error: result.error } : {}),
+      },
+    });
+    return result.ok;
   }
 }
 
