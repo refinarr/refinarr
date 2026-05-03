@@ -22,7 +22,7 @@ Remedarr stores the API keys for your Sonarr/Radarr instances. Treat the data vo
 
 **Defaults you should know about:**
 
-- Every page and API route is gated by a deny-by-default auth middleware. The only public surfaces are `/api/health`, `/login`, and (only while no user exists) `/setup`.
+- Every page and API route is gated by a deny-by-default auth proxy ([`src/proxy.ts`](src/proxy.ts), Next.js 16's renamed Middleware). The only public surfaces are `/api/health`, `/login`, and (only while no user exists) `/setup`.
 - Passwords are hashed with scrypt; sessions are random 32-byte tokens stored httpOnly + sameSite=strict.
 - Sonarr/Radarr API keys are stored encrypted at rest with AES-256-GCM. The encryption key lives at `/data/.encryption-key` (auto-generated on first start, mode 0600) or via the `ENCRYPTION_KEY` env var (32 bytes base64). Lose the key → existing instance keys are unrecoverable; you will need to re-add the instances.
 - API keys for connected *arr apps are **never** returned to the browser. They never leave the server-side code path that talks to Sonarr/Radarr.

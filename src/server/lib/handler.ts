@@ -26,7 +26,7 @@ export function createApiHandler(handler: RouteHandler) {
   return async (req: NextRequest, ctx: RouteContext) => {
     try {
       await ensureSeeded();
-      // Authentication is handled in middleware (deny-by-default).
+      // Authentication is handled in the proxy (deny-by-default).
       // By the time a route handler runs, the request is authenticated.
       const resolvedParams = await ctx.params;
       return await handler(req, { params: resolvedParams });
