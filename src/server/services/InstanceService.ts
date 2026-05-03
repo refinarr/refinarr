@@ -53,7 +53,8 @@ export class InstanceService {
     if (!instance) return false;
     const client = ArrClientFactory.createArrClient(instance);
     const ok = await client.testConnection();
-    appLogger.info("Connection test", {
+    const log = ok ? appLogger.info : appLogger.error;
+    log.call(appLogger, "Connection test", {
       source: "instance-service",
       context: { id, name: instance.name, type: instance.type, ok },
     });
@@ -73,7 +74,8 @@ export class InstanceService {
     };
     const client = ArrClientFactory.createArrClient(transient);
     const ok = await client.testConnection();
-    appLogger.info("Credentials test", {
+    const log = ok ? appLogger.info : appLogger.error;
+    log.call(appLogger, "Credentials test", {
       source: "instance-service",
       context: { type: data.type, ok },
     });
