@@ -5,7 +5,7 @@ import { E2E_USERNAME, E2E_PASSWORD } from "./helpers";
 // setup project). These tests assume the E2E admin account already exists.
 
 test("visiting /setup after setup redirects to /dashboard", async ({ page }) => {
-  // Log in first so middleware doesn't bounce us to /login before checking setup state.
+  // Log in first so the proxy doesn't bounce us to /login before checking setup state.
   await page.goto("/login");
   await page.getByLabel("Username").fill(E2E_USERNAME);
   await page.getByLabel("Password", { exact: true }).fill(E2E_PASSWORD);
