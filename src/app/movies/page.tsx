@@ -50,7 +50,7 @@ function MoviesPageContent() {
     activeInstance, setInstanceId, selected, toggle,
     filters, setFilters, selectedId, setSelectedId, selectedItem,
     allMovies, total, isLoading, isFetching, isError, isFetchingNextPage,
-    refetch, sentinelRef, scoringMode, noCfsConfigured,
+    refetch, sentinelRef, scoringMode, noCfsConfigured, bulkProgress,
     handleSearch, handleIgnore, handleDelete, deletableCount, runSearch, runIgnore, runDelete,
   } = useMoviesPage();
 
@@ -236,6 +236,7 @@ function MoviesPageContent() {
 
           <BulkActionToolbar
             selectedCount={selected.size}
+            progress={bulkProgress}
             onSearch={handleSearch}
             onDelete={async (search) => {
               const count = deletableCount();

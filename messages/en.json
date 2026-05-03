@@ -147,7 +147,12 @@
     "search": "Search",
     "ignore": "Ignore",
     "delete": "Delete",
-    "deleteAndSearch": "Delete and search"
+    "deleteAndSearch": "Delete and search",
+    "progress": {
+      "search": "Searching {current}/{total}",
+      "ignore": "Ignoring {current}/{total}",
+      "delete": "Deleting {current}/{total}"
+    }
   },
   "history": {
     "title": "History",

@@ -49,7 +49,7 @@ function ShowsPageContent() {
     activeInstance, setInstanceId, selected, toggle,
     filters, setFilters, selectedId, setSelectedId, selectedItem,
     allSeries, total, isLoading, isFetching, isError, isFetchingNextPage,
-    refetch, sentinelRef, scoringMode, noCfsConfigured,
+    refetch, sentinelRef, scoringMode, noCfsConfigured, bulkProgress,
     handleSearch, handleIgnore, handleDelete, deletableCount, runSearch, runIgnore,
     runSearchSeason, runSearchEpisode, runDeleteSeason, runDeleteEpisode,
   } = useShowsPage();
@@ -243,6 +243,7 @@ function ShowsPageContent() {
 
           <BulkActionToolbar
             selectedCount={selected.size}
+            progress={bulkProgress}
             onSearch={handleSearch}
             onDelete={async (search) => {
               const count = deletableCount();

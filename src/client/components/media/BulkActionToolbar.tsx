@@ -3,22 +3,56 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/client/components/ui/button";
 import { Search, Trash2, EyeOff } from "lucide-react";
 
+export type BulkAction = "search" | "ignore" | "delete";
+
+export interface BulkProgress {
+  current: number;
+  total: number;
+  action: BulkAction;
+}
+
 interface Props {
   selectedCount: number;
   onSearch: () => void;
   onDelete: (search: boolean) => void;
   onIgnore: () => void;
   disabled?: boolean;
+  progress?: BulkProgress | null;
 }
 
-export function BulkActionToolbar({ selectedCount, onSearch, onDelete, onIgnore, disabled }: Props) {
+export function BulkActionToolbar({
+  selectedCount,
+  onSearch,
+  onDelete,
+  onIgnore,
+  disabled,
+  progress,
+}: Props) {
   const t = useTranslations("bulk");
-  if (selectedCount === 0) return null;
+  if (selectedCount === 0 && !progress) return null;
+
+  const wrapperClasses =
+    "fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t bg-background px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:static md:mb-4 md:rounded-md md:border-0 md:bg-accent md:px-3 md:py-3";
+
+  if (progress) {
+    const pct = progress.total > 0 ? Math.min(100, (progress.current / progress.total) * 100) : 0;
+    return (
+      <div className={wrapperClasses}>
+        <div role="status" aria-live="polite" className="text-sm font-medium">
+          {t(`progress.${progress.action}`, { current: progress.current, total: progress.total })}
+        </div>
+        <div className="ml-auto h-1 w-32 overflow-hidden rounded bg-muted-foreground/20">
+          <div
+            className="h-full rounded bg-primary transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t bg-background px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:static md:mb-4 md:rounded-md md:border-0 md:bg-accent md:px-3 md:py-3"
-    >
+    <div className={wrapperClasses}>
       <span className="text-sm font-medium">{t("selected", { count: selectedCount })}</span>
       <div className="ml-auto flex gap-2">
         <Button size="sm" variant="outline" onClick={onSearch} disabled={disabled} aria-label={t("search")}>
