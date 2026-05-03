@@ -368,7 +368,11 @@ function ShowsPageContent() {
           open={selectedId !== null}
           onOpenChange={(open) => !open && setSelectedId(null)}
           scoringMode={scoringMode}
-          onIgnore={async (s) => { await runIgnore([s]); setSelectedId(null); }}
+          onIgnore={async () => {
+            if (!selectedItem) return;
+            await runIgnore([selectedItem]);
+            setSelectedId(null);
+          }}
           onSearchSeason={runSearchSeason}
           onSearchEpisode={runSearchEpisode}
           onDeleteSeason={runDeleteSeason}

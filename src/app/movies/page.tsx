@@ -361,16 +361,25 @@ function MoviesPageContent() {
           open={selectedId !== null}
           onOpenChange={(open) => !open && setSelectedId(null)}
           scoringMode={scoringMode}
-          onSearch={async (m) => { await runSearch([m]); setSelectedId(null); }}
-          onIgnore={async (m) => { await runIgnore([m]); setSelectedId(null); }}
-          onDelete={async (m, triggerSearch) => {
+          onSearch={async () => {
+            if (!selectedItem) return;
+            await runSearch([selectedItem]);
+            setSelectedId(null);
+          }}
+          onIgnore={async () => {
+            if (!selectedItem) return;
+            await runIgnore([selectedItem]);
+            setSelectedId(null);
+          }}
+          onDelete={async (_m, triggerSearch) => {
+            if (!selectedItem) return;
             const ok = await askConfirm({
               title: tConfirmDeleteFile("title"),
-              body: tConfirmDeleteFile("body", { title: m.title }),
+              body: tConfirmDeleteFile("body", { title: selectedItem.title }),
               destructive: true,
             });
             if (!ok) return;
-            await runDelete([m], triggerSearch);
+            await runDelete([selectedItem], triggerSearch);
             setSelectedId(null);
           }}
         />
