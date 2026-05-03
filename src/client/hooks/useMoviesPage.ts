@@ -11,7 +11,9 @@ import { useInfiniteScroll } from "./useInfiniteScroll";
 import { toast } from "sonner";
 import { api } from "@/client/lib/api";
 import { withToast } from "@/client/lib/with-toast";
+import { runSerial } from "@/client/lib/run-serial";
 import type { ActionLog, FlaggedMovie, ScoringMode } from "@/shared/types/models";
+import type { BulkProgress } from "@/client/components/media/BulkActionToolbar";
 
 export interface MediaFilters {
   sortBy: "score" | "title" | "added" | "size";
@@ -45,6 +47,7 @@ export function useMoviesPage() {
     hasNegativeCfId: null,
   });
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<BulkProgress | null>(null);
 
   const activeInstance = instanceId || instances?.find((i) => i.type === "radarr")?.id || 0;
   const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
@@ -83,46 +86,57 @@ export function useMoviesPage() {
   };
 
   const searchMutation = useMutation({
-    mutationFn: async (movies: FlaggedMovie[]) => {
-      const results: ActionLog[] = [];
-      for (const m of movies) {
-        const r = await api.post<ActionLog>(`/radarr/movies/search`, { instanceId: activeInstance, mediaId: m.id, title: m.title });
-        results.push(r);
-      }
-      return results;
-    },
+    mutationFn: async ({ movies, isBulk }: { movies: FlaggedMovie[]; isBulk: boolean }) =>
+      runSerial(
+        movies,
+        (m) =>
+          api.post<ActionLog>(`/radarr/movies/search`, {
+            instanceId: activeInstance,
+            mediaId: m.id,
+            title: m.title,
+          }),
+        isBulk ? (current, total) => setBulkProgress({ current, total, action: "search" }) : undefined,
+      ),
     onSuccess: (results) => {
-      if (results.some((r) => r.isDryRun)) {
-        toast.info(tSearch("queuedDryRun"));
-      } else {
-        toast.success(tSearch("started"));
-      }
+      if (results.some((r) => r.isDryRun)) toast.info(tSearch("queuedDryRun"));
+      else toast.success(tSearch("started"));
     },
     onError: () => toast.error(tSearch("failed")),
+    onSettled: () => setBulkProgress(null),
   });
 
   const ignoreMutation = useMutation({
-    mutationFn: async (movies: FlaggedMovie[]) => {
-      for (const m of movies) {
-        await api.post(`/ignore`, { instanceId: activeInstance, mediaId: m.id, mediaType: "movie", title: m.title });
-      }
-    },
+    mutationFn: async ({ movies, isBulk }: { movies: FlaggedMovie[]; isBulk: boolean }) =>
+      runSerial(
+        movies,
+        (m) =>
+          api.post(`/ignore`, {
+            instanceId: activeInstance,
+            mediaId: m.id,
+            mediaType: "movie",
+            title: m.title,
+          }),
+        isBulk ? (current, total) => setBulkProgress({ current, total, action: "ignore" }) : undefined,
+      ),
     onSuccess: () => refetch(),
+    onSettled: () => setBulkProgress(null),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async ({ movies, search }: { movies: FlaggedMovie[]; search: boolean }) => {
-      const results: ActionLog[] = [];
-      for (const m of movies.filter((m) => m.hasFile && m.movieFileId > 0)) {
-        const r = await api.post<ActionLog>(`/radarr/movies/delete`, {
-          instanceId: activeInstance,
-          mediaId: m.id,
-          fileId: m.movieFileId,
-          title: m.title,
-          search,
-        });
-        results.push(r);
-      }
+    mutationFn: async ({ movies, search, isBulk }: { movies: FlaggedMovie[]; search: boolean; isBulk: boolean }) => {
+      const deletable = movies.filter((m) => m.hasFile && m.movieFileId > 0);
+      const results = await runSerial(
+        deletable,
+        (m) =>
+          api.post<ActionLog>(`/radarr/movies/delete`, {
+            instanceId: activeInstance,
+            mediaId: m.id,
+            fileId: m.movieFileId,
+            title: m.title,
+            search,
+          }),
+        isBulk ? (current, total) => setBulkProgress({ current, total, action: "delete" }) : undefined,
+      );
       return { results, search };
     },
     onSuccess: ({ results, search }) => {
@@ -134,20 +148,27 @@ export function useMoviesPage() {
       }
     },
     onError: () => toast.error(tDelete("fileFailed")),
+    onSettled: () => setBulkProgress(null),
   });
 
-  const runSearch = (movies: FlaggedMovie[]) => searchMutation.mutateAsync(movies);
-  const runIgnore = withToast(ignoreMutation, { success: tIgnore("done"), error: tIgnore("failed") });
-  const runDelete = (movies: FlaggedMovie[], search: boolean) =>
-    deleteMutation.mutateAsync({ movies, search });
+  const runSearch = (movies: FlaggedMovie[], isBulk = false) =>
+    searchMutation.mutateAsync({ movies, isBulk });
+  const ignoreToast = withToast(ignoreMutation, { success: tIgnore("done"), error: tIgnore("failed") });
+  const runIgnore = (movies: FlaggedMovie[], isBulk = false) => ignoreToast({ movies, isBulk });
+  const runDelete = (movies: FlaggedMovie[], search: boolean, isBulk = false) =>
+    deleteMutation.mutateAsync({ movies, search, isBulk });
 
   const handleSearch = async () => {
-    await runSearch(allMovies.filter((m) => selected.has(m.id)));
+    const items = allMovies.filter((m) => selected.has(m.id));
+    if (!items.length) return;
+    await runSearch(items, true);
     setSelected(new Set());
   };
 
   const handleIgnore = async () => {
-    await runIgnore(allMovies.filter((m) => selected.has(m.id)));
+    const items = allMovies.filter((m) => selected.has(m.id));
+    if (!items.length) return;
+    await runIgnore(items, true);
     setSelected(new Set());
   };
 
@@ -157,7 +178,7 @@ export function useMoviesPage() {
   const handleDelete = async (search: boolean) => {
     const toDelete = deletableSelected();
     if (!toDelete.length) return;
-    await runDelete(toDelete, search);
+    await runDelete(toDelete, search, true);
     setSelected(new Set());
   };
 
@@ -189,6 +210,7 @@ export function useMoviesPage() {
     sentinelRef,
     scoringMode,
     noCfsConfigured,
+    bulkProgress,
     handleSearch,
     handleIgnore,
     handleDelete,

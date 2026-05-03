@@ -11,8 +11,10 @@ import { useInfiniteScroll } from "./useInfiniteScroll";
 import { toast } from "sonner";
 import { api } from "@/client/lib/api";
 import { withToast } from "@/client/lib/with-toast";
+import { runSerial } from "@/client/lib/run-serial";
 import type { ActionLog, FlaggedSeries, ScoringMode } from "@/shared/types/models";
 import type { MediaFilters } from "./useMoviesPage";
+import type { BulkProgress } from "@/client/components/media/BulkActionToolbar";
 
 export function useShowsPage() {
   const tSearch = useTranslations("toast.search");
@@ -36,6 +38,7 @@ export function useShowsPage() {
     hasNegativeCfId: null,
   });
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<BulkProgress | null>(null);
 
   const activeInstance = instanceId || instances?.find((i) => i.type === "sonarr")?.id || 0;
   const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
@@ -74,46 +77,57 @@ export function useShowsPage() {
   };
 
   const searchMutation = useMutation({
-    mutationFn: async (series: FlaggedSeries[]) => {
-      const results: ActionLog[] = [];
-      for (const s of series) {
-        const r = await api.post<ActionLog>(`/sonarr/series/search`, { instanceId: activeInstance, mediaId: s.id, title: s.title });
-        results.push(r);
-      }
-      return results;
-    },
+    mutationFn: async ({ series, isBulk }: { series: FlaggedSeries[]; isBulk: boolean }) =>
+      runSerial(
+        series,
+        (s) =>
+          api.post<ActionLog>(`/sonarr/series/search`, {
+            instanceId: activeInstance,
+            mediaId: s.id,
+            title: s.title,
+          }),
+        isBulk ? (current, total) => setBulkProgress({ current, total, action: "search" }) : undefined,
+      ),
     onSuccess: (results) => {
-      if (results.some((r) => r.isDryRun)) {
-        toast.info(tSearch("queuedDryRun"));
-      } else {
-        toast.success(tSearch("started"));
-      }
+      if (results.some((r) => r.isDryRun)) toast.info(tSearch("queuedDryRun"));
+      else toast.success(tSearch("started"));
     },
     onError: () => toast.error(tSearch("failed")),
+    onSettled: () => setBulkProgress(null),
   });
 
   const ignoreMutation = useMutation({
-    mutationFn: async (series: FlaggedSeries[]) => {
-      for (const s of series) {
-        await api.post(`/ignore`, { instanceId: activeInstance, mediaId: s.id, mediaType: "series", title: s.title });
-      }
-    },
+    mutationFn: async ({ series, isBulk }: { series: FlaggedSeries[]; isBulk: boolean }) =>
+      runSerial(
+        series,
+        (s) =>
+          api.post(`/ignore`, {
+            instanceId: activeInstance,
+            mediaId: s.id,
+            mediaType: "series",
+            title: s.title,
+          }),
+        isBulk ? (current, total) => setBulkProgress({ current, total, action: "ignore" }) : undefined,
+      ),
     onSuccess: () => refetch(),
+    onSettled: () => setBulkProgress(null),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async ({ series, search }: { series: FlaggedSeries[]; search: boolean }) => {
-      const results: ActionLog[] = [];
-      for (const s of series.filter((s) => s.episodeFiles.length > 0)) {
-        const r = await api.post<ActionLog>(`/sonarr/series/delete`, {
-          instanceId: activeInstance,
-          mediaId: s.id,
-          fileIds: s.episodeFiles.map((f) => f.id),
-          title: s.title,
-          search,
-        });
-        results.push(r);
-      }
+    mutationFn: async ({ series, search, isBulk }: { series: FlaggedSeries[]; search: boolean; isBulk: boolean }) => {
+      const deletable = series.filter((s) => s.episodeFiles.length > 0);
+      const results = await runSerial(
+        deletable,
+        (s) =>
+          api.post<ActionLog>(`/sonarr/series/delete`, {
+            instanceId: activeInstance,
+            mediaId: s.id,
+            fileIds: s.episodeFiles.map((f) => f.id),
+            title: s.title,
+            search,
+          }),
+        isBulk ? (current, total) => setBulkProgress({ current, total, action: "delete" }) : undefined,
+      );
       return { results, search };
     },
     onSuccess: ({ results, search }) => {
@@ -125,11 +139,15 @@ export function useShowsPage() {
       }
     },
     onError: () => toast.error(tDelete("filesFailed")),
+    onSettled: () => setBulkProgress(null),
   });
 
-  const runSearch = (series: FlaggedSeries[]) => searchMutation.mutateAsync(series);
-  const runIgnore = withToast(ignoreMutation, { success: tIgnore("done"), error: tIgnore("failed") });
-  const runDelete = (series: FlaggedSeries[], search: boolean) => deleteMutation.mutateAsync({ series, search });
+  const runSearch = (series: FlaggedSeries[], isBulk = false) =>
+    searchMutation.mutateAsync({ series, isBulk });
+  const ignoreToast = withToast(ignoreMutation, { success: tIgnore("done"), error: tIgnore("failed") });
+  const runIgnore = (series: FlaggedSeries[], isBulk = false) => ignoreToast({ series, isBulk });
+  const runDelete = (series: FlaggedSeries[], search: boolean, isBulk = false) =>
+    deleteMutation.mutateAsync({ series, search, isBulk });
 
   const seasonSearchMutation = useMutation({
     mutationFn: async ({ series, seasonNumber }: { series: FlaggedSeries; seasonNumber: number }) => {
@@ -211,12 +229,16 @@ export function useShowsPage() {
     episodeDeleteMutation.mutateAsync({ series, fileId, label, search });
 
   const handleSearch = async () => {
-    await runSearch(allSeries.filter((s) => selected.has(s.id)));
+    const items = allSeries.filter((s) => selected.has(s.id));
+    if (!items.length) return;
+    await runSearch(items, true);
     setSelected(new Set());
   };
 
   const handleIgnore = async () => {
-    await runIgnore(allSeries.filter((s) => selected.has(s.id)));
+    const items = allSeries.filter((s) => selected.has(s.id));
+    if (!items.length) return;
+    await runIgnore(items, true);
     setSelected(new Set());
   };
 
@@ -226,7 +248,7 @@ export function useShowsPage() {
   const handleDelete = async (search: boolean) => {
     const toDelete = deletableSelected();
     if (!toDelete.length) return;
-    await runDelete(toDelete, search);
+    await runDelete(toDelete, search, true);
     setSelected(new Set());
   };
 
@@ -258,6 +280,7 @@ export function useShowsPage() {
     sentinelRef,
     scoringMode,
     noCfsConfigured,
+    bulkProgress,
     handleSearch,
     handleIgnore,
     handleDelete,

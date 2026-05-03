@@ -30,4 +30,34 @@ describe("BulkActionToolbar", () => {
     expect(toolbar.className).toContain("bottom-0");
     expect(toolbar.className).toContain("md:static");
   });
+
+  it("renders an aria-live progress UI in place of action buttons when progress is provided", () => {
+    renderWithProviders(
+      <BulkActionToolbar
+        selectedCount={5}
+        progress={{ current: 3, total: 5, action: "search" }}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+      />
+    );
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveTextContent(/searching 3\/5/i);
+    expect(screen.queryByRole("button", { name: /^search$/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/5 selected/i)).not.toBeInTheDocument();
+  });
+
+  it("still renders the toolbar with progress when nothing is selected (final tick after clearing)", () => {
+    renderWithProviders(
+      <BulkActionToolbar
+        selectedCount={0}
+        progress={{ current: 5, total: 5, action: "delete" }}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(/deleting 5\/5/i);
+  });
 });
