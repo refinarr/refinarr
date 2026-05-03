@@ -3,7 +3,7 @@ import { prisma } from "@/server/lib/db";
 import { SESSION_COOKIE } from "@/server/lib/auth";
 import { timingSafeEqual } from "crypto";
 
-export const runtime = "nodejs";
+// Next.js 16: Proxy always runs on Node.js — no `export const runtime` needed.
 
 const PUBLIC_API_PATHS = new Set<string>([
   "/api/health",
