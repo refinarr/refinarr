@@ -91,7 +91,7 @@ export function MediaPageHeader({
                 value={String(activeInstance)}
                 onValueChange={(v) => onSetInstance(Number(v ?? 0))}
               >
-                <SelectTrigger className="w-44">
+                <SelectTrigger className="w-44" data-testid="instance-switcher">
                   <SelectValue>{activeInstanceName ?? tInstSel("selectInstance")}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
