@@ -62,7 +62,12 @@
     "ignored": "Ignored",
     "history": "History",
     "logs": "Logs",
-    "settings": "Settings"
+    "settings": "Settings",
+    "menu": "Menu",
+    "openMenu": "Open navigation menu"
+  },
+  "a11y": {
+    "skipToContent": "Skip to content"
   },
   "dashboard": {
     "title": "Dashboard",
