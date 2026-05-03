@@ -51,7 +51,7 @@ export class SeriesService extends MediaService {
       const flagged = await this.buildFlaggedSeries(instanceId, instance, mode);
       cached = { flagged };
       dataCache.set(cacheKey, cached);
-      appLogger.info("Built flagged series cache", {
+      appLogger.debug("Built flagged series cache", {
         source: "series-service",
         context: {
           instanceId,

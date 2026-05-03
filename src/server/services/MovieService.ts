@@ -51,7 +51,7 @@ export class MovieService extends MediaService {
       const flagged = await this.buildFlaggedMovies(instanceId, instance, mode);
       cached = { flagged };
       dataCache.set(cacheKey, cached);
-      appLogger.info("Built flagged movies cache", {
+      appLogger.debug("Built flagged movies cache", {
         source: "movie-service",
         context: {
           instanceId,
