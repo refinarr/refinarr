@@ -3,6 +3,8 @@ import { type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { CommandPalette } from "./CommandPalette";
+import { KeyboardHelpDialog } from "./KeyboardHelpDialog";
 
 interface Props {
   children: ReactNode;
@@ -27,6 +29,8 @@ export function AppShell({ children }: Props) {
       >
         {children}
       </main>
+      <CommandPalette />
+      <KeyboardHelpDialog />
     </div>
   );
 }

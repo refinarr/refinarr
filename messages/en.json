@@ -72,6 +72,36 @@
     "selectInstance": "Select instance",
     "truncatedHint": "Showing first {limit} per instance — refine filters to see all {total}."
   },
+  "commandPalette": {
+    "title": "Command palette",
+    "description": "Jump to a page or run a quick action",
+    "placeholder": "Type a command or search…",
+    "empty": "No results found.",
+    "groups": {
+      "navigate": "Navigate",
+      "radarrInstance": "Switch Radarr instance",
+      "sonarrInstance": "Switch Sonarr instance",
+      "actions": "Actions"
+    },
+    "actions": {
+      "addInstance": "Add instance",
+      "toggleDryRun": "Toggle Dry Run"
+    },
+    "status": {
+      "on": "On",
+      "off": "Off"
+    }
+  },
+  "keyboardHelp": {
+    "title": "Keyboard shortcuts",
+    "description": "Quick keys to navigate Remedarr.",
+    "shortcuts": {
+      "openPalette": "Open command palette (macOS)",
+      "openPaletteWin": "Open command palette (Windows / Linux)",
+      "showHelp": "Show this help",
+      "closeDialog": "Close dialog or palette"
+    }
+  },
   "a11y": {
     "skipToContent": "Skip to content"
   },
