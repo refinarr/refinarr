@@ -5,11 +5,29 @@ import { appLogger } from "@/server/lib/app-logger";
 
 interface ExecuteActionOptions {
   instanceId: number;
+  instanceName: string;
   action: ActionType;
   mediaId: number;
   title: string;
   payload?: Record<string, unknown>;
   run: () => Promise<void>;
+}
+
+// Single source for the human-readable log subject — keeps [DryRun],
+// success, and error messages consistent (action: title [instanceName]).
+function describe(opts: ExecuteActionOptions): string {
+  return `${opts.action}: ${opts.title} [${opts.instanceName}]`;
+}
+
+function logContext(opts: ExecuteActionOptions, isDryRun: boolean) {
+  return {
+    action: opts.action,
+    mediaId: opts.mediaId,
+    title: opts.title,
+    instanceId: opts.instanceId,
+    instanceName: opts.instanceName,
+    isDryRun,
+  };
 }
 
 export abstract class MediaService {
@@ -28,19 +46,26 @@ export abstract class MediaService {
     });
 
     if (isDryRun) {
-      appLogger.info("[DryRun]", { context: { action: opts.action, mediaId: opts.mediaId } });
+      appLogger.info(`[DryRun] ${describe(opts)}`, {
+        source: "media-action",
+        context: logContext(opts, true),
+      });
       return logEntry;
     }
 
     try {
       await opts.run();
+      appLogger.info(`[Run] ${describe(opts)}`, {
+        source: "media-action",
+        context: logContext(opts, false),
+      });
       return logRepository.update(logEntry.id, { status: "success" });
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
-      appLogger.error("Media action failed", {
+      appLogger.error(`Media action failed: ${describe(opts)}`, {
         source: "media-action",
         err,
-        context: { action: opts.action, mediaId: opts.mediaId, title: opts.title, instanceId: opts.instanceId },
+        context: logContext(opts, false),
       });
       return logRepository.update(logEntry.id, { status: "failed", error });
     }

@@ -291,6 +291,7 @@ export class SeriesService extends MediaService {
     const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
 
     return this.executeAction({
+      instanceName: instance.name,
       instanceId,
       action: "delete",
       mediaId,
@@ -311,6 +312,7 @@ export class SeriesService extends MediaService {
     const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
 
     return this.executeAction({
+      instanceName: instance.name,
       instanceId,
       action: "search",
       mediaId,
@@ -331,6 +333,7 @@ export class SeriesService extends MediaService {
     const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
 
     return this.executeAction({
+      instanceName: instance.name,
       instanceId,
       action: "search",
       mediaId,
@@ -351,6 +354,7 @@ export class SeriesService extends MediaService {
     const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
 
     return this.executeAction({
+      instanceName: instance.name,
       instanceId,
       action: "search",
       mediaId,

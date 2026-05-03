@@ -229,6 +229,7 @@ export class MovieService extends MediaService {
     const client = ArrClientFactory.createArrClient(instance) as RadarrClient;
 
     return this.executeAction({
+      instanceName: instance.name,
       instanceId,
       action: "search",
       mediaId,
@@ -250,6 +251,7 @@ export class MovieService extends MediaService {
     const client = ArrClientFactory.createArrClient(instance) as RadarrClient;
 
     return this.executeAction({
+      instanceName: instance.name,
       instanceId,
       action: "delete",
       mediaId,
