@@ -1,4 +1,4 @@
-# Remedarr
+# Refinarr
 
 Self-hosted dashboard that connects to Sonarr/Radarr, identifies media missing your wanted Custom Formats, and gives you bulk cleanup tools. Runs on port **7272**.
 
@@ -18,7 +18,7 @@ On first launch, navigate to `http://<host>:7272` — you will be redirected to 
 
 ## Threat model and security
 
-Remedarr stores the API keys for your Sonarr/Radarr instances. Treat the data volume the same as you would treat those keys — back it up encrypted, do not share it, and rotate downstream API keys after suspected compromise.
+Refinarr stores the API keys for your Sonarr/Radarr instances. Treat the data volume the same as you would treat those keys — back it up encrypted, do not share it, and rotate downstream API keys after suspected compromise.
 
 **Defaults you should know about:**
 
@@ -26,23 +26,23 @@ Remedarr stores the API keys for your Sonarr/Radarr instances. Treat the data vo
 - Passwords are hashed with scrypt; sessions are random 32-byte tokens stored httpOnly + sameSite=strict.
 - Sonarr/Radarr API keys are stored encrypted at rest with AES-256-GCM. The encryption key lives at `/data/.encryption-key` (auto-generated on first start, mode 0600) or via the `ENCRYPTION_KEY` env var (32 bytes base64). Lose the key → existing instance keys are unrecoverable; you will need to re-add the instances.
 - API keys for connected *arr apps are **never** returned to the browser. They never leave the server-side code path that talks to Sonarr/Radarr.
-- Remedarr has no telemetry, no analytics, and makes no outbound HTTP calls except to your configured *arr instances.
+- Refinarr has no telemetry, no analytics, and makes no outbound HTTP calls except to your configured *arr instances.
 - The Node process inside the container does not run as root.
 
 **Public exposure:**
 
-Remedarr **must not be exposed to the public internet** without a reverse proxy you trust to do TLS and (optionally) external auth. The built-in login is good for a private LAN; it is not designed to be the only thing between the internet and your media server.
+Refinarr **must not be exposed to the public internet** without a reverse proxy you trust to do TLS and (optionally) external auth. The built-in login is good for a private LAN; it is not designed to be the only thing between the internet and your media server.
 
 **Reverse-proxy auth (Authelia / Authentik / Caddy / etc):**
 
-Remedarr can trust a username header from a reverse proxy that has already authenticated the user. Off by default. Enable it like:
+Refinarr can trust a username header from a reverse proxy that has already authenticated the user. Off by default. Enable it like:
 
 ```env
 TRUST_PROXY_AUTH=true
 PROXY_USER_HEADER=X-Remote-User   # default; change if your proxy sets a different header
 ```
 
-Only enable this when remedarr is bound to a private interface that **only** the trusted proxy can reach. Anything else can spoof the header. Remedarr deliberately does **not** read `X-Forwarded-For` or any IP header for auth decisions.
+Only enable this when refinarr is bound to a private interface that **only** the trusted proxy can reach. Anything else can spoof the header. Refinarr deliberately does **not** read `X-Forwarded-For` or any IP header for auth decisions.
 
 **API access from scripts:**
 

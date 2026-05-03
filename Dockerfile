@@ -15,7 +15,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NODE_ENV=production
-ENV DATABASE_URL=file:///data/remedarr.db
+ENV DATABASE_URL=file:///data/data.db
 RUN npx prisma generate
 RUN yarn build
 
@@ -24,7 +24,7 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=7272
-ENV DATABASE_URL=file:///data/remedarr.db
+ENV DATABASE_URL=file:///data/data.db
 
 RUN mkdir -p /data
 

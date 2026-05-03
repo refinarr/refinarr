@@ -1,8 +1,8 @@
 {
-  "appName": "Remedarr",
+  "appName": "Refinarr",
   "auth": {
     "setup": {
-      "title": "Welcome to Remedarr",
+      "title": "Welcome to Refinarr",
       "subtitle": "Create the admin account that will manage this instance.",
       "username": "Username",
       "password": "Password",
@@ -14,7 +14,7 @@
       "failed": "Couldn't create account. Try again."
     },
     "login": {
-      "title": "Sign in to Remedarr",
+      "title": "Sign in to Refinarr",
       "username": "Username",
       "password": "Password",
       "submit": "Sign in",
@@ -24,7 +24,7 @@
     "logout": "Sign out",
     "password": {
       "title": "Change password",
-      "description": "Change the password for your remedarr account. All other signed-in sessions will be signed out.",
+      "description": "Change the password for your Refinarr account. All other signed-in sessions will be signed out.",
       "currentPassword": "Current password",
       "newPassword": "New password",
       "newPasswordHint": "At least 12 characters. Must differ from your current password.",
@@ -102,7 +102,7 @@
   },
   "keyboardHelp": {
     "title": "Keyboard shortcuts",
-    "description": "Quick keys to navigate Remedarr.",
+    "description": "Quick keys to navigate Refinarr.",
     "shortcuts": {
       "openPalette": "Open command palette (macOS)",
       "openPaletteWin": "Open command palette (Windows / Linux)",

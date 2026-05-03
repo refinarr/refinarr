@@ -6,7 +6,7 @@ function createPrismaClient(): PrismaClient {
   const dbUrl =
     process.env.DATABASE_URL ??
     (process.env.NODE_ENV === "production"
-      ? "file:///data/remedarr.db"
+      ? "file:///data/data.db"
       : "file:./dev.db");
 
   const adapter = new PrismaLibSql({ url: dbUrl });

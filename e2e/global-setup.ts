@@ -5,7 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { E2E_USERNAME, E2E_PASSWORD } from "./helpers";
 
-const SESSION_COOKIE = "rdr_session";
+const SESSION_COOKIE = "rfn_session";
 const SESSION_DAYS = 30;
 
 function hashPassword(password: string): string {

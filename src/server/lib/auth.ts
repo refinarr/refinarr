@@ -8,7 +8,7 @@ const HASH_LEN = 64;
 const SESSION_DAYS = 30;
 const SESSION_MS = SESSION_DAYS * 24 * 60 * 60 * 1000;
 
-export const SESSION_COOKIE = "rdr_session";
+export const SESSION_COOKIE = "rfn_session";
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16);
