@@ -8,10 +8,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
 import { Label } from "@/client/components/ui/label";
+import { FormField } from "@/client/components/ui/form-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { useCreateInstance, useUpdateInstance } from "@/client/hooks/useInstances";
 import { withToast } from "@/client/lib/with-toast";
 import type { Instance } from "@/shared/types/models";
+import { Loader2 } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -63,6 +65,8 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
     onClose();
   };
 
+  const submitting = create.isPending || update.isPending;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
@@ -91,29 +95,25 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="instance-name">{t("name")}</Label>
-            <Input id="instance-name" {...register("name")} placeholder={t("namePlaceholder")} />
-            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="instance-url">{t("url")}</Label>
-            <Input id="instance-url" {...register("url")} placeholder={t("urlPlaceholder")} />
-            {errors.url && <p className="text-xs text-destructive">{errors.url.message}</p>}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="instance-apikey">{t("apiKey")}</Label>
+          <FormField id="instance-name" label={t("name")} error={errors.name?.message}>
+            <Input {...register("name")} placeholder={t("namePlaceholder")} />
+          </FormField>
+          <FormField id="instance-url" label={t("url")} error={errors.url?.message}>
+            <Input {...register("url")} placeholder={t("urlPlaceholder")} />
+          </FormField>
+          <FormField id="instance-apikey" label={t("apiKey")} error={errors.apiKey?.message}>
             <Input
-              id="instance-apikey"
               {...register("apiKey")}
               type="password"
               placeholder={isEdit ? t("apiKeyPlaceholderEdit") : t("apiKeyPlaceholderNew")}
             />
-            {errors.apiKey && <p className="text-xs text-destructive">{errors.apiKey.message}</p>}
-          </div>
+          </FormField>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>{tCommon("cancel")}</Button>
-            <Button type="submit" disabled={create.isPending || update.isPending}>{tCommon("save")}</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {tCommon("save")}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

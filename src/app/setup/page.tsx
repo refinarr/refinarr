@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
 import { Input } from "@/client/components/ui/input";
-import { Label } from "@/client/components/ui/label";
 import { Button } from "@/client/components/ui/button";
+import { FormField } from "@/client/components/ui/form-field";
+import { Loader2 } from "lucide-react";
 
 export default function SetupPage() {
   const t = useTranslations("auth.setup");
@@ -49,10 +50,8 @@ export default function SetupPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="username">{t("username")}</Label>
+            <FormField id="username" label={t("username")}>
               <Input
-                id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
@@ -61,11 +60,9 @@ export default function SetupPage() {
                 maxLength={64}
                 pattern="[a-zA-Z0-9_.-]+"
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">{t("password")}</Label>
+            </FormField>
+            <FormField id="password" label={t("password")} description={t("passwordHint")}>
               <Input
-                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -73,12 +70,9 @@ export default function SetupPage() {
                 required
                 minLength={12}
               />
-              <p className="text-xs text-muted-foreground">{t("passwordHint")}</p>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="confirm">{t("confirmPassword")}</Label>
+            </FormField>
+            <FormField id="confirm" label={t("confirmPassword")} error={err}>
               <Input
-                id="confirm"
                 type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
@@ -86,9 +80,9 @@ export default function SetupPage() {
                 required
                 minLength={12}
               />
-            </div>
-            {err && <p className="text-sm text-destructive">{err}</p>}
+            </FormField>
             <Button type="submit" disabled={submitting} className="w-full">
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("submit")}
             </Button>
           </form>

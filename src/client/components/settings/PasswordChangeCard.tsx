@@ -5,8 +5,9 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
-import { Label } from "@/client/components/ui/label";
+import { FormField } from "@/client/components/ui/form-field";
 import { useMe } from "@/client/hooks/useMe";
+import { Loader2 } from "lucide-react";
 
 export function PasswordChangeCard() {
   const t = useTranslations("auth.password");
@@ -17,7 +18,6 @@ export function PasswordChangeCard() {
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Reverse-proxy users manage their password elsewhere — hide the card.
   if (me?.source !== "session") return null;
 
   const submit = async (e: React.FormEvent) => {
@@ -64,21 +64,17 @@ export function PasswordChangeCard() {
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4 max-w-md">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="current-password">{t("currentPassword")}</Label>
+          <FormField id="current-password" label={t("currentPassword")}>
             <Input
-              id="current-password"
               type="password"
               value={current}
               onChange={(e) => setCurrent(e.target.value)}
               autoComplete="current-password"
               required
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="new-password">{t("newPassword")}</Label>
+          </FormField>
+          <FormField id="new-password" label={t("newPassword")} description={t("newPasswordHint")}>
             <Input
-              id="new-password"
               type="password"
               value={next}
               onChange={(e) => setNext(e.target.value)}
@@ -86,12 +82,9 @@ export function PasswordChangeCard() {
               required
               minLength={12}
             />
-            <p className="text-xs text-muted-foreground">{t("newPasswordHint")}</p>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="confirm-new-password">{t("confirmNewPassword")}</Label>
+          </FormField>
+          <FormField id="confirm-new-password" label={t("confirmNewPassword")} error={err}>
             <Input
-              id="confirm-new-password"
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
@@ -99,9 +92,9 @@ export function PasswordChangeCard() {
               required
               minLength={12}
             />
-          </div>
-          {err && <p className="text-sm text-destructive">{err}</p>}
+          </FormField>
           <Button type="submit" disabled={submitting}>
+            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t("submit")}
           </Button>
         </form>
