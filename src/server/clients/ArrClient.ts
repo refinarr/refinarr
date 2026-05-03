@@ -48,12 +48,12 @@ export abstract class ArrClient {
     return res.json() as Promise<T>;
   }
 
-  async testConnection(): Promise<boolean> {
+  async testConnection(): Promise<{ ok: boolean; error?: string }> {
     try {
       await this.fetch("/system/status");
-      return true;
-    } catch {
-      return false;
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   }
 
