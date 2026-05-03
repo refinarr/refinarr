@@ -67,7 +67,12 @@ test("ignoring a movie removes it from the flagged list", async ({ page }) => {
   });
 
   await page.goto("/movies");
-  await page.getByText("Ignorable Film").waitFor({ timeout: 10_000 });
+  // Card and table both render in the DOM (the card is CSS-hidden at desktop
+  // viewport via md:hidden); use the tbody testid to scope to the visible row.
+  await page
+    .getByTestId("media-table-body")
+    .getByText("Ignorable Film")
+    .waitFor({ timeout: 10_000 });
 
   const ignoreBtn = page.getByRole("button", { name: "Ignore" }).first();
   if (await ignoreBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
@@ -79,8 +84,8 @@ test("ignoring a movie removes it from the flagged list", async ({ page }) => {
       await confirmBtn.click();
     }
 
-    // After ignore, the item should disappear from the list
-    await expect(page.getByText("Ignorable Film")).not.toBeVisible({ timeout: 5_000 });
+    // After ignore, the item should be fully removed from the DOM (both card and table).
+    await expect(page.getByText("Ignorable Film")).toHaveCount(0, { timeout: 5_000 });
   }
 });
 

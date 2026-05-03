@@ -61,42 +61,61 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
+// Default chromium viewport is 1280x720 → md+; both the mobile card list and
+// the desktop table render in the DOM, but the cards are CSS-hidden via md:hidden.
+// Scope to the tbody testid so the locator only matches the visible desktop row.
 test("flagged movies list renders", async ({ page }) => {
   await page.goto("/movies");
-  await expect(page.getByText("The Missing Format")).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page.getByTestId("media-table-body").getByText("The Missing Format"),
+  ).toBeVisible({ timeout: 10_000 });
 });
 
 test("search by title filters results", async ({ page }) => {
   await page.goto("/movies");
-  await page.getByText("The Missing Format").waitFor({ timeout: 10_000 });
+  await page
+    .getByTestId("media-table-body")
+    .getByText("The Missing Format")
+    .waitFor({ timeout: 10_000 });
 
   const searchInput = page.getByPlaceholder(/search/i);
   if (await searchInput.isVisible()) {
-    // Override route to return empty results for non-matching search
     await page.route("**/api/radarr/movies**", (route) =>
       route.fulfill({ status: 200, json: { ...FAKE_RESPONSE, items: [], total: 0 } })
     );
     await searchInput.fill("xyzzy nonexistent");
-    await expect(page.getByText("The Missing Format")).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("The Missing Format")).toHaveCount(0, { timeout: 5_000 });
   }
 });
 
 test("search action in dry-run mode shows queued toast", async ({ page }) => {
-  // Intercept the search action (browser → Next.js POST route).
+  // Mock the search action with a dry-run ActionLog so the client's onSuccess
+  // branches to the 'queued (dry run)' toast.
   await page.route("**/api/radarr/movies/search**", (route) =>
-    route.fulfill({ status: 200, json: { ok: true } })
+    route.fulfill({
+      status: 200,
+      json: {
+        id: 1,
+        instanceId: 1,
+        action: "search",
+        mediaId: 1,
+        title: "The Missing Format",
+        isDryRun: true,
+        status: "dry_run",
+        createdAt: new Date().toISOString(),
+      },
+    })
   );
 
   await page.goto("/movies");
-  await page.getByText("The Missing Format").waitFor({ timeout: 10_000 });
+  await page
+    .getByTestId("media-table-body")
+    .getByText("The Missing Format")
+    .waitFor({ timeout: 10_000 });
 
-  // The search button is inside the accordion item — open it first if needed.
-  const movieRow = page.locator("text=The Missing Format").locator("..").locator("..");
+  const movieRow = page.getByTestId("media-table-body").locator("tr").filter({ hasText: "The Missing Format" });
   const searchBtn = movieRow.getByRole("button", { name: /search/i }).first();
 
-  if (await searchBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-    await searchBtn.click();
-    // Dry-run mode is on by default — expect a "queued" / "dry run" toast.
-    await expect(page.getByText(/dry run|queued/i)).toBeVisible({ timeout: 5_000 });
-  }
+  await searchBtn.click();
+  await expect(page.getByText(/dry run|queued/i)).toBeVisible({ timeout: 5_000 });
 });

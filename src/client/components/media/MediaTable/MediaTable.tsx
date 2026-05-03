@@ -48,7 +48,7 @@ export function MediaTable<T extends { id: number }>({
   return (
     <>
       {renderCard && (
-        <ul className="flex flex-col gap-2 md:hidden">
+        <ul data-testid="media-card-list" className="flex flex-col gap-2 md:hidden">
           {rows.map((row) => (
             <MediaCard
               key={row.id}
@@ -83,7 +83,7 @@ export function MediaTable<T extends { id: number }>({
               })}
             </tr>
           </thead>
-          <tbody>
+          <tbody data-testid="media-table-body">
             {rows.map((row) => (
               <tr
                 key={row.id}
