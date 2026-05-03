@@ -48,9 +48,6 @@ test.beforeEach(async ({ page }) => {
     return route.continue();
   });
 
-  // Per-instance movie listing — use mode=all branch's limit=200 OR the
-  // single-instance branch's limit=50; either way, return one movie per
-  // instance so we can verify aggregation works.
   await page.route("**/api/radarr/movies**", (route) => {
     const url = new URL(route.request().url());
     const instanceId = url.searchParams.get("instanceId");
@@ -74,70 +71,34 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test("All Radarr aggregates flagged movies across instances", async ({ page }) => {
+test("instance switcher reloads the table with the chosen instance's movies", async ({ page }) => {
   await page.goto("/movies");
 
-  // Single-instance mode loads first; Radarr-Main shows.
+  // Default lands on Radarr-Main.
   await expect(
     page.getByTestId("media-table-body").getByText(/Movie 100 \(Main\)/),
   ).toBeVisible({ timeout: 10_000 });
 
-  // Open the instance Select by clicking its current value (the trigger
-  // displays the active instance name) then pick "All Radarr".
+  // Open the instance Select and switch to Radarr-4K.
   await page.getByText("Radarr-Main", { exact: true }).first().click();
-  await page.getByText("All Radarr", { exact: true }).click();
+  await page.getByText("Radarr-4K", { exact: true }).click();
 
-  // Both instance results should now be in the table body.
-  await expect(
-    page.getByTestId("media-table-body").getByText(/Movie 100 \(Main\)/),
-  ).toBeVisible({ timeout: 10_000 });
+  // Table now reflects Radarr-4K only — no "All" view exists.
   await expect(
     page.getByTestId("media-table-body").getByText(/Movie 200 \(4K\)/),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page.getByTestId("media-table-body").getByText(/Movie 100 \(Main\)/),
+  ).toHaveCount(0);
 });
 
-test("Multi-instance bulk delete confirm shows per-instance breakdown", async ({ page }) => {
-  let upstreamHits = 0;
-  await page.route("**/api/radarr/movies/delete**", (route) => {
-    upstreamHits += 1;
-    const id = Number(JSON.parse(String(route.request().postData() ?? "{}")).instanceId ?? 0);
-    return route.fulfill({
-      status: 200,
-      json: {
-        id: upstreamHits,
-        instanceId: id,
-        action: "delete",
-        mediaId: id * 100,
-        title: `Movie ${id * 100}`,
-        isDryRun: true,
-        status: "dry_run",
-        createdAt: new Date().toISOString(),
-      },
-    });
-  });
+test("legacy ?instanceId=all URL silently falls back to the first instance", async ({ page }) => {
+  await page.goto("/movies?instanceId=all");
 
-  await page.goto("/movies");
-  await page.getByTestId("media-table-body").getByText(/Movie 100 \(Main\)/).waitFor({ timeout: 10_000 });
-
-  // Switch to All Radarr.
-  await page.getByText("Radarr-Main", { exact: true }).first().click();
-  await page.getByText("All Radarr", { exact: true }).click();
-
-  // Wait for the second-instance row to appear.
-  await page.getByTestId("media-table-body").getByText(/Movie 200 \(4K\)/).waitFor({ timeout: 10_000 });
-
-  // Select both rows via their checkboxes. base-ui's Checkbox primitive
-  // renders with data-slot="checkbox"; that's what shadcn's wrapper sets.
-  const checkboxes = page.getByTestId("media-table-body").locator('[data-slot="checkbox"]');
-  await checkboxes.nth(0).click();
-  await checkboxes.nth(1).click();
-
-  // The delete button is in the bulk toolbar; click "Delete" (not "Delete and search").
-  await page.getByRole("button", { name: /^delete$/i }).first().click();
-
-  // The confirm dialog should show the per-instance breakdown.
-  const dialog = page.getByRole("alertdialog");
-  await expect(dialog).toBeVisible({ timeout: 5_000 });
-  await expect(dialog).toContainText(/from Radarr-Main/i);
-  await expect(dialog).toContainText(/from Radarr-4K/i);
+  // No "All Radarr" option exists; URL is treated as invalid and falls back
+  // to the first instance (Radarr-Main).
+  await expect(
+    page.getByTestId("media-table-body").getByText(/Movie 100 \(Main\)/),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("All Radarr", { exact: true })).toHaveCount(0);
 });

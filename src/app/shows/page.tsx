@@ -39,14 +39,12 @@ import { useBulkAbort } from "@/client/hooks/media/useBulkAbort";
 import { useBulkMediaActions, type BulkActionsConfig } from "@/client/hooks/media/useBulkMediaActions";
 import { useBulkHandlers } from "@/client/hooks/media/useBulkHandlers";
 import { useShowSeasonEpisodeActions } from "@/client/hooks/media/useShowSeasonEpisodeActions";
-import type { FlaggedSeriesWithInstance } from "@/client/hooks/media/useSeriesAll";
-import { buildInstanceBreakdown } from "@/client/lib/multi-instance-bulk";
 import { getSeverity } from "@/client/lib/severity";
 import { formatBytes } from "@/client/lib/format";
-import type { ScoringMode } from "@/shared/types/models";
+import type { FlaggedSeries, ScoringMode } from "@/shared/types/models";
 
 type SeriesBulkConfig = Pick<
-  BulkActionsConfig<FlaggedSeriesWithInstance>,
+  BulkActionsConfig<FlaggedSeries>,
   "mediaType" | "search" | "ignore" | "delete"
 >;
 
@@ -91,40 +89,40 @@ function ShowsPageContent() {
 
   const inst = useInstanceSelection("sonarr");
   const { data: config } = useConfig();
-  const { data: prefs } = usePreferences(inst.helperInstance);
-  const { data: profiles } = useQualityProfiles("sonarr", inst.helperInstance);
+  const { data: prefs } = usePreferences(inst.activeInstance);
+  const { data: profiles } = useQualityProfiles("sonarr", inst.activeInstance);
   const refreshMutation = useRefreshInstance();
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
 
-  const scoringMode = (config?.scoringModes[`scoringMode:${inst.helperInstance}`] ?? "manual") as ScoringMode;
-  const noCfsConfigured = !inst.isAllMode && scoringMode === "manual" && (prefs?.length ?? 0) === 0;
+  const scoringMode = (config?.scoringModes[`scoringMode:${inst.activeInstance}`] ?? "manual") as ScoringMode;
+  const noCfsConfigured = scoringMode === "manual" && (prefs?.length ?? 0) === 0;
 
   const filters = useMediaFilters(scoringMode);
   const data = useFlaggedSeriesData({
     activeInstance: inst.activeInstance,
-    instanceIds: inst.typedInstanceIds,
     filters: filters.forQuery,
   });
   const sentinelRef = useInfiniteScroll(data.fetchNextPage, data.hasNextPage);
-  const selection = useMediaSelection<FlaggedSeriesWithInstance>(data.allSeries, SERIES_BULK_CONFIG.delete.isDeletable);
-  const drawer = useDetailDrawer<FlaggedSeriesWithInstance>(data.allSeries);
+  const selection = useMediaSelection<FlaggedSeries>(data.allSeries, SERIES_BULK_CONFIG.delete.isDeletable);
+  const drawer = useDetailDrawer<FlaggedSeries>(data.allSeries);
 
   const [bulkProgress, setBulkProgress] = useState<BulkProgress | null>(null);
   const abort = useBulkAbort();
-  const actions = useBulkMediaActions<FlaggedSeriesWithInstance>({
+  const actions = useBulkMediaActions<FlaggedSeries>({
     ...SERIES_BULK_CONFIG,
+    instanceId: inst.activeInstance,
     setProgress: setBulkProgress,
     refetch: data.refetch,
   });
-  const handlers = useBulkHandlers<FlaggedSeriesWithInstance>({ selection, abort, actions });
+  const handlers = useBulkHandlers<FlaggedSeries>({ selection, abort, actions });
   const seasonEpisode = useShowSeasonEpisodeActions({
-    fallbackInstance: inst.isAllMode ? 0 : (inst.activeInstance as number),
+    instanceId: inst.activeInstance,
     refetch: data.refetch,
   });
 
-  const runSearch = (s: FlaggedSeriesWithInstance) =>
+  const runSearch = (s: FlaggedSeries) =>
     actions.searchMutation.mutateAsync({ items: [s], isBulk: false });
-  const runIgnore = (s: FlaggedSeriesWithInstance) =>
+  const runIgnore = (s: FlaggedSeries) =>
     actions.ignoreWithToast({ items: [s], isBulk: false });
 
   const wantedCfOptions = (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }));
@@ -146,7 +144,7 @@ function ShowsPageContent() {
     );
   }
 
-  const columns: ColumnDef<FlaggedSeriesWithInstance>[] = [
+  const columns: ColumnDef<FlaggedSeries>[] = [
     {
       key: "severity",
       header: "",
@@ -269,11 +267,11 @@ function ShowsPageContent() {
               )}
             </div>
             <div className="flex items-center gap-3">
-              {!inst.isAllMode && typeof inst.activeInstance === "number" && inst.activeInstance > 0 && (
+              {inst.activeInstance > 0 && (
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => refreshMutation.mutate(inst.activeInstance as number)}
+                  onClick={() => refreshMutation.mutate(inst.activeInstance)}
                   disabled={refreshMutation.isPending}
                   title={t("refreshTitle")}
                   aria-label={t("refreshTitle")}
@@ -281,23 +279,20 @@ function ShowsPageContent() {
                   <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
                 </Button>
               )}
-              {!inst.isAllMode && typeof inst.activeInstance === "number" && inst.activeInstance > 0 && (
+              {inst.activeInstance > 0 && (
                 <ScoringModeSelector instanceId={inst.activeInstance} />
               )}
               {inst.typedInstances.length > 1 && (
                 <Select
-                  value={inst.isAllMode ? "all" : String(inst.activeInstance)}
-                  onValueChange={(v) => inst.setInstanceId(v === "all" ? "all" : Number(v ?? 0))}
+                  value={String(inst.activeInstance)}
+                  onValueChange={(v) => inst.setInstanceId(Number(v ?? 0))}
                 >
                   <SelectTrigger className="w-44">
                     <SelectValue>
-                      {inst.isAllMode
-                        ? tInstSel("allSonarr")
-                        : (inst.typedInstances.find((i) => i.id === inst.activeInstance)?.name ?? tInstSel("selectInstance"))}
+                      {inst.typedInstances.find((i) => i.id === inst.activeInstance)?.name ?? tInstSel("selectInstance")}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{tInstSel("allSonarr")}</SelectItem>
                     {inst.typedInstances.map((i) => (
                       <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
                     ))}
@@ -309,19 +304,13 @@ function ShowsPageContent() {
 
           <MediaSearchBar
             arrType="sonarr"
-            instanceId={inst.helperInstance}
+            instanceId={inst.activeInstance}
             scoringMode={scoringMode}
             filters={filters.filters}
             onChange={(next) => filters.setFilters((prev) => ({ ...prev, ...next }))}
           />
 
           <ActiveFilterChips chips={chips} />
-
-          {inst.isAllMode && data.truncated && (
-            <p className="rounded-md border border-yellow-500/30 bg-yellow-500/5 px-3 py-2 text-xs text-yellow-300">
-              {tInstSel("truncatedHint", { limit: data.perInstanceLimit, total: data.total })}
-            </p>
-          )}
 
           <BulkActionToolbar
             selectedCount={selection.selected.size}
@@ -331,16 +320,9 @@ function ShowsPageContent() {
             onDelete={async (search) => {
               const items = selection.deletableSelected;
               if (!items.length) return;
-              const breakdown = buildInstanceBreakdown(items, (id) => inst.instances?.find((i) => i.id === id)?.name ?? `#${id}`);
-              const body = breakdown.length > 1
-                ? tConfirmDeleteSeries("bodyMulti", {
-                    instanceCount: breakdown.length,
-                    breakdown: breakdown.map((b) => `${b.count} from ${b.name}`).join(", "),
-                  })
-                : tConfirmDeleteSeries("body", { count: items.length });
               const ok = await askConfirm({
                 title: tConfirmDeleteSeries("title"),
-                body,
+                body: tConfirmDeleteSeries("body", { count: items.length }),
                 destructive: true,
               });
               if (ok) handlers.handleDelete(search);
@@ -351,7 +333,7 @@ function ShowsPageContent() {
           {(data.isLoading || inst.loadingInstances) && <MediaTableSkeleton rows={8} />}
           {data.isError && <MediaErrorCard onRetry={data.refetch} />}
           {!inst.loadingInstances && !data.isLoading && !data.isError && data.allSeries.length === 0 && (
-            (inst.isAllMode || inst.activeInstance)
+            inst.activeInstance > 0
               ? noCfsConfigured
                 ? <NoCfsPrompt />
                 : (chips.length > 0

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { instanceService } from "@/server/services/InstanceService";
+import { dataCache } from "@/server/lib/DataCache";
 import { instanceUpdateSchema } from "@/shared/types/schemas";
 import type { Instance } from "@/shared/types/models";
 import type { InstanceListItem } from "@/shared/types/api";
@@ -25,11 +26,16 @@ export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
     return NextResponse.json({ error: "Invalid instance update" }, { status: 400 });
   }
   const instance = await instanceService.update(id, parsed.data);
+  // URL / API key / enabled changes mean the cached movies/series snapshot
+  // points at the old upstream (or stale disabled state). Drop it so the
+  // next fetch refreshes from the new instance config.
+  dataCache.invalidate(id);
   return NextResponse.json(publicView(instance));
 });
 
 export const DELETE = createApiHandler(async (_req, ctx) => {
   const id = Number(ctx.params.id);
   await instanceService.delete(id);
+  dataCache.invalidate(id);
   return NextResponse.json({ ok: true });
 });

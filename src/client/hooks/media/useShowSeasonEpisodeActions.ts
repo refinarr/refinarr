@@ -5,28 +5,19 @@ import { api } from "@/client/lib/api";
 import type { ActionLog, FlaggedSeries } from "@/shared/types/models";
 
 export interface SeasonEpisodeConfig {
-  fallbackInstance: number;
+  instanceId: number;
   refetch: () => unknown;
 }
 
-// Series-only single-item actions that don't fan out across instances.
-// Carries __instanceId from the series argument when present (so a row in
-// "All Sonarr" mode dispatches to the right instance), otherwise falls back
-// to the page's active instance. Toast strings are resolved here.
 export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
-  const { refetch, fallbackInstance } = config;
+  const { refetch, instanceId } = config;
   const tSearch = useTranslations("toast.search");
   const tDelete = useTranslations("toast.delete");
-
-  const targetInstance = (s: FlaggedSeries): number => {
-    const candidate = (s as FlaggedSeries & { __instanceId?: unknown }).__instanceId;
-    return typeof candidate === "number" ? candidate : fallbackInstance;
-  };
 
   const seasonSearch = useMutation({
     mutationFn: ({ series, seasonNumber }: { series: FlaggedSeries; seasonNumber: number }) =>
       api.post<ActionLog>(`/sonarr/series/season-search`, {
-        instanceId: targetInstance(series),
+        instanceId,
         mediaId: series.id,
         seasonNumber,
         title: `${series.title} — Season ${seasonNumber}`,
@@ -41,7 +32,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
   const episodeSearch = useMutation({
     mutationFn: ({ series, fileId, label }: { series: FlaggedSeries; fileId: number; label: string }) =>
       api.post<ActionLog>(`/sonarr/series/episode-search`, {
-        instanceId: targetInstance(series),
+        instanceId,
         mediaId: series.id,
         fileId,
         title: `${series.title} — ${label}`,
@@ -58,7 +49,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       series: FlaggedSeries; seasonNumber: number; fileIds: number[]; search: boolean;
     }) =>
       api.post<ActionLog>(`/sonarr/series/delete`, {
-        instanceId: targetInstance(series),
+        instanceId,
         mediaId: series.id,
         fileIds,
         title: `${series.title} — Season ${seasonNumber}`,
@@ -79,7 +70,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       series: FlaggedSeries; fileId: number; label: string; search: boolean;
     }) =>
       api.post<ActionLog>(`/sonarr/series/delete`, {
-        instanceId: targetInstance(series),
+        instanceId,
         mediaId: series.id,
         fileIds: [fileId],
         title: `${series.title} — ${label}`,

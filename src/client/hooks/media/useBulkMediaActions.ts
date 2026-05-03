@@ -3,14 +3,10 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/client/lib/api";
 import { withToast } from "@/client/lib/with-toast";
-import { runMultiInstanceBulk } from "@/client/lib/multi-instance-bulk";
+import { runSerial } from "@/client/lib/run-serial";
 import { isAbortError } from "./useBulkAbort";
 import type { ActionLog } from "@/shared/types/models";
-import type { BulkProgress } from "@/client/components/media/BulkActionToolbar";
-
-interface WithInstance {
-  __instanceId: number;
-}
+import type { BulkAction, BulkProgress } from "@/client/components/media/BulkActionToolbar";
 
 export interface BulkVars<T> {
   items: T[];
@@ -33,12 +29,10 @@ interface DeleteEndpointConfig<T> {
   body: (item: T, instId: number, search: boolean) => Record<string, unknown>;
 }
 
-// One delete-toast key set per media type. The series page uses the
-// "filesDone" plurals while the movies page uses "fileDone" — pass the right
-// key suffix via mediaType.
 type MediaToastVariant = "movie" | "series";
 
-export interface BulkActionsConfig<T extends WithInstance> {
+export interface BulkActionsConfig<T> {
+  instanceId: number;
   setProgress: (p: BulkProgress | null) => void;
   refetch: () => unknown;
   mediaType: MediaToastVariant;
@@ -47,13 +41,34 @@ export interface BulkActionsConfig<T extends WithInstance> {
   delete: DeleteEndpointConfig<T>;
 }
 
-// Three bulk mutations (search/ignore/delete) that follow the same pattern:
-// fan out items by __instanceId, runSerial within each group, Promise.all
-// across groups, emit aggregate progress, treat AbortError as a cancel toast.
-// Page hooks (useMoviesPage, useShowsPage) call this factory once with their
-// type-specific endpoint config — toast strings are resolved here.
-export function useBulkMediaActions<T extends WithInstance>(config: BulkActionsConfig<T>) {
-  const { setProgress, refetch, mediaType } = config;
+interface RunOptions {
+  isBulk: boolean;
+  signal?: AbortSignal;
+  action: BulkAction;
+  setProgress: (p: BulkProgress | null) => void;
+}
+
+async function runBulk<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  opts: RunOptions,
+): Promise<R[]> {
+  const total = items.length;
+  if (opts.isBulk) opts.setProgress({ current: 0, total, action: opts.action });
+  return runSerial(
+    items,
+    async (item, i) => {
+      const r = await fn(item);
+      if (opts.isBulk) opts.setProgress({ current: i + 1, total, action: opts.action });
+      return r;
+    },
+    undefined,
+    { signal: opts.signal },
+  );
+}
+
+export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
+  const { instanceId, setProgress, refetch, mediaType } = config;
   const tSearch = useTranslations("toast.search");
   const tDelete = useTranslations("toast.delete");
   const tIgnore = useTranslations("toast.ignore");
@@ -65,9 +80,9 @@ export function useBulkMediaActions<T extends WithInstance>(config: BulkActionsC
 
   const searchMutation = useMutation({
     mutationFn: ({ items, isBulk, signal }: BulkVars<T>) =>
-      runMultiInstanceBulk(
+      runBulk(
         items,
-        (item, instId) => api.post<ActionLog>(config.search.endpoint, config.search.body(item, instId)),
+        (item) => api.post<ActionLog>(config.search.endpoint, config.search.body(item, instanceId)),
         { isBulk, signal, action: "search", setProgress },
       ),
     onSuccess: (results) => {
@@ -83,9 +98,9 @@ export function useBulkMediaActions<T extends WithInstance>(config: BulkActionsC
 
   const ignoreMutation = useMutation({
     mutationFn: ({ items, isBulk, signal }: BulkVars<T>) =>
-      runMultiInstanceBulk(
+      runBulk(
         items,
-        (item, instId) => api.post(config.ignore.endpoint, config.ignore.body(item, instId)),
+        (item) => api.post(config.ignore.endpoint, config.ignore.body(item, instanceId)),
         { isBulk, signal, action: "ignore", setProgress },
       ),
     onSuccess: () => refetch(),
@@ -98,9 +113,9 @@ export function useBulkMediaActions<T extends WithInstance>(config: BulkActionsC
   const deleteMutation = useMutation({
     mutationFn: async ({ items, search, isBulk, signal }: DeleteVars<T>) => {
       const deletable = items.filter(config.delete.isDeletable);
-      const results = await runMultiInstanceBulk(
+      const results = await runBulk(
         deletable,
-        (item, instId) => api.post<ActionLog>(config.delete.endpoint, config.delete.body(item, instId, search)),
+        (item) => api.post<ActionLog>(config.delete.endpoint, config.delete.body(item, instanceId, search)),
         { isBulk, signal, action: "delete", setProgress },
       );
       return { results, search };
@@ -120,8 +135,6 @@ export function useBulkMediaActions<T extends WithInstance>(config: BulkActionsC
     onSettled: () => setProgress(null),
   });
 
-  // Single-item ignore callers (row-hover, drawer) still get a sonner
-  // toast.promise loading/success spinner; bulk progress UI covers multi-item.
   const ignoreWithToast = withToast(ignoreMutation, {
     success: tIgnore("done"),
     error: tIgnore("failed"),

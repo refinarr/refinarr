@@ -67,10 +67,7 @@
     "openMenu": "Open navigation menu"
   },
   "instanceSelector": {
-    "allRadarr": "All Radarr",
-    "allSonarr": "All Sonarr",
-    "selectInstance": "Select instance",
-    "truncatedHint": "Showing first {limit} per instance — refine filters to see all {total}."
+    "selectInstance": "Select instance"
   },
   "commandPalette": {
     "title": "Command palette",
@@ -415,13 +412,11 @@
     },
     "deleteMovies": {
       "title": "Delete files?",
-      "body": "Delete files for {count, plural, one {# movie} other {# movies}}? This cannot be undone.",
-      "bodyMulti": "Delete files across {instanceCount} instances ({breakdown})? This cannot be undone."
+      "body": "Delete files for {count, plural, one {# movie} other {# movies}}? This cannot be undone."
     },
     "deleteSeries": {
       "title": "Delete files?",
-      "body": "Delete all files for {count, plural, one {# series} other {# series}}? This cannot be undone.",
-      "bodyMulti": "Delete files across {instanceCount} instances ({breakdown})? This cannot be undone."
+      "body": "Delete all files for {count, plural, one {# series} other {# series}}? This cannot be undone."
     },
     "deleteSeason": {
       "title": "Delete season?",

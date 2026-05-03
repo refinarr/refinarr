@@ -8,14 +8,13 @@ import type { MediaSelection } from "../useMediaSelection";
 
 interface Item {
   id: number;
-  __instanceId: number;
   hasFile: boolean;
 }
 
 const items: Item[] = [
-  { id: 1, __instanceId: 1, hasFile: true },
-  { id: 2, __instanceId: 1, hasFile: false },
-  { id: 3, __instanceId: 2, hasFile: true },
+  { id: 1, hasFile: true },
+  { id: 2, hasFile: false },
+  { id: 3, hasFile: true },
 ];
 
 function makeSelection(state: { selectedItems: Item[]; deletableSelected: Item[] }): MediaSelection<Item> {

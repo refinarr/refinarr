@@ -29,7 +29,6 @@ function wrapper({ children }: { children: ReactNode }) {
 
 describe("parseUrlInstance", () => {
   it.each([
-    ["all", "all" as const],
     ["1", 1],
     ["42", 42],
     [null, 0],
@@ -37,6 +36,7 @@ describe("parseUrlInstance", () => {
     ["0", 0],
     ["-3", 0],
     ["abc", 0],
+    ["all", 0],
   ])("parses %p → %p", (input, expected) => {
     expect(parseUrlInstance(input)).toEqual(expected);
   });
@@ -63,31 +63,26 @@ describe("useInstanceSelection", () => {
     await vi.waitFor(() => {
       expect(result.current.activeInstance).toBe(1);
     });
-    expect(result.current.isAllMode).toBe(false);
-    expect(result.current.helperInstance).toBe(1);
   });
 
-  it("starts in all mode when the URL says ?instanceId=all", async () => {
+  it("falls back to first instance when URL carries the legacy ?instanceId=all", async () => {
     mockSearch.set("instanceId", "all");
     mockApi.get.mockResolvedValue([radarr1, radarr2]);
     const { result } = renderHook(() => useInstanceSelection("radarr"), { wrapper });
-    expect(result.current.isAllMode).toBe(true);
-    expect(result.current.activeInstance).toBe("all");
     await vi.waitFor(() => {
-      expect(result.current.helperInstance).toBe(1);
+      expect(result.current.activeInstance).toBe(1);
     });
   });
 
-  it("setInstanceId switches between numeric and 'all'", async () => {
+  it("setInstanceId switches between instances", async () => {
     mockApi.get.mockResolvedValue([radarr1, radarr2]);
     const { result } = renderHook(() => useInstanceSelection("radarr"), { wrapper });
     await vi.waitFor(() => expect(result.current.typedInstances).toHaveLength(2));
 
-    act(() => result.current.setInstanceId("all"));
-    expect(result.current.isAllMode).toBe(true);
-
     act(() => result.current.setInstanceId(2));
-    expect(result.current.isAllMode).toBe(false);
     expect(result.current.activeInstance).toBe(2);
+
+    act(() => result.current.setInstanceId(1));
+    expect(result.current.activeInstance).toBe(1);
   });
 });
