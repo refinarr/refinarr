@@ -5,8 +5,9 @@ import { Suspense } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
 import { Input } from "@/client/components/ui/input";
-import { Label } from "@/client/components/ui/label";
 import { Button } from "@/client/components/ui/button";
+import { FormField } from "@/client/components/ui/form-field";
+import { Loader2 } from "lucide-react";
 
 function LoginForm() {
   const t = useTranslations("auth.login");
@@ -47,29 +48,25 @@ function LoginForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="username">{t("username")}</Label>
+            <FormField id="username" label={t("username")}>
               <Input
-                id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
                 required
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">{t("password")}</Label>
+            </FormField>
+            <FormField id="password" label={t("password")} error={err}>
               <Input
-                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
               />
-            </div>
-            {err && <p className="text-sm text-destructive">{err}</p>}
+            </FormField>
             <Button type="submit" disabled={submitting} className="w-full">
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("submit")}
             </Button>
           </form>

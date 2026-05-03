@@ -292,6 +292,37 @@ function ShowsPageContent() {
                     onIgnore={async () => { await runIgnore([s]); }}
                   />
                 )}
+                renderCard={(s) => {
+                  const score = scoringMode === "profile" ? s.customFormatScore : s.cfScore;
+                  const hasFile = s.episodeFiles.length > 0;
+                  const items = scoringMode === "profile" ? s.unwantedFormats : s.missingFormats;
+                  return (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <SeverityDot severity={getSeverity(score, s.minProfileScore, scoringMode, hasFile)} />
+                        <span className="font-medium truncate">{s.title}</span>
+                        <span className="text-muted-foreground text-xs shrink-0">{s.year}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        {scoringMode === "profile" && !hasFile ? (
+                          <span>{t("noFile")}</span>
+                        ) : (
+                          <ScoreLabel score={score} minProfileScore={s.minProfileScore} />
+                        )}
+                        <span className="tabular-nums">{formatBytes(s.sizeOnDisk)}</span>
+                        <span className="tabular-nums">{s.affectedEpisodeCount}/{s.totalEpisodeCount} ep</span>
+                      </div>
+                      {items.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          {items.slice(0, 3).map((cf) => <CfBadge key={cf.id} name={cf.name} missing />)}
+                          {items.length > 3 && (
+                            <span className="text-xs text-muted-foreground">+{items.length - 3}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }}
               />
             </div>
           )}
