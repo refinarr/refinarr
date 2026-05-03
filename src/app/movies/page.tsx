@@ -285,6 +285,35 @@ function MoviesPageContent() {
                     onIgnore={async () => { await runIgnore([m]); }}
                   />
                 )}
+                renderCard={(m) => {
+                  const score = scoringMode === "profile" ? m.customFormatScore : m.cfScore;
+                  const items = scoringMode === "profile" ? m.unwantedFormats : m.missingFormats;
+                  return (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <SeverityDot severity={getSeverity(score, m.minProfileScore, scoringMode, m.hasFile)} />
+                        <span className="font-medium truncate">{m.title}</span>
+                        <span className="text-muted-foreground text-xs shrink-0">{m.year}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        {scoringMode === "profile" && !m.hasFile ? (
+                          <span>{t("noFile")}</span>
+                        ) : (
+                          <ScoreLabel score={score} minProfileScore={m.minProfileScore} />
+                        )}
+                        <span className="tabular-nums">{formatBytes(m.sizeOnDisk)}</span>
+                      </div>
+                      {items.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          {items.slice(0, 3).map((cf) => <CfBadge key={cf.id} name={cf.name} missing />)}
+                          {items.length > 3 && (
+                            <span className="text-xs text-muted-foreground">+{items.length - 3}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }}
               />
             </div>
           )}
