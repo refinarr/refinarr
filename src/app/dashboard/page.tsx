@@ -45,7 +45,11 @@ export default function DashboardPage() {
               <p className="text-muted-foreground text-sm mt-1">{t("subtitle")}</p>
             </div>
             <div className="flex items-center gap-3">
-              {config?.dryRun && <Badge variant="secondary">{tDryRun("badgeOn")}</Badge>}
+              {config && (
+                <Badge variant={config.dryRun ? "outline" : "destructive"}>
+                  {config.dryRun ? tDryRun("badgeOn") : tDryRun("badgeOff")}
+                </Badge>
+              )}
               <Button size="sm" variant="outline" onClick={() => router.push("/settings")}>
                 <Plus className="h-4 w-4 mr-1" /> {t("addInstance")}
               </Button>
