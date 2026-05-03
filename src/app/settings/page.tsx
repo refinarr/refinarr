@@ -9,6 +9,7 @@ import { ApiKeyCard } from "@/client/components/settings/ApiKeyCard";
 import { PasswordChangeCard } from "@/client/components/settings/PasswordChangeCard";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { CfPreferencePicker } from "@/client/components/settings/CfPreferencePicker";
+import { SettingsCardSkeleton } from "@/client/components/states/SettingsCardSkeleton";
 import { Button } from "@/client/components/ui/button";
 import { Separator } from "@/client/components/ui/separator";
 import { useInstances } from "@/client/hooks/useInstances";
@@ -18,7 +19,7 @@ import { Plus } from "lucide-react";
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
-  const { data: instances } = useInstances();
+  const { data: instances, isLoading: loadingInstances } = useInstances();
   const { data: config } = useConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Instance | null>(null);
@@ -40,15 +41,19 @@ export default function SettingsPage() {
               <Plus className="h-4 w-4 mr-1" /> {t("addInstance")}
             </Button>
           </div>
-          <div className="space-y-2">
-            {(instances ?? []).map((inst) => (
-              <InstanceCard
-                key={inst.id}
-                instance={inst}
-                onEdit={() => { setEditing(inst); setDialogOpen(true); }}
-              />
-            ))}
-          </div>
+          {loadingInstances ? (
+            <SettingsCardSkeleton />
+          ) : (
+            <div className="space-y-2">
+              {(instances ?? []).map((inst) => (
+                <InstanceCard
+                  key={inst.id}
+                  instance={inst}
+                  onEdit={() => { setEditing(inst); setDialogOpen(true); }}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         <Separator />
