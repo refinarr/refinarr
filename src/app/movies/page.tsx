@@ -24,12 +24,12 @@ import { Button } from "@/client/components/ui/button";
 import { MovieDetailDrawer } from "@/client/components/movies/MovieDetailDrawer";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 
-import { useConfig } from "@/client/hooks/useConfig";
-import { usePreferences } from "@/client/hooks/usePreferences";
-import { useQualityProfiles } from "@/client/hooks/useQualityProfiles";
-import { useRefreshInstance } from "@/client/hooks/useRefreshInstance";
-import { useConfirm } from "@/client/hooks/useConfirm";
-import { useInfiniteScroll } from "@/client/hooks/useInfiniteScroll";
+import { useConfig } from "@/client/hooks/data/useConfig";
+import { usePreferences } from "@/client/hooks/data/usePreferences";
+import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
+import { useRefreshInstance } from "@/client/hooks/data/useRefreshInstance";
+import { useConfirm } from "@/client/hooks/ui/useConfirm";
+import { useInfiniteScroll } from "@/client/hooks/ui/useInfiniteScroll";
 import { useInstanceSelection } from "@/client/hooks/media/useInstanceSelection";
 import { useMediaFilters } from "@/client/hooks/media/useMediaFilters";
 import { useMediaSelection } from "@/client/hooks/media/useMediaSelection";

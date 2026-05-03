@@ -4,8 +4,8 @@ import { Card, CardContent } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
 import { Edit2, Trash2, Plug } from "lucide-react";
-import { useDeleteInstance, useTestConnection } from "@/client/hooks/useInstances";
-import { usePreferences } from "@/client/hooks/usePreferences";
+import { useDeleteInstance, useTestConnection } from "@/client/hooks/data/useInstances";
+import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { withToast } from "@/client/lib/with-toast";
 import type { Instance } from "@/shared/types/models";
 

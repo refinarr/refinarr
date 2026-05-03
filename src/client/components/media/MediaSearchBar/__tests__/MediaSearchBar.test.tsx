@@ -3,11 +3,11 @@ import { describe, it, expect, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "@/test/render";
 
-vi.mock("@/client/hooks/useQualityProfiles", () => ({
+vi.mock("@/client/hooks/data/useQualityProfiles", () => ({
   useQualityProfiles: () => ({ data: [] }),
 }));
 
-vi.mock("@/client/hooks/usePreferences", () => ({
+vi.mock("@/client/hooks/data/usePreferences", () => ({
   usePreferences: () => ({ data: [] }),
 }));
 

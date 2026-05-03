@@ -7,8 +7,8 @@ import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt"
 import { Button } from "@/client/components/ui/button";
 import { Badge } from "@/client/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
-import { useInstances } from "@/client/hooks/useInstances";
-import { useIgnored, useUnignore } from "@/client/hooks/useIgnored";
+import { useInstances } from "@/client/hooks/data/useInstances";
+import { useIgnored, useUnignore } from "@/client/hooks/data/useIgnored";
 import { withToast } from "@/client/lib/with-toast";
 import { formatRelative } from "@/client/lib/format";
 import { useRouter } from "next/navigation";

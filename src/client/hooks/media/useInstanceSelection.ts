@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useInstances } from "../useInstances";
+import { useInstances } from "../data/useInstances";
 import type { ArrType, Instance } from "@/shared/types/models";
 
 export type ActiveInstance = number | "all";

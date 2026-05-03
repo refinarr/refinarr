@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
 import { FormField } from "@/client/components/ui/form-field";
-import { useMe } from "@/client/hooks/useMe";
+import { useMe } from "@/client/hooks/data/useMe";
 import { Loader2 } from "lucide-react";
 
 export function PasswordChangeCard() {

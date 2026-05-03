@@ -11,10 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/client/components/ui/label";
 import { Button } from "@/client/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { useHistory, useClearHistory } from "@/client/hooks/useHistory";
-import { useInstances } from "@/client/hooks/useInstances";
-import { useInfiniteScroll } from "@/client/hooks/useInfiniteScroll";
-import { useConfirm } from "@/client/hooks/useConfirm";
+import { useHistory, useClearHistory } from "@/client/hooks/data/useHistory";
+import { useInstances } from "@/client/hooks/data/useInstances";
+import { useInfiniteScroll } from "@/client/hooks/ui/useInfiniteScroll";
+import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import { withToast } from "@/client/lib/with-toast";
 import type { ActionLog } from "@/shared/types/models";
 

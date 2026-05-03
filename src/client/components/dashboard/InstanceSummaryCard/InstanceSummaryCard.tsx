@@ -5,7 +5,7 @@ import { ArrowRight, Settings } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { InstanceErrorSummary } from "@/client/components/history/InstanceErrorSummary";
-import { useInstanceHealth } from "@/client/hooks/useInstances";
+import { useInstanceHealth } from "@/client/hooks/data/useInstances";
 import type { DashboardInstanceSummary } from "@/shared/types/api";
 
 interface Props {

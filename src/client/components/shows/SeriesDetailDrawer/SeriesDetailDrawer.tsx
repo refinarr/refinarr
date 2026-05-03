@@ -15,7 +15,7 @@ import { SeverityDot } from "@/client/components/media/SeverityDot";
 import { SeasonAccordion } from "@/client/components/shows/SeasonAccordion";
 import { groupBySeason, filename } from "@/client/components/shows/utils";
 import { getSeverity } from "@/client/lib/severity";
-import { useConfirm } from "@/client/hooks/useConfirm";
+import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import type { FlaggedSeries, ScoringMode } from "@/shared/types/models";
 
 interface Props {

@@ -1,5 +1,5 @@
 "use client";
-import { useHealth } from "@/client/hooks/useHealth";
+import { useHealth } from "@/client/hooks/data/useHealth";
 
 export function HealthDot() {
   const { data, isError } = useHealth();

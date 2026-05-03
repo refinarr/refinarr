@@ -12,8 +12,8 @@ import { CfPreferencePicker } from "@/client/components/settings/CfPreferencePic
 import { SettingsCardSkeleton } from "@/client/components/states/SettingsCardSkeleton";
 import { Button } from "@/client/components/ui/button";
 import { Separator } from "@/client/components/ui/separator";
-import { useInstances } from "@/client/hooks/useInstances";
-import { useConfig } from "@/client/hooks/useConfig";
+import { useInstances } from "@/client/hooks/data/useInstances";
+import { useConfig } from "@/client/hooks/data/useConfig";
 import type { Instance } from "@/shared/types/models";
 import { Plus } from "lucide-react";
 

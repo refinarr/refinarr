@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useDebouncedValue } from "../useDebouncedValue";
+import { useDebouncedValue } from "../ui/useDebouncedValue";
 import type { ScoringMode } from "@/shared/types/models";
 
 export interface MediaFilters {

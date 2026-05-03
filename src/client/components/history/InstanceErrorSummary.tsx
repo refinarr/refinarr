@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Badge } from "@/client/components/ui/badge";
-import { useHistoryErrors } from "@/client/hooks/useHistory";
+import { useHistoryErrors } from "@/client/hooks/data/useHistory";
 
 interface Props {
   instanceId: number;

@@ -13,8 +13,8 @@ import {
   SheetClose,
 } from "@/client/components/ui/sheet";
 import { Search, SlidersHorizontal } from "lucide-react";
-import { useQualityProfiles } from "@/client/hooks/useQualityProfiles";
-import { usePreferences } from "@/client/hooks/usePreferences";
+import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
+import { usePreferences } from "@/client/hooks/data/usePreferences";
 import type { ArrType, ScoringMode } from "@/shared/types/models";
 import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 import type { QualityProfile } from "@/shared/types/models";

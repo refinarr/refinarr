@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Film, Tv2, LayoutDashboard, History, Settings, EyeOff, AlertCircle, LogOut } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/client/lib/utils";
-import { useMe, useLogout } from "@/client/hooks/useMe";
+import { useMe, useLogout } from "@/client/hooks/data/useMe";
 
 interface NavLink {
   href: string;
