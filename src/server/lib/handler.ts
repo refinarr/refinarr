@@ -1,18 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { seedDefaults } from "./db";
+import { ensureSeeded } from "./bootstrap";
 import { appLogger } from "./app-logger";
 import { LogSource } from "./log-sources";
 import { UnsafeUrlError } from "./url-guard";
-
-let seeded = false;
-
-async function ensureSeeded() {
-  if (!seeded) {
-    await seedDefaults();
-    seeded = true;
-  }
-}
 
 export type RouteContext = { params: Promise<Record<string, string>> };
 

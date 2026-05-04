@@ -4,7 +4,10 @@ import { ZodError } from "zod";
 
 vi.mock("@/server/lib/db", () => ({
   prisma: {},
-  seedDefaults: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/server/lib/bootstrap", () => ({
+  ensureSeeded: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/server/lib/app-logger", () => ({
