@@ -43,12 +43,12 @@ export function MediaTable<T extends { id: number }>({
     return <>{emptyState}</>;
   }
 
-  const tableHidden = renderCard ? "hidden md:block" : "";
+  const tableHidden = renderCard ? "hidden lg:block" : "";
 
   return (
     <>
       {renderCard && (
-        <ul data-testid="media-card-list" className="flex flex-col gap-2 md:hidden">
+        <ul data-testid="media-card-list" className="flex flex-col gap-2 lg:hidden">
           {rows.map((row) => (
             <MediaCard
               key={row.id}
@@ -62,7 +62,7 @@ export function MediaTable<T extends { id: number }>({
           ))}
         </ul>
       )}
-      <div className={`rounded-lg border overflow-hidden ${tableHidden}`}>
+      <div className={`rounded-lg border overflow-x-auto ${tableHidden}`}>
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-background border-b z-10">
             <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">

@@ -26,6 +26,7 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const missingCfMatch = parseMatchMode(s.get("missingCfMatch"));
   const hasNegativeCfIds = parseIdList(s.get("hasNegativeCfIds"));
   const hasNegativeCfMatch = parseMatchMode(s.get("hasNegativeCfMatch"));
+  const onlyMissing = s.get("onlyMissing") === "true";
 
   const { items, total } = await movieService.getFlaggedMovies(instanceId, {
     page,
@@ -39,6 +40,7 @@ export const GET = createApiHandler(async (req: NextRequest) => {
     missingCfMatch,
     hasNegativeCfIds,
     hasNegativeCfMatch,
+    onlyMissing,
   });
 
   return NextResponse.json({

@@ -36,7 +36,7 @@ describe("MediaTable", () => {
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 
-  it("renders both card list (md:hidden) and table (hidden md:block) when renderCard is provided", () => {
+  it("renders both card list (lg:hidden) and table (hidden lg:block) when renderCard is provided", () => {
     render(
       <MediaTable
         {...baseProps}
@@ -44,11 +44,11 @@ describe("MediaTable", () => {
       />
     );
     const list = screen.getByRole("list");
-    expect(list.className).toContain("md:hidden");
+    expect(list.className).toContain("lg:hidden");
     expect(screen.getByTestId("card-1")).toHaveTextContent("Alpha");
     expect(screen.getByTestId("card-2")).toHaveTextContent("Bravo");
     const tableWrapper = screen.getByRole("table").parentElement!;
-    expect(tableWrapper.className).toContain("hidden md:block");
+    expect(tableWrapper.className).toContain("hidden lg:block");
   });
 
   it("fires onRowClick when a card body is clicked", async () => {

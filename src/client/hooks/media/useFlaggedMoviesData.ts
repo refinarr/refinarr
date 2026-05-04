@@ -1,4 +1,8 @@
+"use client";
+
 import { useMovies } from "./useMovies";
+import { useFlaggedMediaData } from "./useFlaggedMediaData";
+import type { FlaggedMediaData } from "./useFlaggedMediaData";
 import type { MediaFilters } from "./useMediaFilters";
 import type { FlaggedMovie, ScoringMode } from "@/shared/types/models";
 
@@ -7,31 +11,11 @@ interface Args {
   filters: MediaFilters & { scoringMode: ScoringMode };
 }
 
-export interface FlaggedMoviesData {
+export interface FlaggedMoviesData extends Omit<FlaggedMediaData<FlaggedMovie>, "items"> {
   allMovies: FlaggedMovie[];
-  total: number;
-  isLoading: boolean;
-  isError: boolean;
-  isFetching: boolean;
-  isFetchingNextPage: boolean;
-  fetchNextPage: () => unknown;
-  hasNextPage: boolean;
-  refetch: () => unknown;
 }
 
 export function useFlaggedMoviesData({ activeInstance, filters }: Args): FlaggedMoviesData {
-  const single = useMovies(activeInstance, filters);
-  const allMovies = single.data?.pages.flatMap((p) => p.items) ?? [];
-
-  return {
-    allMovies,
-    total: single.data?.pages[0]?.total ?? 0,
-    isLoading: single.isLoading,
-    isError: single.isError,
-    isFetching: single.isFetching,
-    isFetchingNextPage: single.isFetchingNextPage,
-    fetchNextPage: single.fetchNextPage,
-    hasNextPage: !!single.hasNextPage,
-    refetch: single.refetch,
-  };
+  const { items: allMovies, ...rest } = useFlaggedMediaData<FlaggedMovie>(useMovies, activeInstance, filters);
+  return { allMovies, ...rest };
 }

@@ -192,7 +192,9 @@
     "removeChip": "Remove {label}",
     "title": "Filters",
     "openFilters": "Filters",
-    "applyFilters": "Apply"
+    "applyFilters": "Apply",
+    "onlyMissing": "Only missing",
+    "clearAll": "Clear all"
   },
   "bulk": {
     "selected": "{count} selected",

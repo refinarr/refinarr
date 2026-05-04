@@ -92,7 +92,7 @@ export function MultiSelect({
         <span className="line-clamp-1 flex flex-1 items-center gap-1.5 text-left">{triggerText}</span>
         <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="min-w-[--anchor-width]">
+      <DropdownMenuContent className="min-w-56 max-h-80">
         {label && (
           <DropdownMenuGroup>
             <DropdownMenuLabel>{label}</DropdownMenuLabel>

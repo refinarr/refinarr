@@ -24,7 +24,7 @@ export function useMovies(instanceId: number, filters: MovieFilters = {}) {
     limit: "50",
   });
   for (const [k, v] of Object.entries(filters)) {
-    if (v === undefined || v === null || v === "") continue;
+    if (v === undefined || v === null || v === "" || v === false) continue;
     if (Array.isArray(v)) {
       if (v.length > 0) params.set(k, v.join(","));
     } else {

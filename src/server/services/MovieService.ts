@@ -1,4 +1,4 @@
-import type { FlaggedMovie, ActionLog, ScoringMode } from "@/shared/types/models";
+import type { FlaggedMovie, ActionLog, MediaQuery, ScoringMode } from "@/shared/types/models";
 import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
@@ -16,46 +16,11 @@ import {
   scoreProfileCoverage,
 } from "@/server/lib/scoring";
 
-interface MovieQuery {
-  page: number;
-  limit: number;
-  sortBy: "score" | "title" | "added" | "size";
-  order: "asc" | "desc";
-  maxScore?: number;
-  q?: string;
-  profileId?: number;
-  missingCfIds?: number[];
-  missingCfMatch?: "any" | "all";
-  hasNegativeCfIds?: number[];
-  hasNegativeCfMatch?: "any" | "all";
-}
-
-function compareFlaggedMovies(
-  a: FlaggedMovie,
-  b: FlaggedMovie,
-  sortBy: MovieQuery["sortBy"],
-  mode: ScoringMode,
-  dir: 1 | -1,
-): number {
-  if (sortBy === "added") return 0;
-  if (sortBy === "title") return a.title.localeCompare(b.title) * dir;
-  // Numeric sorts: items without a file sink to the bottom regardless of
-  // direction, so the user's "worst N" view is never polluted by entries
-  // with no on-disk reference to compare against.
-  if (a.hasFile !== b.hasFile) return a.hasFile ? -1 : 1;
-  if (!a.hasFile) return 0;
-  if (sortBy === "score") {
-    const av = mode === "profile" ? a.customFormatScore : a.cfScore;
-    const bv = mode === "profile" ? b.customFormatScore : b.cfScore;
-    return (av - bv) * dir;
-  }
-  return (a.sizeOnDisk - b.sizeOnDisk) * dir;
-}
 
 export class MovieService extends MediaService {
   async getFlaggedMovies(
     instanceId: number,
-    query: MovieQuery
+    query: MediaQuery
   ): Promise<{ items: FlaggedMovie[]; total: number }> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -83,7 +48,7 @@ export class MovieService extends MediaService {
       });
     }
 
-    return this.applyQuery(cached.flagged, query, mode);
+    return this.applyQuery(cached.flagged, query, mode, (m) => m.hasFile);
   }
 
   private async buildFlaggedMovies(
@@ -189,58 +154,6 @@ export class MovieService extends MediaService {
           sizeOnDisk: file?.size ?? 0,
         };
       });
-  }
-
-  private applyQuery(
-    source: FlaggedMovie[],
-    query: MovieQuery,
-    mode: ScoringMode
-  ): { items: FlaggedMovie[]; total: number } {
-    let flagged = source;
-
-    if (query.maxScore !== undefined) {
-      flagged = flagged.filter((m) => m.cfScore <= query.maxScore!);
-    }
-
-    if (query.q) {
-      const q = query.q.toLowerCase();
-      flagged = flagged.filter(
-        (m) =>
-          m.title.toLowerCase().includes(q) ||
-          m.missingFormats.some((cf) => cf.name.toLowerCase().includes(q))
-      );
-    }
-
-    if (query.profileId !== undefined) {
-      flagged = flagged.filter((m) => m.qualityProfileId === query.profileId);
-    }
-
-    if (query.missingCfIds && query.missingCfIds.length > 0) {
-      const wanted = query.missingCfIds;
-      const matchAll = (query.missingCfMatch ?? "all") === "all";
-      flagged = flagged.filter((m) => {
-        const have = new Set(m.missingFormats.map((cf) => cf.id));
-        return matchAll ? wanted.every((id) => have.has(id)) : wanted.some((id) => have.has(id));
-      });
-    }
-
-    if (query.hasNegativeCfIds && query.hasNegativeCfIds.length > 0) {
-      const wanted = query.hasNegativeCfIds;
-      const matchAll = (query.hasNegativeCfMatch ?? "all") === "all";
-      flagged = flagged.filter((m) => {
-        const have = new Set(m.unwantedFormats.map((cf) => cf.id));
-        return matchAll ? wanted.every((id) => have.has(id)) : wanted.some((id) => have.has(id));
-      });
-    }
-
-    const dir = query.order === "asc" ? 1 : -1;
-    const sorted = [...flagged].sort((a, b) =>
-      compareFlaggedMovies(a, b, query.sortBy, mode, dir),
-    );
-
-    const total = sorted.length;
-    const start = (query.page - 1) * query.limit;
-    return { items: sorted.slice(start, start + query.limit), total };
   }
 
   async triggerSearch(instanceId: number, mediaId: number, title: string): Promise<ActionLog> {

@@ -14,6 +14,7 @@ export interface MediaFilters {
   missingCfMatch: MatchMode;
   hasNegativeCfIds: number[];
   hasNegativeCfMatch: MatchMode;
+  onlyMissing: boolean;
 }
 
 export const defaultMediaFilters: MediaFilters = {
@@ -26,6 +27,7 @@ export const defaultMediaFilters: MediaFilters = {
   missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
+  onlyMissing: false,
 };
 
 export interface MediaFiltersResult {
