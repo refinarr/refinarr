@@ -3,7 +3,6 @@ import { seriesService } from "@/server/services/SeriesService";
 import { instanceService } from "@/server/services/InstanceService";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
-import { configRepository } from "@/server/repositories/ConfigRepository";
 
 const fetchMock = vi.fn();
 
@@ -134,7 +133,6 @@ describe("SeriesService.getFlaggedSeries — manual mode", () => {
 describe("SeriesService.getFlaggedSeries — profile mode", () => {
   test("flags series whose worst episode score is below cutoff", async () => {
     const instance = await instanceService.create(baseInstance);
-    await configRepository.set(`scoringMode:${instance.id}`, "profile");
     setupSonarrMocks({
       series: [{ id: 1, title: "BelowCut", year: 2024, qualityProfileId: 1 }],
       files: new Map([[1, [
@@ -151,7 +149,6 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
 
   test("flags fileless series when profile cutoff > 0", async () => {
     const instance = await instanceService.create(baseInstance);
-    await configRepository.set(`scoringMode:${instance.id}`, "profile");
     setupSonarrMocks({
       series: [{ id: 1, title: "NoFiles", year: 2024, qualityProfileId: 1 }],
       files: new Map([[1, []]]),
@@ -165,7 +162,6 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
 
   test("populates unwantedFormats from negative-score CFs in episode files", async () => {
     const instance = await instanceService.create(baseInstance);
-    await configRepository.set(`scoringMode:${instance.id}`, "profile");
     setupSonarrMocks({
       series: [{ id: 1, title: "BadFile", year: 2024, qualityProfileId: 1 }],
       files: new Map([[1, [

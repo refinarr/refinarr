@@ -78,6 +78,7 @@ export class InstanceService {
       url: data.url,
       apiKey: data.apiKey,
       enabled: true,
+      scoringMode: "profile",
       createdAt: new Date(),
     };
     const client = ArrClientFactory.createArrClient(transient);

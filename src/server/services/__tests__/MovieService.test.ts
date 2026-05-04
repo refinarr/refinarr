@@ -1,10 +1,20 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { movieService } from "@/server/services/MovieService";
 import { instanceService } from "@/server/services/InstanceService";
+import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { configRepository } from "@/server/repositories/ConfigRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
+import type { ScoringMode } from "@/shared/types/models";
+
+// Tests are explicit about scoringMode rather than relying on the column
+// default ("profile"), so a future default-flip doesn't silently break them.
+async function createInstance(mode: ScoringMode = "manual") {
+  const inst = await instanceService.create(baseInstance);
+  await instanceRepository.update(inst.id, { scoringMode: mode });
+  return inst;
+}
 
 const fetchMock = vi.fn();
 
@@ -99,7 +109,7 @@ describe("MovieService.getFlaggedMovies — manual mode", () => {
   });
 
   test("flags movies missing wanted CFs and excludes ones with all wanted", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [
       { cfId: 10, cfName: "HDR" },
     ]);
@@ -161,7 +171,6 @@ describe("MovieService.getFlaggedMovies — manual mode", () => {
 describe("MovieService.getFlaggedMovies — profile mode", () => {
   test("flags movies whose customFormatScore is below cutoffFormatScore", async () => {
     const instance = await instanceService.create(baseInstance);
-    await configRepository.set(`scoringMode:${instance.id}`, "profile");
     setupRadarrMocks({
       movies: [
         { id: 1, title: "Low", year: 2024, qualityProfileId: 1, hasFile: true, movieFileId: 100 },
@@ -183,7 +192,6 @@ describe("MovieService.getFlaggedMovies — profile mode", () => {
 
   test("populates unwantedFormats from negative-scoring CFs in the file", async () => {
     const instance = await instanceService.create(baseInstance);
-    await configRepository.set(`scoringMode:${instance.id}`, "profile");
     setupRadarrMocks({
       movies: [{ id: 1, title: "Bad", year: 2024, qualityProfileId: 1, hasFile: true, movieFileId: 100 }],
       files: [

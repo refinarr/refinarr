@@ -19,7 +19,9 @@ export interface CreateInstanceDto {
   enabled?: boolean;
 }
 
-export type UpdateInstanceDto = Partial<CreateInstanceDto>;
+export type UpdateInstanceDto = Partial<CreateInstanceDto> & {
+  scoringMode?: "manual" | "profile";
+};
 
 /**
  * Shape sent to the browser. Never includes apiKey — that's a server-only secret.
@@ -30,6 +32,7 @@ export interface InstanceListItem {
   name: string;
   url: string;
   enabled: boolean;
+  scoringMode: "manual" | "profile";
   createdAt: string | Date;
 }
 
