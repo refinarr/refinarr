@@ -5,6 +5,7 @@ import { preferenceRepository } from "@/server/repositories/PreferenceRepository
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { configRepository } from "@/server/repositories/ConfigRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
+import { dataCache } from "@/server/lib/DataCache";
 
 const fetchMock = vi.fn();
 
@@ -404,6 +405,41 @@ describe("MovieService.triggerSearch", () => {
 
   test("throws when instance is missing", async () => {
     await expect(movieService.triggerSearch(99999, 1, "A")).rejects.toThrow(/not found/);
+  });
+
+  test("successful action invalidates the flagged-media cache for that instance", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupRadarrMocks({ movies: [], files: [], profiles: [] });
+    dataCache.set(`movies:${instance.id}:manual`, ["stale"]);
+    dataCache.set(`series:${instance.id}:profile`, ["stale"]);
+    dataCache.set(`movies:9999:manual`, ["other"]);
+
+    await movieService.triggerSearch(instance.id, 1, "A");
+
+    expect(dataCache.get(`movies:${instance.id}:manual`, 60_000)).toBeNull();
+    expect(dataCache.get(`series:${instance.id}:profile`, 60_000)).toBeNull();
+    expect(dataCache.get(`movies:9999:manual`, 60_000)).toEqual(["other"]);
+  });
+
+  test("dry-run does NOT invalidate the cache (upstream state unchanged)", async () => {
+    const instance = await instanceService.create(baseInstance);
+    await configRepository.set("dryRun", "true");
+    setupRadarrMocks({ movies: [], files: [], profiles: [] });
+    dataCache.set(`movies:${instance.id}:manual`, ["preserve"]);
+
+    await movieService.triggerSearch(instance.id, 1, "A");
+
+    expect(dataCache.get(`movies:${instance.id}:manual`, 60_000)).toEqual(["preserve"]);
+  });
+
+  test("failed action does NOT invalidate the cache (upstream state unchanged)", async () => {
+    const instance = await instanceService.create(baseInstance);
+    fetchMock.mockResolvedValue(new Response("nope", { status: 500 }));
+    dataCache.set(`movies:${instance.id}:manual`, ["preserve"]);
+
+    await movieService.triggerSearch(instance.id, 1, "A");
+
+    expect(dataCache.get(`movies:${instance.id}:manual`, 60_000)).toEqual(["preserve"]);
   });
 });
 

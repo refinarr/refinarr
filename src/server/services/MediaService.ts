@@ -3,6 +3,7 @@ import { logRepository } from "@/server/repositories/LogRepository";
 import { dryRunService } from "./DryRunService";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
+import { dataCache } from "@/server/lib/DataCache";
 
 interface ExecuteActionOptions {
   instanceId: number;
@@ -56,6 +57,11 @@ export abstract class MediaService {
 
     try {
       await opts.run();
+      // Bust the flagged-media cache so the UI sees the post-action state on
+      // the next read (deleted/searched item gone) instead of the previous
+      // 5-minute snapshot. Dry runs and failed actions don't invalidate —
+      // upstream state didn't change.
+      dataCache.invalidate(opts.instanceId);
       appLogger.info(`[Run] ${describe(opts)}`, {
         source: LogSource.MediaAction,
         context: logContext(opts, false),
