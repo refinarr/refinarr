@@ -43,7 +43,8 @@ export class ArrRateLimiter {
   private readonly refillPerMs: number;
 
   constructor() {
-    const ratePerSec = Math.max(1, Number(process.env.ARR_RATE_LIMIT ?? 5));
+    const parsed = Number(process.env.ARR_RATE_LIMIT);
+    const ratePerSec = Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
     this.refillPerMs = ratePerSec / 1000;
     this.capacity = ratePerSec * 2;
   }
