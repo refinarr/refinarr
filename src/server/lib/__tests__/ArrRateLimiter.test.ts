@@ -44,6 +44,26 @@ describe("ArrRateLimiter", () => {
     expect(Date.now()).toBe(start);
   });
 
+  test("queued waiters consume one token per refill interval", async () => {
+    const limiter = make(1); // capacity = 2
+    await limiter.acquire(1);
+    await limiter.acquire(1); // drained
+
+    let firstResolved = false;
+    let secondResolved = false;
+    const first = limiter.acquire(1).then(() => { firstResolved = true; });
+    const second = limiter.acquire(1).then(() => { secondResolved = true; });
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await Promise.resolve();
+    expect(firstResolved).toBe(true);
+    expect(secondResolved).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await Promise.all([first, second]);
+    expect(secondResolved).toBe(true);
+  });
+
   test("evict resets the bucket so next acquire is immediate", async () => {
     const limiter = make(1); // capacity = 2
 

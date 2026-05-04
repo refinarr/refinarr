@@ -1,6 +1,7 @@
 class TokenBucket {
   private tokens: number;
   private lastRefillMs: number;
+  private tail: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly capacity: number,
@@ -11,16 +12,27 @@ class TokenBucket {
   }
 
   async acquire(): Promise<void> {
-    this.refill();
-    if (this.tokens >= 1) {
-      this.tokens -= 1;
-      return;
+    // Chain callers into a FIFO queue via promise tail — each caller waits
+    // for the previous to finish before entering its own timing loop, so no
+    // two callers race to consume the same refilled token.
+    let release!: () => void;
+    const prev = this.tail;
+    this.tail = new Promise<void>((resolve) => { release = resolve; });
+
+    await prev;
+    try {
+      while (true) {
+        this.refill();
+        if (this.tokens >= 1) {
+          this.tokens -= 1;
+          return;
+        }
+        const waitMs = Math.max(1, Math.ceil((1 - this.tokens) / this.refillPerMs));
+        await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
+      }
+    } finally {
+      release();
     }
-    // Wait until one token is available, then consume it.
-    const waitMs = Math.ceil((1 - this.tokens) / this.refillPerMs);
-    await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
-    this.refill();
-    this.tokens = Math.max(0, this.tokens - 1);
   }
 
   private refill(): void {
@@ -44,7 +56,8 @@ export class ArrRateLimiter {
 
   constructor() {
     const parsed = Number(process.env.ARR_RATE_LIMIT);
-    const ratePerSec = Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+    const configuredRate = Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+    const ratePerSec = Math.max(1, configuredRate);
     this.refillPerMs = ratePerSec / 1000;
     this.capacity = ratePerSec * 2;
   }
