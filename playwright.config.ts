@@ -24,11 +24,12 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Production build + start. ~30s up-front cost (cached in .next-e2e for
-    // subsequent runs when source hasn't changed) but page loads after that
-    // are 100-200ms instead of the multi-second cold compiles `next dev` takes.
-    // Eliminates the per-test 30s timeout flakiness we saw with dev mode.
-    command: `next build && next start -p ${E2E_PORT}`,
+    // Production build + start. prisma migrate deploy runs here (not only in
+    // globalSetup) so DATABASE_URL is guaranteed set before next start calls
+    // the instrumentation hook. globalSetup runs concurrently and Turbopack
+    // can finish next build before globalSetup's migration completes, causing
+    // an intermittent "no such table" crash without this guard.
+    command: `prisma migrate deploy && next build && next start -p ${E2E_PORT}`,
     url: `http://localhost:${E2E_PORT}/api/health`,
     // Never reuse — globalSetup wipes the DB so we always need a fresh server.
     reuseExistingServer: false,
