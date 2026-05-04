@@ -49,9 +49,13 @@ class SearchWorker {
     const handle = this.timers.get(instanceId);
     if (handle) clearInterval(handle);
     this.timers.delete(instanceId);
-    this.lastProcessedAt.delete(instanceId);
     const instance = await instanceRepository.findById(instanceId);
-    if (instance && instance.enabled) this.startForInstance(instance);
+    if (instance && instance.enabled) {
+      this.startForInstance(instance);
+    } else {
+      // Instance deleted or disabled — drop the cooldown so it doesn't linger.
+      this.lastProcessedAt.delete(instanceId);
+    }
   }
 
   /**
