@@ -128,7 +128,7 @@ describe("key loading — env var validation", () => {
   test("loads key from ENCRYPTION_KEY_PATH file when env var is unset", async () => {
     vi.resetModules();
     delete process.env.ENCRYPTION_KEY;
-    const dir = mkdtempSync(join(tmpdir(), "remedarr-key-"));
+    const dir = mkdtempSync(join(tmpdir(), "refinarr-key-"));
     tmpDirs.push(dir);
     const keyPath = join(dir, ".encryption-key");
     writeFileSync(keyPath, randomBytes(32));
@@ -142,7 +142,7 @@ describe("key loading — env var validation", () => {
   test("throws when key file exists but has wrong length", async () => {
     vi.resetModules();
     delete process.env.ENCRYPTION_KEY;
-    const dir = mkdtempSync(join(tmpdir(), "remedarr-key-"));
+    const dir = mkdtempSync(join(tmpdir(), "refinarr-key-"));
     tmpDirs.push(dir);
     const keyPath = join(dir, ".encryption-key");
     writeFileSync(keyPath, Buffer.alloc(8)); // not 32 bytes
@@ -155,7 +155,7 @@ describe("key loading — env var validation", () => {
   test("generates a new key file when none exists", async () => {
     vi.resetModules();
     delete process.env.ENCRYPTION_KEY;
-    const dir = mkdtempSync(join(tmpdir(), "remedarr-key-"));
+    const dir = mkdtempSync(join(tmpdir(), "refinarr-key-"));
     tmpDirs.push(dir);
     const keyPath = join(dir, "subdir", ".encryption-key");
     process.env.ENCRYPTION_KEY_PATH = keyPath;
@@ -169,7 +169,7 @@ describe("key loading — env var validation", () => {
     vi.resetModules();
     delete process.env.ENCRYPTION_KEY;
     // Override the production path to a writable temp dir so we don't try to write to /data.
-    const dir = mkdtempSync(join(tmpdir(), "remedarr-prod-key-"));
+    const dir = mkdtempSync(join(tmpdir(), "refinarr-prod-key-"));
     tmpDirs.push(dir);
     process.env.ENCRYPTION_KEY_PATH = join(dir, ".encryption-key");
     vi.stubEnv("NODE_ENV", "production");

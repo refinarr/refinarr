@@ -1,6 +1,6 @@
 // SSRF guard for user-supplied *arr instance URLs.
 //
-// remedarr is an *arr companion: by design users connect it to LAN/loopback
+// refinarr is an *arr companion: by design users connect it to LAN/loopback
 // Sonarr/Radarr instances. We CANNOT blanket-block RFC1918 or 127.0.0.0/8 —
 // those are the most common, supported targets. We only reject the
 // unambiguously-bad cases: non-http(s) schemes, cloud metadata endpoints,
