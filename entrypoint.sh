@@ -22,5 +22,5 @@ if [ -f /data/remedarr.db ] && [ ! -f /data/data.db ]; then
   [ -f /data/remedarr.db-shm ]     && mv /data/remedarr.db-shm     /data/data.db-shm
 fi
 
-npx prisma migrate deploy
+node ./node_modules/prisma/build/index.js migrate deploy
 exec node server.js
