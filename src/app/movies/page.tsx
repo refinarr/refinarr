@@ -9,7 +9,7 @@ import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton
 import { MediaPageHeader } from "@/client/components/media/MediaPageHeader";
 import { MediaSearchBar } from "@/client/components/media/MediaSearchBar";
 import { MediaTable, type ColumnDef } from "@/client/components/media/MediaTable";
-import { ActiveFilterChips, type FilterChip } from "@/client/components/media/ActiveFilterChips";
+import { ActiveFilterChips, buildCfChips, type FilterChip } from "@/client/components/media/ActiveFilterChips";
 import { SeverityDot } from "@/client/components/media/SeverityDot";
 import { ScoreLabel } from "@/client/components/media/ScoreLabel";
 import { CfBadge } from "@/client/components/media/CfBadge";
@@ -212,37 +212,31 @@ function MoviesPageContent() {
 
   const profileName = profiles?.find((p) => p.id === filters.filters.profileId)?.name;
 
-  const missingChips: FilterChip[] = filters.filters.missingCfIds
-    .map((id) => {
-      const name = wantedCfOptions.find((c) => c.id === id)?.name;
-      if (!name) return null;
-      return {
-        key: `cf-${id}`,
-        label: tFilters("missingLabel", { name }),
-        onRemove: () =>
-          filters.setFilters((f) => ({
-            ...f,
-            missingCfIds: f.missingCfIds.filter((x) => x !== id),
-          })),
-      } satisfies FilterChip;
-    })
-    .filter((c): c is FilterChip => c !== null);
+  const removeMissingCf = (id: number) =>
+    filters.setFilters((f) => ({
+      ...f,
+      missingCfIds: f.missingCfIds.filter((x) => x !== id),
+    }));
+  const removePenaltyCf = (id: number) =>
+    filters.setFilters((f) => ({
+      ...f,
+      hasNegativeCfIds: f.hasNegativeCfIds.filter((x) => x !== id),
+    }));
 
-  const penaltyChips: FilterChip[] = filters.filters.hasNegativeCfIds
-    .map((id) => {
-      const name = negativeCfOptions.find((c) => c.id === id)?.name;
-      if (!name) return null;
-      return {
-        key: `ncf-${id}`,
-        label: tFilters("penaltyLabel", { name }),
-        onRemove: () =>
-          filters.setFilters((f) => ({
-            ...f,
-            hasNegativeCfIds: f.hasNegativeCfIds.filter((x) => x !== id),
-          })),
-      } satisfies FilterChip;
-    })
-    .filter((c): c is FilterChip => c !== null);
+  const missingChips = buildCfChips({
+    ids: filters.filters.missingCfIds,
+    options: wantedCfOptions,
+    label: (name) => tFilters("missingLabel", { name }),
+    removeId: removeMissingCf,
+    keyPrefix: "cf",
+  });
+  const penaltyChips = buildCfChips({
+    ids: filters.filters.hasNegativeCfIds,
+    options: negativeCfOptions,
+    label: (name) => tFilters("penaltyLabel", { name }),
+    removeId: removePenaltyCf,
+    keyPrefix: "ncf",
+  });
 
   const chips: FilterChip[] = [
     filters.filters.q && {
@@ -258,6 +252,20 @@ function MoviesPageContent() {
     ...missingChips,
     ...penaltyChips,
   ].filter(Boolean) as FilterChip[];
+
+  const renderEmptyState = () => {
+    if (inst.activeInstance === 0 || noCfsConfigured) return <NoCfsPrompt />;
+    if (chips.length > 0) {
+      return (
+        <NoFilterMatchState
+          onClear={() =>
+            filters.setFilters((f) => ({ ...f, q: "", profileId: null, missingCfIds: [], hasNegativeCfIds: [], maxScore: 1 }))
+          }
+        />
+      );
+    }
+    return <AllClearState />;
+  };
 
   return (
     <AppShell>
@@ -307,15 +315,7 @@ function MoviesPageContent() {
 
           {(data.isLoading || inst.loadingInstances) && <MediaTableSkeleton />}
           {data.isError && <MediaErrorCard onRetry={data.refetch} />}
-          {!inst.loadingInstances && !data.isLoading && !data.isError && data.allMovies.length === 0 && (
-            inst.activeInstance > 0
-              ? noCfsConfigured
-                ? <NoCfsPrompt />
-                : (chips.length > 0
-                    ? <NoFilterMatchState onClear={() => filters.setFilters((f) => ({ ...f, q: "", profileId: null, missingCfIds: [], hasNegativeCfIds: [], maxScore: 1 }))} />
-                    : <AllClearState />)
-              : <NoCfsPrompt />
-          )}
+          {!inst.loadingInstances && !data.isLoading && !data.isError && data.allMovies.length === 0 && renderEmptyState()}
 
           {!data.isLoading && data.allMovies.length > 0 && (
             <div className={data.isFetching ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>

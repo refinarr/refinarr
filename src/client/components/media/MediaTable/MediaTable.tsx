@@ -69,7 +69,8 @@ export function MediaTable<T extends { id: number }>({
               <th className="w-10 px-3 py-2.5" />
               {columns.map((col) => {
                 const isActiveSort = col.sortKey === sortBy;
-                const arrow = !isActiveSort ? "" : order === "asc" ? " ↑" : " ↓";
+                let arrow = "";
+                if (isActiveSort) arrow = order === "asc" ? " ↑" : " ↓";
                 return (
                   <th
                     key={col.key}

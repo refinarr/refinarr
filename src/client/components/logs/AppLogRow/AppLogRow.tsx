@@ -31,9 +31,9 @@ export function AppLogRow({ entry }: Props) {
         onClick={() => hasContext && setExpanded((v) => !v)}
       >
         <td className="px-3 py-2 align-middle w-6">
-          {hasContext ? (
-            expanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-          ) : null}
+          {hasContext && (expanded
+            ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />)}
         </td>
         <td
           className="px-3 py-2 align-middle w-44 text-xs text-muted-foreground tabular-nums"

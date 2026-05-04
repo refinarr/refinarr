@@ -83,6 +83,56 @@ function unauthorized(req: NextRequest, isApi: boolean): NextResponse {
   return NextResponse.redirect(url);
 }
 
+// Force /setup before first user is created; close /setup once a user exists.
+// Returns the response to send, or null if the request should continue.
+async function setupGate(req: NextRequest, path: string, isApi: boolean): Promise<NextResponse | null> {
+  const isSetupPath = path === "/setup" || path === "/api/auth/setup";
+  const hasUser = await userExists();
+
+  if (!hasUser) {
+    if (isSetupPath) return NextResponse.next();
+    if (isApi) return NextResponse.json({ error: "Setup required" }, { status: 401 });
+    const url = req.nextUrl.clone();
+    url.pathname = "/setup";
+    return NextResponse.redirect(url);
+  }
+
+  if (isSetupPath) {
+    if (isApi) return NextResponse.json({ error: "Setup already completed" }, { status: 409 });
+    const url = req.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  return null;
+}
+
+function isPublicPath(path: string, isApi: boolean): boolean {
+  return isApi ? PUBLIC_API_PATHS.has(path) : PUBLIC_PAGE_PATHS.has(path);
+}
+
+// True if any authentication signal accepts this request.
+// Order: session cookie → X-Api-Key → reverse-proxy header (opt-in).
+// We deliberately do NOT read X-Forwarded-For for auth decisions.
+async function hasValidAuth(req: NextRequest): Promise<boolean> {
+  const sessionId = req.cookies.get(SESSION_COOKIE)?.value;
+  if (sessionId && (await isValidSessionId(sessionId))) return true;
+
+  const apiKey = req.headers.get("x-api-key");
+  if (apiKey) {
+    const stored = await getStoredApiKey();
+    if (stored && constantTimeMatch(apiKey, stored)) return true;
+  }
+
+  if (process.env.TRUST_PROXY_AUTH === "true") {
+    const headerName = process.env.PROXY_USER_HEADER ?? "X-Remote-User";
+    const remoteUser = req.headers.get(headerName);
+    if (remoteUser && remoteUser.length > 0) return true;
+  }
+
+  return false;
+}
+
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const isApi = path.startsWith("/api/");
@@ -91,54 +141,12 @@ export async function proxy(req: NextRequest) {
   // health check resolves to 200 before any user is created.
   if (path === "/api/health") return withSecurityHeaders(NextResponse.next());
 
-  // First-run state: no User row yet → force everything to /setup
-  const hasUser = await userExists();
-  if (!hasUser) {
-    if (path === "/setup" || path === "/api/auth/setup") return withSecurityHeaders(NextResponse.next());
-    if (isApi) return withSecurityHeaders(NextResponse.json({ error: "Setup required" }, { status: 401 }));
-    const url = req.nextUrl.clone();
-    url.pathname = "/setup";
-    return withSecurityHeaders(NextResponse.redirect(url));
-  }
+  const setupResp = await setupGate(req, path, isApi);
+  if (setupResp) return withSecurityHeaders(setupResp);
 
-  // After setup is done, /setup is a closed door.
-  if (path === "/setup" || path === "/api/auth/setup") {
-    if (isApi) return withSecurityHeaders(NextResponse.json({ error: "Setup already completed" }, { status: 409 }));
-    const url = req.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return withSecurityHeaders(NextResponse.redirect(url));
-  }
+  if (isPublicPath(path, isApi)) return withSecurityHeaders(NextResponse.next());
 
-  // Public paths (small explicit allow-list)
-  if (isApi && PUBLIC_API_PATHS.has(path)) return withSecurityHeaders(NextResponse.next());
-  if (!isApi && PUBLIC_PAGE_PATHS.has(path)) return withSecurityHeaders(NextResponse.next());
-
-  // From here on: require a positive auth signal. No "skip auth if X" branches.
-
-  // 1. Session cookie (UI users)
-  const sessionId = req.cookies.get(SESSION_COOKIE)?.value;
-  if (sessionId && (await isValidSessionId(sessionId))) {
-    return withSecurityHeaders(NextResponse.next());
-  }
-
-  // 2. X-Api-Key header (scripted access)
-  const apiKey = req.headers.get("x-api-key");
-  if (apiKey) {
-    const stored = await getStoredApiKey();
-    if (stored && constantTimeMatch(apiKey, stored)) {
-      return withSecurityHeaders(NextResponse.next());
-    }
-  }
-
-  // 3. Reverse-proxy trust mode — opt-in only.
-  // We deliberately do NOT read X-Forwarded-For for auth
-  if (process.env.TRUST_PROXY_AUTH === "true") {
-    const headerName = process.env.PROXY_USER_HEADER ?? "X-Remote-User";
-    const remoteUser = req.headers.get(headerName);
-    if (remoteUser && remoteUser.length > 0) {
-      return withSecurityHeaders(NextResponse.next());
-    }
-  }
+  if (await hasValidAuth(req)) return withSecurityHeaders(NextResponse.next());
 
   return withSecurityHeaders(unauthorized(req, isApi));
 }

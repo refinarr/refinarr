@@ -55,20 +55,24 @@ function HistoryContent() {
 
   const allLogs: ActionLog[] = data?.pages.flatMap((p) => p.items) ?? [];
 
-  const statusLabel = (key: string) =>
-    key === "" ? tCommon("all")
-      : key === "success" ? tStatus("success")
-      : key === "failed" ? tStatus("failed")
-      : key === "dry_run" ? tStatus("dryRun")
-      : key === "pending" ? tStatus("pending")
-      : tCommon("all");
+  const statusLabel = (key: string) => {
+    switch (key) {
+      case "success": return tStatus("success");
+      case "failed":  return tStatus("failed");
+      case "dry_run": return tStatus("dryRun");
+      case "pending": return tStatus("pending");
+      default:        return tCommon("all");
+    }
+  };
 
-  const actionLabel = (key: string) =>
-    key === "" ? tCommon("all")
-      : key === "search" ? tAction("search")
-      : key === "delete" ? tAction("delete")
-      : key === "ignore" ? tAction("ignore")
-      : tCommon("all");
+  const actionLabel = (key: string) => {
+    switch (key) {
+      case "search": return tAction("search");
+      case "delete": return tAction("delete");
+      case "ignore": return tAction("ignore");
+      default:       return tCommon("all");
+    }
+  };
 
   return (
     <div className="space-y-4">

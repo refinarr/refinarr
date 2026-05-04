@@ -1,1 +1,1 @@
-export { ActiveFilterChips, type FilterChip } from "./ActiveFilterChips";
+export { ActiveFilterChips, buildCfChips, type FilterChip } from "./ActiveFilterChips";

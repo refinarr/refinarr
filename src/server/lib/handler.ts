@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { seedDefaults } from "./db";
 import { appLogger } from "./app-logger";
+import { LogSource } from "./log-sources";
 import { UnsafeUrlError } from "./url-guard";
 
 let seeded = false;
@@ -39,7 +40,7 @@ export function createApiHandler(handler: RouteHandler) {
         return NextResponse.json({ error: "Invalid request" }, { status: 400 });
       }
       appLogger.error("Unhandled API error", {
-        source: "api",
+        source: LogSource.Api,
         err,
         context: { method: req.method, path: req.nextUrl.pathname },
       });

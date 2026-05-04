@@ -38,12 +38,23 @@ const eslintConfig = defineConfig([
       "sonarjs/prefer-immediate-return": "warn",
     },
   },
-  // Tests are allowed to repeat literals and have looser complexity budgets.
+  // Tests are allowed to repeat literals, have looser complexity budgets,
+  // and intentionally overwrite collection keys to verify replacement paths.
   {
     files: ["**/__tests__/**", "**/*.test.{ts,tsx}", "e2e/**", "src/test/**"],
     rules: {
       "sonarjs/no-duplicate-string": "off",
       "sonarjs/no-identical-functions": "off",
+      "sonarjs/cognitive-complexity": "off",
+      "sonarjs/no-element-overwrite": "off",
+    },
+  },
+  // shadcn-installed primitives in src/client/components/ui are vendored and
+  // would be clobbered by future `shadcn add` updates. Don't lint their style.
+  {
+    files: ["src/client/components/ui/**"],
+    rules: {
+      "sonarjs/no-nested-conditional": "off",
       "sonarjs/cognitive-complexity": "off",
     },
   },

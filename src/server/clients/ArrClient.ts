@@ -1,5 +1,6 @@
 import type { Instance } from "@/shared/types/models";
 import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { redactString } from "@/server/lib/redact";
 
@@ -45,7 +46,7 @@ export abstract class ArrClient {
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       appLogger.warn(`Arr API error: ${this.instanceName}`, {
-        source: "arr-client",
+        source: LogSource.ArrClient,
         context: {
           instance: this.instanceName,
           url,
