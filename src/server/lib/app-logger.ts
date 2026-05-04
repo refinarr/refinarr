@@ -1,5 +1,6 @@
 import { logger } from "./logger";
 import { redactContext } from "./redact";
+import { appLogRepository } from "@/server/repositories/AppLogRepository";
 import type { LogLevel } from "@/shared/types/models";
 
 interface LogFields {
@@ -28,11 +29,9 @@ function persist(level: LogLevel, message: string, fields?: LogFields) {
     context: Object.keys(ctx).length ? JSON.stringify(ctx) : null,
   };
 
-  import("@/server/repositories/AppLogRepository")
-    .then(({ appLogRepository }) =>
-      appLogRepository.create(data).catch((e: unknown) => logger.error(e, "AppLog persist failed"))
-    )
-    .catch((e: unknown) => logger.error(e, "AppLog repository import failed"));
+  appLogRepository
+    .create(data)
+    .catch((e: unknown) => logger.error(e, "AppLog persist failed"));
 }
 
 export const appLogger = {

@@ -1,3 +1,5 @@
+import type { ActionLog } from "./models";
+
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;
@@ -89,5 +91,5 @@ export interface DashboardSummary {
     flaggedSeries: number;
     failedActions24h: number;
   };
-  recentActivity: import("./models").ActionLog[];
+  recentActivity: ActionLog[];
 }
