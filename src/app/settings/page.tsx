@@ -83,7 +83,7 @@ export default function SettingsPage() {
           )}
         </section>
 
-        <Separator />
+        {(instances ?? []).length > 0 && <Separator />}
 
         {/* Scoring Mode per instance */}
         {(instances ?? []).length > 0 && (
@@ -100,7 +100,7 @@ export default function SettingsPage() {
           </section>
         )}
 
-        <Separator />
+        {manualInstances.length > 0 && <Separator />}
 
         {/* Wanted Custom Formats (manual mode only) */}
         {manualInstances.length > 0 && (

@@ -16,6 +16,7 @@ export const instanceCreateSchema = z.object({
   url: z.string().min(1).max(2048),
   apiKey: z.string().min(1).max(256),
   enabled: z.boolean().optional(),
+  searchesPerHour: z.number().int().min(1).max(1000).optional(),
 });
 
 export const instanceUpdateSchema = z.object({
@@ -25,6 +26,7 @@ export const instanceUpdateSchema = z.object({
   apiKey: z.string().min(1).max(256).optional(),
   enabled: z.boolean().optional(),
   scoringMode: z.enum(["manual", "profile"]).optional(),
+  searchesPerHour: z.number().int().min(1).max(1000).optional(),
 });
 
 export const instanceTestSchema = z.object({

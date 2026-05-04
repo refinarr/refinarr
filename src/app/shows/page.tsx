@@ -13,6 +13,7 @@ import { ActiveFilterChips, buildCfChips, type FilterChip } from "@/client/compo
 import { SeverityDot } from "@/client/components/media/SeverityDot";
 import { ScoreLabel } from "@/client/components/media/ScoreLabel";
 import { CfBadge } from "@/client/components/media/CfBadge";
+import { SearchStatusBadge } from "@/client/components/media/SearchStatusBadge";
 import { RowHoverActions } from "@/client/components/media/RowHoverActions";
 import { AllClearState } from "@/client/components/states/AllClearState";
 import { NoCfsPrompt } from "@/client/components/states/NoCfsPrompt";
@@ -32,12 +33,15 @@ import { useMediaFilters } from "@/client/hooks/media/useMediaFilters";
 import { useMediaSelection } from "@/client/hooks/media/useMediaSelection";
 import { useDetailDrawer } from "@/client/hooks/media/useDetailDrawer";
 import { useFlaggedSeriesData } from "@/client/hooks/media/useFlaggedSeriesData";
+import { useQueuedMediaIds } from "@/client/hooks/data/useSearchQueue";
+import { useRecentSearchMap } from "@/client/hooks/data/useRecentSearches";
 import { useBulkAbort } from "@/client/hooks/media/useBulkAbort";
 import { useBulkMediaActions, type BulkActionsConfig } from "@/client/hooks/media/useBulkMediaActions";
 import { useBulkHandlers } from "@/client/hooks/media/useBulkHandlers";
 import { useShowSeasonEpisodeActions } from "@/client/hooks/media/useShowSeasonEpisodeActions";
 import { getSeverity } from "@/client/lib/severity";
 import { formatBytes } from "@/client/lib/format";
+import { formatRelative } from "@/client/lib/format-relative";
 import type { FlaggedSeries, ScoringMode } from "@/shared/types/models";
 
 type SeriesBulkConfig = Pick<
@@ -81,6 +85,7 @@ function ShowsPageContent() {
   const tCols = useTranslations("shows.columns");
   const tFilters = useTranslations("filters");
   const tConfirmDeleteSeries = useTranslations("confirm.deleteSeries");
+  const tTime = useTranslations("time");
   const router = useRouter();
 
   const inst = useInstanceSelection("sonarr");
@@ -98,6 +103,8 @@ function ShowsPageContent() {
     activeInstance: inst.activeInstance,
     filters: filters.forQuery,
   });
+  const queuedIds = useQueuedMediaIds(inst.activeInstance);
+  const recentMap = useRecentSearchMap(inst.activeInstance);
   const sentinelRef = useInfiniteScroll(data.fetchNextPage, data.hasNextPage);
   const selection = useMediaSelection<FlaggedSeries>(data.allSeries, SERIES_BULK_CONFIG.delete.isDeletable);
   const drawer = useDetailDrawer<FlaggedSeries>(data.allSeries);
@@ -156,12 +163,26 @@ function ShowsPageContent() {
       key: "title",
       header: tCols("title"),
       sortKey: "title",
-      render: (s) => (
-        <div className="flex items-baseline gap-2 min-w-0">
-          <span className="font-medium truncate">{s.title}</span>
-          <span className="text-muted-foreground text-xs shrink-0">{s.year}</span>
-        </div>
-      ),
+      render: (s) => {
+        const recent = !queuedIds.has(s.id) ? recentMap.get(s.id) : undefined;
+        return (
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span className="font-medium truncate">{s.title}</span>
+            <span className="text-muted-foreground text-xs shrink-0">{s.year}</span>
+            {queuedIds.has(s.id) && (
+              <SearchStatusBadge status="pending" instanceId={inst.activeInstance} />
+            )}
+            {recent && (
+              <SearchStatusBadge
+                status="searched"
+                instanceId={inst.activeInstance}
+                title={s.title}
+                relativeTime={formatRelative(recent, tTime)}
+              />
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "profile",

@@ -4,6 +4,7 @@ import { hashPassword, createSession, getUserCount, SESSION_COOKIE } from "@/ser
 import { credentialsSchema } from "@/shared/types/schemas";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/server/lib/log-sources";
 
 export async function POST(req: NextRequest) {
   const { allowed, retryAfterMs } = checkRateLimit(`setup:${clientIp(req)}`, { max: 10, windowMs: 15 * 60 * 1000 });
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
       data: { username, passwordHash: hashPassword(password) },
     });
     const session = await createSession(user.id);
-    appLogger.info("Initial admin user created", { source: "auth", context: { username } });
+    appLogger.info("Initial admin user created", { source: LogSource.Auth, context: { username } });
     const res = NextResponse.json({ ok: true });
     res.cookies.set(SESSION_COOKIE, session.id, {
       httpOnly: true,

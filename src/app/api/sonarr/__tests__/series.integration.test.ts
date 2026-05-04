@@ -6,6 +6,7 @@ import { POST as deleteSeriesFiles } from "@/app/api/sonarr/series/delete/route"
 import { POST as createInstance } from "@/app/api/instances/route";
 import { mswServer, sonarrHandlers } from "@/test/msw";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
+import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 
 const ctxNone = { params: Promise.resolve({}) };
 const baseUrl = "http://192.168.1.10:8989";
@@ -53,7 +54,7 @@ describe("GET /api/sonarr/series", () => {
 });
 
 describe("POST /api/sonarr/series/search", () => {
-  test("creates a success ActionLog when upstream accepts", async () => {
+  test("enqueues a series search and returns 202", async () => {
     const instanceId = await makeInstance();
     mswServer.use(...sonarrHandlers({ baseUrl }, { series: [], qualityProfiles: [] }));
     const res = await searchSeries(new NextRequest("http://localhost/api/sonarr/series/search", {
@@ -61,8 +62,10 @@ describe("POST /api/sonarr/series/search", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ instanceId, mediaId: 1, title: "Show" }),
     }), ctxNone);
-    expect(res.status).toBe(200);
-    expect((await res.json()).status).toBe("success");
+    expect(res.status).toBe(202);
+    const body = await res.json();
+    expect(body.queued).toBe(true);
+    expect(typeof body.queueId).toBe("number");
   });
 
   test("schema-failing body returns 400", async () => {
@@ -76,7 +79,7 @@ describe("POST /api/sonarr/series/search", () => {
 });
 
 describe("POST /api/sonarr/series/delete", () => {
-  test("deletes each fileId and optionally triggers a search", async () => {
+  test("deletes each fileId inline and enqueues the optional search", async () => {
     const instanceId = await makeInstance();
     const deletedFiles: number[] = [];
     let commandHit = false;
@@ -92,6 +95,11 @@ describe("POST /api/sonarr/series/delete", () => {
     expect(res.status).toBe(200);
     expect((await res.json()).status).toBe("success");
     expect(deletedFiles.sort()).toEqual([10, 11]);
-    expect(commandHit).toBe(true);
+    // Search is queued for the worker — route does not dispatch it inline.
+    expect(commandHit).toBe(false);
+    const queued = await searchQueueRepository.findPendingByInstance(instanceId);
+    expect(queued).toHaveLength(1);
+    expect(queued[0].mediaId).toBe(1);
+    expect(queued[0].action).toBe("series");
   });
 });

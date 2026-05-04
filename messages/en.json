@@ -59,6 +59,7 @@
     "movies": "Movies",
     "shows": "Shows",
     "ignored": "Ignored",
+    "queue": "Queue",
     "history": "History",
     "logs": "Logs",
     "settings": "Settings",
@@ -207,6 +208,31 @@
     "cancel": "Cancel",
     "cancelled": "Cancelled"
   },
+  "search": {
+    "pendingBadge": "Pending search",
+    "pendingBadgeTooltip": "Queued; will fire on the next worker tick. Click to open the queue.",
+    "searchedBadge": "Searched {time}",
+    "searchedBadgeTooltip": "Last successful search dispatched {time}. Click to open history."
+  },
+  "queue": {
+    "title": "Search Queue",
+    "subtitle": "Searches waiting for the worker to dispatch. Drains at the per-instance rate set in Settings.",
+    "empty": "No searches queued.",
+    "perInstance": "{instance}",
+    "pendingCount": "{count, plural, one {# pending} other {# pending}}",
+    "etaLabel": "Last item fires in ~{eta}",
+    "etaNone": "Drains as fast as the worker fires",
+    "clear": "Cancel pending",
+    "clearConfirmTitle": "Cancel queued searches?",
+    "clearConfirmBody": "Cancels {count} pending searches for {instance}. Already-dispatched searches are unaffected.",
+    "clearedToast": "Cancelled {count} queued searches",
+    "clearFailedToast": "Couldn't cancel queue",
+    "actionMovie": "Movie search",
+    "actionSeries": "Series search",
+    "actionSeason": "Season search",
+    "actionEpisodeFile": "Episode file search",
+    "queuedAt": "Queued {time}"
+  },
   "history": {
     "title": "History",
     "filters": {
@@ -298,11 +324,17 @@
       "type": "Type",
       "name": "Name",
       "namePlaceholder": "My Radarr",
+      "namePlaceholderSonarr": "My Sonarr",
       "url": "URL",
-      "urlPlaceholder": "http://localhost:7878",
+      "urlPlaceholder": "localhost:7878 or 10.10.1.10:7878",
+      "urlPlaceholderSonarr": "localhost:8989 or 10.10.1.10:8989",
       "apiKey": "API Key",
       "apiKeyPlaceholderEdit": "•••••••• (leave blank to keep current)",
       "apiKeyPlaceholderNew": "••••••••",
+      "searchesPerHour": "Max searches per hour",
+      "searchesPerHourHelp": "Caps how often refinarr triggers searches on this instance. Searches fan out to your indexers and trackers — too many in a short window can cause them to rate-limit or ban you. 20/hour is safe for most private trackers.",
+      "queuedBadge": "{count, plural, one {# queued} other {# queued}}",
+      "queuedBadgeTooltip": "{count, plural, one {# search pending. ETA ~{eta}.} other {# searches pending. ETA ~{eta}.}}",
       "testConnection": "Test connection",
       "testFallbackName": "Instance"
     },
@@ -469,5 +501,17 @@
     },
     "confirmLabel": "Confirm",
     "cancelLabel": "Cancel"
+  },
+  "time": {
+    "unknown": "unknown",
+    "secondsAgo": "{n}s ago",
+    "minutesAgo": "{n}m ago",
+    "hoursAgo": "{n}h ago",
+    "daysAgo": "{n}d ago",
+    "etaNow": "now",
+    "etaLessThanMinute": "<1m",
+    "etaMinutes": "{n}m",
+    "etaHours": "{n}h",
+    "etaHoursMinutes": "{n}h {m}m"
   }
 }

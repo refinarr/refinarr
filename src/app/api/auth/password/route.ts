@@ -9,6 +9,7 @@ import {
 import { passwordChangeSchema } from "@/shared/types/schemas";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/server/lib/log-sources";
 
 export async function POST(req: NextRequest) {
   const { allowed, retryAfterMs } = checkRateLimit(`pwchange:${clientIp(req)}`, {
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!verifyPassword(currentPassword, user.passwordHash)) {
-    appLogger.warn("Failed password change attempt", { source: "auth", context: { userId: user.id } });
+    appLogger.warn("Failed password change attempt", { source: LogSource.Auth, context: { userId: user.id } });
     return NextResponse.json({ error: "Wrong current password" }, { status: 401 });
   }
 
@@ -57,7 +58,6 @@ export async function POST(req: NextRequest) {
   await prisma.session.deleteMany({
     where: { userId: user.id, id: { not: sessionId } },
   });
-
-  appLogger.info("Password changed", { source: "auth", context: { userId: user.id } });
+  appLogger.info("Password changed", { source: LogSource.Auth, context: { userId: user.id } });
   return NextResponse.json({ ok: true });
 }

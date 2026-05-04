@@ -39,7 +39,10 @@ yarn-error.log*
 .env*
 !.env.example
 
-# at-rest encryption key — must never be committed
+# local dev artifacts (db files, encryption keys) — tracked folder, ignored contents
+/local/*
+!/local/.gitkeep
+# legacy root-level encryption key (pre-local/ migration)
 .encryption-key
 
 # vercel
@@ -58,4 +61,3 @@ plan-v1.md
 
 # Claude Code runtime state
 .claude/*.lock
-.encryption-key.e2e

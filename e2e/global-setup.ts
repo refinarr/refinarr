@@ -17,26 +17,33 @@ function hashPassword(password: string): string {
 
 export default async function globalSetup() {
   // Wipe the E2E test DB + encryption key so every run starts fresh.
-  for (const f of ["e2e-test.db", "e2e-test.db-journal", "e2e-test.db-wal", "e2e-test.db-shm", ".encryption-key.e2e"]) {
+  await mkdir("local", { recursive: true });
+
+  for (const f of ["local/e2e-test.db", "local/e2e-test.db-journal", "local/e2e-test.db-wal", "local/e2e-test.db-shm", "local/.encryption-key.e2e"]) {
     await rm(f, { force: true });
   }
 
   // Apply schema to the fresh DB before the webServer starts.
   execSync("yarn prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: "file:./e2e-test.db" },
+    env: { ...process.env, DATABASE_URL: "file:./local/e2e-test.db" },
     stdio: "inherit",
   });
 
   // Seed the E2E admin account + an active session, then write the storageState
   // file so all spec files can start authenticated. Bypasses the /setup UI flow.
-  const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: "file:./e2e-test.db" }) });
-  const user = await prisma.user.create({
-    data: { username: E2E_USERNAME, passwordHash: hashPassword(E2E_PASSWORD) },
-  });
-  const sessionId = randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
-  await prisma.session.create({ data: { id: sessionId, userId: user.id, expiresAt } });
-  await prisma.$disconnect();
+  const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: "file:./local/e2e-test.db" }) });
+  let sessionId: string;
+  let expiresAt: Date;
+  try {
+    const user = await prisma.user.create({
+      data: { username: E2E_USERNAME, passwordHash: hashPassword(E2E_PASSWORD) },
+    });
+    sessionId = randomBytes(32).toString("hex");
+    expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+    await prisma.session.create({ data: { id: sessionId, userId: user.id, expiresAt } });
+  } finally {
+    await prisma.$disconnect();
+  }
 
   await mkdir("e2e/.auth", { recursive: true });
   await writeFile(

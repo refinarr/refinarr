@@ -3,12 +3,15 @@
 // literals at call sites. Keep this list small and discoverable.
 export const LogSource = {
   Api: "api",
+  Auth: "auth",
   Db: "db",
   ArrClient: "arr-client",
   InstanceService: "instance-service",
   MovieService: "movie-service",
   SeriesService: "series-service",
   MediaAction: "media-action",
+  SearchQueue: "search-queue",
+  SearchWorker: "search-worker",
 } as const;
 
 export type LogSource = (typeof LogSource)[keyof typeof LogSource];

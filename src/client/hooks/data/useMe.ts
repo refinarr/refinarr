@@ -1,5 +1,6 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/client/lib/query-keys";
 import { api } from "@/client/lib/api";
 
 interface Me {
@@ -9,7 +10,7 @@ interface Me {
 
 export function useMe() {
   return useQuery({
-    queryKey: ["me"],
+    queryKey: queryKeys.me(),
     queryFn: () => api.get<Me>("/auth/me"),
     staleTime: 60_000,
     retry: false,

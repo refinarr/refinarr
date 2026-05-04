@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import { logRepository } from "@/server/repositories/LogRepository";
 import type { ActionStatus, ActionType } from "@/shared/types/models";
 
@@ -98,10 +98,55 @@ describe("LogRepository", () => {
       await logRepository.create({ ...baseLog, mediaId: i, title: `m${i}` });
       await new Promise((r) => setTimeout(r, 2));
     }
-    await new Promise((r) => setTimeout(r, 50));
+    await vi.waitFor(async () => {
+      const remaining = await logRepository.findAll();
+      expect(remaining).toHaveLength(5);
+    }, { timeout: 500 });
     const remaining = await logRepository.findAll();
-    expect(remaining).toHaveLength(5);
     // Oldest two should be gone (mediaId 0, 1).
     expect(remaining.map((r) => r.mediaId).sort()).toEqual([2, 3, 4, 5, 6]);
+  });
+
+  describe("findRecentSearches", () => {
+    test("returns the most recent successful search per mediaId within the window", async () => {
+      await logRepository.create({ ...baseLog, mediaId: 1, title: "first hit" });
+      await new Promise((r) => setTimeout(r, 5));
+      const newer = await logRepository.create({ ...baseLog, mediaId: 1, title: "second hit (newer)" });
+      await logRepository.create({ ...baseLog, mediaId: 2, title: "other media" });
+
+      const results = await logRepository.findRecentSearches(1, 60_000);
+      expect(results).toHaveLength(2);
+      const idMap = new Map(results.map((r) => [r.mediaId, r.lastSearchedAt]));
+      // Two successful rows for mediaId=1 — must collapse to the latest timestamp.
+      expect(idMap.has(1)).toBe(true);
+      expect(idMap.get(1)!.getTime()).toBe(new Date(newer.createdAt).getTime());
+      expect(idMap.has(2)).toBe(true);
+    });
+
+    test("excludes rows older than the window", async () => {
+      vi.useFakeTimers({ now: Date.now() - 100 });
+      try {
+        await logRepository.create({ ...baseLog, mediaId: 1 });
+      } finally {
+        vi.useRealTimers();
+      }
+      const results = await logRepository.findRecentSearches(1, 1);
+      expect(results).toHaveLength(0);
+    });
+
+    test("excludes failed and isDryRun rows — only non-dry success counts as 'searched'", async () => {
+      await logRepository.create({ ...baseLog, mediaId: 1, status: "failed", error: "boom" });
+      await logRepository.create({ ...baseLog, mediaId: 2, status: "success", isDryRun: true });
+      const results = await logRepository.findRecentSearches(1, 60_000);
+      expect(results).toHaveLength(0);
+    });
+
+    test("scopes to the given instance", async () => {
+      await logRepository.create({ ...baseLog, instanceId: 1, mediaId: 1 });
+      await logRepository.create({ ...baseLog, instanceId: 2, mediaId: 1 });
+      expect(await logRepository.findRecentSearches(1, 60_000)).toHaveLength(1);
+      expect(await logRepository.findRecentSearches(2, 60_000)).toHaveLength(1);
+      expect(await logRepository.findRecentSearches(3, 60_000)).toHaveLength(0);
+    });
   });
 });

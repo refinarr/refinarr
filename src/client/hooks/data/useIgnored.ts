@@ -18,8 +18,8 @@ export function useUnignore(instanceId: number) {
     mutationFn: (id: number) => api.delete<{ ok: boolean }>(`/ignore/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.ignore(instanceId) });
-      qc.invalidateQueries({ queryKey: ["movies", instanceId] });
-      qc.invalidateQueries({ queryKey: ["series", instanceId] });
+      qc.invalidateQueries({ queryKey: queryKeys.moviesAll(instanceId) });
+      qc.invalidateQueries({ queryKey: queryKeys.seriesAll(instanceId) });
     },
   });
 }

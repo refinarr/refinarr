@@ -4,6 +4,7 @@ import { LogSource } from "./log-sources";
 import { configRepository } from "@/server/repositories/ConfigRepository";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ConfigKey } from "@/server/config/keys";
+import { searchWorker } from "./search-worker";
 
 let seeded = false;
 
@@ -24,6 +25,8 @@ export async function seedDefaults(): Promise<void> {
       context: { count: migrated },
     });
   }
+
+  await searchWorker.start();
 }
 
 export async function ensureSeeded(): Promise<void> {

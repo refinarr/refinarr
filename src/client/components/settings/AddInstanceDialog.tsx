@@ -36,8 +36,9 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
       z.object({
         type: z.enum(["radarr", "sonarr"]),
         name: z.string().min(1),
-        url: z.url(),
+        url: z.string().min(1).transform((v) => /^https?:\/\//i.test(v) ? v : `http://${v}`).pipe(z.url()),
         apiKey: isEdit ? z.string() : z.string().min(1),
+        searchesPerHour: z.number().int().min(1).max(1000),
       }),
     [isEdit]
   );
@@ -46,8 +47,8 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
   const { register, handleSubmit, setValue, reset, getValues, control, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: editing
-      ? { type: editing.type, name: editing.name, url: editing.url, apiKey: "" }
-      : { type: "radarr", name: "", url: "", apiKey: "" },
+      ? { type: editing.type, name: editing.name, url: editing.url, apiKey: "", searchesPerHour: editing.searchesPerHour }
+      : { type: "radarr", name: "", url: "", apiKey: "", searchesPerHour: 20 },
   });
 
   const runUpdate = withToast(update, { success: tToast("updated"), error: tToast("updateFailed") });
@@ -61,16 +62,18 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
   const watchedApiKey = useWatch({ control, name: "apiKey" });
   const canTest = !!watchedUrl?.trim() && !!watchedApiKey?.trim();
 
+  const normalizeUrl = (url: string) => /^https?:\/\//i.test(url) ? url : `http://${url}`;
+
   const handleTest = () => {
     const v = getValues();
-    return runTest({ type: v.type, url: v.url, apiKey: v.apiKey });
+    return runTest({ type: v.type, url: normalizeUrl(v.url), apiKey: v.apiKey });
   };
 
   const onSubmit = async (data: FormValues) => {
     if (editing) {
       const payload = data.apiKey.trim()
         ? data
-        : { type: data.type, name: data.name, url: data.url };
+        : { type: data.type, name: data.name, url: data.url, searchesPerHour: data.searchesPerHour };
       await runUpdate({ id: editing.id, data: payload });
     } else {
       await runCreate(data);
@@ -110,16 +113,30 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
             </Select>
           </div>
           <FormField id="instance-name" label={t("name")} error={errors.name?.message}>
-            <Input {...register("name")} placeholder={t("namePlaceholder")} />
+            <Input {...register("name")} placeholder={selectedType === "sonarr" ? t("namePlaceholderSonarr") : t("namePlaceholder")} />
           </FormField>
           <FormField id="instance-url" label={t("url")} error={errors.url?.message}>
-            <Input {...register("url")} placeholder={t("urlPlaceholder")} />
+            <Input {...register("url")} placeholder={selectedType === "sonarr" ? t("urlPlaceholderSonarr") : t("urlPlaceholder")} />
           </FormField>
           <FormField id="instance-apikey" label={t("apiKey")} error={errors.apiKey?.message}>
             <Input
               {...register("apiKey")}
               type="password"
               placeholder={isEdit ? t("apiKeyPlaceholderEdit") : t("apiKeyPlaceholderNew")}
+            />
+          </FormField>
+          <FormField
+            id="instance-sph"
+            label={t("searchesPerHour")}
+            error={errors.searchesPerHour?.message}
+            description={t("searchesPerHourHelp")}
+          >
+            <Input
+              {...register("searchesPerHour", { valueAsNumber: true })}
+              type="number"
+              min={1}
+              max={1000}
+              inputMode="numeric"
             />
           </FormField>
           <DialogFooter>

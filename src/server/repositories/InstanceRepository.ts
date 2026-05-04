@@ -10,6 +10,7 @@ interface RawInstanceRow {
   apiKey: string;
   enabled: boolean;
   scoringMode: string;
+  searchesPerHour: number;
   createdAt: Date;
 }
 
@@ -17,10 +18,11 @@ function toInstance(row: RawInstanceRow): Instance {
   return { ...row, apiKey: decryptSecret(row.apiKey) } as Instance;
 }
 
-// scoringMode has a DB-level default ("profile"), so callers don't need
-// to provide it on create — the column will fill in.
-type CreateInstanceInput = Omit<Instance, "id" | "createdAt" | "scoringMode"> & {
+// Both columns have DB-level defaults, so callers don't need to provide
+// them on create — the column will fill in.
+type CreateInstanceInput = Omit<Instance, "id" | "createdAt" | "scoringMode" | "searchesPerHour"> & {
   scoringMode?: ScoringMode;
+  searchesPerHour?: number;
 };
 
 export class InstanceRepository extends BaseRepository<Instance> {

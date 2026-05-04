@@ -13,6 +13,7 @@ export interface Instance {
   apiKey: string;
   enabled: boolean;
   scoringMode: ScoringMode;
+  searchesPerHour: number;
   createdAt: Date;
 }
 
@@ -113,4 +114,22 @@ export interface IgnoreEntry {
   mediaType: MediaType;
   title: string;
   ignoredAt: Date;
+}
+
+export type SearchQueueAction = "movie" | "series" | "season" | "episode-file";
+export type SearchQueueStatus = "pending" | "done" | "failed";
+
+export interface SearchQueueEntry {
+  id: number;
+  instanceId: number;
+  action: SearchQueueAction;
+  mediaId: number;
+  payload: string;
+  title: string;
+  status: SearchQueueStatus;
+  error: string | null;
+  createdAt: Date;
+  processedAt: Date | null;
+  seasonNumber: number;
+  fileId: number;
 }

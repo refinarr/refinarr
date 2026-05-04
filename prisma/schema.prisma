@@ -7,14 +7,15 @@ datasource db {
 }
 
 model Instance {
-  id          Int      @id @default(autoincrement())
-  type        String
-  name        String
-  url         String
-  apiKey      String
-  enabled     Boolean  @default(true)
-  scoringMode String   @default("profile")
-  createdAt   DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  type            String
+  name            String
+  url             String
+  apiKey          String
+  enabled         Boolean  @default(true)
+  scoringMode     String   @default("profile")
+  searchesPerHour Int      @default(20)
+  createdAt       DateTime @default(now())
 }
 
 model AppConfig {
@@ -81,4 +82,23 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([expiresAt])
+}
+
+model SearchQueue {
+  id           Int       @id @default(autoincrement())
+  instanceId   Int
+  action       String
+  mediaId      Int
+  payload      String
+  title        String
+  status       String    @default("pending")
+  error        String?
+  createdAt    DateTime  @default(now())
+  processedAt  DateTime?
+  seasonNumber Int       @default(0)
+  fileId       Int       @default(0)
+
+  @@index([instanceId, status, createdAt])
+  // SearchQueue_pending_dedup: partial UNIQUE index (WHERE status='pending') is
+  // hand-written in the migration SQL — Prisma does not support WHERE-clause indexes.
 }

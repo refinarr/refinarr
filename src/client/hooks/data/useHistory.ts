@@ -41,6 +41,6 @@ export function useClearHistory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.delete<{ ok: boolean }>("/history"),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["history"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.historyAll() }),
   });
 }
