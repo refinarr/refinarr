@@ -12,24 +12,36 @@ interface Props {
   instance: DashboardInstanceSummary;
 }
 
+type HealthState = "disabled" | "checking" | "connected" | "unreachable";
+
+const DOT_CLASS: Record<HealthState, string> = {
+  disabled: "bg-muted-foreground",
+  checking: "bg-muted-foreground animate-pulse",
+  connected: "bg-green-500",
+  unreachable: "bg-red-500",
+};
+
+// Translation key suffix under `dashboard.instanceCard.*`.
+const LABEL_KEY: Record<HealthState, string> = {
+  disabled: "disabled",
+  checking: "checking",
+  connected: "connected",
+  unreachable: "unreachable",
+};
+
+function getHealthState(enabled: boolean, isLoading: boolean, healthy: boolean): HealthState {
+  if (!enabled) return "disabled";
+  if (isLoading) return "checking";
+  return healthy ? "connected" : "unreachable";
+}
+
 export function InstanceSummaryCard({ instance }: Props) {
   const t = useTranslations("dashboard.instanceCard");
   const { data: health, isLoading: healthLoading, isError: healthError } = useInstanceHealth(instance.id);
   const healthy = !healthError && health?.ok === true;
-  const dotClass = !instance.enabled
-    ? "bg-muted-foreground"
-    : healthLoading
-    ? "bg-muted-foreground animate-pulse"
-    : healthy
-    ? "bg-green-500"
-    : "bg-red-500";
-  const healthLabel = !instance.enabled
-    ? t("disabled")
-    : healthLoading
-    ? t("checking")
-    : healthy
-    ? t("connected")
-    : t("unreachable");
+  const state = getHealthState(instance.enabled, healthLoading, healthy);
+  const dotClass = DOT_CLASS[state];
+  const healthLabel = t(LABEL_KEY[state]);
 
   const libraryHref = instance.type === "radarr" ? "/movies" : "/shows";
   const flaggedNounKey = instance.type === "radarr" ? "flaggedMoviesNoun" : "flaggedSeriesNoun";

@@ -60,13 +60,11 @@ export function MovieDetailDrawer({
 
           <div className="border-t pt-3">
             <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Custom Formats</h3>
-            {!movie.hasFile ? (
-              <p className="text-muted-foreground text-sm">No file downloaded.</p>
-            ) : hasCfs ? (
-              <CfScoreList formats={movie.customFormats} missingFormats={movie.missingFormats} />
-            ) : (
-              <p className="text-muted-foreground text-sm">No custom format data.</p>
-            )}
+            {(() => {
+              if (!movie.hasFile) return <p className="text-muted-foreground text-sm">No file downloaded.</p>;
+              if (hasCfs) return <CfScoreList formats={movie.customFormats} missingFormats={movie.missingFormats} />;
+              return <p className="text-muted-foreground text-sm">No custom format data.</p>;
+            })()}
           </div>
         </div>
 
