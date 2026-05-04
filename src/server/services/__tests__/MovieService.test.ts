@@ -407,6 +407,16 @@ describe("MovieService.triggerSearch", () => {
     expect(log.error).toBeTruthy();
   });
 
+  test("non-Error throws are stringified into the log error column", async () => {
+    const instance = await instanceService.create(baseInstance);
+    // Reject with a bare string so executeAction's `err instanceof Error`
+    // check falls through to the `String(err)` branch.
+    fetchMock.mockRejectedValue("upstream-disconnected");
+    const log = await movieService.triggerSearch(instance.id, 1, "A");
+    expect(log.status).toBe("failed");
+    expect(log.error).toBe("upstream-disconnected");
+  });
+
   test("throws when instance is missing", async () => {
     await expect(movieService.triggerSearch(99999, 1, "A")).rejects.toThrow(/not found/);
   });
