@@ -8,6 +8,7 @@ import { DryRunToggle } from "@/client/components/settings/DryRunToggle";
 import { ApiKeyCard } from "@/client/components/settings/ApiKeyCard";
 import { PasswordChangeCard } from "@/client/components/settings/PasswordChangeCard";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
+import { AppearanceSelector } from "@/client/components/settings/AppearanceSelector";
 import { CfPreferencePicker } from "@/client/components/settings/CfPreferencePicker";
 import { SettingsCardSkeleton } from "@/client/components/states/SettingsCardSkeleton";
 import { Button } from "@/client/components/ui/button";
@@ -17,7 +18,7 @@ import { useConfig } from "@/client/hooks/data/useConfig";
 import type { Instance } from "@/shared/types/models";
 import { Plus } from "lucide-react";
 
-const KNOWN_ANCHORS = new Set(["dry-run"]);
+const KNOWN_ANCHORS = new Set(["dry-run", "appearance"]);
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
@@ -51,6 +52,14 @@ export default function SettingsPage() {
         <section id="dry-run" className="space-y-4 scroll-mt-20">
           <h2 className="text-lg font-semibold">{t("dryRunMode")}</h2>
           <DryRunToggle prominent />
+        </section>
+
+        <Separator />
+
+        {/* Appearance */}
+        <section id="appearance" className="space-y-4 scroll-mt-20">
+          <h2 className="text-lg font-semibold">{t("appearance.title")}</h2>
+          <AppearanceSelector />
         </section>
 
         <Separator />

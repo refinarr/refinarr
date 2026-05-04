@@ -68,7 +68,7 @@ The `X-Api-Key` header is honored for non-browser callers. The key is shown (and
 
 ## Stack
 
-- Next.js App Router, TypeScript, Tailwind 4, shadcn/ui (dark mode only)
+- Next.js App Router, TypeScript, Tailwind 4, shadcn/ui (3 themes: dark-orange, dark-teal, light)
 - Prisma 7 + SQLite
 - TanStack Query v5
 - next-intl

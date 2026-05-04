@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
@@ -116,16 +116,17 @@ function MoviesPageContent() {
   const runDelete = (m: FlaggedMovie, search: boolean) =>
     actions.deleteMutation.mutateAsync({ items: [m], isBulk: false, search });
 
-  const wantedCfOptions = (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }));
-  const negativeCfOptions = (() => {
-    const seen = new Map<number, string>();
-    for (const p of profiles ?? []) {
-      for (const item of p.formatItems ?? []) {
-        if (item.score < 0) seen.set(item.format, item.name);
-      }
-    }
-    return Array.from(seen, ([id, name]) => ({ id, name }));
-  })();
+  const wantedCfOptions = useMemo(
+    () => (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName })),
+    [prefs],
+  );
+  const negativeCfOptions = useMemo(() => {
+    const pairs = (profiles ?? [])
+      .flatMap((p) => p.formatItems ?? [])
+      .filter((item) => item.score < 0)
+      .map((item) => [item.format, item.name] as const);
+    return Array.from(new Map(pairs), ([id, name]) => ({ id, name }));
+  }, [profiles]);
 
   if (!inst.loadingInstances && !inst.instances?.length) {
     return (
