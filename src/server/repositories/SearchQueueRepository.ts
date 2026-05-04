@@ -145,8 +145,10 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
     const overflow = total - RETENTION_CAP;
     const oldest = await this.db.searchQueue.findMany({
       where: { status: { not: "pending" } },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ processedAt: "asc" }, { createdAt: "asc" }],
       take: overflow,
+      select: { id: true },
+    });
       select: { id: true },
     });
     if (oldest.length === 0) return;
