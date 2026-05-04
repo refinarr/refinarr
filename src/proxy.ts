@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/lib/db";
+import { configRepository } from "@/server/repositories/ConfigRepository";
+import { ConfigKey } from "@/server/config/keys";
 import { SESSION_COOKIE } from "@/server/lib/auth";
 import { timingSafeEqual } from "crypto";
 
@@ -69,8 +71,7 @@ function constantTimeMatch(a: string, b: string): boolean {
 }
 
 async function getStoredApiKey(): Promise<string | null> {
-  const row = await prisma.appConfig.findUnique({ where: { key: "apiKey" } });
-  return row?.value ?? null;
+  return configRepository.getTyped(ConfigKey.ApiKey);
 }
 
 function unauthorized(req: NextRequest, isApi: boolean): NextResponse {

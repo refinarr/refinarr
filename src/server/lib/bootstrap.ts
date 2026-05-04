@@ -1,21 +1,20 @@
 import crypto from "crypto";
-import { prisma } from "./db";
 import { appLogger } from "./app-logger";
 import { LogSource } from "./log-sources";
+import { configRepository } from "@/server/repositories/ConfigRepository";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
+import { ConfigKey } from "@/server/config/keys";
 
 let seeded = false;
 
 export async function seedDefaults(): Promise<void> {
-  const dryRun = await prisma.appConfig.findUnique({ where: { key: "dryRun" } });
-  if (!dryRun) {
-    await prisma.appConfig.create({ data: { key: "dryRun", value: "true" } });
+  if ((await configRepository.get(ConfigKey.DryRun.key)) === null) {
+    await configRepository.setTyped(ConfigKey.DryRun, ConfigKey.DryRun.default);
   }
 
-  const apiKey = await prisma.appConfig.findUnique({ where: { key: "apiKey" } });
-  if (!apiKey) {
+  if ((await configRepository.get(ConfigKey.ApiKey.key)) === null) {
     const generated = crypto.randomBytes(16).toString("hex");
-    await prisma.appConfig.create({ data: { key: "apiKey", value: generated } });
+    await configRepository.setTyped(ConfigKey.ApiKey, generated);
   }
 
   const migrated = await instanceRepository.migrateUnencrypted();

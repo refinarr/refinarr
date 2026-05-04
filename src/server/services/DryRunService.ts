@@ -1,13 +1,13 @@
 import { configRepository } from "@/server/repositories/ConfigRepository";
+import { ConfigKey } from "@/server/config/keys";
 
 export class DryRunService {
   async isDryRun(): Promise<boolean> {
-    const value = await configRepository.get("dryRun");
-    return value === "true";
+    return configRepository.getTyped(ConfigKey.DryRun);
   }
 
   async setDryRun(enabled: boolean): Promise<void> {
-    await configRepository.set("dryRun", String(enabled));
+    await configRepository.setTyped(ConfigKey.DryRun, enabled);
   }
 
   async withDryRun<T>(

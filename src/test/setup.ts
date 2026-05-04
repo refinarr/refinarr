@@ -23,6 +23,10 @@ afterEach(() => {
 // Truncate every table and clear in-memory caches before each test so DB-backed
 // tests are hermetic. Order matters for FK relations; SQLite doesn't enforce
 // them by default, but consistent order keeps things predictable.
+//
+// dryRun is explicitly seeded false so live-mode integration tests can assert
+// the success path. Production's first-launch default is true (dry-run on);
+// individual tests that exercise dry-run flip it back.
 beforeEach(async () => {
   await prisma.$transaction([
     prisma.session.deleteMany(),
@@ -34,5 +38,6 @@ beforeEach(async () => {
     prisma.appConfig.deleteMany(),
     prisma.instance.deleteMany(),
   ]);
+  await prisma.appConfig.create({ data: { key: "dryRun", value: "false" } });
   dataCache.clear();
 });

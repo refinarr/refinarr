@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createApiHandler } from "@/server/lib/handler";
 import { configRepository } from "@/server/repositories/ConfigRepository";
+import { ConfigKey } from "@/server/config/keys";
 import { prisma } from "@/server/lib/db";
 import { verifyPassword, getSession, SESSION_COOKIE } from "@/server/lib/auth";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
@@ -47,11 +48,11 @@ export const POST = createApiHandler(async (req: NextRequest) => {
   const action = req.nextUrl.searchParams.get("action");
   if (action === "rotate") {
     const next = crypto.randomBytes(16).toString("hex");
-    await configRepository.set("apiKey", next);
+    await configRepository.setTyped(ConfigKey.ApiKey, next);
     return NextResponse.json({ apiKey: next });
   }
 
-  const apiKey = await configRepository.get("apiKey");
+  const apiKey = await configRepository.getTyped(ConfigKey.ApiKey);
   if (!apiKey) return NextResponse.json({ error: "API key not initialized" }, { status: 500 });
   return NextResponse.json({ apiKey });
 });
