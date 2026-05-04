@@ -1,4 +1,4 @@
-import type { Instance, ArrType } from "@/shared/types/models";
+import type { Instance, ArrType, ScoringMode } from "@/shared/types/models";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { appLogger } from "@/server/lib/app-logger";
@@ -20,6 +20,7 @@ export class InstanceService {
     url: string;
     apiKey: string;
     enabled?: boolean;
+    scoringMode?: ScoringMode;
   }): Promise<Instance> {
     assertSafeArrUrl(data.url);
     const created = await instanceRepository.create({ ...data, enabled: data.enabled ?? true });
