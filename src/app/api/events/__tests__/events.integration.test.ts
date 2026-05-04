@@ -36,7 +36,9 @@ async function readEvents(
       }
     }
   }
-  reader.releaseLock();
+  try {
+    reader.releaseLock();
+  } catch { /* already released or stream closed */ }
   return events;
 }
 

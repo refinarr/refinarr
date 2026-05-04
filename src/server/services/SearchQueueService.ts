@@ -24,12 +24,14 @@ export interface QueueStatus {
 
 export class SearchQueueService {
   async enqueue(input: EnqueueInput): Promise<SearchQueueEntry> {
-    const seasonNumber = input.action === "season"
-      ? (input.payload?.seasonNumber as number | undefined) ?? 0
-      : 0;
-    const fileId = input.action === "episode-file"
-      ? (input.payload?.fileId as number | undefined) ?? 0
-      : 0;
+    if (input.action === "season" && typeof input.payload?.seasonNumber !== "number") {
+      throw new Error("season action requires numeric seasonNumber in payload");
+    }
+    if (input.action === "episode-file" && typeof input.payload?.fileId !== "number") {
+      throw new Error("episode-file action requires numeric fileId in payload");
+    }
+    const seasonNumber = input.action === "season" ? (input.payload!.seasonNumber as number) : 0;
+    const fileId = input.action === "episode-file" ? (input.payload!.fileId as number) : 0;
 
     const { entry, created } = await searchQueueRepository.createUnique({
       instanceId: input.instanceId,
@@ -65,7 +67,12 @@ export class SearchQueueService {
         title: entry.title,
       },
     });
-    void searchWorker.kick(input.instanceId);
+    searchWorker.kick(input.instanceId).catch((err) =>
+      appLogger.error("searchWorker.kick failed", {
+        source: LogSource.SearchQueue,
+        context: { instanceId: input.instanceId, err: String(err) },
+      })
+    );
     eventBus.emit({ type: "queue-changed", instanceId: input.instanceId });
     return entry;
   }
@@ -90,7 +97,7 @@ export class SearchQueueService {
     const pendingCount = await searchQueueRepository.countPending(instanceId);
     if (pendingCount === 0) return { pendingCount: 0, etaMs: 0 };
     const instance = await instanceRepository.findById(instanceId);
-    if (!instance) {
+    if (!instance || !instance.enabled) {
       // Pending rows for a deleted instance — worker will mark them failed on
       // the next tick. Return count with etaMs=0 so callers see the backlog
       // without a misleading rate-derived ETA.

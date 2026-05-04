@@ -100,7 +100,7 @@ export default function SettingsPage() {
           </section>
         )}
 
-        {(instances ?? []).length > 0 && <Separator />}
+        {manualInstances.length > 0 && <Separator />}
 
         {/* Wanted Custom Formats (manual mode only) */}
         {manualInstances.length > 0 && (

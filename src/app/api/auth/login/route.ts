@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { prisma } from "@/server/lib/db";
 import { verifyPassword, createSession, SESSION_COOKIE } from "@/server/lib/auth";
 import { credentialsSchema } from "@/shared/types/schemas";
@@ -23,7 +24,8 @@ export async function POST(req: NextRequest) {
   const { username, password } = parsed.data;
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user || !verifyPassword(password, user.passwordHash)) {
-    appLogger.warn("Failed login attempt", { source: LogSource.Auth, context: { username } });
+    const usernameHash = createHash("sha256").update(username).digest("hex").slice(0, 8);
+    appLogger.warn("Failed login attempt", { source: LogSource.Auth, context: { usernameHash } });
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 

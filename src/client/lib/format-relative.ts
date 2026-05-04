@@ -12,13 +12,14 @@ function toMs(date: Date | string | number): number {
 
 export function formatRelative(date: Date | string | number): string {
   const ms = toMs(date);
-  const seconds = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (!Number.isFinite(ms)) return "unknown";
+  const seconds = Math.max(0, Math.floor((Date.now() - ms) / 1000));
   if (seconds < 60) return `${seconds}s ago`;
-  const mins = Math.round(seconds / 60);
+  const mins = Math.floor(seconds / 60);
   if (mins < 60) return `${mins}m ago`;
-  const hours = Math.round(mins / 60);
+  const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
-  const days = Math.round(hours / 24);
+  const days = Math.floor(hours / 24);
   return `${days}d ago`;
 }
 

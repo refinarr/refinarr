@@ -32,13 +32,18 @@ export default async function globalSetup() {
   // Seed the E2E admin account + an active session, then write the storageState
   // file so all spec files can start authenticated. Bypasses the /setup UI flow.
   const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: "file:./local/e2e-test.db" }) });
-  const user = await prisma.user.create({
-    data: { username: E2E_USERNAME, passwordHash: hashPassword(E2E_PASSWORD) },
-  });
-  const sessionId = randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
-  await prisma.session.create({ data: { id: sessionId, userId: user.id, expiresAt } });
-  await prisma.$disconnect();
+  let sessionId: string;
+  let expiresAt: Date;
+  try {
+    const user = await prisma.user.create({
+      data: { username: E2E_USERNAME, passwordHash: hashPassword(E2E_PASSWORD) },
+    });
+    sessionId = randomBytes(32).toString("hex");
+    expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+    await prisma.session.create({ data: { id: sessionId, userId: user.id, expiresAt } });
+  } finally {
+    await prisma.$disconnect();
+  }
 
   await mkdir("e2e/.auth", { recursive: true });
   await writeFile(

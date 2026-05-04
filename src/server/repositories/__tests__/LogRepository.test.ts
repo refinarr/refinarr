@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import { logRepository } from "@/server/repositories/LogRepository";
 import type { ActionStatus, ActionType } from "@/shared/types/models";
 
@@ -122,9 +122,12 @@ describe("LogRepository", () => {
     });
 
     test("excludes rows older than the window", async () => {
-      await logRepository.create({ ...baseLog, mediaId: 1 });
-      // Wait a moment so the row is now outside a 1ms window.
-      await new Promise((r) => setTimeout(r, 10));
+      vi.useFakeTimers({ now: Date.now() - 100 });
+      try {
+        await logRepository.create({ ...baseLog, mediaId: 1 });
+      } finally {
+        vi.useRealTimers();
+      }
       const results = await logRepository.findRecentSearches(1, 1);
       expect(results).toHaveLength(0);
     });

@@ -42,6 +42,8 @@ yarn-error.log*
 # local dev artifacts (db files, encryption keys) — tracked folder, ignored contents
 /local/*
 !/local/.gitkeep
+# legacy root-level encryption key (pre-local/ migration)
+.encryption-key
 
 # vercel
 .vercel

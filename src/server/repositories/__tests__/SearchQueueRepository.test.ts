@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 
 async function enqueue(instanceId: number, mediaId: number, action: "movie" | "series" | "season" | "episode-file" = "movie") {
@@ -101,12 +101,12 @@ describe("SearchQueueRepository", () => {
       await new Promise((r) => setTimeout(r, 2));
     }
     // The next create() call triggers trim() — pending rows are exempt.
-    // trim() is now fire-and-forget so give the microtask queue a tick.
     await enqueue(1, 100);
-    await new Promise((r) => setTimeout(r, 20));
-    const all = await searchQueueRepository.findAll();
-    const terminal = all.filter((r) => r.status !== "pending");
-    expect(terminal.length).toBeLessThanOrEqual(5);
+    await vi.waitFor(async () => {
+      const all = await searchQueueRepository.findAll();
+      const terminal = all.filter((r) => r.status !== "pending");
+      expect(terminal.length).toBeLessThanOrEqual(5);
+    }, { timeout: 500 });
   });
 
   test("findLastProcessedAt returns null when no terminal rows exist", async () => {

@@ -3,7 +3,8 @@ import { BaseRepository } from "./BaseRepository";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 
-const RETENTION_CAP = Number(process.env.SEARCH_QUEUE_RETENTION_CAP ?? 5000);
+const _retentionEnv = parseInt(process.env.SEARCH_QUEUE_RETENTION_CAP ?? "", 10);
+const RETENTION_CAP = Number.isFinite(_retentionEnv) && _retentionEnv > 0 ? _retentionEnv : 5000;
 
 function isUniqueConstraintError(err: unknown): boolean {
   return (

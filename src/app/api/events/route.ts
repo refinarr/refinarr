@@ -40,6 +40,10 @@ export async function GET(req: NextRequest) {
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       activeClients += 1;
+      appLogger.debug("SSE client connected", {
+        source: LogSource.Api,
+        context: { activeClients },
+      });
 
       const send = (data: ServerEvent | { type: "ready" }) => {
         if (closed) return;
@@ -79,11 +83,6 @@ export async function GET(req: NextRequest) {
     cancel() {
       cleanup();
     },
-  });
-
-  appLogger.debug("SSE client connected", {
-    source: LogSource.Api,
-    context: { activeClients },
   });
 
   return new Response(stream, {
