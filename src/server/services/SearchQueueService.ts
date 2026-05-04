@@ -105,11 +105,22 @@ export class SearchQueueService {
     }
     const rate = instance.searchesPerHour;
     const minDelayMs = 3_600_000 / Math.max(1, rate);
-    const lastProcessedAt = await searchQueueRepository.findLastProcessedAt(instanceId);
-    // How long until the first pending row can fire. When no terminal rows
-    // exist (never processed), treat elapsed = minDelayMs so remainingFirstDelay
-    // = 0 — matches the optimistic "fires immediately on kick()" behaviour.
-    const elapsed = lastProcessedAt ? Date.now() - lastProcessedAt.getTime() : minDelayMs;
+    const [lastProcessedAt, nextPending] = await Promise.all([
+      searchQueueRepository.findLastProcessedAt(instanceId),
+      searchQueueRepository.findNextPending(instanceId),
+    ]);
+    // If the oldest pending row was enqueued after the last terminal row, the
+    // queue was empty when this row arrived — kick() will fire it immediately.
+    const queueRestartedAfterDrain =
+      !!lastProcessedAt &&
+      !!nextPending &&
+      nextPending.createdAt.getTime() > lastProcessedAt.getTime();
+    // How long until the first pending row can fire. Treat elapsed = minDelayMs
+    // (→ remainingFirstDelay = 0) when: never processed, or restarted after drain.
+    const elapsed =
+      !lastProcessedAt || queueRestartedAfterDrain
+        ? minDelayMs
+        : Date.now() - lastProcessedAt.getTime();
     const remainingFirstDelay = Math.max(0, minDelayMs - elapsed);
     return { pendingCount, etaMs: remainingFirstDelay + (pendingCount - 1) * minDelayMs };
   }

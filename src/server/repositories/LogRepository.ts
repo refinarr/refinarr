@@ -78,6 +78,7 @@ export class LogRepository extends BaseRepository<ActionLog> {
         instanceId,
         action: "search",
         status: "success",
+        isDryRun: false,
         createdAt: { gte: since },
       },
       orderBy: { createdAt: "desc" },

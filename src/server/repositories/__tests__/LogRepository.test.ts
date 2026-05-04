@@ -134,9 +134,9 @@ describe("LogRepository", () => {
       expect(results).toHaveLength(0);
     });
 
-    test("excludes failed and dry_run rows — only success counts as 'searched'", async () => {
+    test("excludes failed and isDryRun rows — only non-dry success counts as 'searched'", async () => {
       await logRepository.create({ ...baseLog, mediaId: 1, status: "failed", error: "boom" });
-      await logRepository.create({ ...baseLog, mediaId: 2, status: "dry_run", isDryRun: true });
+      await logRepository.create({ ...baseLog, mediaId: 2, status: "success", isDryRun: true });
       const results = await logRepository.findRecentSearches(1, 60_000);
       expect(results).toHaveLength(0);
     });
