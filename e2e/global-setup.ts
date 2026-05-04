@@ -17,19 +17,21 @@ function hashPassword(password: string): string {
 
 export default async function globalSetup() {
   // Wipe the E2E test DB + encryption key so every run starts fresh.
-  for (const f of ["e2e-test.db", "e2e-test.db-journal", "e2e-test.db-wal", "e2e-test.db-shm", ".encryption-key.e2e"]) {
+  await mkdir("local", { recursive: true });
+
+  for (const f of ["local/e2e-test.db", "local/e2e-test.db-journal", "local/e2e-test.db-wal", "local/e2e-test.db-shm", "local/.encryption-key.e2e"]) {
     await rm(f, { force: true });
   }
 
   // Apply schema to the fresh DB before the webServer starts.
   execSync("yarn prisma migrate deploy", {
-    env: { ...process.env, DATABASE_URL: "file:./e2e-test.db" },
+    env: { ...process.env, DATABASE_URL: "file:./local/e2e-test.db" },
     stdio: "inherit",
   });
 
   // Seed the E2E admin account + an active session, then write the storageState
   // file so all spec files can start authenticated. Bypasses the /setup UI flow.
-  const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: "file:./e2e-test.db" }) });
+  const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: "file:./local/e2e-test.db" }) });
   const user = await prisma.user.create({
     data: { username: E2E_USERNAME, passwordHash: hashPassword(E2E_PASSWORD) },
   });

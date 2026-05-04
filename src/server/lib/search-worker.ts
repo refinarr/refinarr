@@ -27,9 +27,9 @@ class SearchWorker {
 
   async start(): Promise<void> {
     if (this.started) return;
-    this.started = true;
     const instances = await instanceRepository.findAllEnabled();
     for (const inst of instances) this.startForInstance(inst);
+    this.started = true;
     appLogger.info("Search worker started", {
       source: LogSource.SearchWorker,
       context: { instances: instances.length },
@@ -118,8 +118,8 @@ class SearchWorker {
     if (!next) return false;
 
     const instance = await instanceRepository.findById(instanceId);
-    if (!instance) {
-      await searchQueueService.markFailed(next.id, "Instance not found");
+    if (!instance || !instance.enabled) {
+      await searchQueueService.markFailed(next.id, "Instance not found or disabled");
       return true;
     }
 
@@ -165,10 +165,12 @@ class SearchWorker {
     } else if (entry.action === "series") {
       log = await seriesService.triggerSearch(instance.id, entry.mediaId, entry.title);
     } else if (entry.action === "season") {
-      const seasonNumber = payload.seasonNumber as number;
+      const seasonNumber = typeof payload.seasonNumber === "number" ? payload.seasonNumber : NaN;
+      if (!Number.isFinite(seasonNumber)) throw new Error(`Invalid seasonNumber in payload for queue entry ${entry.id}`);
       log = await seriesService.triggerSeasonSearch(instance.id, entry.mediaId, seasonNumber, entry.title);
     } else if (entry.action === "episode-file") {
-      const fileId = payload.fileId as number;
+      const fileId = typeof payload.fileId === "number" ? payload.fileId : NaN;
+      if (!Number.isFinite(fileId)) throw new Error(`Invalid fileId in payload for queue entry ${entry.id}`);
       log = await seriesService.triggerEpisodeFileSearch(instance.id, entry.mediaId, fileId, entry.title);
     } else {
       throw new Error(`Unknown queue action: ${entry.action}`);

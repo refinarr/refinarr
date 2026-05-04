@@ -28,12 +28,13 @@ async function readEvents(
     ]);
     if (done || !value) break;
     buffer += decoder.decode(value, { stream: true });
-    for (const line of buffer.split("\n")) {
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? ""; // retain incomplete trailing segment
+    for (const line of lines) {
       if (line.startsWith("data: ")) {
         events.push(JSON.parse(line.slice(6)));
       }
     }
-    buffer = "";
   }
   reader.releaseLock();
   return events;

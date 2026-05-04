@@ -27,7 +27,7 @@ export function useSearchQueue(instanceId: number, enabled = true) {
 
 export function useAllPendingQueue() {
   return useQuery({
-    queryKey: ["search-queue", "all"],
+    queryKey: queryKeys.searchQueueAll(),
     queryFn: () => api.get<AllPendingResponse>("/search-queue"),
     refetchInterval: 10_000,
   });
@@ -40,7 +40,7 @@ export function useClearQueue() {
       api.delete<{ removed: number }>(`/search-queue?instanceId=${instanceId}`),
     onSuccess: (_, instanceId) => {
       qc.invalidateQueries({ queryKey: queryKeys.searchQueue(instanceId) });
-      qc.invalidateQueries({ queryKey: ["search-queue", "all"] });
+      qc.invalidateQueries({ queryKey: queryKeys.searchQueueAll() });
     },
   });
 }

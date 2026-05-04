@@ -1,8 +1,9 @@
 import { randomBytes } from "crypto";
 import { execSync } from "child_process";
-import { rmSync } from "fs";
+import { mkdirSync, rmSync } from "fs";
+import { dirname } from "path";
 
-const TEST_DB_PATH = "./vitest-test.db";
+const TEST_DB_PATH = "./local/vitest-test.db";
 const TEST_DB_URL = `file:${TEST_DB_PATH}`;
 
 export function setup() {
@@ -14,6 +15,8 @@ export function setup() {
   process.env.LOG_RETENTION_CAP = "5";
   process.env.ACTION_LOG_RETENTION_CAP = "5";
   process.env.SEARCH_QUEUE_RETENTION_CAP = "5";
+
+  mkdirSync(dirname(TEST_DB_PATH), { recursive: true });
 
   // Wipe any leftover test DB so migrations apply cleanly.
   for (const f of [TEST_DB_PATH, `${TEST_DB_PATH}-journal`, `${TEST_DB_PATH}-wal`, `${TEST_DB_PATH}-shm`]) {

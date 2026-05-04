@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { logger } from "./logger";
 import type { AppLogEntry } from "@/shared/types/models";
 
 /**
@@ -24,7 +25,13 @@ class EventBus {
   }
 
   emit(event: ServerEvent): void {
-    this.emitter.emit("event", event);
+    for (const listener of this.emitter.listeners("event")) {
+      try {
+        (listener as (e: ServerEvent) => void)(event);
+      } catch (err) {
+        logger.error(err, "EventBus listener threw");
+      }
+    }
   }
 
   subscribe(listener: (event: ServerEvent) => void): () => void {

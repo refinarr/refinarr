@@ -51,9 +51,9 @@ export function useTriggerMovieSearch() {
     mutationFn: ({ instanceId, mediaId, title }: { instanceId: number; mediaId: number; title: string }) =>
       api.post(`/radarr/movies/search`, { instanceId, mediaId, title }),
     onSuccess: (_data, variables) => {
-      qc.invalidateQueries({ queryKey: ["history"] });
+      qc.invalidateQueries({ queryKey: queryKeys.historyAll() });
       qc.invalidateQueries({ queryKey: queryKeys.searchQueue(variables.instanceId) });
-      qc.invalidateQueries({ queryKey: ["search-queue", "all"] });
+      qc.invalidateQueries({ queryKey: queryKeys.searchQueueAll() });
     },
   });
 }

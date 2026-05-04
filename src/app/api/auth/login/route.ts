@@ -4,6 +4,7 @@ import { verifyPassword, createSession, SESSION_COOKIE } from "@/server/lib/auth
 import { credentialsSchema } from "@/shared/types/schemas";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/server/lib/log-sources";
 
 export async function POST(req: NextRequest) {
   const { allowed, retryAfterMs } = checkRateLimit(`login:${clientIp(req)}`, { max: 10, windowMs: 15 * 60 * 1000 });
@@ -22,8 +23,7 @@ export async function POST(req: NextRequest) {
   const { username, password } = parsed.data;
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user || !verifyPassword(password, user.passwordHash)) {
-    // TODO: source need to be from LogSource enum, but that causes a circular dependency. Refactor needed to fix.
-    appLogger.warn("Failed login attempt", { source: "auth", context: { username } });
+    appLogger.warn("Failed login attempt", { source: LogSource.Auth, context: { username } });
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 

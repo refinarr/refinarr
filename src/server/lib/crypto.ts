@@ -11,7 +11,7 @@ const PREFIX = "v1:";
 function defaultKeyPath(): string {
   // Mirrors the DB path logic in db.ts: /data in production, project dir in dev.
   if (process.env.ENCRYPTION_KEY_PATH) return process.env.ENCRYPTION_KEY_PATH;
-  return process.env.NODE_ENV === "production" ? "/data/.encryption-key" : "./.encryption-key";
+  return process.env.NODE_ENV === "production" ? "/data/.encryption-key" : "./local/.encryption-key";
 }
 
 function loadOrGenerateKey(): Buffer {

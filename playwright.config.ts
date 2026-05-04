@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const E2E_PORT = 7373;
-const E2E_DB = "file:./e2e-test.db";
+const E2E_DB = "file:./local/e2e-test.db";
 // Separate dist dir → separate lock file → no collision with the primary dev server.
 const E2E_DIST = ".next-e2e";
 
@@ -39,7 +39,7 @@ export default defineConfig({
       DATABASE_URL: E2E_DB,
       // crypto.ts defaults to /data/.encryption-key when NODE_ENV=production;
       // that's a Docker-volume path. Override to a local file for the e2e run.
-      ENCRYPTION_KEY_PATH: "./.encryption-key.e2e",
+      ENCRYPTION_KEY_PATH: "./local/.encryption-key.e2e",
       LOG_LEVEL: "silent",
     },
   },

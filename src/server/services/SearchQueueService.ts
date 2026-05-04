@@ -24,69 +24,50 @@ export interface QueueStatus {
 
 export class SearchQueueService {
   async enqueue(input: EnqueueInput): Promise<SearchQueueEntry> {
-    const existing = await this.findPendingDuplicate(input);
-    if (existing) {
-      appLogger.info("Search enqueue deduped", {
-        source: LogSource.SearchQueue,
-        context: {
-          existingId: existing.id,
-          instanceId: existing.instanceId,
-          action: existing.action,
-          mediaId: existing.mediaId,
-          title: existing.title,
-        },
-      });
-      return existing;
-    }
+    const seasonNumber = input.action === "season"
+      ? (input.payload?.seasonNumber as number | undefined) ?? 0
+      : 0;
+    const fileId = input.action === "episode-file"
+      ? (input.payload?.fileId as number | undefined) ?? 0
+      : 0;
 
-    const row = await searchQueueRepository.create({
+    const { entry, created } = await searchQueueRepository.createUnique({
       instanceId: input.instanceId,
       action: input.action,
       mediaId: input.mediaId,
       title: input.title,
       payload: JSON.stringify(input.payload ?? {}),
+      seasonNumber,
+      fileId,
     });
+
+    if (!created) {
+      appLogger.info("Search enqueue deduped", {
+        source: LogSource.SearchQueue,
+        context: {
+          existingId: entry.id,
+          instanceId: entry.instanceId,
+          action: entry.action,
+          mediaId: entry.mediaId,
+          title: entry.title,
+        },
+      });
+      return entry;
+    }
+
     appLogger.info("Search enqueued", {
       source: LogSource.SearchQueue,
       context: {
-        id: row.id,
-        instanceId: row.instanceId,
-        action: row.action,
-        mediaId: row.mediaId,
-        title: row.title,
+        id: entry.id,
+        instanceId: entry.instanceId,
+        action: entry.action,
+        mediaId: entry.mediaId,
+        title: entry.title,
       },
     });
-    // Poke the worker so the first enqueue drains immediately if the rate
-    // budget allows. Rapid follow-up enqueues see a recent lastProcessedAt
-    // and skip; the setInterval paces them out per searchesPerHour.
     void searchWorker.kick(input.instanceId);
     eventBus.emit({ type: "queue-changed", instanceId: input.instanceId });
-    return row;
-  }
-
-  // Returns an existing pending row that matches the request, or null.
-  // For movie/series, (instanceId, action, mediaId) is enough. For season /
-  // episode-file the same series is valid for many seasons / files, so we
-  // disambiguate via the payload key the worker reads later.
-  private async findPendingDuplicate(input: EnqueueInput): Promise<SearchQueueEntry | null> {
-    const candidates = await searchQueueRepository.findPendingMatching(
-      input.instanceId,
-      input.action,
-      input.mediaId,
-    );
-    if (candidates.length === 0) return null;
-    if (input.action === "movie" || input.action === "series") return candidates[0];
-    const key = input.action === "season" ? "seasonNumber" : "fileId";
-    const wanted = input.payload?.[key];
-    if (wanted === undefined) return null;
-    return candidates.find((row) => {
-      try {
-        const payload = JSON.parse(row.payload) as Record<string, unknown>;
-        return payload[key] === wanted;
-      } catch {
-        return false;
-      }
-    }) ?? null;
+    return entry;
   }
 
   async findNextPending(instanceId: number): Promise<SearchQueueEntry | null> {
@@ -109,11 +90,21 @@ export class SearchQueueService {
     const pendingCount = await searchQueueRepository.countPending(instanceId);
     if (pendingCount === 0) return { pendingCount: 0, etaMs: 0 };
     const instance = await instanceRepository.findById(instanceId);
-    const rate = instance?.searchesPerHour ?? 1;
-    // First pending row fires on the next tick (effectively now); subsequent
-    // ones each take 1 hour / rate. ETA is for the LAST pending row to fire.
+    if (!instance) {
+      // Pending rows for a deleted instance — worker will mark them failed on
+      // the next tick. Return count with etaMs=0 so callers see the backlog
+      // without a misleading rate-derived ETA.
+      return { pendingCount, etaMs: 0 };
+    }
+    const rate = instance.searchesPerHour;
     const minDelayMs = 3_600_000 / Math.max(1, rate);
-    return { pendingCount, etaMs: (pendingCount - 1) * minDelayMs };
+    const lastProcessedAt = await searchQueueRepository.findLastProcessedAt(instanceId);
+    // How long until the first pending row can fire. When no terminal rows
+    // exist (never processed), treat elapsed = minDelayMs so remainingFirstDelay
+    // = 0 — matches the optimistic "fires immediately on kick()" behaviour.
+    const elapsed = lastProcessedAt ? Date.now() - lastProcessedAt.getTime() : minDelayMs;
+    const remainingFirstDelay = Math.max(0, minDelayMs - elapsed);
+    return { pendingCount, etaMs: remainingFirstDelay + (pendingCount - 1) * minDelayMs };
   }
 
   async listPending(instanceId: number): Promise<SearchQueueEntry[]> {

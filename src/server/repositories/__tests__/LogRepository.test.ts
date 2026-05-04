@@ -109,14 +109,15 @@ describe("LogRepository", () => {
     test("returns the most recent successful search per mediaId within the window", async () => {
       await logRepository.create({ ...baseLog, mediaId: 1, title: "first hit" });
       await new Promise((r) => setTimeout(r, 5));
-      await logRepository.create({ ...baseLog, mediaId: 1, title: "second hit (newer)" });
+      const newer = await logRepository.create({ ...baseLog, mediaId: 1, title: "second hit (newer)" });
       await logRepository.create({ ...baseLog, mediaId: 2, title: "other media" });
 
       const results = await logRepository.findRecentSearches(1, 60_000);
       expect(results).toHaveLength(2);
       const idMap = new Map(results.map((r) => [r.mediaId, r.lastSearchedAt]));
-      // Two successful rows for mediaId=1 — collapse to the latest.
+      // Two successful rows for mediaId=1 — must collapse to the latest timestamp.
       expect(idMap.has(1)).toBe(true);
+      expect(idMap.get(1)!.getTime()).toBe(new Date(newer.createdAt).getTime());
       expect(idMap.has(2)).toBe(true);
     });
 

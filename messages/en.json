@@ -220,7 +220,7 @@
     "empty": "No searches queued.",
     "perInstance": "{instance}",
     "pendingCount": "{count} pending",
-    "etaLabel": "Last fires in ~{eta}",
+    "etaLabel": "Last item fires in ~{eta}",
     "etaNone": "Drains as fast as the worker fires",
     "clear": "Cancel pending",
     "clearConfirmTitle": "Cancel queued searches?",

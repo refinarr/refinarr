@@ -25,13 +25,13 @@ export function useServerEvents() {
         case "queue-changed":
         case "queue-cleared":
           qc.invalidateQueries({ queryKey: queryKeys.searchQueue(event.instanceId) });
-          qc.invalidateQueries({ queryKey: ["search-queue", "all"] });
+          qc.invalidateQueries({ queryKey: queryKeys.searchQueueAll() });
           break;
         case "history-changed":
           qc.invalidateQueries({ queryKey: queryKeys.recentSearches(event.instanceId) });
-          qc.invalidateQueries({ queryKey: ["history"] });
+          qc.invalidateQueries({ queryKey: queryKeys.historyAll() });
           qc.invalidateQueries({ queryKey: queryKeys.searchQueue(event.instanceId) });
-          qc.invalidateQueries({ queryKey: ["search-queue", "all"] });
+          qc.invalidateQueries({ queryKey: queryKeys.searchQueueAll() });
           break;
         case "ready":
           // Connection established — no-op. Useful for future telemetry.

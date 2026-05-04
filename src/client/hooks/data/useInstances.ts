@@ -40,7 +40,7 @@ export function useDeleteInstance() {
       // for that instance stay until the user clears them, but /queue
       // should drop the deleted instance's section immediately.
       qc.invalidateQueries({ queryKey: queryKeys.searchQueue(id) });
-      qc.invalidateQueries({ queryKey: ["search-queue", "all"] });
+      qc.invalidateQueries({ queryKey: queryKeys.searchQueueAll() });
     },
   });
 }
@@ -67,7 +67,7 @@ export function useTestCredentials() {
 
 export function useInstanceHealth(id: number) {
   return useQuery({
-    queryKey: ["instance-health", id],
+    queryKey: queryKeys.instanceHealth(id),
     queryFn: () => api.post<{ ok: boolean }>(`/instances/${id}/test`, {}),
     staleTime: 30_000,
     refetchOnWindowFocus: false,

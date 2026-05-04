@@ -5,6 +5,7 @@ import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { searchWorker } from "@/server/lib/search-worker";
+import { searchQueueService } from "@/server/services/SearchQueueService";
 import { eventBus } from "@/server/lib/event-bus";
 
 export class InstanceService {
@@ -53,6 +54,7 @@ export class InstanceService {
 
   async delete(id: number): Promise<void> {
     const existing = await instanceRepository.findById(id);
+    await searchQueueService.clearPending(id);
     await instanceRepository.delete(id);
     void searchWorker.refresh(id);
     eventBus.emit({ type: "queue-changed", instanceId: id });

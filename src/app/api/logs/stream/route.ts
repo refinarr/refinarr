@@ -27,15 +27,28 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const q = req.nextUrl.searchParams.get("q") ?? undefined;
   const filter = { level: level || undefined, q };
 
-  let lastDeliveredId = resumeId
-    ? Number(resumeId)
-    : Number(req.nextUrl.searchParams.get("lastId") ?? "0");
+  // Validate the resume cursor before using it in DB calls and id-dedup.
+  // An invalid (NaN / negative) value would silently poison findSince().
+  const rawId = resumeId ?? req.nextUrl.searchParams.get("lastId") ?? "0";
+  const parsedId = parseInt(rawId, 10);
+  if (!Number.isInteger(parsedId) || parsedId < 0) {
+    return NextResponse.json({ error: "Invalid cursor" }, { status: 400 });
+  }
+  let lastDeliveredId = parsedId;
   const isResume = resumeId !== null;
 
   const encoder = new TextEncoder();
   let unsubscribe: () => void = () => {};
   let heartbeat: NodeJS.Timeout | null = null;
   let closed = false;
+
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    unsubscribe();
+    if (heartbeat) clearInterval(heartbeat);
+    activeClients = Math.max(0, activeClients - 1);
+  };
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -57,47 +70,49 @@ export const GET = createApiHandler(async (req: NextRequest) => {
         lastDeliveredId = Math.max(lastDeliveredId, entry.id);
       };
 
-      // Initial backfill on fresh connect (skipped on EventSource auto-reconnect
-      // — those carry Last-Event-ID and only want the gap.)
-      if (!isResume) {
-        const initial = await appLogRepository.findLatest(200, filter);
-        for (const entry of initial) sendEntry(entry);
-      } else if (lastDeliveredId > 0) {
-        // On resume, fill the gap between last-seen and now from the DB
-        // before subscribing to the bus. Anything emitted via the bus while
-        // we were doing the gap-fill races, but sendEntry's id-dedup
-        // guards against duplicates.
-        const gap = await appLogRepository.findSince(lastDeliveredId, filter);
-        for (const entry of gap) sendEntry(entry);
-      }
-
-      // Signal initial batch done (consumed by useAppLogs to flip "live").
-      enqueue(`event: ready\ndata: {}\n\n`);
-
-      unsubscribe = eventBus.subscribe((e: ServerEvent) => {
-        if (e.type === "applog") sendEntry(e.entry);
-      });
-
-      heartbeat = setInterval(() => enqueue(`: heartbeat\n\n`), HEARTBEAT_MS);
-      heartbeat.unref?.();
-
       const close = () => {
-        if (closed) return;
-        closed = true;
-        unsubscribe();
-        if (heartbeat) clearInterval(heartbeat);
+        cleanup();
         try { controller.close(); } catch { /* already closed */ }
-        activeClients = Math.max(0, activeClients - 1);
       };
 
-      req.signal.addEventListener("abort", close);
+      try {
+        // Subscribe before backfill so no events are missed during the DB
+        // query. Events that arrive during backfill are buffered; sendEntry's
+        // id-dedup handles any overlap with the backfill results.
+        const buffer: AppLogEntry[] = [];
+        let buffering = true;
+        unsubscribe = eventBus.subscribe((e: ServerEvent) => {
+          if (e.type !== "applog") return;
+          if (buffering) { buffer.push(e.entry); } else { sendEntry(e.entry); }
+        });
+
+        // Initial backfill on fresh connect (skipped on EventSource auto-reconnect
+        // — those carry Last-Event-ID and only want the gap.)
+        if (!isResume) {
+          const initial = await appLogRepository.findLatest(200, filter);
+          for (const entry of initial) sendEntry(entry);
+        } else if (lastDeliveredId > 0) {
+          const gap = await appLogRepository.findSince(lastDeliveredId, filter);
+          for (const entry of gap) sendEntry(entry);
+        }
+
+        // Flush buffer — id-dedup in sendEntry drops anything already sent.
+        for (const entry of buffer) sendEntry(entry);
+        buffering = false;
+
+        // Signal initial batch done (consumed by useAppLogs to flip "live").
+        enqueue(`event: ready\ndata: {}\n\n`);
+
+        heartbeat = setInterval(() => enqueue(`: heartbeat\n\n`), HEARTBEAT_MS);
+        heartbeat.unref?.();
+
+        req.signal.addEventListener("abort", close);
+      } catch {
+        close();
+      }
     },
     cancel() {
-      if (closed) return;
-      closed = true;
-      unsubscribe();
-      if (heartbeat) clearInterval(heartbeat);
-      activeClients = Math.max(0, activeClients - 1);
+      cleanup();
     },
   });
 

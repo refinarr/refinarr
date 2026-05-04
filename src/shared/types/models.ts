@@ -130,4 +130,6 @@ export interface SearchQueueEntry {
   error: string | null;
   createdAt: Date;
   processedAt: Date | null;
+  seasonNumber: number;
+  fileId: number;
 }

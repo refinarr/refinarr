@@ -29,6 +29,14 @@ export async function GET(req: NextRequest) {
   let heartbeat: NodeJS.Timeout | null = null;
   let closed = false;
 
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    unsubscribe();
+    if (heartbeat) clearInterval(heartbeat);
+    activeClients = Math.max(0, activeClients - 1);
+  };
+
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       activeClients += 1;
@@ -62,22 +70,14 @@ export async function GET(req: NextRequest) {
       unsubscribe = eventBus.subscribe(send);
 
       const close = () => {
-        if (closed) return;
-        closed = true;
-        unsubscribe();
-        if (heartbeat) clearInterval(heartbeat);
+        cleanup();
         try { controller.close(); } catch { /* already closed */ }
-        activeClients = Math.max(0, activeClients - 1);
       };
 
       req.signal.addEventListener("abort", close);
     },
     cancel() {
-      if (closed) return;
-      closed = true;
-      unsubscribe();
-      if (heartbeat) clearInterval(heartbeat);
-      activeClients = Math.max(0, activeClients - 1);
+      cleanup();
     },
   });
 

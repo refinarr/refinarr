@@ -2,13 +2,16 @@ import { describe, test, expect } from "vitest";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 
 async function enqueue(instanceId: number, mediaId: number, action: "movie" | "series" | "season" | "episode-file" = "movie") {
-  return searchQueueRepository.create({
+  const { entry } = await searchQueueRepository.createUnique({
     instanceId,
     action,
     mediaId,
     title: `t-${mediaId}`,
     payload: "{}",
+    seasonNumber: 0,
+    fileId: 0,
   });
+  return entry;
 }
 
 describe("SearchQueueRepository", () => {
@@ -98,10 +101,80 @@ describe("SearchQueueRepository", () => {
       await new Promise((r) => setTimeout(r, 2));
     }
     // The next create() call triggers trim() — pending rows are exempt.
+    // trim() is now fire-and-forget so give the microtask queue a tick.
     await enqueue(1, 100);
+    await new Promise((r) => setTimeout(r, 20));
     const all = await searchQueueRepository.findAll();
     const terminal = all.filter((r) => r.status !== "pending");
     expect(terminal.length).toBeLessThanOrEqual(5);
+  });
+
+  test("findLastProcessedAt returns null when no terminal rows exist", async () => {
+    await enqueue(1, 1); // pending only
+    expect(await searchQueueRepository.findLastProcessedAt(1)).toBeNull();
+  });
+
+  test("findLastProcessedAt returns the most recent processedAt across done/failed rows", async () => {
+    const a = await enqueue(1, 1);
+    await searchQueueRepository.setStatus(a.id, "done");
+    await new Promise((r) => setTimeout(r, 5));
+    const b = await enqueue(1, 2);
+    await searchQueueRepository.setStatus(b.id, "failed", "err");
+    await enqueue(1, 3); // still pending — should not affect result
+    await enqueue(2, 1); // different instance — should not affect result
+    const ts = await searchQueueRepository.findLastProcessedAt(1);
+    expect(ts).not.toBeNull();
+    const bRow = await searchQueueRepository.findById(b.id);
+    expect(ts!.getTime()).toBe(new Date(bRow!.processedAt!).getTime());
+  });
+
+  test("createUnique returns existing pending row when unique index conflicts (movie)", async () => {
+    const { entry: first, created: c1 } = await searchQueueRepository.createUnique({
+      instanceId: 1, action: "movie", mediaId: 42, title: "X", payload: "{}", seasonNumber: 0, fileId: 0,
+    });
+    const { entry: second, created: c2 } = await searchQueueRepository.createUnique({
+      instanceId: 1, action: "movie", mediaId: 42, title: "X", payload: "{}", seasonNumber: 0, fileId: 0,
+    });
+    expect(c1).toBe(true);
+    expect(c2).toBe(false);
+    expect(second.id).toBe(first.id);
+    expect(await searchQueueRepository.countPending(1)).toBe(1);
+  });
+
+  test("createUnique returns existing pending row for the same season", async () => {
+    const { entry: first } = await searchQueueRepository.createUnique({
+      instanceId: 1, action: "season", mediaId: 7, title: "S", payload: "{}", seasonNumber: 2, fileId: 0,
+    });
+    const { entry: second, created } = await searchQueueRepository.createUnique({
+      instanceId: 1, action: "season", mediaId: 7, title: "S", payload: "{}", seasonNumber: 2, fileId: 0,
+    });
+    expect(created).toBe(false);
+    expect(second.id).toBe(first.id);
+  });
+
+  test("createUnique allows different seasons for the same series", async () => {
+    const { entry: s1 } = await searchQueueRepository.createUnique({
+      instanceId: 1, action: "season", mediaId: 7, title: "S1", payload: "{}", seasonNumber: 1, fileId: 0,
+    });
+    const { entry: s2 } = await searchQueueRepository.createUnique({
+      instanceId: 1, action: "season", mediaId: 7, title: "S2", payload: "{}", seasonNumber: 2, fileId: 0,
+    });
+    expect(s1.id).not.toBe(s2.id);
+    expect(await searchQueueRepository.countPending(1)).toBe(2);
+  });
+
+  test("re-enqueue after done creates a fresh row", async () => {
+    const { entry: first } = await searchQueueRepository.createUnique({
+      instanceId: 1, action: "movie", mediaId: 99, title: "M", payload: "{}", seasonNumber: 0, fileId: 0,
+    });
+    await searchQueueRepository.setStatus(first.id, "done");
+    // Done row is outside the partial index scope — new pending row is allowed.
+    const { entry: second, created } = await searchQueueRepository.createUnique({
+      instanceId: 1, action: "movie", mediaId: 99, title: "M", payload: "{}", seasonNumber: 0, fileId: 0,
+    });
+    expect(created).toBe(true);
+    expect(second.id).not.toBe(first.id);
+    expect(second.status).toBe("pending");
   });
 
   test("deletePendingByInstance removes only pending rows for the given instance", async () => {

@@ -18,7 +18,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
 
   const invalidateQueue = () => {
     qc.invalidateQueries({ queryKey: queryKeys.searchQueue(instanceId) });
-    qc.invalidateQueries({ queryKey: ["search-queue", "all"] });
+    qc.invalidateQueries({ queryKey: queryKeys.searchQueueAll() });
   };
 
   const seasonSearch = useMutation({

@@ -141,6 +141,13 @@ function MoviesPageContent() {
     );
   }
 
+  const renderSearchBadge = (id: number, title: string) => {
+    if (queuedIds.has(id)) return <SearchStatusBadge status="pending" instanceId={inst.activeInstance} />;
+    const recent = recentMap.get(id);
+    if (recent) return <SearchStatusBadge status="searched" instanceId={inst.activeInstance} title={title} relativeTime={formatRelative(recent)} />;
+    return null;
+  };
+
   const columns: ColumnDef<FlaggedMovie>[] = [
     {
       key: "severity",
@@ -155,26 +162,13 @@ function MoviesPageContent() {
       key: "title",
       header: tCols("title"),
       sortKey: "title",
-      render: (m) => {
-        const recent = !queuedIds.has(m.id) ? recentMap.get(m.id) : undefined;
-        return (
-          <div className="flex items-baseline gap-2 min-w-0">
-            <span className="font-medium truncate">{m.title}</span>
-            <span className="text-muted-foreground text-xs shrink-0">{m.year}</span>
-            {queuedIds.has(m.id) && (
-              <SearchStatusBadge status="pending" instanceId={inst.activeInstance} />
-            )}
-            {recent && (
-              <SearchStatusBadge
-                status="searched"
-                instanceId={inst.activeInstance}
-                title={m.title}
-                relativeTime={formatRelative(recent)}
-              />
-            )}
-          </div>
-        );
-      },
+      render: (m) => (
+        <div className="flex items-baseline gap-2 min-w-0">
+          <span className="font-medium truncate">{m.title}</span>
+          <span className="text-muted-foreground text-xs shrink-0">{m.year}</span>
+          {renderSearchBadge(m.id, m.title)}
+        </div>
+      ),
     },
     {
       key: "profile",
@@ -362,24 +356,13 @@ function MoviesPageContent() {
                 renderCard={(m) => {
                   const score = scoringMode === "profile" ? m.customFormatScore : m.cfScore;
                   const items = scoringMode === "profile" ? m.unwantedFormats : m.missingFormats;
-                  const recent = !queuedIds.has(m.id) ? recentMap.get(m.id) : undefined;
                   return (
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2 min-w-0 flex-wrap">
                         <SeverityDot severity={getSeverity(score, m.minProfileScore, scoringMode, m.hasFile)} />
                         <span className="font-medium truncate">{m.title}</span>
                         <span className="text-muted-foreground text-xs shrink-0">{m.year}</span>
-                        {queuedIds.has(m.id) && (
-                          <SearchStatusBadge status="pending" instanceId={inst.activeInstance} />
-                        )}
-                        {recent && (
-                          <SearchStatusBadge
-                            status="searched"
-                            instanceId={inst.activeInstance}
-                            title={m.title}
-                            relativeTime={formatRelative(recent)}
-                          />
-                        )}
+                        {renderSearchBadge(m.id, m.title)}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         {scoringMode === "profile" && !m.hasFile ? (

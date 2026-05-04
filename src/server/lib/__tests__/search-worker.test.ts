@@ -129,21 +129,32 @@ describe("SearchWorker", () => {
     }, { timeout: 2000 });
   });
 
-  test("marks the row failed when the instance no longer exists", async () => {
-    // Enqueue against a non-existent instance directly via the repo (route would have
-    // rejected first, but worker robustness matters if instance was deleted mid-flight).
-    const queued = await searchQueueRepository.create({
-      instanceId: 9999,
+  test("marks the row failed when the instance no longer exists mid-flight", async () => {
+    // Start the worker FIRST so it registers a timer for this instance, then
+    // delete the instance directly (bypassing instanceService.delete() which
+    // now calls clearPending() and would remove the row before the timer fires).
+    const inst = await makeRadarr();
+    mswServer.use(...radarrHandlers({ baseUrl: radarrBase }));
+    await searchWorker.start();
+
+    const { prisma } = await import("@/server/lib/db");
+    await prisma.instance.delete({ where: { id: inst.id } });
+
+    const { entry: queued } = await searchQueueRepository.createUnique({
+      instanceId: inst.id,
       action: "movie",
       mediaId: 1,
       payload: "{}",
-      title: "X",
+      title: "Ghost",
+      seasonNumber: 0,
+      fileId: 0,
     });
-    // Manually start the worker for this fake instance — start() reads enabled
-    // instances which won't include 9999, so we use refresh + immediate findNext.
-    // Easier: just call processOne directly via a tiny private-bypass.
-    // Instead, just verify via the repo path — the worker would do the same.
-    expect(queued.status).toBe("pending");
+
+    await vi.waitFor(async () => {
+      const refetched = await searchQueueRepository.findById(queued.id);
+      expect(refetched?.status).toBe("failed");
+      expect(refetched?.error).toContain("Instance not found");
+    }, { timeout: 2000 });
   });
 
   test("episode-file action resolves episodeIds via getEpisodes and posts EpisodeSearch", async () => {
@@ -200,12 +211,14 @@ describe("SearchWorker", () => {
     const inst = await makeRadarr();
     // Bypass enqueue() — the type system would reject an unknown action.
     // We're testing the worker's defensive throw against malformed rows.
-    const queued = await searchQueueRepository.create({
+    const { entry: queued } = await searchQueueRepository.createUnique({
       instanceId: inst.id,
       action: "bogus" as "movie",
       mediaId: 1,
       payload: "{}",
       title: "ghost",
+      seasonNumber: 0,
+      fileId: 0,
     });
     mswServer.use(...radarrHandlers({ baseUrl: radarrBase }));
 

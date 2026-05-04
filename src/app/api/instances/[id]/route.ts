@@ -12,6 +12,7 @@ function publicView(i: Instance): InstanceListItem {
 
 export const GET = createApiHandler(async (_req, ctx) => {
   const id = Number(ctx.params.id);
+  if (!Number.isInteger(id) || id <= 0) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   const instance = await instanceService.getById(id);
   if (!instance) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(publicView(instance));
@@ -19,6 +20,7 @@ export const GET = createApiHandler(async (_req, ctx) => {
 
 export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
   const id = Number(ctx.params.id);
+  if (!Number.isInteger(id) || id <= 0) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   let body: unknown;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
   const parsed = instanceUpdateSchema.safeParse(body);
@@ -35,6 +37,7 @@ export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
 
 export const DELETE = createApiHandler(async (_req, ctx) => {
   const id = Number(ctx.params.id);
+  if (!Number.isInteger(id) || id <= 0) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   await instanceService.delete(id);
   dataCache.invalidate(id);
   return NextResponse.json({ ok: true });

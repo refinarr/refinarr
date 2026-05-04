@@ -6,6 +6,7 @@ import { seriesService } from "@/server/services/SeriesService";
 
 export const POST = createApiHandler(async (_req, ctx) => {
   const id = Number(ctx.params.id);
+  if (!Number.isInteger(id) || id <= 0) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   const log = await logRepository.findById(id);
   if (!log || !log.payload) {
     return NextResponse.json({ error: "Log entry not found or has no payload" }, { status: 404 });

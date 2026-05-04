@@ -29,6 +29,7 @@ export function formatRelative(date: Date | string | number): string {
 export function formatEta(ms: number): string {
   if (ms <= 0) return "now";
   const totalMin = Math.round(ms / 60_000);
+  if (totalMin === 0) return "<1m";
   if (totalMin < 60) return `${totalMin}m`;
   const hours = Math.floor(totalMin / 60);
   const mins = totalMin % 60;

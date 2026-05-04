@@ -3,6 +3,7 @@ import { createApiHandler } from "@/server/lib/handler";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { dataCache } from "@/server/lib/DataCache";
 import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/server/lib/log-sources";
 import { preferencesSchema } from "@/shared/types/schemas";
 
 export const GET = createApiHandler(async (req: NextRequest) => {
@@ -23,8 +24,7 @@ export const PUT = createApiHandler(async (req: NextRequest) => {
   await preferenceRepository.setForInstance(instanceId, cfs);
   dataCache.invalidate(instanceId);
   appLogger.info("Custom Format preferences updated", {
-    // TODO:  sources should be from LogSource enum
-    source: "preferences-route",
+    source: LogSource.Api,
     context: { instanceId, count: cfs.length },
   });
   return NextResponse.json({ ok: true });

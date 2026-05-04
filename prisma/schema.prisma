@@ -85,16 +85,20 @@ model Session {
 }
 
 model SearchQueue {
-  id          Int       @id @default(autoincrement())
-  instanceId  Int
-  action      String
-  mediaId     Int
-  payload     String
-  title       String
-  status      String    @default("pending")
-  error       String?
-  createdAt   DateTime  @default(now())
-  processedAt DateTime?
+  id           Int       @id @default(autoincrement())
+  instanceId   Int
+  action       String
+  mediaId      Int
+  payload      String
+  title        String
+  status       String    @default("pending")
+  error        String?
+  createdAt    DateTime  @default(now())
+  processedAt  DateTime?
+  seasonNumber Int       @default(0)
+  fileId       Int       @default(0)
 
   @@index([instanceId, status, createdAt])
+  // SearchQueue_pending_dedup: partial UNIQUE index (WHERE status='pending') is
+  // hand-written in the migration SQL — Prisma does not support WHERE-clause indexes.
 }

@@ -6,6 +6,7 @@ import { POST as deleteSeriesFiles } from "@/app/api/sonarr/series/delete/route"
 import { POST as createInstance } from "@/app/api/instances/route";
 import { mswServer, sonarrHandlers } from "@/test/msw";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
+import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 
 const ctxNone = { params: Promise.resolve({}) };
 const baseUrl = "http://192.168.1.10:8989";
@@ -94,7 +95,11 @@ describe("POST /api/sonarr/series/delete", () => {
     expect(res.status).toBe(200);
     expect((await res.json()).status).toBe("success");
     expect(deletedFiles.sort()).toEqual([10, 11]);
-    // Search is queued for the worker — route does not dispatch it.
+    // Search is queued for the worker — route does not dispatch it inline.
     expect(commandHit).toBe(false);
+    const queued = await searchQueueRepository.findPendingByInstance(instanceId);
+    expect(queued).toHaveLength(1);
+    expect(queued[0].mediaId).toBe(1);
+    expect(queued[0].action).toBe("series");
   });
 });
