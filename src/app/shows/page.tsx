@@ -22,7 +22,6 @@ import { NoFilterMatchState } from "@/client/components/states/NoFilterMatchStat
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { SeriesDetailDrawer } from "@/client/components/shows/SeriesDetailDrawer";
 
-import { useConfig } from "@/client/hooks/data/useConfig";
 import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
 import { useRefreshInstance } from "@/client/hooks/data/useRefreshInstance";
@@ -85,13 +84,13 @@ function ShowsPageContent() {
   const router = useRouter();
 
   const inst = useInstanceSelection("sonarr");
-  const { data: config } = useConfig();
   const { data: prefs } = usePreferences(inst.activeInstance);
   const { data: profiles } = useQualityProfiles("sonarr", inst.activeInstance);
   const refreshMutation = useRefreshInstance();
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
 
-  const scoringMode = (config?.scoringModes[`scoringMode:${inst.activeInstance}`] ?? "manual") as ScoringMode;
+  const scoringMode: ScoringMode =
+    inst.typedInstances.find((i) => i.id === inst.activeInstance)?.scoringMode ?? "profile";
   const noCfsConfigured = scoringMode === "manual" && (prefs?.length ?? 0) === 0;
 
   const filters = useMediaFilters(scoringMode, inst.activeInstance);

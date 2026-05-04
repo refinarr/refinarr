@@ -3,7 +3,13 @@ import { seriesService } from "@/server/services/SeriesService";
 import { instanceService } from "@/server/services/InstanceService";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
-import { configRepository } from "@/server/repositories/ConfigRepository";
+import type { ScoringMode } from "@/shared/types/models";
+
+// Tests are explicit about scoringMode rather than relying on the column
+// default ("profile"), so a future default-flip doesn't silently break them.
+async function createInstance(scoringMode: ScoringMode = "manual") {
+  return instanceService.create({ ...baseInstance, scoringMode });
+}
 
 const fetchMock = vi.fn();
 
@@ -72,7 +78,7 @@ const profile: SonarrProfile = {
 
 describe("SeriesService.getFlaggedSeries — manual mode", () => {
   test("returns empty when no preferences are set", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
     const result = await seriesService.getFlaggedSeries(instance.id, {
       page: 1, limit: 50, sortBy: "score", order: "asc",
@@ -81,7 +87,7 @@ describe("SeriesService.getFlaggedSeries — manual mode", () => {
   });
 
   test("flags series with episode files missing wanted CFs", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     setupSonarrMocks({
       series: [{ id: 1, title: "Show A", year: 2024, qualityProfileId: 1 }],
@@ -99,7 +105,7 @@ describe("SeriesService.getFlaggedSeries — manual mode", () => {
   });
 
   test("flags series with no episode files", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     setupSonarrMocks({
       series: [{ id: 1, title: "Empty", year: 2024, qualityProfileId: 1 }],
@@ -114,7 +120,7 @@ describe("SeriesService.getFlaggedSeries — manual mode", () => {
   });
 
   test("excludes ignored series", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     await ignoreRepository.create({ instanceId: instance.id, mediaId: 1, mediaType: "series", title: "Show A" });
     setupSonarrMocks({
@@ -133,8 +139,7 @@ describe("SeriesService.getFlaggedSeries — manual mode", () => {
 
 describe("SeriesService.getFlaggedSeries — profile mode", () => {
   test("flags series whose worst episode score is below cutoff", async () => {
-    const instance = await instanceService.create(baseInstance);
-    await configRepository.set(`scoringMode:${instance.id}`, "profile");
+    const instance = await createInstance("profile");
     setupSonarrMocks({
       series: [{ id: 1, title: "BelowCut", year: 2024, qualityProfileId: 1 }],
       files: new Map([[1, [
@@ -150,8 +155,7 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
   });
 
   test("flags fileless series when profile cutoff > 0", async () => {
-    const instance = await instanceService.create(baseInstance);
-    await configRepository.set(`scoringMode:${instance.id}`, "profile");
+    const instance = await createInstance("profile");
     setupSonarrMocks({
       series: [{ id: 1, title: "NoFiles", year: 2024, qualityProfileId: 1 }],
       files: new Map([[1, []]]),
@@ -164,8 +168,7 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
   });
 
   test("populates unwantedFormats from negative-score CFs in episode files", async () => {
-    const instance = await instanceService.create(baseInstance);
-    await configRepository.set(`scoringMode:${instance.id}`, "profile");
+    const instance = await createInstance("profile");
     setupSonarrMocks({
       series: [{ id: 1, title: "BadFile", year: 2024, qualityProfileId: 1 }],
       files: new Map([[1, [
@@ -188,7 +191,7 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
   });
 
   test("manual mode populates episodeFiles[].customFormats with profile scores", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("profile");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 11, cfName: "Atmos" }]);
     setupSonarrMocks({
       series: [{ id: 1, title: "Show", year: 2024, qualityProfileId: 1 }],
@@ -210,7 +213,7 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
 
 describe("SeriesService — query application", () => {
   beforeEach(async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     setupSonarrMocks({
       series: [
@@ -332,7 +335,7 @@ describe("SeriesService — actions", () => {
 
 describe("SeriesService — manual mode with file lacking customFormats", () => {
   test("treats undefined customFormats as empty array on episode files", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     setupSonarrMocks({
       series: [{ id: 1, title: "ShowMissingCfs", year: 2024, qualityProfileId: 1 }],
@@ -352,7 +355,7 @@ describe("SeriesService — manual mode with file lacking customFormats", () => 
 
 describe("SeriesService — sort edge cases", () => {
   beforeEach(async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     setupSonarrMocks({
       series: [
@@ -429,7 +432,7 @@ describe("SeriesService — sort edge cases", () => {
 
 describe("SeriesService — cache reuse", () => {
   test("second call within TTL returns cached data", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     setupSonarrMocks({
       series: [{ id: 1, title: "Show", year: 2024, qualityProfileId: 1 }],

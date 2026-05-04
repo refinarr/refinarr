@@ -14,7 +14,6 @@ import { SettingsCardSkeleton } from "@/client/components/states/SettingsCardSke
 import { Button } from "@/client/components/ui/button";
 import { Separator } from "@/client/components/ui/separator";
 import { useInstances } from "@/client/hooks/data/useInstances";
-import { useConfig } from "@/client/hooks/data/useConfig";
 import type { Instance } from "@/shared/types/models";
 import { Plus } from "lucide-react";
 
@@ -23,7 +22,6 @@ const KNOWN_ANCHORS = new Set(["dry-run", "appearance"]);
 export default function SettingsPage() {
   const t = useTranslations("settings");
   const { data: instances, isLoading: loadingInstances } = useInstances();
-  const { data: config } = useConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Instance | null>(null);
 
@@ -39,9 +37,7 @@ export default function SettingsPage() {
     return () => clearTimeout(t);
   }, []);
 
-  const manualInstances = (instances ?? []).filter(
-    (i) => (config?.scoringModes[`scoringMode:${i.id}`] ?? "manual") === "manual"
-  );
+  const manualInstances = (instances ?? []).filter((i) => i.scoringMode === "manual");
 
   return (
     <AppShell>

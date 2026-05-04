@@ -1,4 +1,4 @@
-import type { Instance } from "@/shared/types/models";
+import type { Instance, ScoringMode } from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
 import { encryptSecret, decryptSecret, isEncrypted } from "@/server/lib/crypto";
 
@@ -9,12 +9,19 @@ interface RawInstanceRow {
   url: string;
   apiKey: string;
   enabled: boolean;
+  scoringMode: string;
   createdAt: Date;
 }
 
 function toInstance(row: RawInstanceRow): Instance {
   return { ...row, apiKey: decryptSecret(row.apiKey) } as Instance;
 }
+
+// scoringMode has a DB-level default ("profile"), so callers don't need
+// to provide it on create — the column will fill in.
+type CreateInstanceInput = Omit<Instance, "id" | "createdAt" | "scoringMode"> & {
+  scoringMode?: ScoringMode;
+};
 
 export class InstanceRepository extends BaseRepository<Instance> {
   async findById(id: number): Promise<Instance | null> {
@@ -35,7 +42,7 @@ export class InstanceRepository extends BaseRepository<Instance> {
     return rows.map(toInstance);
   }
 
-  async create(data: Omit<Instance, "id" | "createdAt">): Promise<Instance> {
+  async create(data: CreateInstanceInput): Promise<Instance> {
     const created = (await this.db.instance.create({
       data: { ...data, apiKey: encryptSecret(data.apiKey) },
     })) as RawInstanceRow;
