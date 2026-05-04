@@ -2,6 +2,7 @@ import type { ActionLog, ActionType } from "@/shared/types/models";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { dryRunService } from "./DryRunService";
 import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/server/lib/log-sources";
 
 interface ExecuteActionOptions {
   instanceId: number;
@@ -47,7 +48,7 @@ export abstract class MediaService {
 
     if (isDryRun) {
       appLogger.info(`[DryRun] ${describe(opts)}`, {
-        source: "media-action",
+        source: LogSource.MediaAction,
         context: logContext(opts, true),
       });
       return logEntry;
@@ -56,14 +57,14 @@ export abstract class MediaService {
     try {
       await opts.run();
       appLogger.info(`[Run] ${describe(opts)}`, {
-        source: "media-action",
+        source: LogSource.MediaAction,
         context: logContext(opts, false),
       });
       return logRepository.update(logEntry.id, { status: "success" });
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       appLogger.error(`Media action failed: ${describe(opts)}`, {
-        source: "media-action",
+        source: LogSource.MediaAction,
         err,
         context: logContext(opts, false),
       });

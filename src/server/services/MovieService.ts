@@ -8,6 +8,7 @@ import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { RadarrClient } from "@/server/clients/RadarrClient";
 import { dataCache, CACHE_TTL_MS } from "@/server/lib/DataCache";
 import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/server/lib/log-sources";
 import {
   isMissingWantedFormats,
   getMissingFormats,
@@ -30,6 +31,28 @@ interface MovieQuery {
   hasNegativeCfMatch?: "any" | "all";
 }
 
+function compareFlaggedMovies(
+  a: FlaggedMovie,
+  b: FlaggedMovie,
+  sortBy: MovieQuery["sortBy"],
+  mode: ScoringMode,
+  dir: 1 | -1,
+): number {
+  if (sortBy === "added") return 0;
+  if (sortBy === "title") return a.title.localeCompare(b.title) * dir;
+  // Numeric sorts: items without a file sink to the bottom regardless of
+  // direction, so the user's "worst N" view is never polluted by entries
+  // with no on-disk reference to compare against.
+  if (a.hasFile !== b.hasFile) return a.hasFile ? -1 : 1;
+  if (!a.hasFile) return 0;
+  if (sortBy === "score") {
+    const av = mode === "profile" ? a.customFormatScore : a.cfScore;
+    const bv = mode === "profile" ? b.customFormatScore : b.cfScore;
+    return (av - bv) * dir;
+  }
+  return (a.sizeOnDisk - b.sizeOnDisk) * dir;
+}
+
 export class MovieService extends MediaService {
   async getFlaggedMovies(
     instanceId: number,
@@ -45,14 +68,14 @@ export class MovieService extends MediaService {
     let cached = dataCache.get<{ flagged: FlaggedMovie[] }>(cacheKey, CACHE_TTL_MS);
 
     if (cached) {
-      appLogger.debug("Cache hit", { source: "movie-service", context: { cacheKey } });
+      appLogger.debug("Cache hit", { source: LogSource.MovieService, context: { cacheKey } });
     } else {
       const startedAt = Date.now();
       const flagged = await this.buildFlaggedMovies(instanceId, instance, mode);
       cached = { flagged };
       dataCache.set(cacheKey, cached);
       appLogger.debug("Built flagged movies cache", {
-        source: "movie-service",
+        source: LogSource.MovieService,
         context: {
           instanceId,
           instanceName: instance.name,
@@ -213,22 +236,10 @@ export class MovieService extends MediaService {
       });
     }
 
-    const sorted = [...flagged].sort((a, b) => {
-      const dir = query.order === "asc" ? 1 : -1;
-      if (query.sortBy === "score" || query.sortBy === "size") {
-        if (!a.hasFile && !b.hasFile) return 0;
-        if (!a.hasFile) return 1;
-        if (!b.hasFile) return -1;
-      }
-      if (query.sortBy === "score") {
-        const aScore = mode === "profile" ? a.customFormatScore : a.cfScore;
-        const bScore = mode === "profile" ? b.customFormatScore : b.cfScore;
-        return (aScore - bScore) * dir;
-      }
-      if (query.sortBy === "title") return a.title.localeCompare(b.title) * dir;
-      if (query.sortBy === "size") return (a.sizeOnDisk - b.sizeOnDisk) * dir;
-      return 0;
-    });
+    const dir = query.order === "asc" ? 1 : -1;
+    const sorted = [...flagged].sort((a, b) =>
+      compareFlaggedMovies(a, b, query.sortBy, mode, dir),
+    );
 
     const total = sorted.length;
     const start = (query.page - 1) * query.limit;

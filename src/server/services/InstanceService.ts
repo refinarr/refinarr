@@ -2,6 +2,7 @@ import type { Instance, ArrType } from "@/shared/types/models";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 
 export class InstanceService {
@@ -23,7 +24,7 @@ export class InstanceService {
     assertSafeArrUrl(data.url);
     const created = await instanceRepository.create({ ...data, enabled: data.enabled ?? true });
     appLogger.info("Instance created", {
-      source: "instance-service",
+      source: LogSource.InstanceService,
       context: { id: created.id, name: created.name, type: created.type },
     });
     return created;
@@ -33,7 +34,7 @@ export class InstanceService {
     if (typeof data.url === "string") assertSafeArrUrl(data.url);
     const updated = await instanceRepository.update(id, data);
     appLogger.info("Instance updated", {
-      source: "instance-service",
+      source: LogSource.InstanceService,
       context: { id: updated.id, name: updated.name, type: updated.type },
     });
     return updated;
@@ -43,7 +44,7 @@ export class InstanceService {
     const existing = await instanceRepository.findById(id);
     await instanceRepository.delete(id);
     appLogger.info("Instance deleted", {
-      source: "instance-service",
+      source: LogSource.InstanceService,
       context: { id, name: existing?.name, type: existing?.type },
     });
   }
@@ -55,7 +56,7 @@ export class InstanceService {
     const result = await client.testConnection();
     const log = result.ok ? appLogger.info : appLogger.error;
     log.call(appLogger, "Connection test", {
-      source: "instance-service",
+      source: LogSource.InstanceService,
       context: {
         id,
         name: instance.name,
@@ -83,7 +84,7 @@ export class InstanceService {
     const result = await client.testConnection();
     const log = result.ok ? appLogger.info : appLogger.error;
     log.call(appLogger, "Credentials test", {
-      source: "instance-service",
+      source: LogSource.InstanceService,
       context: {
         type: data.type,
         url: data.url,

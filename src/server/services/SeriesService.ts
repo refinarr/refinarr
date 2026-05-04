@@ -8,6 +8,7 @@ import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { SonarrClient } from "@/server/clients/SonarrClient";
 import { dataCache, CACHE_TTL_MS } from "@/server/lib/DataCache";
 import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/server/lib/log-sources";
 import {
   isMissingWantedFormats,
   getMissingFormats,
@@ -30,6 +31,30 @@ interface SeriesQuery {
   hasNegativeCfMatch?: "any" | "all";
 }
 
+function compareFlaggedSeries(
+  a: FlaggedSeries,
+  b: FlaggedSeries,
+  sortBy: SeriesQuery["sortBy"],
+  mode: ScoringMode,
+  dir: 1 | -1,
+): number {
+  if (sortBy === "added") return 0;
+  if (sortBy === "title") return a.title.localeCompare(b.title) * dir;
+  // Numeric sorts: series with no episode files sink to the bottom regardless
+  // of direction, so the "worst N" view is never polluted by entries with
+  // nothing to compare against.
+  const aFileless = a.episodeFiles.length === 0;
+  const bFileless = b.episodeFiles.length === 0;
+  if (aFileless !== bFileless) return aFileless ? 1 : -1;
+  if (aFileless) return 0;
+  if (sortBy === "score") {
+    const av = mode === "profile" ? a.customFormatScore : a.cfScore;
+    const bv = mode === "profile" ? b.customFormatScore : b.cfScore;
+    return (av - bv) * dir;
+  }
+  return (a.sizeOnDisk - b.sizeOnDisk) * dir;
+}
+
 export class SeriesService extends MediaService {
   async getFlaggedSeries(
     instanceId: number,
@@ -45,14 +70,14 @@ export class SeriesService extends MediaService {
     let cached = dataCache.get<{ flagged: FlaggedSeries[] }>(cacheKey, CACHE_TTL_MS);
 
     if (cached) {
-      appLogger.debug("Cache hit", { source: "series-service", context: { cacheKey } });
+      appLogger.debug("Cache hit", { source: LogSource.SeriesService, context: { cacheKey } });
     } else {
       const startedAt = Date.now();
       const flagged = await this.buildFlaggedSeries(instanceId, instance, mode);
       cached = { flagged };
       dataCache.set(cacheKey, cached);
       appLogger.debug("Built flagged series cache", {
-        source: "series-service",
+        source: LogSource.SeriesService,
         context: {
           instanceId,
           instanceName: instance.name,
@@ -267,24 +292,10 @@ export class SeriesService extends MediaService {
       });
     }
 
-    const sorted = [...flagged].sort((a, b) => {
-      const dir = query.order === "asc" ? 1 : -1;
-      if (query.sortBy === "score" || query.sortBy === "size") {
-        const aFileless = a.episodeFiles.length === 0;
-        const bFileless = b.episodeFiles.length === 0;
-        if (aFileless && bFileless) return 0;
-        if (aFileless) return 1;
-        if (bFileless) return -1;
-      }
-      if (query.sortBy === "score") {
-        const aScore = mode === "profile" ? a.customFormatScore : a.cfScore;
-        const bScore = mode === "profile" ? b.customFormatScore : b.cfScore;
-        return (aScore - bScore) * dir;
-      }
-      if (query.sortBy === "title") return a.title.localeCompare(b.title) * dir;
-      if (query.sortBy === "size") return (a.sizeOnDisk - b.sizeOnDisk) * dir;
-      return 0;
-    });
+    const dir = query.order === "asc" ? 1 : -1;
+    const sorted = [...flagged].sort((a, b) =>
+      compareFlaggedSeries(a, b, query.sortBy, mode, dir),
+    );
 
     const total = sorted.length;
     const start = (query.page - 1) * query.limit;

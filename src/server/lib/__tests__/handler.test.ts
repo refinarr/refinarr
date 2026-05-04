@@ -51,7 +51,7 @@ describe("createApiHandler", () => {
   test("ZodError from handler returns 400 with generic message", async () => {
     const handler = createApiHandler(async () => {
       // ZodError constructor requires issues array
-      const err = new ZodError([
+      throw new ZodError([
         {
           code: "invalid_type",
           expected: "string",
@@ -60,7 +60,6 @@ describe("createApiHandler", () => {
           message: "Expected string",
         },
       ]);
-      throw err;
     });
     const res = await handler(makeReq(), makeCtx());
     expect(res.status).toBe(400);

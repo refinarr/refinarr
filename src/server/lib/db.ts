@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import crypto from "crypto";
+import { LogSource } from "./log-sources";
 
 function createPrismaClient(): PrismaClient {
   const dbUrl =
@@ -38,7 +39,7 @@ export async function seedDefaults() {
   if (migrated > 0) {
     const { appLogger } = await import("./app-logger");
     appLogger.info("Encrypted existing instance API keys at rest", {
-      source: "db",
+      source: LogSource.Db,
       context: { count: migrated },
     });
   }
