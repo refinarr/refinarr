@@ -7,13 +7,14 @@ datasource db {
 }
 
 model Instance {
-  id        Int      @id @default(autoincrement())
-  type      String
-  name      String
-  url       String
-  apiKey    String
-  enabled   Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  type        String
+  name        String
+  url         String
+  apiKey      String
+  enabled     Boolean  @default(true)
+  scoringMode String   @default("profile")
+  createdAt   DateTime @default(now())
 }
 
 model AppConfig {

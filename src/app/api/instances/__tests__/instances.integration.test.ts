@@ -151,6 +151,20 @@ describe("GET / PUT / DELETE /api/instances/[id]", () => {
     expect(dataCache.get(`movies:9999:manual`, 60_000)).toEqual(["other"]);
   });
 
+  test("PUT scoringMode change invalidates that instance's flagged-media cache", async () => {
+    const created = await POST(postReq(valid), { params: Promise.resolve({}) });
+    const { id } = await created.json();
+    dataCache.set(`movies:${id}:manual`, ["stale"]);
+    dataCache.set(`movies:${id}:profile`, ["also-stale"]);
+    dataCache.set(`movies:9999:manual`, ["other"]);
+
+    const res = await PUT(putReq(id, { scoringMode: "manual" }), ctxFor(id));
+    expect(res.status).toBe(200);
+    expect(dataCache.get(`movies:${id}:manual`, 60_000)).toBeNull();
+    expect(dataCache.get(`movies:${id}:profile`, 60_000)).toBeNull();
+    expect(dataCache.get(`movies:9999:manual`, 60_000)).toEqual(["other"]);
+  });
+
   test("DELETE invalidates that instance's flagged-media cache", async () => {
     const created = await POST(postReq(valid), { params: Promise.resolve({}) });
     const { id } = await created.json();

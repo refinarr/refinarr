@@ -12,6 +12,7 @@ export interface Instance {
   url: string;
   apiKey: string;
   enabled: boolean;
+  scoringMode: ScoringMode;
   createdAt: Date;
 }
 

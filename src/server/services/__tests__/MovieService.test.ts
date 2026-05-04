@@ -5,6 +5,13 @@ import { preferenceRepository } from "@/server/repositories/PreferenceRepository
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { configRepository } from "@/server/repositories/ConfigRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
+import type { ScoringMode } from "@/shared/types/models";
+
+// Tests are explicit about scoringMode rather than relying on the column
+// default ("profile"), so a future default-flip doesn't silently break them.
+async function createInstance(scoringMode: ScoringMode = "manual") {
+  return instanceService.create({ ...baseInstance, scoringMode });
+}
 
 const fetchMock = vi.fn();
 
@@ -89,7 +96,7 @@ const profile: RadarrProfile = {
 
 describe("MovieService.getFlaggedMovies — manual mode", () => {
   test("returns empty when no preferences are configured", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     setupRadarrMocks({ movies: [], files: [], profiles: [] });
     const result = await movieService.getFlaggedMovies(instance.id, {
       page: 1, limit: 50, sortBy: "score", order: "asc",
@@ -99,7 +106,7 @@ describe("MovieService.getFlaggedMovies — manual mode", () => {
   });
 
   test("flags movies missing wanted CFs and excludes ones with all wanted", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [
       { cfId: 10, cfName: "HDR" },
     ]);
@@ -123,7 +130,7 @@ describe("MovieService.getFlaggedMovies — manual mode", () => {
   });
 
   test("flags movies that have no file at all", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     setupRadarrMocks({
       movies: [
@@ -141,7 +148,7 @@ describe("MovieService.getFlaggedMovies — manual mode", () => {
   });
 
   test("excludes ignored movies", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     await ignoreRepository.create({ instanceId: instance.id, mediaId: 1, mediaType: "movie", title: "A" });
     setupRadarrMocks({
@@ -160,8 +167,7 @@ describe("MovieService.getFlaggedMovies — manual mode", () => {
 
 describe("MovieService.getFlaggedMovies — profile mode", () => {
   test("flags movies whose customFormatScore is below cutoffFormatScore", async () => {
-    const instance = await instanceService.create(baseInstance);
-    await configRepository.set(`scoringMode:${instance.id}`, "profile");
+    const instance = await createInstance("profile");
     setupRadarrMocks({
       movies: [
         { id: 1, title: "Low", year: 2024, qualityProfileId: 1, hasFile: true, movieFileId: 100 },
@@ -182,8 +188,7 @@ describe("MovieService.getFlaggedMovies — profile mode", () => {
   });
 
   test("populates unwantedFormats from negative-scoring CFs in the file", async () => {
-    const instance = await instanceService.create(baseInstance);
-    await configRepository.set(`scoringMode:${instance.id}`, "profile");
+    const instance = await createInstance("profile");
     setupRadarrMocks({
       movies: [{ id: 1, title: "Bad", year: 2024, qualityProfileId: 1, hasFile: true, movieFileId: 100 }],
       files: [
@@ -204,7 +209,7 @@ describe("MovieService.getFlaggedMovies — profile mode", () => {
 
 describe("MovieService.getFlaggedMovies — applyQuery", () => {
   beforeEach(async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     setupRadarrMocks({
       movies: [
@@ -313,7 +318,7 @@ describe("MovieService.getFlaggedMovies — error paths", () => {
 
 describe("MovieService.getFlaggedMovies — sort edge cases", () => {
   beforeEach(async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     setupRadarrMocks({
       movies: [
@@ -361,7 +366,7 @@ describe("MovieService.getFlaggedMovies — sort edge cases", () => {
 
 describe("MovieService — cache reuse", () => {
   test("second call within TTL returns cached data without re-fetching", async () => {
-    const instance = await instanceService.create(baseInstance);
+    const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
     setupRadarrMocks({
       movies: [{ id: 1, title: "A", year: 2024, qualityProfileId: 1, hasFile: true, movieFileId: 100 }],
@@ -400,6 +405,16 @@ describe("MovieService.triggerSearch", () => {
     const log = await movieService.triggerSearch(instance.id, 1, "A");
     expect(log.status).toBe("failed");
     expect(log.error).toBeTruthy();
+  });
+
+  test("non-Error throws are stringified into the log error column", async () => {
+    const instance = await instanceService.create(baseInstance);
+    // Reject with a bare string so executeAction's `err instanceof Error`
+    // check falls through to the `String(err)` branch.
+    fetchMock.mockRejectedValue("upstream-disconnected");
+    const log = await movieService.triggerSearch(instance.id, 1, "A");
+    expect(log.status).toBe("failed");
+    expect(log.error).toBe("upstream-disconnected");
   });
 
   test("throws when instance is missing", async () => {

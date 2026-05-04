@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
 import type { Instance } from "@/shared/types/models";
-import type { CreateInstanceDto } from "@/shared/types/api";
+import type { CreateInstanceDto, UpdateInstanceDto } from "@/shared/types/api";
 
 export function useInstances() {
   return useQuery({
@@ -23,7 +23,7 @@ export function useCreateInstance() {
 export function useUpdateInstance() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<CreateInstanceDto> }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateInstanceDto }) =>
       api.put<Instance>(`/instances/${id}`, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.instances() }),
   });

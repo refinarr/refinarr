@@ -24,6 +24,7 @@ export const instanceUpdateSchema = z.object({
   url: z.string().min(1).max(2048).optional(),
   apiKey: z.string().min(1).max(256).optional(),
   enabled: z.boolean().optional(),
+  scoringMode: z.enum(["manual", "profile"]).optional(),
 });
 
 export const instanceTestSchema = z.object({

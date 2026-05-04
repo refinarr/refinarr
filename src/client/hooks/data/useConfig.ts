@@ -5,7 +5,6 @@ import { queryKeys } from "@/client/lib/query-keys";
 
 interface AppConfig {
   dryRun: boolean;
-  scoringModes: Record<string, string>;
 }
 
 export function useConfig() {

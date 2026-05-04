@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/client/components/ui/label";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { InstanceConnectionDot } from "@/client/components/media/InstanceConnectionDot";
-import { useConfig } from "@/client/hooks/data/useConfig";
 import { cn } from "@/client/lib/utils";
 import type { Instance, ScoringMode } from "@/shared/types/models";
 
@@ -40,12 +39,12 @@ export function MediaPageHeader({
   const tInstSel = useTranslations("instanceSelector");
   const tCommon = useTranslations("common");
   const tScoringOpts = useTranslations("settings.scoringModeOptions");
-  const { data: config } = useConfig();
 
   const showSwitcher = typedInstances.length > 1;
   const showInstanceContext = activeInstance > 0 && !!activeInstanceName;
 
-  const mode = (config?.scoringModes[`scoringMode:${activeInstance}`] ?? "manual") as ScoringMode;
+  const mode: ScoringMode =
+    typedInstances.find((i) => i.id === activeInstance)?.scoringMode ?? "profile";
 
   return (
     <div className="space-y-3">

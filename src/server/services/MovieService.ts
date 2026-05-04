@@ -3,7 +3,6 @@ import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
-import { configRepository } from "@/server/repositories/ConfigRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { RadarrClient } from "@/server/clients/RadarrClient";
 import { dataCache, CACHE_TTL_MS } from "@/server/lib/DataCache";
@@ -61,9 +60,7 @@ export class MovieService extends MediaService {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
-    const scoringMode = await configRepository.get(`scoringMode:${instanceId}`);
-    const mode = (scoringMode ?? "manual") as ScoringMode;
-
+    const mode = instance.scoringMode;
     const cacheKey = `movies:${instanceId}:${mode}`;
     let cached = dataCache.get<{ flagged: FlaggedMovie[] }>(cacheKey, CACHE_TTL_MS);
 
