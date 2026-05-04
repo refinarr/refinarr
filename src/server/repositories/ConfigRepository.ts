@@ -1,4 +1,5 @@
 import { BaseRepository } from "./BaseRepository";
+import type { ConfigSpec } from "@/server/config/keys";
 
 interface AppConfig {
   key: string;
@@ -25,6 +26,16 @@ export class ConfigRepository extends BaseRepository<AppConfig> {
       update: { value },
       create: { key, value },
     });
+  }
+
+  async getTyped<T>(spec: ConfigSpec<T>): Promise<T> {
+    const raw = await this.get(spec.key);
+    if (raw === null) return spec.default;
+    return spec.parse(raw);
+  }
+
+  async setTyped<T>(spec: ConfigSpec<T>, value: T): Promise<void> {
+    await this.set(spec.key, spec.encode(value));
   }
 
   async create(data: Omit<AppConfig, "id" | "createdAt">): Promise<AppConfig> {

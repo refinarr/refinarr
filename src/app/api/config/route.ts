@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { configRepository } from "@/server/repositories/ConfigRepository";
+import { ConfigKey } from "@/server/config/keys";
 import { configUpdateSchema } from "@/shared/types/schemas";
 
 export const GET = createApiHandler(async () => {
-  const dryRun = await configRepository.get("dryRun");
+  const dryRun = await configRepository.getTyped(ConfigKey.DryRun);
   // Note: apiKey is intentionally NOT returned here. Use GET /api/config/api-key
   // (re-auth required) to fetch it for scripted access.
-  return NextResponse.json({ dryRun: dryRun === "true" });
+  return NextResponse.json({ dryRun });
 });
 
 export const PUT = createApiHandler(async (req: NextRequest) => {

@@ -1,5 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { configRepository } from "@/server/repositories/ConfigRepository";
+import { ConfigKey } from "@/server/config/keys";
 import { prisma } from "@/server/lib/db";
 
 describe("ConfigRepository", () => {
@@ -21,6 +22,7 @@ describe("ConfigRepository", () => {
   });
 
   test("findAll returns every config row", async () => {
+    await prisma.appConfig.deleteMany();
     await configRepository.set("a", "1");
     await configRepository.set("b", "2");
     const all = await configRepository.findAll();
@@ -42,5 +44,30 @@ describe("ConfigRepository", () => {
 
   test("delete throws — must use prisma directly", async () => {
     await expect(configRepository.delete(0)).rejects.toThrow();
+  });
+
+  describe("typed accessors", () => {
+    test("getTyped returns the spec default when the key is unset", async () => {
+      // setup.ts seeds dryRun=false; clear it so we hit the no-row branch.
+      await prisma.appConfig.deleteMany({ where: { key: "dryRun" } });
+      expect(await configRepository.getTyped(ConfigKey.DryRun)).toBe(true);
+      expect(await configRepository.getTyped(ConfigKey.ApiKey)).toBeNull();
+    });
+
+    test("setTyped encodes via the spec, getTyped decodes back to the typed value", async () => {
+      await configRepository.setTyped(ConfigKey.DryRun, false);
+      expect(await configRepository.get("dryRun")).toBe("false");
+      expect(await configRepository.getTyped(ConfigKey.DryRun)).toBe(false);
+    });
+
+    test("DryRun.parse treats anything other than 'true' as false", async () => {
+      await configRepository.set("dryRun", "garbage");
+      expect(await configRepository.getTyped(ConfigKey.DryRun)).toBe(false);
+    });
+
+    test("ApiKey round-trips a stored string", async () => {
+      await configRepository.setTyped(ConfigKey.ApiKey, "abcd1234");
+      expect(await configRepository.getTyped(ConfigKey.ApiKey)).toBe("abcd1234");
+    });
   });
 });
