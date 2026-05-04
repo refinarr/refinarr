@@ -149,8 +149,6 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
       take: overflow,
       select: { id: true },
     });
-      select: { id: true },
-    });
     if (oldest.length === 0) return;
     await this.db.searchQueue.deleteMany({ where: { id: { in: oldest.map((r) => r.id) } } });
   }

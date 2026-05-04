@@ -3,6 +3,7 @@ import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { redactString } from "@/server/lib/redact";
+import { arrRateLimiter } from "@/server/lib/ArrRateLimiter";
 
 // Node's fetch wraps the underlying network error and surfaces a generic
 // "fetch failed" message. The real diagnostic (ECONNREFUSED / ENOTFOUND /
@@ -35,6 +36,7 @@ export abstract class ArrClient {
   }
 
   protected async fetch<T>(path: string, init?: RequestInit): Promise<T> {
+    await arrRateLimiter.acquire(this.instanceId);
     const url = `${this.baseUrl}/api/v3${path}`;
     const res = await globalThis.fetch(url, {
       ...init,

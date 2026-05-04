@@ -6,6 +6,7 @@ import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { searchWorker } from "@/server/lib/search-worker";
 import { searchQueueService } from "@/server/services/SearchQueueService";
+import { arrRateLimiter } from "@/server/lib/ArrRateLimiter";
 import { eventBus } from "@/server/lib/event-bus";
 
 export class InstanceService {
@@ -56,6 +57,7 @@ export class InstanceService {
     const existing = await instanceRepository.findById(id);
     await searchQueueService.clearPending(id);
     await instanceRepository.delete(id);
+    arrRateLimiter.evict(id);
     void searchWorker.refresh(id);
     eventBus.emit({ type: "queue-changed", instanceId: id });
     appLogger.info("Instance deleted", {

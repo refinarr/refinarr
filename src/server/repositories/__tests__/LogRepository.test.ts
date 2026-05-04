@@ -98,9 +98,11 @@ describe("LogRepository", () => {
       await logRepository.create({ ...baseLog, mediaId: i, title: `m${i}` });
       await new Promise((r) => setTimeout(r, 2));
     }
-    await new Promise((r) => setTimeout(r, 50));
+    await vi.waitFor(async () => {
+      const remaining = await logRepository.findAll();
+      expect(remaining).toHaveLength(5);
+    }, { timeout: 500 });
     const remaining = await logRepository.findAll();
-    expect(remaining).toHaveLength(5);
     // Oldest two should be gone (mediaId 0, 1).
     expect(remaining.map((r) => r.mediaId).sort()).toEqual([2, 3, 4, 5, 6]);
   });
