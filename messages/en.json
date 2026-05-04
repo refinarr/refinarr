@@ -501,5 +501,17 @@
     },
     "confirmLabel": "Confirm",
     "cancelLabel": "Cancel"
+  },
+  "time": {
+    "unknown": "unknown",
+    "secondsAgo": "{n}s ago",
+    "minutesAgo": "{n}m ago",
+    "hoursAgo": "{n}h ago",
+    "daysAgo": "{n}d ago",
+    "etaNow": "now",
+    "etaLessThanMinute": "<1m",
+    "etaMinutes": "{n}m",
+    "etaHours": "{n}h",
+    "etaHoursMinutes": "{n}h {m}m"
   }
 }

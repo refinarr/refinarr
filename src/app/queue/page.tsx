@@ -21,6 +21,7 @@ interface InstanceSectionProps {
 
 function InstanceQueueSection({ instanceId, instanceName, rows }: InstanceSectionProps) {
   const t = useTranslations("queue");
+  const tTime = useTranslations("time");
   const { data: status } = useSearchQueue(instanceId);
   const clear = useClearQueue();
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
@@ -59,7 +60,7 @@ function InstanceQueueSection({ instanceId, instanceName, rows }: InstanceSectio
           </CardTitle>
           <p className="text-xs text-muted-foreground">
             {status && status.etaMs > 0
-              ? t("etaLabel", { eta: formatEta(status.etaMs) })
+              ? t("etaLabel", { eta: formatEta(status.etaMs, tTime) })
               : t("etaNone")}
           </p>
         </div>
@@ -81,7 +82,7 @@ function InstanceQueueSection({ instanceId, instanceName, rows }: InstanceSectio
               <div className="min-w-0 flex-1">
                 <p className="font-medium truncate" title={row.title}>{row.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {actionLabel(row.action)} · {t("queuedAt", { time: formatRelative(row.createdAt) })}
+                  {actionLabel(row.action)} · {t("queuedAt", { time: formatRelative(row.createdAt, tTime) })}
                 </p>
               </div>
               <Badge variant="outline" className="text-xs">#{idx + 1}</Badge>

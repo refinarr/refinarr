@@ -85,6 +85,7 @@ function ShowsPageContent() {
   const tCols = useTranslations("shows.columns");
   const tFilters = useTranslations("filters");
   const tConfirmDeleteSeries = useTranslations("confirm.deleteSeries");
+  const tTime = useTranslations("time");
   const router = useRouter();
 
   const inst = useInstanceSelection("sonarr");
@@ -176,7 +177,7 @@ function ShowsPageContent() {
                 status="searched"
                 instanceId={inst.activeInstance}
                 title={s.title}
-                relativeTime={formatRelative(recent)}
+                relativeTime={formatRelative(recent, tTime)}
               />
             )}
           </div>

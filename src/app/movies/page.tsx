@@ -81,6 +81,7 @@ function MoviesPageContent() {
   const tFilters = useTranslations("filters");
   const tConfirmDeleteFile = useTranslations("confirm.deleteFile");
   const tConfirmDeleteMovies = useTranslations("confirm.deleteMovies");
+  const tTime = useTranslations("time");
   const router = useRouter();
 
   const inst = useInstanceSelection("radarr");
@@ -144,7 +145,7 @@ function MoviesPageContent() {
   const renderSearchBadge = (id: number, title: string) => {
     if (queuedIds.has(id)) return <SearchStatusBadge status="pending" instanceId={inst.activeInstance} />;
     const recent = recentMap.get(id);
-    if (recent) return <SearchStatusBadge status="searched" instanceId={inst.activeInstance} title={title} relativeTime={formatRelative(recent)} />;
+    if (recent) return <SearchStatusBadge status="searched" instanceId={inst.activeInstance} title={title} relativeTime={formatRelative(recent, tTime)} />;
     return null;
   };
 

@@ -22,6 +22,7 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
   const tForm = useTranslations("settings.instanceForm");
   const tToast = useTranslations("toast.instance");
   const tCommon = useTranslations("common");
+  const tTime = useTranslations("time");
   const deleteInstance = useDeleteInstance();
   const test = useTestConnection();
   const { data: prefs } = usePreferences(instance.id);
@@ -55,7 +56,7 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
         {pendingCount > 0 && (
           <Badge
             variant="outline"
-            title={tForm("queuedBadgeTooltip", { count: pendingCount, eta: formatEta(queue?.etaMs ?? 0) })}
+            title={tForm("queuedBadgeTooltip", { count: pendingCount, eta: formatEta(queue?.etaMs ?? 0, tTime) })}
             className="gap-1"
           >
             <Hourglass className="h-3 w-3" />
