@@ -13,6 +13,7 @@ export function setup() {
   // Tight retention caps so tests can exercise the trim overflow path quickly.
   process.env.LOG_RETENTION_CAP = "5";
   process.env.ACTION_LOG_RETENTION_CAP = "5";
+  process.env.SEARCH_QUEUE_RETENTION_CAP = "5";
 
   // Wipe any leftover test DB so migrations apply cleanly.
   for (const f of [TEST_DB_PATH, `${TEST_DB_PATH}-journal`, `${TEST_DB_PATH}-wal`, `${TEST_DB_PATH}-shm`]) {

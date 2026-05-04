@@ -9,6 +9,8 @@ export const LogSource = {
   MovieService: "movie-service",
   SeriesService: "series-service",
   MediaAction: "media-action",
+  SearchQueue: "search-queue",
+  SearchWorker: "search-worker",
 } as const;
 
 export type LogSource = (typeof LogSource)[keyof typeof LogSource];

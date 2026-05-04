@@ -33,7 +33,15 @@ export function useDeleteInstance() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.delete<{ ok: boolean }>(`/instances/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.instances() }),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: queryKeys.instances() });
+      // Server-side: InstanceService.delete already calls
+      // searchWorker.refresh(id) which clears the timer. The pending rows
+      // for that instance stay until the user clears them, but /queue
+      // should drop the deleted instance's section immediately.
+      qc.invalidateQueries({ queryKey: queryKeys.searchQueue(id) });
+      qc.invalidateQueries({ queryKey: ["search-queue", "all"] });
+    },
   });
 }
 

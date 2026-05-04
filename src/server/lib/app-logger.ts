@@ -1,6 +1,6 @@
 import { logger } from "./logger";
 import { redactContext } from "./redact";
-import { appLogRepository } from "@/server/repositories/AppLogRepository";
+import { eventBus } from "./event-bus";
 import type { LogLevel } from "@/shared/types/models";
 
 interface LogFields {
@@ -29,9 +29,18 @@ function persist(level: LogLevel, message: string, fields?: LogFields) {
     context: Object.keys(ctx).length ? JSON.stringify(ctx) : null,
   };
 
-  appLogRepository
-    .create(data)
-    .catch((e: unknown) => logger.error(e, "AppLog persist failed"));
+  // Dynamic import sidesteps the AppLogRepository → BaseRepository → prisma
+  // chain happening at module load (would force prisma to init for any
+  // module that imports appLogger). Once the row is persisted we push it
+  // onto the bus so the /logs SSE stream picks it up without polling.
+  import("@/server/repositories/AppLogRepository")
+    .then(({ appLogRepository }) =>
+      appLogRepository.create(data).then(
+        (entry) => eventBus.emit({ type: "applog", entry }),
+        (e: unknown) => logger.error(e, "AppLog persist failed"),
+      )
+    )
+    .catch((e: unknown) => logger.error(e, "AppLog repository import failed"));
 }
 
 export const appLogger = {

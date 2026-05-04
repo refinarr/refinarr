@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
   const { username, password } = parsed.data;
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user || !verifyPassword(password, user.passwordHash)) {
+    // TODO: source need to be from LogSource enum, but that causes a circular dependency. Refactor needed to fix.
     appLogger.warn("Failed login attempt", { source: "auth", context: { username } });
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }

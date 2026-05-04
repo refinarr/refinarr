@@ -1,7 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/client/lib/api";
+import { queryKeys } from "@/client/lib/query-keys";
 import type { ActionLog, FlaggedSeries } from "@/shared/types/models";
 
 export interface SeasonEpisodeConfig {
@@ -11,8 +12,14 @@ export interface SeasonEpisodeConfig {
 
 export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
   const { refetch, instanceId } = config;
+  const qc = useQueryClient();
   const tSearch = useTranslations("toast.search");
   const tDelete = useTranslations("toast.delete");
+
+  const invalidateQueue = () => {
+    qc.invalidateQueries({ queryKey: queryKeys.searchQueue(instanceId) });
+    qc.invalidateQueries({ queryKey: ["search-queue", "all"] });
+  };
 
   const seasonSearch = useMutation({
     mutationFn: ({ series, seasonNumber }: { series: FlaggedSeries; seasonNumber: number }) =>
@@ -23,6 +30,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
         title: `${series.title} — Season ${seasonNumber}`,
       }),
     onSuccess: (r) => {
+      invalidateQueue();
       if (r.isDryRun) toast.info(tSearch("seasonQueuedDryRun"));
       else toast.success(tSearch("seasonStarted"));
     },
@@ -38,6 +46,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
         title: `${series.title} — ${label}`,
       }),
     onSuccess: (r) => {
+      invalidateQueue();
       if (r.isDryRun) toast.info(tSearch("episodeQueuedDryRun"));
       else toast.success(tSearch("episodeStarted"));
     },
@@ -56,6 +65,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
         search,
       }),
     onSuccess: (r, vars) => {
+      if (vars.search) invalidateQueue();
       if (r.isDryRun) toast.info(vars.search ? tDelete("queuedAndSearchDryRun") : tDelete("queuedDryRun"));
       else {
         toast.success(vars.search ? tDelete("seasonDoneAndSearch") : tDelete("seasonDone"));
@@ -77,6 +87,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
         search,
       }),
     onSuccess: (r, vars) => {
+      if (vars.search) invalidateQueue();
       if (r.isDryRun) toast.info(vars.search ? tDelete("queuedAndSearchDryRun") : tDelete("queuedDryRun"));
       else {
         toast.success(vars.search ? tDelete("fileDoneAndSearch") : tDelete("fileDone"));

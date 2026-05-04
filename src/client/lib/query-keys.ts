@@ -16,4 +16,6 @@ export const queryKeys = {
     ["customFormats", type, instanceId] as const,
   health: () => ["health"] as const,
   appLogs: (params?: object) => ["appLogs", params] as const,
+  searchQueue: (instanceId: number) => ["search-queue", instanceId] as const,
+  recentSearches: (instanceId: number) => ["recent-searches", instanceId] as const,
 };

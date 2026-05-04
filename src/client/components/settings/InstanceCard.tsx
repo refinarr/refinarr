@@ -3,10 +3,12 @@ import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
-import { Edit2, Trash2, Plug } from "lucide-react";
+import { Edit2, Trash2, Plug, Hourglass } from "lucide-react";
 import { useDeleteInstance, useTestConnection } from "@/client/hooks/data/useInstances";
 import { usePreferences } from "@/client/hooks/data/usePreferences";
+import { useSearchQueue } from "@/client/hooks/data/useSearchQueue";
 import { withToast } from "@/client/lib/with-toast";
+import { formatEta } from "@/client/lib/format-relative";
 import type { Instance } from "@/shared/types/models";
 
 interface Props {
@@ -17,12 +19,15 @@ interface Props {
 
 export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
   const t = useTranslations("settings");
+  const tForm = useTranslations("settings.instanceForm");
   const tToast = useTranslations("toast.instance");
   const tCommon = useTranslations("common");
   const deleteInstance = useDeleteInstance();
   const test = useTestConnection();
   const { data: prefs } = usePreferences(instance.id);
+  const { data: queue } = useSearchQueue(instance.id);
   const noCfs = (prefs?.length ?? 0) === 0 && instance.enabled;
+  const pendingCount = queue?.pendingCount ?? 0;
 
   const runTest = withToast(test, {
     success: tToast("testOk", { name: instance.name }),
@@ -47,6 +52,16 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
             <p className="text-xs text-yellow-400 mt-0.5">{t("noCfsConfigured")}</p>
           )}
         </div>
+        {pendingCount > 0 && (
+          <Badge
+            variant="outline"
+            title={tForm("queuedBadgeTooltip", { count: pendingCount, eta: formatEta(queue?.etaMs ?? 0) })}
+            className="gap-1"
+          >
+            <Hourglass className="h-3 w-3" />
+            {tForm("queuedBadge", { count: pendingCount })}
+          </Badge>
+        )}
         {failedCount > 0 && (
           <Badge variant="destructive">{failedCount} failed</Badge>
         )}

@@ -104,4 +104,43 @@ describe("LogRepository", () => {
     // Oldest two should be gone (mediaId 0, 1).
     expect(remaining.map((r) => r.mediaId).sort()).toEqual([2, 3, 4, 5, 6]);
   });
+
+  describe("findRecentSearches", () => {
+    test("returns the most recent successful search per mediaId within the window", async () => {
+      await logRepository.create({ ...baseLog, mediaId: 1, title: "first hit" });
+      await new Promise((r) => setTimeout(r, 5));
+      await logRepository.create({ ...baseLog, mediaId: 1, title: "second hit (newer)" });
+      await logRepository.create({ ...baseLog, mediaId: 2, title: "other media" });
+
+      const results = await logRepository.findRecentSearches(1, 60_000);
+      expect(results).toHaveLength(2);
+      const idMap = new Map(results.map((r) => [r.mediaId, r.lastSearchedAt]));
+      // Two successful rows for mediaId=1 — collapse to the latest.
+      expect(idMap.has(1)).toBe(true);
+      expect(idMap.has(2)).toBe(true);
+    });
+
+    test("excludes rows older than the window", async () => {
+      await logRepository.create({ ...baseLog, mediaId: 1 });
+      // Wait a moment so the row is now outside a 1ms window.
+      await new Promise((r) => setTimeout(r, 10));
+      const results = await logRepository.findRecentSearches(1, 1);
+      expect(results).toHaveLength(0);
+    });
+
+    test("excludes failed and dry_run rows — only success counts as 'searched'", async () => {
+      await logRepository.create({ ...baseLog, mediaId: 1, status: "failed", error: "boom" });
+      await logRepository.create({ ...baseLog, mediaId: 2, status: "dry_run", isDryRun: true });
+      const results = await logRepository.findRecentSearches(1, 60_000);
+      expect(results).toHaveLength(0);
+    });
+
+    test("scopes to the given instance", async () => {
+      await logRepository.create({ ...baseLog, instanceId: 1, mediaId: 1 });
+      await logRepository.create({ ...baseLog, instanceId: 2, mediaId: 1 });
+      expect(await logRepository.findRecentSearches(1, 60_000)).toHaveLength(1);
+      expect(await logRepository.findRecentSearches(2, 60_000)).toHaveLength(1);
+      expect(await logRepository.findRecentSearches(3, 60_000)).toHaveLength(0);
+    });
+  });
 });

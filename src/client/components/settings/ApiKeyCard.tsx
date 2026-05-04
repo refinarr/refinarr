@@ -33,7 +33,7 @@ export function ApiKeyCard() {
     setPwOpen(true);
   };
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!pending) return;
     setPwErr(null);

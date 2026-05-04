@@ -22,6 +22,7 @@ export abstract class ArrClient {
   protected readonly baseUrl: string;
   protected readonly apiKey: string;
   protected readonly instanceName: string;
+  protected readonly instanceId: number;
 
   constructor(instance: Instance) {
     // Defense in depth: even if a row was tampered with, refuse to fetch
@@ -30,6 +31,7 @@ export abstract class ArrClient {
     this.baseUrl = instance.url.replace(/\/$/, "");
     this.apiKey = instance.apiKey;
     this.instanceName = instance.name;
+    this.instanceId = instance.id;
   }
 
   protected async fetch<T>(path: string, init?: RequestInit): Promise<T> {

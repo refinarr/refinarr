@@ -62,6 +62,34 @@ export class LogRepository extends BaseRepository<ActionLog> {
     }) as Promise<ActionLog[]>;
   }
 
+  /**
+   * Per-instance summary used by the "Searched Xm ago" badge: for each
+   * mediaId that had a successful search action within `windowMs`, the
+   * timestamp of its most recent success. Returned ordered by most recent
+   * first so callers that build a Map<mediaId, Date> get the latest entry.
+   */
+  async findRecentSearches(
+    instanceId: number,
+    windowMs: number
+  ): Promise<Array<{ mediaId: number; lastSearchedAt: Date }>> {
+    const since = new Date(Date.now() - windowMs);
+    const rows = await this.db.actionLog.findMany({
+      where: {
+        instanceId,
+        action: "search",
+        status: "success",
+        createdAt: { gte: since },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { mediaId: true, createdAt: true },
+    });
+    const seen = new Map<number, Date>();
+    for (const r of rows) {
+      if (!seen.has(r.mediaId)) seen.set(r.mediaId, r.createdAt);
+    }
+    return [...seen.entries()].map(([mediaId, lastSearchedAt]) => ({ mediaId, lastSearchedAt }));
+  }
+
   async create(
     data: Omit<ActionLog, "id" | "createdAt">
   ): Promise<ActionLog> {

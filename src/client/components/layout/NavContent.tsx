@@ -2,14 +2,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Film, Tv2, LayoutDashboard, History, Settings, EyeOff, AlertCircle, LogOut } from "lucide-react";
+import { Film, Tv2, LayoutDashboard, History, Settings, EyeOff, AlertCircle, LogOut, Hourglass } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/client/lib/utils";
 import { useMe, useLogout } from "@/client/hooks/data/useMe";
 
 interface NavLink {
   href: string;
-  key: "dashboard" | "movies" | "shows" | "ignored" | "history" | "logs" | "settings";
+  key: "dashboard" | "movies" | "shows" | "ignored" | "queue" | "history" | "logs" | "settings";
   icon: LucideIcon;
 }
 
@@ -18,6 +18,7 @@ const links: NavLink[] = [
   { href: "/movies", key: "movies", icon: Film },
   { href: "/shows", key: "shows", icon: Tv2 },
   { href: "/ignored", key: "ignored", icon: EyeOff },
+  { href: "/queue", key: "queue", icon: Hourglass },
   { href: "/history", key: "history", icon: History },
   { href: "/logs", key: "logs", icon: AlertCircle },
   { href: "/settings", key: "settings", icon: Settings },

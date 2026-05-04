@@ -7,7 +7,7 @@ export const POST = createApiHandler(async (_req, ctx) => {
   const id = Number(ctx.params.id);
   dataCache.invalidate(id);
   appLogger.info("Manual refresh triggered", {
-    source: "refresh-route",
+    // TODO:  sources should be from LogSource enum",
     context: { instanceId: id },
   });
   return NextResponse.json({ ok: true });

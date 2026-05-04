@@ -23,6 +23,7 @@ export const PUT = createApiHandler(async (req: NextRequest) => {
   await preferenceRepository.setForInstance(instanceId, cfs);
   dataCache.invalidate(instanceId);
   appLogger.info("Custom Format preferences updated", {
+    // TODO:  sources should be from LogSource enum
     source: "preferences-route",
     context: { instanceId, count: cfs.length },
   });

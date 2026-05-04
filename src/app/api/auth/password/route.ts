@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!verifyPassword(currentPassword, user.passwordHash)) {
+    // TODO:  sources should be from LogSource enum, but that causes a circular dependency. Refactor needed to fix.
     appLogger.warn("Failed password change attempt", { source: "auth", context: { userId: user.id } });
     return NextResponse.json({ error: "Wrong current password" }, { status: 401 });
   }
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
   await prisma.session.deleteMany({
     where: { userId: user.id, id: { not: sessionId } },
   });
-
+  // TODO:  sources should be from LogSource enum, but that causes a circular dependency. Refactor needed to fix.
   appLogger.info("Password changed", { source: "auth", context: { userId: user.id } });
   return NextResponse.json({ ok: true });
 }

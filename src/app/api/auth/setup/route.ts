@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       data: { username, passwordHash: hashPassword(password) },
     });
     const session = await createSession(user.id);
+    // TODO:  sources should be from LogSource enum, but that causes a circular dependency. Refactor needed to fix.
     appLogger.info("Initial admin user created", { source: "auth", context: { username } });
     const res = NextResponse.json({ ok: true });
     res.cookies.set(SESSION_COOKIE, session.id, {

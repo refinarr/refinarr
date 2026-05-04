@@ -38,6 +38,7 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
         name: z.string().min(1),
         url: z.url(),
         apiKey: isEdit ? z.string() : z.string().min(1),
+        searchesPerHour: z.number().int().min(1).max(1000),
       }),
     [isEdit]
   );
@@ -46,8 +47,8 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
   const { register, handleSubmit, setValue, reset, getValues, control, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: editing
-      ? { type: editing.type, name: editing.name, url: editing.url, apiKey: "" }
-      : { type: "radarr", name: "", url: "", apiKey: "" },
+      ? { type: editing.type, name: editing.name, url: editing.url, apiKey: "", searchesPerHour: editing.searchesPerHour }
+      : { type: "radarr", name: "", url: "", apiKey: "", searchesPerHour: 20 },
   });
 
   const runUpdate = withToast(update, { success: tToast("updated"), error: tToast("updateFailed") });
@@ -70,7 +71,7 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
     if (editing) {
       const payload = data.apiKey.trim()
         ? data
-        : { type: data.type, name: data.name, url: data.url };
+        : { type: data.type, name: data.name, url: data.url, searchesPerHour: data.searchesPerHour };
       await runUpdate({ id: editing.id, data: payload });
     } else {
       await runCreate(data);
@@ -120,6 +121,20 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
               {...register("apiKey")}
               type="password"
               placeholder={isEdit ? t("apiKeyPlaceholderEdit") : t("apiKeyPlaceholderNew")}
+            />
+          </FormField>
+          <FormField
+            id="instance-sph"
+            label={t("searchesPerHour")}
+            error={errors.searchesPerHour?.message}
+            description={t("searchesPerHourHelp")}
+          >
+            <Input
+              {...register("searchesPerHour", { valueAsNumber: true })}
+              type="number"
+              min={1}
+              max={1000}
+              inputMode="numeric"
             />
           </FormField>
           <DialogFooter>

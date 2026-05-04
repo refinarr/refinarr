@@ -61,7 +61,7 @@ describe("GET /api/radarr/movies", () => {
 });
 
 describe("POST /api/radarr/movies/search", () => {
-  test("returns ActionLog with status=success on successful upstream search", async () => {
+  test("enqueues a movie search and returns 202 (queue takes over upstream dispatch)", async () => {
     const instanceId = await makeInstance();
     let commandHit = false;
     mswServer.use(...radarrHandlers({ baseUrl }, {
@@ -73,10 +73,12 @@ describe("POST /api/radarr/movies/search", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ instanceId, mediaId: 1, title: "X" }),
     }), ctxNone);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(202);
     const body = await res.json();
-    expect(body.status).toBe("success");
-    expect(commandHit).toBe(true);
+    expect(body.queued).toBe(true);
+    expect(typeof body.queueId).toBe("number");
+    // Worker is what actually hits upstream — the route only enqueues.
+    expect(commandHit).toBe(false);
   });
 
   test("schema-failing body returns 400", async () => {

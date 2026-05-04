@@ -19,6 +19,7 @@ export interface CreateInstanceDto {
   url: string;
   apiKey: string;
   enabled?: boolean;
+  searchesPerHour?: number;
 }
 
 export type UpdateInstanceDto = Partial<CreateInstanceDto> & {
@@ -35,6 +36,7 @@ export interface InstanceListItem {
   url: string;
   enabled: boolean;
   scoringMode: "manual" | "profile";
+  searchesPerHour: number;
   createdAt: string | Date;
 }
 

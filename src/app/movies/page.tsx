@@ -13,6 +13,7 @@ import { ActiveFilterChips, buildCfChips, type FilterChip } from "@/client/compo
 import { SeverityDot } from "@/client/components/media/SeverityDot";
 import { ScoreLabel } from "@/client/components/media/ScoreLabel";
 import { CfBadge } from "@/client/components/media/CfBadge";
+import { SearchStatusBadge } from "@/client/components/media/SearchStatusBadge";
 import { RowHoverActions } from "@/client/components/media/RowHoverActions";
 import { AllClearState } from "@/client/components/states/AllClearState";
 import { NoCfsPrompt } from "@/client/components/states/NoCfsPrompt";
@@ -32,11 +33,14 @@ import { useMediaFilters } from "@/client/hooks/media/useMediaFilters";
 import { useMediaSelection } from "@/client/hooks/media/useMediaSelection";
 import { useDetailDrawer } from "@/client/hooks/media/useDetailDrawer";
 import { useFlaggedMoviesData } from "@/client/hooks/media/useFlaggedMoviesData";
+import { useQueuedMediaIds } from "@/client/hooks/data/useSearchQueue";
+import { useRecentSearchMap } from "@/client/hooks/data/useRecentSearches";
 import { useBulkAbort } from "@/client/hooks/media/useBulkAbort";
 import { useBulkMediaActions, type BulkActionsConfig } from "@/client/hooks/media/useBulkMediaActions";
 import { useBulkHandlers } from "@/client/hooks/media/useBulkHandlers";
 import { getSeverity } from "@/client/lib/severity";
 import { formatBytes } from "@/client/lib/format";
+import { formatRelative } from "@/client/lib/format-relative";
 import type { FlaggedMovie, ScoringMode } from "@/shared/types/models";
 
 type MovieBulkConfig = Pick<
@@ -94,6 +98,8 @@ function MoviesPageContent() {
     activeInstance: inst.activeInstance,
     filters: filters.forQuery,
   });
+  const queuedIds = useQueuedMediaIds(inst.activeInstance);
+  const recentMap = useRecentSearchMap(inst.activeInstance);
   const sentinelRef = useInfiniteScroll(data.fetchNextPage, data.hasNextPage);
   const selection = useMediaSelection<FlaggedMovie>(data.allMovies, MOVIE_BULK_CONFIG.delete.isDeletable);
   const drawer = useDetailDrawer<FlaggedMovie>(data.allMovies);
@@ -149,12 +155,26 @@ function MoviesPageContent() {
       key: "title",
       header: tCols("title"),
       sortKey: "title",
-      render: (m) => (
-        <div className="flex items-baseline gap-2 min-w-0">
-          <span className="font-medium truncate">{m.title}</span>
-          <span className="text-muted-foreground text-xs shrink-0">{m.year}</span>
-        </div>
-      ),
+      render: (m) => {
+        const recent = !queuedIds.has(m.id) ? recentMap.get(m.id) : undefined;
+        return (
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span className="font-medium truncate">{m.title}</span>
+            <span className="text-muted-foreground text-xs shrink-0">{m.year}</span>
+            {queuedIds.has(m.id) && (
+              <SearchStatusBadge status="pending" instanceId={inst.activeInstance} />
+            )}
+            {recent && (
+              <SearchStatusBadge
+                status="searched"
+                instanceId={inst.activeInstance}
+                title={m.title}
+                relativeTime={formatRelative(recent)}
+              />
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "profile",
@@ -342,12 +362,24 @@ function MoviesPageContent() {
                 renderCard={(m) => {
                   const score = scoringMode === "profile" ? m.customFormatScore : m.cfScore;
                   const items = scoringMode === "profile" ? m.unwantedFormats : m.missingFormats;
+                  const recent = !queuedIds.has(m.id) ? recentMap.get(m.id) : undefined;
                   return (
                     <div className="space-y-1.5">
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
                         <SeverityDot severity={getSeverity(score, m.minProfileScore, scoringMode, m.hasFile)} />
                         <span className="font-medium truncate">{m.title}</span>
                         <span className="text-muted-foreground text-xs shrink-0">{m.year}</span>
+                        {queuedIds.has(m.id) && (
+                          <SearchStatusBadge status="pending" instanceId={inst.activeInstance} />
+                        )}
+                        {recent && (
+                          <SearchStatusBadge
+                            status="searched"
+                            instanceId={inst.activeInstance}
+                            title={m.title}
+                            relativeTime={formatRelative(recent)}
+                          />
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         {scoringMode === "profile" && !m.hasFile ? (
