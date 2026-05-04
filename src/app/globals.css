@@ -2,7 +2,27 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* ----------------------------------------------------------------------
+ * BRAND PALETTE — single source of truth.
+ *
+ * Edit these five tokens to recolor the entire app. Each one becomes a
+ * Tailwind utility (e.g. `bg-brand-amber`, `bg-surface-dark`,
+ * `fill-foreground-on-brand`) and is referenced by the per-theme blocks
+ * below to set --brand.
+ *
+ * Hex equivalents (for the small set of files that cannot read CSS at
+ * runtime — favicon SVG, manifest.ts, viewport metadata) are mirrored in
+ * `src/shared/theme.ts`. Keep them in sync if you change colors here.
+ * -------------------------------------------------------------------- */
+@theme {
+  --color-brand-amber: oklch(0.78 0.16 75);          /* #f59e0b */
+  --color-brand-teal: oklch(0.74 0.13 180);          /* #14b8a6 */
+  --color-surface-dark: oklch(0.145 0 0);            /* #0a0a0a */
+  --color-surface-light: oklch(1 0 0);               /* #ffffff */
+  --color-foreground-on-brand: oklch(0.145 0 0);     /* dark text on brand */
+}
+
+@custom-variant dark (&:is([data-theme="dark-orange"] *, [data-theme="dark-teal"] *));
 
 @theme inline {
   --color-background: var(--background);
@@ -39,6 +59,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-brand: var(--brand);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -83,7 +104,8 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-.dark {
+[data-theme="dark-orange"],
+[data-theme="dark-teal"] {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -116,6 +138,12 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
+
+/* Per-theme brand accent. The neutral palette is set above by the
+   data-theme selectors; this just maps each theme to a palette token. */
+[data-theme="light"],
+[data-theme="dark-orange"] { --brand: var(--color-brand-amber); }
+[data-theme="dark-teal"]   { --brand: var(--color-brand-teal); }
 
 @layer base {
   * {

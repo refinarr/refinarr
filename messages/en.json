@@ -1,5 +1,4 @@
 {
-  "appName": "Refinarr",
   "auth": {
     "setup": {
       "title": "Welcome to Refinarr",
@@ -269,6 +268,15 @@
     "wantedCfsHelp": "Select which Custom Formats each instance should have. Media missing any of these will be flagged.",
     "noCfsConfigured": "No Custom Formats configured",
     "dryRunMode": "Dry Run Mode",
+    "appearance": {
+      "title": "Appearance",
+      "ariaLabel": "Theme",
+      "themes": {
+        "dark-orange": "Dark — Orange",
+        "dark-teal": "Dark — Teal",
+        "light": "Light"
+      }
+    },
     "apiAccess": "API Access",
     "apiKey": {
       "description": "Use this key in the X-Api-Key header for scripted access. Reveal or rotate requires your password.",
