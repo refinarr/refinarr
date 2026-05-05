@@ -23,6 +23,7 @@ export function useApiKeyActions() {
   const copyClipboard = useMutation({
     mutationFn: (text: string) => navigator.clipboard.writeText(text),
   });
+  const revealWithToast = withToast(reveal, { success: tk("revealed"), error: tk("revealFailed") });
   const rotateWithToast = withToast(rotate, { success: tk("rotated"), error: tk("rotateFailed") });
   const copyWithToast = withToast(copyClipboard, { success: tk("copied"), error: tk("copyFailed") });
 
@@ -49,9 +50,7 @@ export function useApiKeyActions() {
     setPwErr(null);
     const action = pending;
     try {
-      const data = action === "rotate"
-        ? await rotateWithToast({ password: pw })
-        : await reveal.mutateAsync({ password: pw });
+      const data = await (action === "rotate" ? rotateWithToast : revealWithToast)({ password: pw });
       setRevealed(data.apiKey);
       resetPrompt();
     } catch (caught) {

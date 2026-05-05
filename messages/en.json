@@ -334,6 +334,8 @@
       "tooManyAttempts": "Too many attempts. Try again later.",
       "copied": "API key copied",
       "copyFailed": "Couldn't copy to clipboard",
+      "revealed": "API key revealed",
+      "revealFailed": "Couldn't reveal API key",
       "rotated": "API key rotated",
       "rotateFailed": "Couldn't rotate API key"
     },
