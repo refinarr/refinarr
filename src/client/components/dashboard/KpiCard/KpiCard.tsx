@@ -1,7 +1,12 @@
 "use client";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/client/components/ui/card";
 import { KpiCardSkeleton } from "@/client/components/states/KpiCardSkeleton";
 
 type Tone = "default" | "warning" | "destructive";
@@ -20,17 +25,29 @@ const toneClasses: Record<Tone, string> = {
   destructive: "text-destructive",
 };
 
-export function KpiCard({ label, value, href, tone = "default", loading }: Props) {
+export function KpiCard({
+  label,
+  value,
+  href,
+  tone = "default",
+  loading,
+}: Props) {
   if (loading) return <KpiCardSkeleton />;
   const inner = (
-    <Card className={href ? "transition-colors hover:bg-muted/40 cursor-pointer" : ""}>
+    <Card
+      className={
+        href ? "transition-colors hover:bg-muted/40 cursor-pointer" : ""
+      }
+    >
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {label}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className={`text-3xl font-bold tabular-nums ${toneClasses[tone]}`}>{value}</p>
+        <p className={`text-3xl font-bold tabular-nums ${toneClasses[tone]}`}>
+          {value}
+        </p>
       </CardContent>
     </Card>
   );

@@ -23,7 +23,12 @@ export function RetryButton({ logId, title }: Props) {
   };
 
   return (
-    <Button variant="outline" size="sm" onClick={handleRetry} disabled={retry.isPending}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleRetry}
+      disabled={retry.isPending}
+    >
       <RotateCcw className="h-3 w-3 mr-1" /> Retry
     </Button>
   );

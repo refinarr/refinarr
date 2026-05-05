@@ -2,7 +2,13 @@
 import { useTranslations } from "next-intl";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/client/components/ui/select";
 import { Label } from "@/client/components/ui/label";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { InstanceConnectionDot } from "@/client/components/common/InstanceConnectionDot";
@@ -45,7 +51,8 @@ export function MediaPageHeader({
   const showInstanceContext = activeInstance > 0 && !!activeInstanceName;
 
   const mode: ScoringMode =
-    typedInstances.find((i) => i.id === activeInstance)?.scoringMode ?? DEFAULT_SCORING_MODE;
+    typedInstances.find((i) => i.id === activeInstance)?.scoringMode ??
+    DEFAULT_SCORING_MODE;
 
   return (
     <div className="space-y-3">
@@ -53,8 +60,12 @@ export function MediaPageHeader({
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/30 bg-primary/10 px-4 py-2">
           <div className="flex items-center gap-2 text-sm">
             <InstanceConnectionDot instanceId={activeInstance} />
-            <span className="font-semibold text-primary">{activeInstanceName}</span>
-            <span className="text-muted-foreground/60" aria-hidden>·</span>
+            <span className="font-semibold text-primary">
+              {activeInstanceName}
+            </span>
+            <span className="text-muted-foreground/60" aria-hidden>
+              ·
+            </span>
             <span className="text-muted-foreground">
               {tInstSel("scoringModeBanner", { mode: tScoringOpts(mode) })}
             </span>
@@ -66,7 +77,9 @@ export function MediaPageHeader({
             disabled={refreshPending}
             className="border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
           >
-            <RefreshCw className={cn("h-4 w-4", refreshPending && "animate-spin")} />
+            <RefreshCw
+              className={cn("h-4 w-4", refreshPending && "animate-spin")}
+            />
             {tCommon("refresh")}
           </Button>
         </div>
@@ -92,17 +105,23 @@ export function MediaPageHeader({
                 onValueChange={(v) => onSetInstance(Number(v ?? 0))}
               >
                 <SelectTrigger className="w-44" data-testid="instance-switcher">
-                  <SelectValue>{activeInstanceName ?? tInstSel("selectInstance")}</SelectValue>
+                  <SelectValue>
+                    {activeInstanceName ?? tInstSel("selectInstance")}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {typedInstances.map((i) => (
-                    <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
+                    <SelectItem key={i.id} value={String(i.id)}>
+                      {i.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           )}
-          {showInstanceContext && <ScoringModeSelector instanceId={activeInstance} />}
+          {showInstanceContext && (
+            <ScoringModeSelector instanceId={activeInstance} />
+          )}
         </div>
       </div>
     </div>

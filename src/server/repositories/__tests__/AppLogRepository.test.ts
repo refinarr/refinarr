@@ -2,7 +2,12 @@ import { describe, test, expect } from "vitest";
 import { appLogRepository } from "@/server/repositories/AppLogRepository";
 import { prisma } from "@/server/lib/db";
 
-const baseEntry = { level: "info" as const, message: "hello", source: "test", context: null };
+const baseEntry = {
+  level: "info" as const,
+  message: "hello",
+  source: "test",
+  context: null,
+};
 
 describe("AppLogRepository", () => {
   test("create + findById round-trips", async () => {
@@ -22,7 +27,11 @@ describe("AppLogRepository", () => {
   test("findPaginated applies level filter", async () => {
     await appLogRepository.create({ ...baseEntry, level: "info" });
     await appLogRepository.create({ ...baseEntry, level: "error" });
-    const errors = await appLogRepository.findPaginated({ level: "error" }, 1, 50);
+    const errors = await appLogRepository.findPaginated(
+      { level: "error" },
+      1,
+      50,
+    );
     expect(errors.total).toBe(1);
     expect(errors.items[0].level).toBe("error");
   });
@@ -30,7 +39,11 @@ describe("AppLogRepository", () => {
   test("findPaginated applies q substring filter on message", async () => {
     await appLogRepository.create({ ...baseEntry, message: "needle in here" });
     await appLogRepository.create({ ...baseEntry, message: "unrelated" });
-    const matches = await appLogRepository.findPaginated({ q: "needle" }, 1, 50);
+    const matches = await appLogRepository.findPaginated(
+      { q: "needle" },
+      1,
+      50,
+    );
     expect(matches.total).toBe(1);
   });
 
@@ -43,8 +56,16 @@ describe("AppLogRepository", () => {
   });
 
   test("findSince accepts level filter", async () => {
-    await appLogRepository.create({ ...baseEntry, level: "info", message: "i" });
-    const e = await appLogRepository.create({ ...baseEntry, level: "error", message: "e" });
+    await appLogRepository.create({
+      ...baseEntry,
+      level: "info",
+      message: "i",
+    });
+    const e = await appLogRepository.create({
+      ...baseEntry,
+      level: "error",
+      message: "e",
+    });
     const after = await appLogRepository.findSince(0, { level: "error" });
     expect(after.map((r) => r.id)).toEqual([e.id]);
   });
@@ -94,6 +115,12 @@ describe("AppLogRepository", () => {
     const remaining = await appLogRepository.findAll();
     expect(remaining).toHaveLength(5);
     // Oldest two ("m0", "m1") should be gone.
-    expect(remaining.map((r) => r.message).sort()).toEqual(["m2", "m3", "m4", "m5", "m6"]);
+    expect(remaining.map((r) => r.message).sort()).toEqual([
+      "m2",
+      "m3",
+      "m4",
+      "m5",
+      "m6",
+    ]);
   });
 });

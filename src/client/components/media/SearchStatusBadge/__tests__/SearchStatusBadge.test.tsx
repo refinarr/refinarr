@@ -22,14 +22,23 @@ describe("SearchStatusBadge", () => {
       />,
     );
     const link = screen.getByRole("link");
-    expect(link.getAttribute("href")).toBe("/history?instanceId=7&q=Some%20Movie");
+    expect(link.getAttribute("href")).toBe(
+      "/history?instanceId=7&q=Some%20Movie",
+    );
     expect(screen.getByText("Searched 12m ago")).toBeInTheDocument();
   });
 
   it("falls back to plain history link when no title is provided", () => {
     renderWithProviders(
-      <SearchStatusBadge status="searched" instanceId={7} relativeTime="3m ago" />,
+      <SearchStatusBadge
+        status="searched"
+        instanceId={7}
+        relativeTime="3m ago"
+      />,
     );
-    expect(screen.getByRole("link")).toHaveAttribute("href", "/history?instanceId=7");
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/history?instanceId=7",
+    );
   });
 });

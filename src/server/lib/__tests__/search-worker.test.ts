@@ -4,7 +4,13 @@ import { searchQueueService } from "@/server/services/SearchQueueService";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { instanceService } from "@/server/services/InstanceService";
-import { mswServer, http, HttpResponse, radarrHandlers, sonarrHandlers } from "@/test/msw";
+import {
+  mswServer,
+  http,
+  HttpResponse,
+  radarrHandlers,
+  sonarrHandlers,
+} from "@/test/msw";
 
 const radarrBase = "http://192.168.1.10:7878";
 const sonarrBase = "http://192.168.1.20:8989";
@@ -43,17 +49,26 @@ describe("SearchWorker", () => {
         commands.push((await request.json()) as Record<string, unknown>);
         return HttpResponse.json({ id: 1 });
       }),
-      ...radarrHandlers({ baseUrl: radarrBase }, { movies: [], movieFiles: [], qualityProfiles: [] }),
+      ...radarrHandlers(
+        { baseUrl: radarrBase },
+        { movies: [], movieFiles: [], qualityProfiles: [] },
+      ),
     );
     const queued = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "movie", mediaId: 42, title: "X",
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 42,
+      title: "X",
     });
 
     await searchWorker.start();
-    await vi.waitFor(async () => {
-      const refetched = await searchQueueRepository.findById(queued.id);
-      expect(refetched?.status).toBe("done");
-    }, { timeout: 2000 });
+    await vi.waitFor(
+      async () => {
+        const refetched = await searchQueueRepository.findById(queued.id);
+        expect(refetched?.status).toBe("done");
+      },
+      { timeout: 2000 },
+    );
 
     expect(commands.length).toBe(1);
     expect(commands[0].name).toBe("MoviesSearch");
@@ -80,7 +95,10 @@ describe("SearchWorker", () => {
       ...sonarrHandlers({ baseUrl: sonarrBase }),
     );
     await searchQueueService.enqueue({
-      instanceId: inst.id, action: "series", mediaId: 7, title: "Show",
+      instanceId: inst.id,
+      action: "series",
+      mediaId: 7,
+      title: "Show",
     });
 
     await searchWorker.start();
@@ -100,7 +118,10 @@ describe("SearchWorker", () => {
       ...sonarrHandlers({ baseUrl: sonarrBase }),
     );
     await searchQueueService.enqueue({
-      instanceId: inst.id, action: "season", mediaId: 7, title: "Show",
+      instanceId: inst.id,
+      action: "season",
+      mediaId: 7,
+      title: "Show",
       payload: { seasonNumber: 3 },
     });
 
@@ -114,19 +135,31 @@ describe("SearchWorker", () => {
   test("marks a queue row failed when upstream errors", async () => {
     const inst = await makeRadarr();
     mswServer.use(
-      http.post(`${radarrBase}/api/v3/command`, () => new HttpResponse(null, { status: 500 })),
-      ...radarrHandlers({ baseUrl: radarrBase }, { movies: [], movieFiles: [], qualityProfiles: [] }),
+      http.post(
+        `${radarrBase}/api/v3/command`,
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+      ...radarrHandlers(
+        { baseUrl: radarrBase },
+        { movies: [], movieFiles: [], qualityProfiles: [] },
+      ),
     );
     const queued = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "movie", mediaId: 1, title: "X",
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 1,
+      title: "X",
     });
 
     await searchWorker.start();
-    await vi.waitFor(async () => {
-      const refetched = await searchQueueRepository.findById(queued.id);
-      expect(refetched?.status).toBe("failed");
-      expect(refetched?.error).toContain("500");
-    }, { timeout: 2000 });
+    await vi.waitFor(
+      async () => {
+        const refetched = await searchQueueRepository.findById(queued.id);
+        expect(refetched?.status).toBe("failed");
+        expect(refetched?.error).toContain("500");
+      },
+      { timeout: 2000 },
+    );
   });
 
   test("marks the row failed when the instance no longer exists mid-flight", async () => {
@@ -150,11 +183,14 @@ describe("SearchWorker", () => {
       fileId: 0,
     });
 
-    await vi.waitFor(async () => {
-      const refetched = await searchQueueRepository.findById(queued.id);
-      expect(refetched?.status).toBe("failed");
-      expect(refetched?.error).toContain("Instance not found");
-    }, { timeout: 2000 });
+    await vi.waitFor(
+      async () => {
+        const refetched = await searchQueueRepository.findById(queued.id);
+        expect(refetched?.status).toBe("failed");
+        expect(refetched?.error).toContain("Instance not found");
+      },
+      { timeout: 2000 },
+    );
   });
 
   test("episode action resolves episodeIds via getEpisodes and posts EpisodeSearch", async () => {
@@ -165,11 +201,13 @@ describe("SearchWorker", () => {
         commands.push((await request.json()) as Record<string, unknown>);
         return HttpResponse.json({ id: 1 });
       }),
-      http.get(`${sonarrBase}/api/v3/episode`, () => HttpResponse.json([
-        { id: 100, episodeFileId: 999, seasonNumber: 1, episodeNumber: 1 },
-        { id: 101, episodeFileId: 42, seasonNumber: 1, episodeNumber: 2 },
-        { id: 102, episodeFileId: 42, seasonNumber: 1, episodeNumber: 3 },
-      ])),
+      http.get(`${sonarrBase}/api/v3/episode`, () =>
+        HttpResponse.json([
+          { id: 100, episodeFileId: 999, seasonNumber: 1, episodeNumber: 1 },
+          { id: 101, episodeFileId: 42, seasonNumber: 1, episodeNumber: 2 },
+          { id: 102, episodeFileId: 42, seasonNumber: 1, episodeNumber: 3 },
+        ]),
+      ),
       ...sonarrHandlers({ baseUrl: sonarrBase }),
     );
     await searchQueueService.enqueue({
@@ -197,14 +235,20 @@ describe("SearchWorker", () => {
     const { prisma } = await import("@/server/lib/db");
     await prisma.instance.delete({ where: { id: inst.id } });
     const queued = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "movie", mediaId: 1, title: "ghost",
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 1,
+      title: "ghost",
     });
 
-    await vi.waitFor(async () => {
-      const refetched = await searchQueueRepository.findById(queued.id);
-      expect(refetched?.status).toBe("failed");
-      expect(refetched?.error).toMatch(/Instance not found/);
-    }, { timeout: 3000 });
+    await vi.waitFor(
+      async () => {
+        const refetched = await searchQueueRepository.findById(queued.id);
+        expect(refetched?.status).toBe("failed");
+        expect(refetched?.error).toMatch(/Instance not found/);
+      },
+      { timeout: 3000 },
+    );
   });
 
   test("worker marks the row failed when the action is unknown", async () => {
@@ -223,11 +267,14 @@ describe("SearchWorker", () => {
     mswServer.use(...radarrHandlers({ baseUrl: radarrBase }));
 
     await searchWorker.start();
-    await vi.waitFor(async () => {
-      const refetched = await searchQueueRepository.findById(queued.id);
-      expect(refetched?.status).toBe("failed");
-      expect(refetched?.error).toMatch(/Unknown queue action/);
-    }, { timeout: 3000 });
+    await vi.waitFor(
+      async () => {
+        const refetched = await searchQueueRepository.findById(queued.id);
+        expect(refetched?.status).toBe("failed");
+        expect(refetched?.error).toMatch(/Unknown queue action/);
+      },
+      { timeout: 3000 },
+    );
   });
 
   test("a follow-up enqueue after the queue empties drains immediately", async () => {
@@ -241,7 +288,10 @@ describe("SearchWorker", () => {
         commands.push((await request.json()) as Record<string, unknown>);
         return HttpResponse.json({ id: 1 });
       }),
-      ...radarrHandlers({ baseUrl: radarrBase }, { movies: [], movieFiles: [], qualityProfiles: [] }),
+      ...radarrHandlers(
+        { baseUrl: radarrBase },
+        { movies: [], movieFiles: [], qualityProfiles: [] },
+      ),
     );
 
     await searchWorker.start();
@@ -253,12 +303,18 @@ describe("SearchWorker", () => {
     // Now enqueue. enqueue() pokes kick(); since no real drain happened,
     // kick() should fire processOne immediately and dispatch this search.
     const enqueued = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "movie", mediaId: 7, title: "Late Arrival",
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 7,
+      title: "Late Arrival",
     });
-    await vi.waitFor(async () => {
-      const refetched = await searchQueueRepository.findById(enqueued.id);
-      expect(refetched?.status).toBe("done");
-    }, { timeout: 2000 });
+    await vi.waitFor(
+      async () => {
+        const refetched = await searchQueueRepository.findById(enqueued.id);
+        expect(refetched?.status).toBe("done");
+      },
+      { timeout: 2000 },
+    );
     expect(commands.length).toBe(1);
   });
 });

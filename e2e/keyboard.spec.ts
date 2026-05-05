@@ -13,12 +13,18 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/api/dashboard/summary**", (route) =>
     route.fulfill({
       status: 200,
-      json: { totals: { flaggedMovies: 0, flaggedSeries: 0, failedActions24h: 0 }, perInstance: [], recentActivity: [] },
+      json: {
+        totals: { flaggedMovies: 0, flaggedSeries: 0, failedActions24h: 0 },
+        perInstance: [],
+        recentActivity: [],
+      },
     }),
   );
 });
 
-test("Cmd+K opens the command palette and Enter on a command navigates", async ({ page }) => {
+test("Cmd+K opens the command palette and Enter on a command navigates", async ({
+  page,
+}) => {
   await page.goto("/dashboard");
 
   // Open the palette. Use Meta on macOS / Control elsewhere — Playwright's
@@ -40,9 +46,15 @@ test("? opens the keyboard help dialog", async ({ page }) => {
   // Wait until the dashboard sidebar is visible — proxy for "client hydrated
   // and document keydown listener attached". Without this, the dispatched
   // keydown can fire before KeyboardHelpDialog's effect has subscribed.
-  await page.getByRole("link", { name: /^Dashboard$/ }).waitFor({ state: "visible" });
+  await page
+    .getByRole("link", { name: /^Dashboard$/ })
+    .waitFor({ state: "visible" });
   await page.evaluate(() => {
-    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }));
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "?", bubbles: true }),
+    );
   });
-  await expect(page.getByRole("heading", { name: /keyboard shortcuts/i })).toBeVisible({ timeout: 5_000 });
+  await expect(
+    page.getByRole("heading", { name: /keyboard shortcuts/i }),
+  ).toBeVisible({ timeout: 5_000 });
 });

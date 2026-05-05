@@ -11,15 +11,20 @@ function allowed(url: string) {
 }
 
 describe("assertSafeArrUrl — blocked hosts", () => {
-  test("AWS/Azure/GCP/DO metadata IP", () => blocked("http://169.254.169.254/latest/meta-data/"));
+  test("AWS/Azure/GCP/DO metadata IP", () =>
+    blocked("http://169.254.169.254/latest/meta-data/"));
   test("AWS metadata IP without path", () => blocked("http://169.254.169.254"));
-  test("GCP metadata internal hostname", () => blocked("http://metadata.google.internal/"));
-  test("GCP metadata googleapis", () => blocked("http://metadata.googleapis.com/"));
+  test("GCP metadata internal hostname", () =>
+    blocked("http://metadata.google.internal/"));
+  test("GCP metadata googleapis", () =>
+    blocked("http://metadata.googleapis.com/"));
   test("Alibaba metadata IP", () => blocked("http://100.100.100.200/"));
   test("null route 0.0.0.0", () => blocked("http://0.0.0.0/"));
   test("IPv6 link-local fe80::1", () => blocked("http://[fe80::1]/"));
-  test("IPv6 link-local uppercase FE80", () => blocked("http://[FE80::dead:beef]/"));
-  test("IPv6 link-local with path", () => blocked("http://[fe80::1]/api/v3/system/status"));
+  test("IPv6 link-local uppercase FE80", () =>
+    blocked("http://[FE80::dead:beef]/"));
+  test("IPv6 link-local with path", () =>
+    blocked("http://[fe80::1]/api/v3/system/status"));
 });
 
 describe("assertSafeArrUrl — blocked protocols", () => {
@@ -31,7 +36,8 @@ describe("assertSafeArrUrl — blocked protocols", () => {
 describe("assertSafeArrUrl — invalid inputs", () => {
   test("empty string throws UnsafeUrlError", () => blocked(""));
   test("not a URL throws UnsafeUrlError", () => blocked("not a url"));
-  test("bare hostname without scheme throws", () => blocked("192.168.1.1:8989"));
+  test("bare hostname without scheme throws", () =>
+    blocked("192.168.1.1:8989"));
 });
 
 describe("assertSafeArrUrl — allowed hosts (RFC1918 + loopback)", () => {
@@ -40,7 +46,8 @@ describe("assertSafeArrUrl — allowed hosts (RFC1918 + loopback)", () => {
   test("RFC1918 class B", () => allowed("http://172.16.0.1:9898/"));
   test("loopback 127.0.0.1", () => allowed("http://127.0.0.1:8989/"));
   test("loopback localhost", () => allowed("http://localhost:8989/"));
-  test("IPv6 loopback ::1 (not link-local)", () => allowed("http://[::1]:8989/"));
+  test("IPv6 loopback ::1 (not link-local)", () =>
+    allowed("http://[::1]:8989/"));
   test("public HTTPS", () => allowed("https://sonarr.example.com/"));
   test("RFC1918 with path", () => allowed("http://192.168.1.100:8989/radarr"));
 });

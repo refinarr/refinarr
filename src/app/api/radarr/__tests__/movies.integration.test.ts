@@ -41,15 +41,39 @@ const profile = {
 describe("GET /api/radarr/movies", () => {
   test("returns paginated FlaggedMovie wrapper through the full route handler", async () => {
     const instanceId = await makeInstance();
-    await preferenceRepository.setForInstance(instanceId, [{ cfId: 10, cfName: "HDR" }]);
-    mswServer.use(...radarrHandlers({ baseUrl }, {
-      movies: [
-        { id: 1, title: "Flagged", year: 2024, qualityProfileId: 1, hasFile: true, movieFileId: 100 },
-      ],
-      movieFiles: [{ id: 100, movieId: 1, size: 1024, customFormats: [], customFormatScore: 0 }],
-      qualityProfiles: [profile],
-    }));
-    const req = new NextRequest(`http://localhost/api/radarr/movies?instanceId=${instanceId}&page=1&limit=50`);
+    await preferenceRepository.setForInstance(instanceId, [
+      { cfId: 10, cfName: "HDR" },
+    ]);
+    mswServer.use(
+      ...radarrHandlers(
+        { baseUrl },
+        {
+          movies: [
+            {
+              id: 1,
+              title: "Flagged",
+              year: 2024,
+              qualityProfileId: 1,
+              hasFile: true,
+              movieFileId: 100,
+            },
+          ],
+          movieFiles: [
+            {
+              id: 100,
+              movieId: 1,
+              size: 1024,
+              customFormats: [],
+              customFormatScore: 0,
+            },
+          ],
+          qualityProfiles: [profile],
+        },
+      ),
+    );
+    const req = new NextRequest(
+      `http://localhost/api/radarr/movies?instanceId=${instanceId}&page=1&limit=50`,
+    );
     const res = await listMovies(req, ctxNone);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -64,15 +88,27 @@ describe("POST /api/radarr/movies/search", () => {
   test("enqueues a movie search and returns 202 (queue takes over upstream dispatch)", async () => {
     const instanceId = await makeInstance();
     let commandHit = false;
-    mswServer.use(...radarrHandlers({ baseUrl }, {
-      movies: [], movieFiles: [], qualityProfiles: [],
-      onCommand: () => { commandHit = true; },
-    }));
-    const res = await searchMovie(new NextRequest("http://localhost/api/radarr/movies/search", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ instanceId, mediaId: 1, title: "X" }),
-    }), ctxNone);
+    mswServer.use(
+      ...radarrHandlers(
+        { baseUrl },
+        {
+          movies: [],
+          movieFiles: [],
+          qualityProfiles: [],
+          onCommand: () => {
+            commandHit = true;
+          },
+        },
+      ),
+    );
+    const res = await searchMovie(
+      new NextRequest("http://localhost/api/radarr/movies/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ instanceId, mediaId: 1, title: "X" }),
+      }),
+      ctxNone,
+    );
     expect(res.status).toBe(202);
     const body = await res.json();
     expect(body.queued).toBe(true);
@@ -82,20 +118,26 @@ describe("POST /api/radarr/movies/search", () => {
   });
 
   test("schema-failing body returns 400", async () => {
-    const res = await searchMovie(new NextRequest("http://localhost/api/radarr/movies/search", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ instanceId: -1, mediaId: 0 }),
-    }), ctxNone);
+    const res = await searchMovie(
+      new NextRequest("http://localhost/api/radarr/movies/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ instanceId: -1, mediaId: 0 }),
+      }),
+      ctxNone,
+    );
     expect(res.status).toBe(400);
   });
 
   test("malformed JSON returns 400", async () => {
-    const res = await searchMovie(new NextRequest("http://localhost/api/radarr/movies/search", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{not-json",
-    }), ctxNone);
+    const res = await searchMovie(
+      new NextRequest("http://localhost/api/radarr/movies/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{not-json",
+      }),
+      ctxNone,
+    );
     expect(res.status).toBe(400);
   });
 });
@@ -103,8 +145,12 @@ describe("POST /api/radarr/movies/search", () => {
 describe("GET /api/radarr/qualityprofiles", () => {
   test("forwards profiles from the upstream", async () => {
     const instanceId = await makeInstance();
-    mswServer.use(...radarrHandlers({ baseUrl }, { qualityProfiles: [profile] }));
-    const req = new NextRequest(`http://localhost/api/radarr/qualityprofiles?instanceId=${instanceId}`);
+    mswServer.use(
+      ...radarrHandlers({ baseUrl }, { qualityProfiles: [profile] }),
+    );
+    const req = new NextRequest(
+      `http://localhost/api/radarr/qualityprofiles?instanceId=${instanceId}`,
+    );
     const res = await listProfiles(req, ctxNone);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -112,7 +158,9 @@ describe("GET /api/radarr/qualityprofiles", () => {
   });
 
   test("missing instance returns 404", async () => {
-    const req = new NextRequest("http://localhost/api/radarr/qualityprofiles?instanceId=99999");
+    const req = new NextRequest(
+      "http://localhost/api/radarr/qualityprofiles?instanceId=99999",
+    );
     const res = await listProfiles(req, ctxNone);
     expect(res.status).toBe(404);
   });

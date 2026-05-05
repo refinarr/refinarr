@@ -41,7 +41,7 @@ describe("MediaTable", () => {
       <MediaTable
         {...baseProps}
         renderCard={(r) => <span data-testid={`card-${r.id}`}>{r.title}</span>}
-      />
+      />,
     );
     const list = screen.getByRole("list");
     expect(list.className).toContain("lg:hidden");
@@ -58,7 +58,7 @@ describe("MediaTable", () => {
         {...baseProps}
         onRowClick={onRowClick}
         renderCard={(r) => <span data-testid={`card-${r.id}`}>{r.title}</span>}
-      />
+      />,
     );
     await userEvent.click(screen.getByTestId("card-2"));
     expect(onRowClick).toHaveBeenCalledWith(2);
@@ -71,7 +71,7 @@ describe("MediaTable", () => {
         {...baseProps}
         onRowClick={onRowClick}
         renderCard={(r) => <span data-testid={`card-${r.id}`}>{r.title}</span>}
-      />
+      />,
     );
     const cards = screen.getAllByRole("listitem");
     const checkbox = cards[0].querySelector('button[role="checkbox"]')!;

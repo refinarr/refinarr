@@ -17,7 +17,11 @@ import { groupBySeason, filename } from "@/app/shows/components/utils";
 import { getSeverity } from "@/client/lib/severity";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import { SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
-import type { FlaggedSeries, QualityProfile, ScoringMode } from "@/shared/types/models";
+import type {
+  FlaggedSeries,
+  QualityProfile,
+  ScoringMode,
+} from "@/shared/types/models";
 
 interface Props {
   series: FlaggedSeries | null;
@@ -26,10 +30,27 @@ interface Props {
   scoringMode: ScoringMode;
   profiles: QualityProfile[] | undefined;
   onIgnore: (series: FlaggedSeries) => void;
-  onSearchSeason: (series: FlaggedSeries, seasonNumber: number) => Promise<unknown>;
-  onSearchEpisode: (series: FlaggedSeries, fileId: number, label: string) => Promise<unknown>;
-  onDeleteSeason: (series: FlaggedSeries, seasonNumber: number, fileIds: number[], search: boolean) => Promise<unknown>;
-  onDeleteEpisode: (series: FlaggedSeries, fileId: number, label: string, search: boolean) => Promise<unknown>;
+  onSearchSeason: (
+    series: FlaggedSeries,
+    seasonNumber: number,
+  ) => Promise<unknown>;
+  onSearchEpisode: (
+    series: FlaggedSeries,
+    fileId: number,
+    label: string,
+  ) => Promise<unknown>;
+  onDeleteSeason: (
+    series: FlaggedSeries,
+    seasonNumber: number,
+    fileIds: number[],
+    search: boolean,
+  ) => Promise<unknown>;
+  onDeleteEpisode: (
+    series: FlaggedSeries,
+    fileId: number,
+    label: string,
+    search: boolean,
+  ) => Promise<unknown>;
 }
 
 export function SeriesDetailDrawer({
@@ -54,10 +75,17 @@ export function SeriesDetailDrawer({
 
   const hasFiles = series.episodeFiles.length > 0;
   const score = SCORE_FOR[scoringMode](series);
-  const severity = getSeverity(score, series.minProfileScore, scoringMode, hasFiles);
+  const severity = getSeverity(
+    score,
+    series.minProfileScore,
+    scoringMode,
+    hasFiles,
+  );
   const seasonMap = groupBySeason(series.episodeFiles);
   const seasons = Array.from(seasonMap.keys()).sort((a, b) => a - b);
-  const profileName = profiles?.find((p) => p.id === series.qualityProfileId)?.name;
+  const profileName = profiles?.find(
+    (p) => p.id === series.qualityProfileId,
+  )?.name;
   // In profile mode the score is meaningless without a file (no
   // customFormatScore to compare to the cutoff). Card and table show
   // "No file"; the drawer matches.
@@ -78,18 +106,29 @@ export function SeriesDetailDrawer({
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
             <span className="text-muted-foreground">{tDrawer("score")}</span>
             <span>
-              {showNoFile
-                ? <span className="text-xs text-muted-foreground">{tShows("noFile")}</span>
-                : <ScoreLabel score={score} minProfileScore={series.minProfileScore} />}
+              {showNoFile ? (
+                <span className="text-xs text-muted-foreground">
+                  {tShows("noFile")}
+                </span>
+              ) : (
+                <ScoreLabel
+                  score={score}
+                  minProfileScore={series.minProfileScore}
+                />
+              )}
             </span>
             <span className="text-muted-foreground">{tDrawer("profile")}</span>
             <span>{profileName ?? "—"}</span>
             <span className="text-muted-foreground">{tDrawer("episodes")}</span>
-            <span className="tabular-nums">{series.affectedEpisodeCount} / {series.totalEpisodeCount}</span>
+            <span className="tabular-nums">
+              {series.affectedEpisodeCount} / {series.totalEpisodeCount}
+            </span>
           </div>
 
           <div className="border-t pt-3">
-            <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">{tDrawer("seasons")}</h3>
+            <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+              {tDrawer("seasons")}
+            </h3>
             {seasons.length > 0 ? (
               <Accordion>
                 {seasons.map((season) => {
@@ -97,8 +136,9 @@ export function SeriesDetailDrawer({
                   const affectedFileIds = files
                     .filter((f) =>
                       isProfileMode(scoringMode)
-                        ? f.minProfileScore !== undefined && f.customFormatScore < f.minProfileScore
-                        : f.missingFormats.length > 0
+                        ? f.minProfileScore !== undefined &&
+                          f.customFormatScore < f.minProfileScore
+                        : f.missingFormats.length > 0,
                     )
                     .map((f) => f.id);
                   return (
@@ -112,11 +152,19 @@ export function SeriesDetailDrawer({
                         if (affectedFileIds.length === 0) return;
                         const ok = await askConfirm({
                           title: tSeason("title"),
-                          body: tSeason("body", { count: affectedFileIds.length, season }),
+                          body: tSeason("body", {
+                            count: affectedFileIds.length,
+                            season,
+                          }),
                           destructive: true,
                         });
                         if (!ok) return;
-                        await onDeleteSeason(series, season, affectedFileIds, search);
+                        await onDeleteSeason(
+                          series,
+                          season,
+                          affectedFileIds,
+                          search,
+                        );
                       }}
                       onSearchFile={(fileId, relativePath) =>
                         onSearchEpisode(series, fileId, filename(relativePath))
@@ -137,7 +185,9 @@ export function SeriesDetailDrawer({
                 })}
               </Accordion>
             ) : (
-              <p className="text-muted-foreground text-sm">{tShows("noEpisodeFiles")}</p>
+              <p className="text-muted-foreground text-sm">
+                {tShows("noEpisodeFiles")}
+              </p>
             )}
           </div>
         </div>

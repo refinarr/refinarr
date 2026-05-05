@@ -1,4 +1,9 @@
-import type { FlaggedMovie, ActionLog, MediaQuery, ScoringMode } from "@/shared/types/models";
+import type {
+  FlaggedMovie,
+  ActionLog,
+  MediaQuery,
+  ScoringMode,
+} from "@/shared/types/models";
 import { movieRetryPayloadSchema } from "@/shared/types/schemas";
 import { isProfileMode } from "@/shared/scoring-mode";
 import { MediaService } from "./MediaService";
@@ -20,21 +25,26 @@ import {
 import { badRequest } from "@/server/lib/api-errors";
 import type { RetryActionOptions } from "./media-services";
 
-
 export class MovieService extends MediaService {
   async getFlaggedMovies(
     instanceId: number,
-    query: MediaQuery
+    query: MediaQuery,
   ): Promise<{ items: FlaggedMovie[]; total: number }> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
     const mode = instance.scoringMode;
     const cacheKey = `movies:${instanceId}:${mode}`;
-    let cached = dataCache.get<{ flagged: FlaggedMovie[] }>(cacheKey, CACHE_TTL_MS);
+    let cached = dataCache.get<{ flagged: FlaggedMovie[] }>(
+      cacheKey,
+      CACHE_TTL_MS,
+    );
 
     if (cached) {
-      appLogger.debug("Cache hit", { source: LogSource.MovieService, context: { cacheKey } });
+      appLogger.debug("Cache hit", {
+        source: LogSource.MovieService,
+        context: { cacheKey },
+      });
     } else {
       const startedAt = Date.now();
       const flagged = await this.buildFlaggedMovies(instanceId, instance, mode);
@@ -58,7 +68,7 @@ export class MovieService extends MediaService {
   private async buildFlaggedMovies(
     instanceId: number,
     instance: Awaited<ReturnType<typeof instanceRepository.findById>>,
-    mode: ScoringMode
+    mode: ScoringMode,
   ): Promise<FlaggedMovie[]> {
     const client = ArrClientFactory.createArrClient(instance!) as RadarrClient;
     const [movies, profiles] = await Promise.all([
@@ -68,25 +78,32 @@ export class MovieService extends MediaService {
 
     const profileMap = new Map(profiles.map((p) => [p.id, p]));
     const profileScoreMap = new Map<number, Map<number, number>>();
-    const profileFormatMap = new Map<number, Array<{ id: number; name: string }>>();
+    const profileFormatMap = new Map<
+      number,
+      Array<{ id: number; name: string }>
+    >();
     for (const p of profiles) {
       const cfMap = new Map<number, number>();
       for (const item of p.formatItems) cfMap.set(item.format, item.score);
       profileScoreMap.set(p.id, cfMap);
       profileFormatMap.set(
         p.id,
-        p.formatItems.filter((item) => item.score > 0).map((item) => ({ id: item.format, name: item.name }))
+        p.formatItems
+          .filter((item) => item.score > 0)
+          .map((item) => ({ id: item.format, name: item.name })),
       );
     }
 
-    const fileIds = movies.filter((m) => m.hasFile && m.movieFileId > 0).map((m) => m.movieFileId);
+    const fileIds = movies
+      .filter((m) => m.hasFile && m.movieFileId > 0)
+      .map((m) => m.movieFileId);
     const movieFiles = await client.getMovieFilesByIds(fileIds);
     const fileMap = new Map(movieFiles.map((f) => [f.movieId, f]));
 
     const ignoredSet = new Set(
       (await ignoreRepository.findByInstance(instanceId))
         .filter((e) => e.mediaType === "movie")
-        .map((e) => e.mediaId)
+        .map((e) => e.mediaId),
     );
 
     if (isProfileMode(mode)) {
@@ -102,24 +119,37 @@ export class MovieService extends MediaService {
           const profile = profileMap.get(m.qualityProfileId)!;
           const file = fileMap.get(m.id);
           const score = file?.customFormatScore ?? 0;
-          const cfScores = profileScoreMap.get(m.qualityProfileId) ?? new Map<number, number>();
-          const positiveProfileCfs = profileFormatMap.get(m.qualityProfileId) ?? [];
+          const cfScores =
+            profileScoreMap.get(m.qualityProfileId) ??
+            new Map<number, number>();
+          const positiveProfileCfs =
+            profileFormatMap.get(m.qualityProfileId) ?? [];
           const fileCfs = file?.customFormats ?? [];
           const fileCfIds = new Set(fileCfs.map((cf) => cf.id));
           const unwantedFormats = fileCfs
             .filter((cf) => (cfScores.get(cf.id) ?? 0) < 0)
-            .map((cf) => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) }));
+            .map((cf) => ({
+              id: cf.id,
+              name: cf.name,
+              score: cfScores.get(cf.id),
+            }));
           return {
             id: m.id,
             title: m.title,
             year: m.year,
             qualityProfileId: m.qualityProfileId,
             movieFileId: m.movieFileId,
-            customFormats: fileCfs.map((cf) => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) })),
+            customFormats: fileCfs.map((cf) => ({
+              id: cf.id,
+              name: cf.name,
+              score: cfScores.get(cf.id),
+            })),
             customFormatScore: score,
             hasFile: m.hasFile,
             cfScore: scoreProfileCoverage(score, profile.cutoffFormatScore),
-            missingFormats: positiveProfileCfs.filter((cf) => !fileCfIds.has(cf.id)),
+            missingFormats: positiveProfileCfs.filter(
+              (cf) => !fileCfIds.has(cf.id),
+            ),
             unwantedFormats,
             minProfileScore: profile.cutoffFormatScore,
             sizeOnDisk: file?.size ?? 0,
@@ -137,12 +167,21 @@ export class MovieService extends MediaService {
       .filter((m) => !ignoredSet.has(m.id))
       .filter((m) => {
         if (!m.hasFile) return true;
-        return isMissingWantedFormats(fileMap.get(m.id)?.customFormats ?? [], wantedIds);
+        return isMissingWantedFormats(
+          fileMap.get(m.id)?.customFormats ?? [],
+          wantedIds,
+        );
       })
       .map((m) => {
         const file = fileMap.get(m.id);
-        const cfScores = profileScoreMap.get(m.qualityProfileId) ?? new Map<number, number>();
-        const formats = file?.customFormats?.map(cf => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) })) ?? [];
+        const cfScores =
+          profileScoreMap.get(m.qualityProfileId) ?? new Map<number, number>();
+        const formats =
+          file?.customFormats?.map((cf) => ({
+            id: cf.id,
+            name: cf.name,
+            score: cfScores.get(cf.id),
+          })) ?? [];
         return {
           id: m.id,
           title: m.title,
@@ -178,7 +217,12 @@ export class MovieService extends MediaService {
   // call. Errors propagate to the caller (the dashboard route swallows
   // them since this is fire-and-forget).
   warmFlaggedCache(instanceId: number): Promise<unknown> {
-    return this.getFlaggedMovies(instanceId, { page: 1, limit: 1, sortBy: "score", order: "asc" });
+    return this.getFlaggedMovies(instanceId, {
+      page: 1,
+      limit: 1,
+      sortBy: "score",
+      order: "asc",
+    });
   }
 
   // Re-runs a stored ActionLog payload. Movies-specific fields:
@@ -187,21 +231,34 @@ export class MovieService extends MediaService {
   //     (legacy rows stamped action="delete_blacklist" inside the payload;
   //     the schema still accepts them, the migration backfills them to
   //     "delete" so the action-parity guard passes)
-  async retryFromPayload(payload: Record<string, unknown>, opts: RetryActionOptions = {}): Promise<ActionLog> {
+  async retryFromPayload(
+    payload: Record<string, unknown>,
+    opts: RetryActionOptions = {},
+  ): Promise<ActionLog> {
     const result = movieRetryPayloadSchema.safeParse(payload);
     if (!result.success) {
-      const action = typeof payload.action === "string" ? payload.action : "unknown";
+      const action =
+        typeof payload.action === "string" ? payload.action : "unknown";
       throw badRequest(`Cannot retry action type: ${action}`);
     }
     const data = result.data;
     switch (data.action) {
       case "search":
-        return this.triggerSearch(data.instanceId, data.mediaId, data.title, opts);
+        return this.triggerSearch(
+          data.instanceId,
+          data.mediaId,
+          data.title,
+          opts,
+        );
       case "delete":
       case "delete_blacklist":
         return this.deleteFile(
-          data.instanceId, data.mediaId, data.fileId, data.title,
-          data.triggerSearch ?? true, opts,
+          data.instanceId,
+          data.mediaId,
+          data.fileId,
+          data.title,
+          data.triggerSearch ?? true,
+          opts,
         );
       default: {
         const _exhaustive: never = data;
@@ -214,7 +271,7 @@ export class MovieService extends MediaService {
     instanceId: number,
     mediaId: number,
     title: string,
-    opts: RetryActionOptions = {}
+    opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -238,7 +295,7 @@ export class MovieService extends MediaService {
     fileId: number,
     title: string,
     triggerSearch = true,
-    opts: RetryActionOptions = {}
+    opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -251,7 +308,14 @@ export class MovieService extends MediaService {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
-      payload: { instanceId, action: "delete", mediaId, fileId, title, triggerSearch },
+      payload: {
+        instanceId,
+        action: "delete",
+        mediaId,
+        fileId,
+        title,
+        triggerSearch,
+      },
       run: async () => {
         await client.deleteFile(fileId);
         if (triggerSearch) await client.triggerSearch(mediaId);

@@ -20,11 +20,15 @@ const baseLog = {
 };
 
 function getReq(qs: string) {
-  return new NextRequest(`http://localhost/api/history?${qs}`, { method: "GET" });
+  return new NextRequest(`http://localhost/api/history?${qs}`, {
+    method: "GET",
+  });
 }
 
 function retryReq(id: number) {
-  return new NextRequest(`http://localhost/api/history/${id}/retry`, { method: "POST" });
+  return new NextRequest(`http://localhost/api/history/${id}/retry`, {
+    method: "POST",
+  });
 }
 
 describe("GET /api/history", () => {
@@ -74,7 +78,10 @@ describe("DELETE /api/history", () => {
   test("clears all action log rows", async () => {
     await logRepository.create(baseLog);
     await logRepository.create(baseLog);
-    const res = await clearAll(new NextRequest("http://localhost/api/history", { method: "DELETE" }), ctxNone);
+    const res = await clearAll(
+      new NextRequest("http://localhost/api/history", { method: "DELETE" }),
+      ctxNone,
+    );
     expect(res.status).toBe(200);
     expect(await logRepository.findAll()).toHaveLength(0);
   });
@@ -84,8 +91,9 @@ describe("POST /api/history/[id]/retry", () => {
   test("updates the selected failed log instead of creating a duplicate", async () => {
     const radarrBase = "http://192.168.1.10:7878";
     mswServer.use(
-      http.post(`${radarrBase}/api/v3/command`, () =>
-        new HttpResponse(null, { status: 500 }),
+      http.post(
+        `${radarrBase}/api/v3/command`,
+        () => new HttpResponse(null, { status: 500 }),
       ),
     );
     const instance = await instanceService.create({
@@ -94,7 +102,12 @@ describe("POST /api/history/[id]/retry", () => {
       url: radarrBase,
       apiKey: "abcd1234abcd1234abcd1234abcd1234",
     });
-    const payload = { instanceId: instance.id, action: "search", mediaId: 100, title: "Movie" };
+    const payload = {
+      instanceId: instance.id,
+      action: "search",
+      mediaId: 100,
+      title: "Movie",
+    };
     const original = await logRepository.create({
       ...baseLog,
       instanceId: instance.id,
@@ -105,7 +118,9 @@ describe("POST /api/history/[id]/retry", () => {
     const previousCreatedAt = new Date(Date.now() - 60_000);
     await logRepository.update(original.id, { createdAt: previousCreatedAt });
 
-    const res = await retry(retryReq(original.id), { params: Promise.resolve({ id: String(original.id) }) });
+    const res = await retry(retryReq(original.id), {
+      params: Promise.resolve({ id: String(original.id) }),
+    });
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -118,14 +133,17 @@ describe("POST /api/history/[id]/retry", () => {
     // lastRetriedAt so the History UI can render "Failed X · Retried Y".
     expect(logs[0].createdAt.getTime()).toBe(previousCreatedAt.getTime());
     expect(logs[0].lastRetriedAt).toBeTruthy();
-    expect(logs[0].lastRetriedAt!.getTime()).toBeGreaterThan(previousCreatedAt.getTime());
+    expect(logs[0].lastRetriedAt!.getTime()).toBeGreaterThan(
+      previousCreatedAt.getTime(),
+    );
   });
 
   test("season-scoped retry preserves seasonNumber instead of broadening to a series search", async () => {
     const sonarrBase = "http://192.168.1.10:8989";
     mswServer.use(
-      http.post(`${sonarrBase}/api/v3/command`, () =>
-        new HttpResponse(null, { status: 500 }),
+      http.post(
+        `${sonarrBase}/api/v3/command`,
+        () => new HttpResponse(null, { status: 500 }),
       ),
     );
     const instance = await instanceService.create({
@@ -135,7 +153,11 @@ describe("POST /api/history/[id]/retry", () => {
       apiKey: "abcd1234abcd1234abcd1234abcd1234",
     });
     const payload = {
-      instanceId: instance.id, action: "search_season", mediaId: 7, seasonNumber: 3, title: "Show",
+      instanceId: instance.id,
+      action: "search_season",
+      mediaId: 7,
+      seasonNumber: 3,
+      title: "Show",
     };
     const original = await logRepository.create({
       ...baseLog,
@@ -148,7 +170,9 @@ describe("POST /api/history/[id]/retry", () => {
       payload: JSON.stringify(payload),
     });
 
-    const res = await retry(retryReq(original.id), { params: Promise.resolve({ id: String(original.id) }) });
+    const res = await retry(retryReq(original.id), {
+      params: Promise.resolve({ id: String(original.id) }),
+    });
     expect(res.status).toBe(200);
 
     const logs = await logRepository.findAll();
@@ -166,10 +190,13 @@ describe("POST /api/history/[id]/retry", () => {
     const sonarrBase = "http://192.168.1.10:8989";
     mswServer.use(
       http.get(`${sonarrBase}/api/v3/episode`, () =>
-        HttpResponse.json([{ id: 1, episodeFileId: 42, seasonNumber: 1, episodeNumber: 2 }]),
+        HttpResponse.json([
+          { id: 1, episodeFileId: 42, seasonNumber: 1, episodeNumber: 2 },
+        ]),
       ),
-      http.post(`${sonarrBase}/api/v3/command`, () =>
-        new HttpResponse(null, { status: 500 }),
+      http.post(
+        `${sonarrBase}/api/v3/command`,
+        () => new HttpResponse(null, { status: 500 }),
       ),
     );
     const instance = await instanceService.create({
@@ -179,7 +206,11 @@ describe("POST /api/history/[id]/retry", () => {
       apiKey: "abcd1234abcd1234abcd1234abcd1234",
     });
     const payload = {
-      instanceId: instance.id, action: "search_episode", mediaId: 7, fileId: 42, title: "Show",
+      instanceId: instance.id,
+      action: "search_episode",
+      mediaId: 7,
+      fileId: 42,
+      title: "Show",
     };
     const original = await logRepository.create({
       ...baseLog,
@@ -192,7 +223,9 @@ describe("POST /api/history/[id]/retry", () => {
       payload: JSON.stringify(payload),
     });
 
-    const res = await retry(retryReq(original.id), { params: Promise.resolve({ id: String(original.id) }) });
+    const res = await retry(retryReq(original.id), {
+      params: Promise.resolve({ id: String(original.id) }),
+    });
     expect(res.status).toBe(200);
 
     const logs = await logRepository.findAll();
@@ -218,10 +251,15 @@ describe("POST /api/history/[id]/retry", () => {
       mediaId: 100,
       status: "failed",
       payload: JSON.stringify({
-        instanceId: 9999, action: "search", mediaId: 8888, title: "Mismatch",
+        instanceId: 9999,
+        action: "search",
+        mediaId: 8888,
+        title: "Mismatch",
       }),
     });
-    const res = await retry(retryReq(corrupt.id), { params: Promise.resolve({ id: String(corrupt.id) }) });
+    const res = await retry(retryReq(corrupt.id), {
+      params: Promise.resolve({ id: String(corrupt.id) }),
+    });
     expect(res.status).toBe(400);
     // The original row is untouched.
     const fresh = await logRepository.findById(corrupt.id);
@@ -245,10 +283,15 @@ describe("POST /api/history/[id]/retry", () => {
       mediaId: 100,
       status: "failed",
       payload: JSON.stringify({
-        instanceId: instance.id, action: "ignore", mediaId: 100, title: "Movie",
+        instanceId: instance.id,
+        action: "ignore",
+        mediaId: 100,
+        title: "Movie",
       }),
     });
-    const res = await retry(retryReq(corrupt.id), { params: Promise.resolve({ id: String(corrupt.id) }) });
+    const res = await retry(retryReq(corrupt.id), {
+      params: Promise.resolve({ id: String(corrupt.id) }),
+    });
     const body = await res.json();
     expect(res.status).toBe(400);
     expect(body.error).toMatch(/Cannot retry/);
@@ -270,10 +313,16 @@ describe("POST /api/history/[id]/retry", () => {
       action: "search",
       status: "failed",
       payload: JSON.stringify({
-        instanceId: instance.id, action: "delete", mediaId: 100, fileId: 5, title: "Movie",
+        instanceId: instance.id,
+        action: "delete",
+        mediaId: 100,
+        fileId: 5,
+        title: "Movie",
       }),
     });
-    const res = await retry(retryReq(corrupt.id), { params: Promise.resolve({ id: String(corrupt.id) }) });
+    const res = await retry(retryReq(corrupt.id), {
+      params: Promise.resolve({ id: String(corrupt.id) }),
+    });
     expect(res.status).toBe(400);
     const fresh = await logRepository.findById(corrupt.id);
     expect(fresh?.status).toBe("failed");

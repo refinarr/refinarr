@@ -14,9 +14,13 @@ describe("runSerial", () => {
 
   it("emits progress 0/N at start and current/N after each item", async () => {
     const progress: Array<[number, number]> = [];
-    await runSerial([1, 2, 3], async (n) => n, (current, total) => {
-      progress.push([current, total]);
-    });
+    await runSerial(
+      [1, 2, 3],
+      async (n) => n,
+      (current, total) => {
+        progress.push([current, total]);
+      },
+    );
     expect(progress).toEqual([
       [0, 3],
       [1, 3],
@@ -27,7 +31,11 @@ describe("runSerial", () => {
 
   it("emits 0/0 for an empty array and resolves to []", async () => {
     const onProgress = vi.fn();
-    const result = await runSerial<number, number>([], async (n) => n, onProgress);
+    const result = await runSerial<number, number>(
+      [],
+      async (n) => n,
+      onProgress,
+    );
     expect(result).toEqual([]);
     expect(onProgress).toHaveBeenCalledWith(0, 0);
     expect(onProgress).toHaveBeenCalledTimes(1);
@@ -40,7 +48,7 @@ describe("runSerial", () => {
         seen.push(n);
         if (n === 2) throw new Error("boom");
         return n;
-      })
+      }),
     ).rejects.toThrow("boom");
     expect(seen).toEqual([1, 2]);
   });
@@ -50,7 +58,7 @@ describe("runSerial", () => {
     ctrl.abort();
     const onProgress = vi.fn();
     await expect(
-      runSerial([1, 2, 3], async (n) => n, onProgress, { signal: ctrl.signal })
+      runSerial([1, 2, 3], async (n) => n, onProgress, { signal: ctrl.signal }),
     ).rejects.toMatchObject({ name: "AbortError" });
     // 0/3 emitted at start; abort fires before any item runs.
     expect(onProgress).toHaveBeenCalledWith(0, 3);
@@ -70,7 +78,7 @@ describe("runSerial", () => {
         },
         onProgress,
         { signal: ctrl.signal },
-      )
+      ),
     ).rejects.toMatchObject({ name: "AbortError" });
     // Only the first item ran; the abort check fires before the second.
     expect(seen).toEqual([1]);

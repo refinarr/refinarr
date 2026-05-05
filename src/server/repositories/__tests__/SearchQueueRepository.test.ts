@@ -1,7 +1,11 @@
 import { describe, test, expect, vi } from "vitest";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 
-async function enqueue(instanceId: number, mediaId: number, action: "movie" | "series" | "season" | "episode" = "movie") {
+async function enqueue(
+  instanceId: number,
+  mediaId: number,
+  action: "movie" | "series" | "season" | "episode" = "movie",
+) {
   const { entry } = await searchQueueRepository.createUnique({
     instanceId,
     action,
@@ -49,7 +53,11 @@ describe("SearchQueueRepository", () => {
 
   test("setStatus stamps processedAt and stores the error", async () => {
     const row = await enqueue(1, 1);
-    const updated = await searchQueueRepository.setStatus(row.id, "failed", "boom");
+    const updated = await searchQueueRepository.setStatus(
+      row.id,
+      "failed",
+      "boom",
+    );
     expect(updated.status).toBe("failed");
     expect(updated.error).toBe("boom");
     expect(updated.processedAt).not.toBeNull();
@@ -83,7 +91,9 @@ describe("SearchQueueRepository", () => {
 
   test("update mutates arbitrary fields", async () => {
     const row = await enqueue(1, 1);
-    const updated = await searchQueueRepository.update(row.id, { title: "renamed" });
+    const updated = await searchQueueRepository.update(row.id, {
+      title: "renamed",
+    });
     expect(updated.title).toBe("renamed");
   });
 
@@ -102,11 +112,14 @@ describe("SearchQueueRepository", () => {
     }
     // The next create() call triggers trim() — pending rows are exempt.
     await enqueue(1, 100);
-    await vi.waitFor(async () => {
-      const all = await searchQueueRepository.findAll();
-      const terminal = all.filter((r) => r.status !== "pending");
-      expect(terminal.length).toBeLessThanOrEqual(5);
-    }, { timeout: 500 });
+    await vi.waitFor(
+      async () => {
+        const all = await searchQueueRepository.findAll();
+        const terminal = all.filter((r) => r.status !== "pending");
+        expect(terminal.length).toBeLessThanOrEqual(5);
+      },
+      { timeout: 500 },
+    );
   });
 
   test("findLastProcessedAt returns null when no terminal rows exist", async () => {
@@ -129,12 +142,26 @@ describe("SearchQueueRepository", () => {
   });
 
   test("createUnique returns existing pending row when unique index conflicts (movie)", async () => {
-    const { entry: first, created: c1 } = await searchQueueRepository.createUnique({
-      instanceId: 1, action: "movie", mediaId: 42, title: "X", payload: "{}", seasonNumber: 0, fileId: 0,
-    });
-    const { entry: second, created: c2 } = await searchQueueRepository.createUnique({
-      instanceId: 1, action: "movie", mediaId: 42, title: "X", payload: "{}", seasonNumber: 0, fileId: 0,
-    });
+    const { entry: first, created: c1 } =
+      await searchQueueRepository.createUnique({
+        instanceId: 1,
+        action: "movie",
+        mediaId: 42,
+        title: "X",
+        payload: "{}",
+        seasonNumber: 0,
+        fileId: 0,
+      });
+    const { entry: second, created: c2 } =
+      await searchQueueRepository.createUnique({
+        instanceId: 1,
+        action: "movie",
+        mediaId: 42,
+        title: "X",
+        payload: "{}",
+        seasonNumber: 0,
+        fileId: 0,
+      });
     expect(c1).toBe(true);
     expect(c2).toBe(false);
     expect(second.id).toBe(first.id);
@@ -143,21 +170,47 @@ describe("SearchQueueRepository", () => {
 
   test("createUnique returns existing pending row for the same season", async () => {
     const { entry: first } = await searchQueueRepository.createUnique({
-      instanceId: 1, action: "season", mediaId: 7, title: "S", payload: "{}", seasonNumber: 2, fileId: 0,
+      instanceId: 1,
+      action: "season",
+      mediaId: 7,
+      title: "S",
+      payload: "{}",
+      seasonNumber: 2,
+      fileId: 0,
     });
-    const { entry: second, created } = await searchQueueRepository.createUnique({
-      instanceId: 1, action: "season", mediaId: 7, title: "S", payload: "{}", seasonNumber: 2, fileId: 0,
-    });
+    const { entry: second, created } = await searchQueueRepository.createUnique(
+      {
+        instanceId: 1,
+        action: "season",
+        mediaId: 7,
+        title: "S",
+        payload: "{}",
+        seasonNumber: 2,
+        fileId: 0,
+      },
+    );
     expect(created).toBe(false);
     expect(second.id).toBe(first.id);
   });
 
   test("createUnique allows different seasons for the same series", async () => {
     const { entry: s1 } = await searchQueueRepository.createUnique({
-      instanceId: 1, action: "season", mediaId: 7, title: "S1", payload: "{}", seasonNumber: 1, fileId: 0,
+      instanceId: 1,
+      action: "season",
+      mediaId: 7,
+      title: "S1",
+      payload: "{}",
+      seasonNumber: 1,
+      fileId: 0,
     });
     const { entry: s2 } = await searchQueueRepository.createUnique({
-      instanceId: 1, action: "season", mediaId: 7, title: "S2", payload: "{}", seasonNumber: 2, fileId: 0,
+      instanceId: 1,
+      action: "season",
+      mediaId: 7,
+      title: "S2",
+      payload: "{}",
+      seasonNumber: 2,
+      fileId: 0,
     });
     expect(s1.id).not.toBe(s2.id);
     expect(await searchQueueRepository.countPending(1)).toBe(2);
@@ -165,13 +218,27 @@ describe("SearchQueueRepository", () => {
 
   test("re-enqueue after done creates a fresh row", async () => {
     const { entry: first } = await searchQueueRepository.createUnique({
-      instanceId: 1, action: "movie", mediaId: 99, title: "M", payload: "{}", seasonNumber: 0, fileId: 0,
+      instanceId: 1,
+      action: "movie",
+      mediaId: 99,
+      title: "M",
+      payload: "{}",
+      seasonNumber: 0,
+      fileId: 0,
     });
     await searchQueueRepository.setStatus(first.id, "done");
     // Done row is outside the partial index scope — new pending row is allowed.
-    const { entry: second, created } = await searchQueueRepository.createUnique({
-      instanceId: 1, action: "movie", mediaId: 99, title: "M", payload: "{}", seasonNumber: 0, fileId: 0,
-    });
+    const { entry: second, created } = await searchQueueRepository.createUnique(
+      {
+        instanceId: 1,
+        action: "movie",
+        mediaId: 99,
+        title: "M",
+        payload: "{}",
+        seasonNumber: 0,
+        fileId: 0,
+      },
+    );
     expect(created).toBe(true);
     expect(second.id).not.toBe(first.id);
     expect(second.status).toBe("pending");

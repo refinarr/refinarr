@@ -9,14 +9,20 @@ describe("NoInstancesPrompt", () => {
     renderWithProviders(<NoInstancesPrompt onAdd={() => {}} />);
     // Strings come from messages/en.json under states.noInstances.
     expect(screen.getByText("No instances configured")).toBeInTheDocument();
-    expect(screen.getByText(/add a radarr or sonarr instance/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /add instance/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/add a radarr or sonarr instance/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /add instance/i }),
+    ).toBeInTheDocument();
   });
 
   it("calls onAdd when the CTA is clicked", async () => {
     const onAdd = vi.fn();
     renderWithProviders(<NoInstancesPrompt onAdd={onAdd} />);
-    await userEvent.click(screen.getByRole("button", { name: /add instance/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /add instance/i }),
+    );
     expect(onAdd).toHaveBeenCalledTimes(1);
   });
 });

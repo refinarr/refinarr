@@ -13,10 +13,13 @@ export async function GET(req: NextRequest) {
   }
 
   const sessionId = req.cookies.get(SESSION_COOKIE)?.value;
-  if (!sessionId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!sessionId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const session = await getSession(sessionId);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   return NextResponse.json({ username: user.username, source: "session" });
 }

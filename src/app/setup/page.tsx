@@ -3,7 +3,12 @@ import * as React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/client/components/ui/card";
 import { Input } from "@/client/components/ui/input";
 import { Button } from "@/client/components/ui/button";
 import { FormField } from "@/client/components/ui/form-field";
@@ -21,8 +26,14 @@ export default function SetupPage() {
 
   const submit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (password.length < 12) { setErr(t("tooShort")); return; }
-    if (password !== confirm) { setErr(t("mismatch")); return; }
+    if (password.length < 12) {
+      setErr(t("tooShort"));
+      return;
+    }
+    if (password !== confirm) {
+      setErr(t("mismatch"));
+      return;
+    }
     setErr(null);
     setSubmitting(true);
     try {
@@ -61,7 +72,11 @@ export default function SetupPage() {
                 pattern="[a-zA-Z0-9_.-]+"
               />
             </FormField>
-            <FormField id="password" label={t("password")} description={t("passwordHint")}>
+            <FormField
+              id="password"
+              label={t("password")}
+              description={t("passwordHint")}
+            >
               <Input
                 type="password"
                 value={password}

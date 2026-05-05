@@ -18,36 +18,57 @@ describe("useDebouncedValue", () => {
   });
 
   test("delays updates by the configured delay", () => {
-    const { result, rerender } = renderHook(({ v }) => useDebouncedValue(v, 200), {
-      initialProps: { v: "a" },
-    });
+    const { result, rerender } = renderHook(
+      ({ v }) => useDebouncedValue(v, 200),
+      {
+        initialProps: { v: "a" },
+      },
+    );
     rerender({ v: "b" });
     expect(result.current).toBe("a");
-    act(() => { vi.advanceTimersByTime(199); });
+    act(() => {
+      vi.advanceTimersByTime(199);
+    });
     expect(result.current).toBe("a");
-    act(() => { vi.advanceTimersByTime(2); });
+    act(() => {
+      vi.advanceTimersByTime(2);
+    });
     expect(result.current).toBe("b");
   });
 
   test("resets the timer when the value changes again before the delay elapses", () => {
-    const { result, rerender } = renderHook(({ v }) => useDebouncedValue(v, 200), {
-      initialProps: { v: "a" },
-    });
+    const { result, rerender } = renderHook(
+      ({ v }) => useDebouncedValue(v, 200),
+      {
+        initialProps: { v: "a" },
+      },
+    );
     rerender({ v: "b" });
-    act(() => { vi.advanceTimersByTime(150); });
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
     rerender({ v: "c" });
-    act(() => { vi.advanceTimersByTime(150); });
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
     expect(result.current).toBe("a"); // first window cancelled
-    act(() => { vi.advanceTimersByTime(60); });
+    act(() => {
+      vi.advanceTimersByTime(60);
+    });
     expect(result.current).toBe("c");
   });
 
   test("works with non-string types", () => {
-    const { result, rerender } = renderHook(({ v }) => useDebouncedValue(v, 100), {
-      initialProps: { v: 1 },
-    });
+    const { result, rerender } = renderHook(
+      ({ v }) => useDebouncedValue(v, 100),
+      {
+        initialProps: { v: 1 },
+      },
+    );
     rerender({ v: 42 });
-    act(() => { vi.advanceTimersByTime(101); });
+    act(() => {
+      vi.advanceTimersByTime(101);
+    });
     expect(result.current).toBe(42);
   });
 });

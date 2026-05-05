@@ -10,16 +10,25 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
-import { BulkActionToolbar, type BulkProgress } from "@/client/components/media/BulkActionToolbar";
+import {
+  BulkActionToolbar,
+  type BulkProgress,
+} from "@/client/components/media/BulkActionToolbar";
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
 import { MediaPageHeader } from "@/client/components/media/MediaPageHeader";
 import { MediaSearchBar } from "@/client/components/media/MediaSearchBar";
-import { MediaTable, type ColumnDef } from "@/client/components/media/MediaTable";
+import {
+  MediaTable,
+  type ColumnDef,
+} from "@/client/components/media/MediaTable";
 import { ActiveFilterChips } from "@/client/components/common/ActiveFilterChips";
 import { RowHoverActions } from "@/client/components/common/RowHoverActions";
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
-import { MediaPageEmptyState, type EmptyStateKind } from "@/client/components/states/MediaPageEmptyState";
+import {
+  MediaPageEmptyState,
+  type EmptyStateKind,
+} from "@/client/components/states/MediaPageEmptyState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
@@ -39,7 +48,10 @@ import {
   type FlaggedMediaQueryHook,
 } from "@/client/hooks/media/useFlaggedMediaData";
 import { useBulkAbort } from "@/client/hooks/media/useBulkAbort";
-import { useBulkMediaActions, type BulkActionsConfig } from "@/client/hooks/media/useBulkMediaActions";
+import {
+  useBulkMediaActions,
+  type BulkActionsConfig,
+} from "@/client/hooks/media/useBulkMediaActions";
 import { useBulkHandlers } from "@/client/hooks/media/useBulkHandlers";
 import { DEFAULT_SCORING_MODE, isManualMode } from "@/shared/scoring-mode";
 import type {
@@ -93,7 +105,10 @@ interface InternalShellContext {
 
 const ShellContext = createContext<InternalShellContext | null>(null);
 
-function useShellContext<T extends FlaggedMedia>(): Omit<InternalShellContext, "ctx"> & {
+function useShellContext<T extends FlaggedMedia>(): Omit<
+  InternalShellContext,
+  "ctx"
+> & {
   ctx: MediaListShellRenderCtx<T>;
   data: ReturnType<typeof useFlaggedMediaData<T>>;
   selection: ReturnType<typeof useMediaSelection<T>>;
@@ -101,7 +116,10 @@ function useShellContext<T extends FlaggedMedia>(): Omit<InternalShellContext, "
   handlers: ReturnType<typeof useBulkHandlers<T>>;
 } {
   const value = useContext(ShellContext);
-  if (!value) throw new Error("MediaListShell sub-components must be rendered inside <MediaListShell>");
+  if (!value)
+    throw new Error(
+      "MediaListShell sub-components must be rendered inside <MediaListShell>",
+    );
   // Internal context erases T to FlaggedMedia. Narrow via cast — caller
   // supplies the type parameter when the page knows what kind of media this is.
   return value as never;
@@ -113,7 +131,10 @@ function useShellContext<T extends FlaggedMedia>(): Omit<InternalShellContext, "
 
 interface RootProps<T extends FlaggedMedia> {
   arrType: ArrType;
-  bulkConfig: Pick<BulkActionsConfig<T>, "mediaType" | "search" | "ignore" | "delete">;
+  bulkConfig: Pick<
+    BulkActionsConfig<T>,
+    "mediaType" | "search" | "ignore" | "delete"
+  >;
   useQuery: FlaggedMediaQueryHook<T>;
   i18nNamespace: string;
   confirmDeleteBulkKey: string;
@@ -140,14 +161,23 @@ function Root<T extends FlaggedMedia>({
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
 
   const scoringMode: ScoringMode =
-    inst.typedInstances.find((i) => i.id === inst.activeInstance)?.scoringMode ?? DEFAULT_SCORING_MODE;
-  const noCfsConfigured = isManualMode(scoringMode) && (prefs?.length ?? 0) === 0;
+    inst.typedInstances.find((i) => i.id === inst.activeInstance)
+      ?.scoringMode ?? DEFAULT_SCORING_MODE;
+  const noCfsConfigured =
+    isManualMode(scoringMode) && (prefs?.length ?? 0) === 0;
 
   const filters = useMediaFilters(scoringMode, inst.activeInstance);
-  const data = useFlaggedMediaData<T>(useQuery, inst.activeInstance, filters.forQuery);
+  const data = useFlaggedMediaData<T>(
+    useQuery,
+    inst.activeInstance,
+    filters.forQuery,
+  );
   const queuedIds = useQueuedMediaIds(inst.activeInstance);
   const recentMap = useRecentSearchMap(inst.activeInstance);
-  const selection = useMediaSelection<T>(data.items, bulkConfig.delete.isDeletable);
+  const selection = useMediaSelection<T>(
+    data.items,
+    bulkConfig.delete.isDeletable,
+  );
   const drawer = useDetailDrawer<T>(data.items);
 
   const [bulkProgress, setBulkProgress] = useState<BulkProgress | null>(null);
@@ -159,7 +189,11 @@ function Root<T extends FlaggedMedia>({
     refetch: data.refetch,
   });
   const handlers = useBulkHandlers<T>({ selection, abort, actions });
-  const { chips, clearActiveFilters } = useFilterChips({ filters, prefs, profiles });
+  const { chips, clearActiveFilters } = useFilterChips({
+    filters,
+    prefs,
+    profiles,
+  });
 
   const ctx: MediaListShellRenderCtx<T> = {
     arrType,
@@ -169,10 +203,16 @@ function Root<T extends FlaggedMedia>({
     queuedIds,
     recentMap,
     refetch: data.refetch,
-    runSearch: (item) => actions.searchMutation.mutateAsync({ items: [item], isBulk: false }),
-    runIgnore: (item) => actions.ignoreWithToast({ items: [item], isBulk: false }),
+    runSearch: (item) =>
+      actions.searchMutation.mutateAsync({ items: [item], isBulk: false }),
+    runIgnore: (item) =>
+      actions.ignoreWithToast({ items: [item], isBulk: false }),
     runDelete: (item, triggerSearch) =>
-      actions.deleteMutation.mutateAsync({ items: [item], isBulk: false, search: triggerSearch }),
+      actions.deleteMutation.mutateAsync({
+        items: [item],
+        isBulk: false,
+        search: triggerSearch,
+      }),
     t,
     tCols,
     tTime,
@@ -226,14 +266,20 @@ function Root<T extends FlaggedMedia>({
 function Header() {
   const { ctx, inst, refreshMutation, data, selection } = useShellContext();
   const tRefresh = useTranslations("toast.refresh");
-  const refreshWithToast = withToast(refreshMutation, { success: tRefresh("done"), error: tRefresh("failed") });
+  const refreshWithToast = withToast(refreshMutation, {
+    success: tRefresh("done"),
+    error: tRefresh("failed"),
+  });
   return (
     <MediaPageHeader
       title={ctx.t("title")}
       total={data.total}
       selected={selection.selected.size}
       activeInstance={inst.activeInstance}
-      activeInstanceName={inst.typedInstances.find((i) => i.id === inst.activeInstance)?.name ?? null}
+      activeInstanceName={
+        inst.typedInstances.find((i) => i.id === inst.activeInstance)?.name ??
+        null
+      }
       typedInstances={inst.typedInstances}
       onSetInstance={inst.setInstanceId}
       onRefresh={() => refreshWithToast(inst.activeInstance)}
@@ -263,7 +309,14 @@ function Chips() {
 }
 
 function BulkBar() {
-  const { selection, bulkProgress, abort, handlers, askConfirm, confirmDeleteBulkKey } = useShellContext();
+  const {
+    selection,
+    bulkProgress,
+    abort,
+    handlers,
+    askConfirm,
+    confirmDeleteBulkKey,
+  } = useShellContext();
   const tConfirmDeleteBulk = useTranslations(confirmDeleteBulkKey);
 
   return (
@@ -310,16 +363,32 @@ function Body<T extends FlaggedMedia>({ columns, Card }: BodyProps<T>) {
     <>
       {(data.isLoading || inst.loadingInstances) && <MediaTableSkeleton />}
       {data.isError && <MediaErrorCard onRetry={data.refetch} />}
-      {!inst.loadingInstances && !data.isLoading && !data.isError && data.items.length === 0 && (() => {
-        let emptyState: EmptyStateKind;
-        if (inst.activeInstance <= 0 || noCfsConfigured) emptyState = "no-cfs";
-        else if (chips.length > 0) emptyState = "filtered-empty";
-        else emptyState = "all-clear";
-        return <MediaPageEmptyState state={emptyState} onClear={clearActiveFilters} />;
-      })()}
+      {!inst.loadingInstances &&
+        !data.isLoading &&
+        !data.isError &&
+        data.items.length === 0 &&
+        (() => {
+          let emptyState: EmptyStateKind;
+          if (inst.activeInstance <= 0 || noCfsConfigured)
+            emptyState = "no-cfs";
+          else if (chips.length > 0) emptyState = "filtered-empty";
+          else emptyState = "all-clear";
+          return (
+            <MediaPageEmptyState
+              state={emptyState}
+              onClear={clearActiveFilters}
+            />
+          );
+        })()}
 
       {!data.isLoading && data.items.length > 0 && (
-        <div className={data.isFetching ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+        <div
+          className={
+            data.isFetching
+              ? "opacity-50 pointer-events-none transition-opacity"
+              : "transition-opacity"
+          }
+        >
           <MediaTable
             rows={data.items}
             columns={columns(ctx)}
@@ -338,7 +407,9 @@ function Body<T extends FlaggedMedia>({ columns, Card }: BodyProps<T>) {
             rowActions={(item) => (
               <RowHoverActions
                 onSearch={() => ctx.runSearch(item)}
-                onIgnore={async () => { await ctx.runIgnore(item); }}
+                onIgnore={async () => {
+                  await ctx.runIgnore(item);
+                }}
               />
             )}
             renderCard={(item) => <Card item={item} ctx={ctx} />}
@@ -357,12 +428,22 @@ function Body<T extends FlaggedMedia>({ columns, Card }: BodyProps<T>) {
 }
 
 interface DrawerProps<T extends FlaggedMedia> {
-  as: ComponentType<{ item: T | null; ctx: MediaListShellRenderCtx<T>; close: () => void }>;
+  as: ComponentType<{
+    item: T | null;
+    ctx: MediaListShellRenderCtx<T>;
+    close: () => void;
+  }>;
 }
 
 function Drawer<T extends FlaggedMedia>({ as: Component }: DrawerProps<T>) {
   const { ctx, drawer } = useShellContext<T>();
-  return <Component item={drawer.selectedItem} ctx={ctx} close={() => drawer.setSelectedId(null)} />;
+  return (
+    <Component
+      item={drawer.selectedItem}
+      ctx={ctx}
+      close={() => drawer.setSelectedId(null)}
+    />
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────

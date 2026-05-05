@@ -47,6 +47,8 @@ export const POST = createApiHandler(async (_req, ctx) => {
   // Unsupported actions throw badRequest from the service, so createApiHandler
   // turns them into a 400 with the descriptive message — no per-route catch
   // needed.
-  const result = await mediaServiceFor(inst.type).retryFromPayload(payload, { actionLogId: id });
+  const result = await mediaServiceFor(inst.type).retryFromPayload(payload, {
+    actionLogId: id,
+  });
   return NextResponse.json(result);
 });

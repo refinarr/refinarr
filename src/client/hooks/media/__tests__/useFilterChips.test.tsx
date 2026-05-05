@@ -55,7 +55,9 @@ describe("useFilterChips", () => {
       },
       { wrapper },
     );
-    act(() => result.current.filters.setFilters((f) => ({ ...f, q: "matrix" })));
+    act(() =>
+      result.current.filters.setFilters((f) => ({ ...f, q: "matrix" })),
+    );
     expect(result.current.chips.find((c) => c.key === "q")).toBeTruthy();
   });
 
@@ -67,7 +69,9 @@ describe("useFilterChips", () => {
       },
       { wrapper },
     );
-    act(() => result.current.filters.setFilters((f) => ({ ...f, missingCfIds: [10] })));
+    act(() =>
+      result.current.filters.setFilters((f) => ({ ...f, missingCfIds: [10] })),
+    );
     const chip = result.current.chips.find((c) => c.label.includes("HDR10+"));
     expect(chip).toBeTruthy();
   });
@@ -81,9 +85,14 @@ describe("useFilterChips", () => {
       { wrapper },
     );
     act(() =>
-      result.current.filters.setFilters((f) => ({ ...f, hasNegativeCfIds: [50] })),
+      result.current.filters.setFilters((f) => ({
+        ...f,
+        hasNegativeCfIds: [50],
+      })),
     );
-    const chip = result.current.chips.find((c) => c.label.includes("x265 Penalty"));
+    const chip = result.current.chips.find((c) =>
+      c.label.includes("x265 Penalty"),
+    );
     expect(chip).toBeTruthy();
   });
 
@@ -95,8 +104,12 @@ describe("useFilterChips", () => {
       },
       { wrapper },
     );
-    act(() => result.current.filters.setFilters((f) => ({ ...f, onlyMissing: true })));
-    expect(result.current.chips.some((c) => c.key === "onlyMissing")).toBe(true);
+    act(() =>
+      result.current.filters.setFilters((f) => ({ ...f, onlyMissing: true })),
+    );
+    expect(result.current.chips.some((c) => c.key === "onlyMissing")).toBe(
+      true,
+    );
   });
 
   it("clearActiveFilters resets value-bearing filters but keeps sort + match modes", () => {

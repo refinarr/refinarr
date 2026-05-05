@@ -10,7 +10,10 @@ interface Options {
   windowMs: number;
 }
 
-export function checkRateLimit(key: string, opts: Options): { allowed: boolean; retryAfterMs: number } {
+export function checkRateLimit(
+  key: string,
+  opts: Options,
+): { allowed: boolean; retryAfterMs: number } {
   const now = Date.now();
   const existing = buckets.get(key);
   if (!existing || existing.resetAt <= now) {

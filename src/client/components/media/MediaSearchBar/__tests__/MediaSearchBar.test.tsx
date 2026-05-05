@@ -39,7 +39,9 @@ describe("MediaSearchBar", () => {
       />,
     );
     expect(screen.getByPlaceholderText(/search title/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /only missing/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /only missing/i }),
+    ).toBeInTheDocument();
   });
 
   it("invokes onChange when the Only missing pill is toggled", async () => {
@@ -53,7 +55,9 @@ describe("MediaSearchBar", () => {
         onChange={onChange}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /only missing/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /only missing/i }),
+    );
     expect(onChange).toHaveBeenCalledWith({ onlyMissing: true });
   });
 
@@ -67,7 +71,9 @@ describe("MediaSearchBar", () => {
         onChange={vi.fn()}
       />,
     );
-    expect(screen.queryByRole("button", { name: /clear all/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /clear all/i }),
+    ).not.toBeInTheDocument();
 
     rerender(
       <MediaSearchBar
@@ -78,7 +84,9 @@ describe("MediaSearchBar", () => {
         onChange={vi.fn()}
       />,
     );
-    expect(screen.getByRole("button", { name: /clear all/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /clear all/i }),
+    ).toBeInTheDocument();
   });
 
   it("Clear all resets every value-bearing filter", async () => {
@@ -88,7 +96,13 @@ describe("MediaSearchBar", () => {
         arrType="radarr"
         instanceId={1}
         scoringMode="manual"
-        filters={{ ...baseFilters, profileId: 1, maxScore: 0.5, onlyMissing: true, q: "x" }}
+        filters={{
+          ...baseFilters,
+          profileId: 1,
+          maxScore: 0.5,
+          onlyMissing: true,
+          q: "x",
+        }}
         onChange={onChange}
       />,
     );

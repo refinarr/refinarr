@@ -37,7 +37,10 @@ export function badRequest(message: string, code?: string): HttpError {
   return new HttpError({ status: 400, message, code });
 }
 
-export function unauthorized(message = "Unauthorized", code?: string): HttpError {
+export function unauthorized(
+  message = "Unauthorized",
+  code?: string,
+): HttpError {
   return new HttpError({ status: 401, message, code });
 }
 
@@ -49,7 +52,11 @@ export function conflict(message: string, code?: string): HttpError {
   return new HttpError({ status: 409, message, code });
 }
 
-export function tooManyRequests(message: string, retryAfterMs?: number, code?: string): HttpError {
+export function tooManyRequests(
+  message: string,
+  retryAfterMs?: number,
+  code?: string,
+): HttpError {
   const headers: Record<string, string> = {};
   if (retryAfterMs !== undefined) {
     headers["Retry-After"] = String(Math.ceil(retryAfterMs / 1000));
@@ -59,7 +66,7 @@ export function tooManyRequests(message: string, retryAfterMs?: number, code?: s
 
 export function internal(
   message = "Internal server error",
-  context?: Record<string, unknown>
+  context?: Record<string, unknown>,
 ): HttpError {
   return new HttpError({
     status: 500,
@@ -73,7 +80,7 @@ export function internal(
 export async function parseJson<T>(
   req: NextRequest,
   schema: ZodType<T>,
-  invalidMessage: string
+  invalidMessage: string,
 ): Promise<T> {
   let body: unknown;
   try {

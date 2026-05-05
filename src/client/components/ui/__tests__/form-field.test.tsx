@@ -9,7 +9,7 @@ describe("FormField", () => {
     render(
       <FormField id="email" label="Email">
         <Input type="email" defaultValue="" />
-      </FormField>
+      </FormField>,
     );
     const input = screen.getByLabelText("Email");
     expect(input).toHaveAttribute("id", "email");
@@ -19,14 +19,21 @@ describe("FormField", () => {
 
   it("renders the description and ties it to the input via aria-describedby", () => {
     render(
-      <FormField id="password" label="Password" description="At least 12 characters">
+      <FormField
+        id="password"
+        label="Password"
+        description="At least 12 characters"
+      >
         <Input type="password" defaultValue="" />
-      </FormField>
+      </FormField>,
     );
     const input = screen.getByLabelText("Password");
     const descId = input.getAttribute("aria-describedby");
     expect(descId).toBe("password-description");
-    expect(screen.getByText("At least 12 characters")).toHaveAttribute("id", descId!);
+    expect(screen.getByText("At least 12 characters")).toHaveAttribute(
+      "id",
+      descId!,
+    );
     expect(input).not.toHaveAttribute("aria-invalid");
   });
 
@@ -34,7 +41,7 @@ describe("FormField", () => {
     render(
       <FormField id="username" label="Username" error="Required">
         <Input defaultValue="" />
-      </FormField>
+      </FormField>,
     );
     const input = screen.getByLabelText("Username");
     expect(input).toHaveAttribute("aria-invalid", "true");
@@ -48,9 +55,11 @@ describe("FormField", () => {
     render(
       <FormField id="x" label="X" description="hint" error="bad">
         <Input defaultValue="" />
-      </FormField>
+      </FormField>,
     );
     const input = screen.getByLabelText("X");
-    expect(input.getAttribute("aria-describedby")).toBe("x-description x-error");
+    expect(input.getAttribute("aria-describedby")).toBe(
+      "x-description x-error",
+    );
   });
 });

@@ -8,20 +8,33 @@ import { dataCache } from "@/server/lib/DataCache";
 import { radarrDeleteSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
-  const { instanceId, mediaId, fileId, title, search = false } = await parseJson(
-    req,
-    radarrDeleteSchema,
-    "Invalid delete payload",
-  );
+  const {
+    instanceId,
+    mediaId,
+    fileId,
+    title,
+    search = false,
+  } = await parseJson(req, radarrDeleteSchema, "Invalid delete payload");
 
   // Delete fires inline; the optional follow-up search goes through the
   // queue (live) or fires inline as a dry-run preview.
-  const result = await movieService.deleteFile(instanceId, mediaId, fileId, title, false);
+  const result = await movieService.deleteFile(
+    instanceId,
+    mediaId,
+    fileId,
+    title,
+    false,
+  );
   if (search && result.status !== "failed") {
     if (await dryRunService.isDryRun()) {
       await movieService.triggerSearch(instanceId, mediaId, title);
     } else {
-      await searchQueueService.enqueue({ instanceId, action: "movie", mediaId, title });
+      await searchQueueService.enqueue({
+        instanceId,
+        action: "movie",
+        mediaId,
+        title,
+      });
     }
   }
   dataCache.invalidate(instanceId);

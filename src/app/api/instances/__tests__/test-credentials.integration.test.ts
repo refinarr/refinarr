@@ -16,9 +16,15 @@ function postReq(body: unknown): NextRequest {
 
 describe("POST /api/instances/test (stateless)", () => {
   test("ok: true when upstream returns 200", async () => {
-    mswServer.use(...radarrHandlers({ baseUrl }, { systemStatus: { status: 200 } }));
+    mswServer.use(
+      ...radarrHandlers({ baseUrl }, { systemStatus: { status: 200 } }),
+    );
     const res = await POST(
-      postReq({ type: "radarr", url: baseUrl, apiKey: "abcd1234abcd1234abcd1234abcd1234" }),
+      postReq({
+        type: "radarr",
+        url: baseUrl,
+        apiKey: "abcd1234abcd1234abcd1234abcd1234",
+      }),
       ctxNone,
     );
     expect(res.status).toBe(200);
@@ -26,9 +32,15 @@ describe("POST /api/instances/test (stateless)", () => {
   });
 
   test("ok: false when upstream returns 403", async () => {
-    mswServer.use(...radarrHandlers({ baseUrl }, { systemStatus: { status: 403 } }));
+    mswServer.use(
+      ...radarrHandlers({ baseUrl }, { systemStatus: { status: 403 } }),
+    );
     const res = await POST(
-      postReq({ type: "radarr", url: baseUrl, apiKey: "wrong-key-wrong-key-wrong-key-00" }),
+      postReq({
+        type: "radarr",
+        url: baseUrl,
+        apiKey: "wrong-key-wrong-key-wrong-key-00",
+      }),
       ctxNone,
     );
     expect(res.status).toBe(200);
@@ -37,7 +49,11 @@ describe("POST /api/instances/test (stateless)", () => {
 
   test("rejects SSRF URL (cloud metadata) with 400", async () => {
     const res = await POST(
-      postReq({ type: "radarr", url: "http://169.254.169.254/", apiKey: "abcd1234abcd1234abcd1234abcd1234" }),
+      postReq({
+        type: "radarr",
+        url: "http://169.254.169.254/",
+        apiKey: "abcd1234abcd1234abcd1234abcd1234",
+      }),
       ctxNone,
     );
     expect(res.status).toBe(400);

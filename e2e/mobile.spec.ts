@@ -47,28 +47,34 @@ test.beforeEach(async ({ page }) => {
     return route.continue();
   });
   await page.route("**/api/radarr/movies**", (route) =>
-    route.fulfill({ status: 200, json: FAKE_RESPONSE })
+    route.fulfill({ status: 200, json: FAKE_RESPONSE }),
   );
   await page.route("**/api/radarr/qualityprofiles**", (route) =>
-    route.fulfill({ status: 200, json: [] })
+    route.fulfill({ status: 200, json: [] }),
   );
   await page.route("**/api/preferences**", (route) =>
-    route.fulfill({ status: 200, json: [] })
+    route.fulfill({ status: 200, json: [] }),
   );
 });
 
-test("topbar hamburger replaces the sidebar on mobile and opens the nav sheet", async ({ page }) => {
+test("topbar hamburger replaces the sidebar on mobile and opens the nav sheet", async ({
+  page,
+}) => {
   await page.goto("/dashboard");
   // The desktop sidebar is hidden below md, and the dashboard nav links
   // are not in the DOM until the sheet opens.
   await expect(page.getByRole("link", { name: /movies/i })).toHaveCount(0);
 
   await page.getByRole("button", { name: /open navigation menu/i }).click();
-  await expect(page.getByRole("link", { name: /movies/i })).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole("link", { name: /movies/i })).toBeVisible({
+    timeout: 5_000,
+  });
   await expect(page.getByRole("link", { name: /shows/i })).toBeVisible();
 });
 
-test("movies page renders cards and the filter pills are visible on mobile", async ({ page }) => {
+test("movies page renders cards and the filter pills are visible on mobile", async ({
+  page,
+}) => {
   await page.goto("/movies");
 
   // Both card and table render in the DOM (the table is CSS-hidden below lg);
@@ -79,10 +85,14 @@ test("movies page renders cards and the filter pills are visible on mobile", asy
 
   // Filter pills wrap naturally on mobile — no separate sheet trigger.
   // The Only-missing toggle is the always-visible quick filter.
-  await expect(page.getByRole("button", { name: /only missing/i })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /only missing/i }),
+  ).toBeVisible();
 });
 
-test("only-missing pill toggles to active state when tapped", async ({ page }) => {
+test("only-missing pill toggles to active state when tapped", async ({
+  page,
+}) => {
   await page.goto("/movies");
   await page
     .getByTestId("media-card-list")
@@ -92,5 +102,7 @@ test("only-missing pill toggles to active state when tapped", async ({ page }) =
   const toggle = page.getByRole("button", { name: /only missing/i });
   await toggle.click();
   // After tapping, a "Clear all" link appears since at least one filter is now active.
-  await expect(page.getByRole("button", { name: /clear all/i })).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole("button", { name: /clear all/i })).toBeVisible({
+    timeout: 5_000,
+  });
 });

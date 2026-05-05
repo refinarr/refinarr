@@ -10,10 +10,16 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   if (!Number.isInteger(instanceId) || instanceId <= 0) {
     return NextResponse.json({ error: "instanceId required" }, { status: 400 });
   }
-  const windowHoursRaw = Number(req.nextUrl.searchParams.get("windowHours") ?? "1");
-  const windowHours = Number.isFinite(windowHoursRaw) && windowHoursRaw > 0
-    ? Math.min(windowHoursRaw, MAX_WINDOW_HOURS)
-    : 1;
-  const items = await logRepository.findRecentSearches(instanceId, windowHours * 60 * 60 * 1000);
+  const windowHoursRaw = Number(
+    req.nextUrl.searchParams.get("windowHours") ?? "1",
+  );
+  const windowHours =
+    Number.isFinite(windowHoursRaw) && windowHoursRaw > 0
+      ? Math.min(windowHoursRaw, MAX_WINDOW_HOURS)
+      : 1;
+  const items = await logRepository.findRecentSearches(
+    instanceId,
+    windowHours * 60 * 60 * 1000,
+  );
   return NextResponse.json({ items });
 });

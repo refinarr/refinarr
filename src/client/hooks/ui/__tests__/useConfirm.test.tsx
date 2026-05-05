@@ -15,7 +15,11 @@ function Host({ onResolve, destructive, autoOpen }: HostProps) {
   const { confirm, dialog } = useConfirm();
   useEffect(() => {
     if (!autoOpen) return;
-    confirm({ title: "Delete?", body: "This will delete it.", destructive }).then(onResolve);
+    confirm({
+      title: "Delete?",
+      body: "This will delete it.",
+      destructive,
+    }).then(onResolve);
   }, [confirm, onResolve, destructive, autoOpen]);
   return <>{dialog}</>;
 }
@@ -29,8 +33,17 @@ describe("useConfirm", () => {
 
   test("clicking confirm resolves the promise with true", async () => {
     let resolved: boolean | undefined;
-    renderWithProviders(<Host onResolve={(v) => { resolved = v; }} autoOpen />);
-    const confirmBtn = await screen.findByRole("button", { name: /confirm|delete|yes/i });
+    renderWithProviders(
+      <Host
+        onResolve={(v) => {
+          resolved = v;
+        }}
+        autoOpen
+      />,
+    );
+    const confirmBtn = await screen.findByRole("button", {
+      name: /confirm|delete|yes/i,
+    });
     await userEvent.click(confirmBtn);
     // Drain the microtask the promise resolves on.
     await new Promise((r) => setTimeout(r, 0));
@@ -39,7 +52,14 @@ describe("useConfirm", () => {
 
   test("clicking cancel resolves the promise with false", async () => {
     let resolved: boolean | undefined;
-    renderWithProviders(<Host onResolve={(v) => { resolved = v; }} autoOpen />);
+    renderWithProviders(
+      <Host
+        onResolve={(v) => {
+          resolved = v;
+        }}
+        autoOpen
+      />,
+    );
     const cancelBtn = await screen.findByRole("button", { name: /cancel|no/i });
     await userEvent.click(cancelBtn);
     await new Promise((r) => setTimeout(r, 0));
@@ -48,7 +68,9 @@ describe("useConfirm", () => {
 
   test("destructive=true applies destructive styling to the confirm action", async () => {
     renderWithProviders(<Host onResolve={() => {}} destructive autoOpen />);
-    const confirmBtn = await screen.findByRole("button", { name: /confirm|delete|yes/i });
+    const confirmBtn = await screen.findByRole("button", {
+      name: /confirm|delete|yes/i,
+    });
     expect(confirmBtn.className).toMatch(/destructive/);
   });
 

@@ -21,7 +21,9 @@ export function useDashboardSummary() {
       // open dashboard tab.
       const data = query.state.data;
       if (query.state.status !== "success" || !data) return SLOW_INTERVAL;
-      const hasCold = data.perInstance.some((p) => p.enabled && p.flaggedCount === null);
+      const hasCold = data.perInstance.some(
+        (p) => p.enabled && p.flaggedCount === null,
+      );
       return hasCold ? FAST_INTERVAL : SLOW_INTERVAL;
     },
   });

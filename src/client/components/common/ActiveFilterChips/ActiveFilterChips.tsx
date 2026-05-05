@@ -20,7 +20,11 @@ export function ActiveFilterChips({ chips }: Props) {
     <div className="flex flex-wrap items-center gap-1.5">
       <span className="text-xs text-muted-foreground">{t("active")}</span>
       {chips.map((chip) => (
-        <Badge key={chip.key} variant="secondary" className="gap-1 pl-2 pr-1 py-0.5">
+        <Badge
+          key={chip.key}
+          variant="secondary"
+          className="gap-1 pl-2 pr-1 py-0.5"
+        >
           <span className="text-xs">{chip.label}</span>
           <button
             type="button"

@@ -24,14 +24,22 @@ export interface QueueStatus {
 
 export class SearchQueueService {
   async enqueue(input: EnqueueInput): Promise<SearchQueueEntry> {
-    if (input.action === "season" && typeof input.payload?.seasonNumber !== "number") {
+    if (
+      input.action === "season" &&
+      typeof input.payload?.seasonNumber !== "number"
+    ) {
       throw new Error("season action requires numeric seasonNumber in payload");
     }
-    if (input.action === "episode" && typeof input.payload?.fileId !== "number") {
+    if (
+      input.action === "episode" &&
+      typeof input.payload?.fileId !== "number"
+    ) {
       throw new Error("episode action requires numeric fileId in payload");
     }
-    const seasonNumber = input.action === "season" ? (input.payload!.seasonNumber as number) : 0;
-    const fileId = input.action === "episode" ? (input.payload!.fileId as number) : 0;
+    const seasonNumber =
+      input.action === "season" ? (input.payload!.seasonNumber as number) : 0;
+    const fileId =
+      input.action === "episode" ? (input.payload!.fileId as number) : 0;
 
     const { entry, created } = await searchQueueRepository.createUnique({
       instanceId: input.instanceId,
@@ -71,7 +79,7 @@ export class SearchQueueService {
       appLogger.error("searchWorker.kick failed", {
         source: LogSource.SearchQueue,
         context: { instanceId: input.instanceId, err: String(err) },
-      })
+      }),
     );
     eventBus.emit({ type: "queue-changed", instanceId: input.instanceId });
     return entry;
@@ -122,7 +130,10 @@ export class SearchQueueService {
         ? minDelayMs
         : Date.now() - lastProcessedAt.getTime();
     const remainingFirstDelay = Math.max(0, minDelayMs - elapsed);
-    return { pendingCount, etaMs: remainingFirstDelay + (pendingCount - 1) * minDelayMs };
+    return {
+      pendingCount,
+      etaMs: remainingFirstDelay + (pendingCount - 1) * minDelayMs,
+    };
   }
 
   async listPending(instanceId: number): Promise<SearchQueueEntry[]> {
@@ -134,7 +145,8 @@ export class SearchQueueService {
   }
 
   async clearPending(instanceId: number): Promise<number> {
-    const removed = await searchQueueRepository.deletePendingByInstance(instanceId);
+    const removed =
+      await searchQueueRepository.deletePendingByInstance(instanceId);
     if (removed > 0) {
       appLogger.info("Search queue cleared", {
         source: LogSource.SearchQueue,

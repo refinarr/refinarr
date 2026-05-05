@@ -1,7 +1,10 @@
 import Papa from "papaparse";
 import type { FlaggedMovie, FlaggedSeries } from "@/shared/types/models";
 
-export function exportMoviesCsv(movies: FlaggedMovie[], filename = "movies.csv") {
+export function exportMoviesCsv(
+  movies: FlaggedMovie[],
+  filename = "movies.csv",
+) {
   const rows = movies.map((m) => ({
     Title: m.title,
     Year: m.year,
@@ -12,7 +15,10 @@ export function exportMoviesCsv(movies: FlaggedMovie[], filename = "movies.csv")
   downloadCsv(rows, filename);
 }
 
-export function exportSeriesCsv(series: FlaggedSeries[], filename = "series.csv") {
+export function exportSeriesCsv(
+  series: FlaggedSeries[],
+  filename = "series.csv",
+) {
   const rows = series.map((s) => ({
     Title: s.title,
     Year: s.year,

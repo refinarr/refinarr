@@ -10,5 +10,7 @@ export async function login(page: Page) {
   await page.getByLabel("Username").fill(E2E_USERNAME);
   await page.getByLabel("Password", { exact: true }).fill(E2E_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 10_000 });
+  await page.waitForURL((url) => !url.pathname.includes("/login"), {
+    timeout: 10_000,
+  });
 }

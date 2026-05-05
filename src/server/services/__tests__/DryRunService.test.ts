@@ -30,16 +30,24 @@ describe("DryRunService", () => {
 
   test("withDryRun returns the dry result without invoking liveAction in dry mode", async () => {
     let called = false;
-    const result = await dryRunService.withDryRun(true, async () => {
-      called = true;
-      return "live";
-    }, "dry");
+    const result = await dryRunService.withDryRun(
+      true,
+      async () => {
+        called = true;
+        return "live";
+      },
+      "dry",
+    );
     expect(result).toBe("dry");
     expect(called).toBe(false);
   });
 
   test("withDryRun invokes liveAction in live mode", async () => {
-    const result = await dryRunService.withDryRun(false, async () => "live", "dry");
+    const result = await dryRunService.withDryRun(
+      false,
+      async () => "live",
+      "dry",
+    );
     expect(result).toBe("live");
   });
 });

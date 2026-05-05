@@ -21,7 +21,10 @@ const classes: Record<LogLevel, string> = {
 
 export function LogLevelBadge({ level }: Props) {
   return (
-    <Badge variant="outline" className={`uppercase tracking-wide text-[10px] ${classes[level]}`}>
+    <Badge
+      variant="outline"
+      className={`uppercase tracking-wide text-[10px] ${classes[level]}`}
+    >
       {labels[level]}
     </Badge>
   );

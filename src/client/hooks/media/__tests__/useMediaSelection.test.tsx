@@ -34,7 +34,9 @@ describe("useMediaSelection", () => {
       result.current.toggle(1);
       result.current.toggle(3);
     });
-    expect(result.current.selectedItems.map((i) => i.id).sort()).toEqual([1, 3]);
+    expect(result.current.selectedItems.map((i) => i.id).sort()).toEqual([
+      1, 3,
+    ]);
   });
 
   it("filters deletableSelected by the predicate", () => {
@@ -47,7 +49,9 @@ describe("useMediaSelection", () => {
       result.current.toggle(3);
     });
     expect(result.current.selectedItems).toHaveLength(3);
-    expect(result.current.deletableSelected.map((i) => i.id).sort()).toEqual([1, 3]);
+    expect(result.current.deletableSelected.map((i) => i.id).sort()).toEqual([
+      1, 3,
+    ]);
     expect(result.current.deletableCount).toBe(2);
   });
 

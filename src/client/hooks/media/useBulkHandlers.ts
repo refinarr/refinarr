@@ -9,8 +9,18 @@ interface HasId {
 // We don't depend on the mutation's full generics here — only that each
 // mutation accepts items in the shape both useBulkMediaActions and the page
 // hooks already use.
-type BulkMutate<T> = UseMutationResult<unknown, unknown, { items: T[]; isBulk: boolean; signal?: AbortSignal }, unknown>;
-type DeleteMutate<T> = UseMutationResult<unknown, unknown, { items: T[]; isBulk: boolean; signal?: AbortSignal; search: boolean }, unknown>;
+type BulkMutate<T> = UseMutationResult<
+  unknown,
+  unknown,
+  { items: T[]; isBulk: boolean; signal?: AbortSignal },
+  unknown
+>;
+type DeleteMutate<T> = UseMutationResult<
+  unknown,
+  unknown,
+  { items: T[]; isBulk: boolean; signal?: AbortSignal; search: boolean },
+  unknown
+>;
 
 export interface BulkHandlerActions<T> {
   searchMutation: BulkMutate<T>;
@@ -64,7 +74,12 @@ export function useBulkHandlers<T extends HasId>({
     if (!selection.deletableSelected.length) return;
     const items = selection.deletableSelected;
     await runWithAbort(abort, async (signal) => {
-      await actions.deleteMutation.mutateAsync({ items, search, isBulk: true, signal });
+      await actions.deleteMutation.mutateAsync({
+        items,
+        search,
+        isBulk: true,
+        signal,
+      });
       selection.clear();
     });
   };

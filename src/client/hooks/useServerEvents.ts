@@ -24,13 +24,19 @@ export function useServerEvents() {
       switch (event.type) {
         case "queue-changed":
         case "queue-cleared":
-          qc.invalidateQueries({ queryKey: queryKeys.searchQueue(event.instanceId) });
+          qc.invalidateQueries({
+            queryKey: queryKeys.searchQueue(event.instanceId),
+          });
           qc.invalidateQueries({ queryKey: queryKeys.searchQueueAll() });
           break;
         case "history-changed":
-          qc.invalidateQueries({ queryKey: queryKeys.recentSearches(event.instanceId) });
+          qc.invalidateQueries({
+            queryKey: queryKeys.recentSearches(event.instanceId),
+          });
           qc.invalidateQueries({ queryKey: queryKeys.historyAll() });
-          qc.invalidateQueries({ queryKey: queryKeys.searchQueue(event.instanceId) });
+          qc.invalidateQueries({
+            queryKey: queryKeys.searchQueue(event.instanceId),
+          });
           qc.invalidateQueries({ queryKey: queryKeys.searchQueueAll() });
           break;
         case "ready":

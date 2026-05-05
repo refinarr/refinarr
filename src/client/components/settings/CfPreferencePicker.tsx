@@ -1,13 +1,21 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/client/components/ui/card";
 import { Button } from "@/client/components/ui/button";
 import { Badge } from "@/client/components/ui/badge";
 import { Checkbox } from "@/client/components/ui/checkbox";
 import { Label } from "@/client/components/ui/label";
 import { useCustomFormats } from "@/client/hooks/data/useCustomFormats";
-import { usePreferences, useSetPreferences } from "@/client/hooks/data/usePreferences";
+import {
+  usePreferences,
+  useSetPreferences,
+} from "@/client/hooks/data/usePreferences";
 import type { Instance } from "@/shared/types/models";
 import { withToast } from "@/client/lib/with-toast";
 import { Loader2 } from "lucide-react";
@@ -20,7 +28,10 @@ export function CfPreferencePicker({ instance }: Props) {
   const t = useTranslations("settings.cfPicker");
   const tToast = useTranslations("toast.cfs");
   const tCommon = useTranslations("common");
-  const { data: available, isLoading: loadingCfs } = useCustomFormats(instance.type, instance.id);
+  const { data: available, isLoading: loadingCfs } = useCustomFormats(
+    instance.type,
+    instance.id,
+  );
   const { data: saved } = usePreferences(instance.id);
   const setPreferences = useSetPreferences();
 
@@ -28,7 +39,9 @@ export function CfPreferencePicker({ instance }: Props) {
 
   const savedIds = new Set((saved ?? []).map((p) => p.cfId));
   const isSelected = (id: number) => overrides.get(id) ?? savedIds.has(id);
-  const selectedCount = (available ?? []).filter((cf) => isSelected(cf.id)).length;
+  const selectedCount = (available ?? []).filter((cf) =>
+    isSelected(cf.id),
+  ).length;
 
   const toggle = (id: number) => {
     setOverrides((prev) => {
@@ -85,13 +98,19 @@ export function CfPreferencePicker({ instance }: Props) {
           <div className="flex items-center gap-2">
             {selectedCount > 0 && (
               <>
-                <Badge variant="secondary">{t("selectedCount", { count: selectedCount })}</Badge>
+                <Badge variant="secondary">
+                  {t("selectedCount", { count: selectedCount })}
+                </Badge>
                 <Button size="sm" variant="ghost" onClick={clearAll}>
                   {tCommon("clear")}
                 </Button>
               </>
             )}
-            <Button size="sm" onClick={save} disabled={setPreferences.isPending}>
+            <Button
+              size="sm"
+              onClick={save}
+              disabled={setPreferences.isPending}
+            >
               {tCommon("save")}
             </Button>
           </div>
@@ -106,7 +125,10 @@ export function CfPreferencePicker({ instance }: Props) {
                 checked={isSelected(cf.id)}
                 onCheckedChange={() => toggle(cf.id)}
               />
-              <Label htmlFor={`cf-${instance.id}-${cf.id}`} className="text-sm cursor-pointer">
+              <Label
+                htmlFor={`cf-${instance.id}-${cf.id}`}
+                className="text-sm cursor-pointer"
+              >
                 {cf.name}
               </Label>
             </div>

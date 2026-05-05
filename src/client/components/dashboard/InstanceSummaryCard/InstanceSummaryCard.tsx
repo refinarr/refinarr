@@ -40,7 +40,11 @@ const LABEL_KEY: Record<HealthState, string> = {
   unreachable: "unreachable",
 };
 
-function getHealthState(enabled: boolean, isLoading: boolean, healthy: boolean): HealthState {
+function getHealthState(
+  enabled: boolean,
+  isLoading: boolean,
+  healthy: boolean,
+): HealthState {
   if (!enabled) return "disabled";
   if (isLoading) return "checking";
   return healthy ? "connected" : "unreachable";
@@ -48,7 +52,11 @@ function getHealthState(enabled: boolean, isLoading: boolean, healthy: boolean):
 
 export function InstanceSummaryCard({ instance }: Props) {
   const t = useTranslations("dashboard.instanceCard");
-  const { data: health, isLoading: healthLoading, isError: healthError } = useInstanceHealth(instance.id);
+  const {
+    data: health,
+    isLoading: healthLoading,
+    isError: healthError,
+  } = useInstanceHealth(instance.id);
   const healthy = !healthError && health?.ok === true;
   const state = getHealthState(instance.enabled, healthLoading, healthy);
   const dotClass = DOT_CLASS[state];
@@ -61,10 +69,17 @@ export function InstanceSummaryCard({ instance }: Props) {
     <Card className={!instance.enabled ? "opacity-60" : ""}>
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${dotClass}`} title={healthLabel} />
-          <Badge variant="outline" className="capitalize">{instance.type}</Badge>
+          <span
+            className={`h-2 w-2 rounded-full ${dotClass}`}
+            title={healthLabel}
+          />
+          <Badge variant="outline" className="capitalize">
+            {instance.type}
+          </Badge>
           <span className="font-medium truncate">{instance.name}</span>
-          {!instance.enabled && <Badge variant="secondary">{t("disabled")}</Badge>}
+          {!instance.enabled && (
+            <Badge variant="secondary">{t("disabled")}</Badge>
+          )}
         </div>
         <p className="text-xs text-muted-foreground mt-1">{healthLabel}</p>
       </CardHeader>
@@ -76,12 +91,18 @@ export function InstanceSummaryCard({ instance }: Props) {
           <span className="text-sm flex items-baseline gap-1">
             {instance.flaggedCount === null ? (
               <>
-                <span className="text-2xl font-bold tabular-nums text-muted-foreground">—</span>
-                <span className="text-muted-foreground">{t(flaggedNounKey, { count: 0 })}</span>
+                <span className="text-2xl font-bold tabular-nums text-muted-foreground">
+                  —
+                </span>
+                <span className="text-muted-foreground">
+                  {t(flaggedNounKey, { count: 0 })}
+                </span>
               </>
             ) : (
               <>
-                <span className="text-2xl font-bold tabular-nums">{instance.flaggedCount}</span>
+                <span className="text-2xl font-bold tabular-nums">
+                  {instance.flaggedCount}
+                </span>
                 <span className="text-muted-foreground">
                   {t(flaggedNounKey, { count: instance.flaggedCount })}
                 </span>

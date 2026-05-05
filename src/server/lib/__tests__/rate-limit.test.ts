@@ -76,11 +76,15 @@ describe("clientIp", () => {
   }
 
   test("returns the first IP from x-forwarded-for", () => {
-    expect(clientIp(makeReq({ "x-forwarded-for": "1.2.3.4, 5.6.7.8" }))).toBe("1.2.3.4");
+    expect(clientIp(makeReq({ "x-forwarded-for": "1.2.3.4, 5.6.7.8" }))).toBe(
+      "1.2.3.4",
+    );
   });
 
   test("trims whitespace from the IP", () => {
-    expect(clientIp(makeReq({ "x-forwarded-for": "  1.2.3.4  " }))).toBe("1.2.3.4");
+    expect(clientIp(makeReq({ "x-forwarded-for": "  1.2.3.4  " }))).toBe(
+      "1.2.3.4",
+    );
   });
 
   test("falls back to 'unknown' without x-forwarded-for", () => {

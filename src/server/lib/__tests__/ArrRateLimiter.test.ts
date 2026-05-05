@@ -2,8 +2,12 @@ import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { ArrRateLimiter } from "../ArrRateLimiter";
 
 describe("ArrRateLimiter", () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   function make(ratePerSec: number) {
     vi.stubEnv("ARR_RATE_LIMIT", String(ratePerSec));
@@ -26,7 +30,9 @@ describe("ArrRateLimiter", () => {
     for (let i = 0; i < 20; i++) await limiter.acquire(1);
 
     let resolved = false;
-    const p = limiter.acquire(1).then(() => { resolved = true; });
+    const p = limiter.acquire(1).then(() => {
+      resolved = true;
+    });
     expect(resolved).toBe(false);
     await vi.runAllTimersAsync();
     await p;
@@ -51,8 +57,12 @@ describe("ArrRateLimiter", () => {
 
     let firstResolved = false;
     let secondResolved = false;
-    const first = limiter.acquire(1).then(() => { firstResolved = true; });
-    const second = limiter.acquire(1).then(() => { secondResolved = true; });
+    const first = limiter.acquire(1).then(() => {
+      firstResolved = true;
+    });
+    const second = limiter.acquire(1).then(() => {
+      secondResolved = true;
+    });
 
     await vi.advanceTimersByTimeAsync(1000);
     await Promise.resolve();

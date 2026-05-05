@@ -19,7 +19,10 @@ export const SCORE_FOR: Record<ScoringMode, (item: FlaggedMedia) => number> = {
 // The "things wrong with this item" list for the active mode. Profile mode
 // surfaces unwanted (negative-score) formats present on the file; manual
 // mode surfaces wanted formats missing from the file.
-export const ISSUES_FOR: Record<ScoringMode, (item: FlaggedMedia) => CustomFormat[]> = {
+export const ISSUES_FOR: Record<
+  ScoringMode,
+  (item: FlaggedMedia) => CustomFormat[]
+> = {
   profile: (item) => item.unwantedFormats,
   manual: (item) => item.missingFormats,
 };
@@ -35,7 +38,8 @@ export const ISSUES_HEADER_KEY: Record<ScoringMode, "penalties" | "missing"> = {
 // dispatch doesn't fit (e.g. "if mode is X AND another condition, do Y").
 // Using these instead of `mode === "profile"` keeps the literal
 // confined to this file — every other file imports via the helper.
-export const isProfileMode = (m: ScoringMode): m is "profile" => m === "profile";
+export const isProfileMode = (m: ScoringMode): m is "profile" =>
+  m === "profile";
 export const isManualMode = (m: ScoringMode): m is "manual" => m === "manual";
 
 // Default scoring mode used when an instance lookup misses or when the

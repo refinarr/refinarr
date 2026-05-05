@@ -21,7 +21,13 @@ const series: FlaggedSeries = {
 };
 
 const profiles: QualityProfile[] = [
-  { id: 100, name: "HD-1080p", minUpgradeFormatScore: 0, cutoffFormatScore: 100, formatItems: [] },
+  {
+    id: 100,
+    name: "HD-1080p",
+    minUpgradeFormatScore: 0,
+    cutoffFormatScore: 100,
+    formatItems: [],
+  },
 ];
 
 const noopHandlers = {

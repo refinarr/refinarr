@@ -51,4 +51,5 @@ class EventBus {
 // new emitter, silently dropping events.
 const globalForEventBus = globalThis as unknown as { eventBus?: EventBus };
 export const eventBus = globalForEventBus.eventBus ?? new EventBus();
-if (process.env.NODE_ENV !== "production") globalForEventBus.eventBus = eventBus;
+if (process.env.NODE_ENV !== "production")
+  globalForEventBus.eventBus = eventBus;

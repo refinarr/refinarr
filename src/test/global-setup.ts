@@ -19,7 +19,12 @@ export function setup() {
   mkdirSync(dirname(TEST_DB_PATH), { recursive: true });
 
   // Wipe any leftover test DB so migrations apply cleanly.
-  for (const f of [TEST_DB_PATH, `${TEST_DB_PATH}-journal`, `${TEST_DB_PATH}-wal`, `${TEST_DB_PATH}-shm`]) {
+  for (const f of [
+    TEST_DB_PATH,
+    `${TEST_DB_PATH}-journal`,
+    `${TEST_DB_PATH}-wal`,
+    `${TEST_DB_PATH}-shm`,
+  ]) {
     rmSync(f, { force: true });
   }
   execSync("yarn prisma migrate deploy", {

@@ -35,7 +35,11 @@ describe("LogRepository", () => {
     await logRepository.create({ ...baseLog, status: "failed", error: "Boom" });
     await logRepository.create({ ...baseLog, instanceId: 2, status: "failed" });
 
-    const failedInst1 = await logRepository.findPaginated({ instanceId: 1, status: "failed" }, 1, 50);
+    const failedInst1 = await logRepository.findPaginated(
+      { instanceId: 1, status: "failed" },
+      1,
+      50,
+    );
     expect(failedInst1.total).toBe(1);
     expect(failedInst1.items[0].error).toBe("Boom");
   });
@@ -54,7 +58,12 @@ describe("LogRepository", () => {
   test("findFailedByInstance returns only failed rows for the instance", async () => {
     await logRepository.create({ ...baseLog, status: "success" });
     await logRepository.create({ ...baseLog, status: "failed", error: "x" });
-    await logRepository.create({ ...baseLog, instanceId: 2, status: "failed", error: "y" });
+    await logRepository.create({
+      ...baseLog,
+      instanceId: 2,
+      status: "failed",
+      error: "y",
+    });
     const failed = await logRepository.findFailedByInstance(1);
     expect(failed).toHaveLength(1);
   });
@@ -69,14 +78,17 @@ describe("LogRepository", () => {
   });
 
   test("findRecent caps the result at the limit", async () => {
-    for (let i = 0; i < 4; i += 1) await logRepository.create({ ...baseLog, mediaId: i });
+    for (let i = 0; i < 4; i += 1)
+      await logRepository.create({ ...baseLog, mediaId: i });
     const recent = await logRepository.findRecent(2);
     expect(recent).toHaveLength(2);
   });
 
   test("update mutates a row", async () => {
     const created = await logRepository.create(baseLog);
-    const updated = await logRepository.update(created.id, { status: "failed" });
+    const updated = await logRepository.update(created.id, {
+      status: "failed",
+    });
     expect(updated.status).toBe("failed");
   });
 
@@ -98,10 +110,13 @@ describe("LogRepository", () => {
       await logRepository.create({ ...baseLog, mediaId: i, title: `m${i}` });
       await new Promise((r) => setTimeout(r, 2));
     }
-    await vi.waitFor(async () => {
-      const remaining = await logRepository.findAll();
-      expect(remaining).toHaveLength(5);
-    }, { timeout: 500 });
+    await vi.waitFor(
+      async () => {
+        const remaining = await logRepository.findAll();
+        expect(remaining).toHaveLength(5);
+      },
+      { timeout: 500 },
+    );
     const remaining = await logRepository.findAll();
     // Oldest two should be gone (mediaId 0, 1).
     expect(remaining.map((r) => r.mediaId).sort()).toEqual([2, 3, 4, 5, 6]);
@@ -109,10 +124,22 @@ describe("LogRepository", () => {
 
   describe("findRecentSearches", () => {
     test("returns the most recent successful search per mediaId within the window", async () => {
-      await logRepository.create({ ...baseLog, mediaId: 1, title: "first hit" });
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 1,
+        title: "first hit",
+      });
       await new Promise((r) => setTimeout(r, 5));
-      const newer = await logRepository.create({ ...baseLog, mediaId: 1, title: "second hit (newer)" });
-      await logRepository.create({ ...baseLog, mediaId: 2, title: "other media" });
+      const newer = await logRepository.create({
+        ...baseLog,
+        mediaId: 1,
+        title: "second hit (newer)",
+      });
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 2,
+        title: "other media",
+      });
 
       const results = await logRepository.findRecentSearches(1, 60_000);
       expect(results).toHaveLength(2);
@@ -135,8 +162,18 @@ describe("LogRepository", () => {
     });
 
     test("excludes failed and isDryRun rows — only non-dry success counts as 'searched'", async () => {
-      await logRepository.create({ ...baseLog, mediaId: 1, status: "failed", error: "boom" });
-      await logRepository.create({ ...baseLog, mediaId: 2, status: "success", isDryRun: true });
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 1,
+        status: "failed",
+        error: "boom",
+      });
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 2,
+        status: "success",
+        isDryRun: true,
+      });
       const results = await logRepository.findRecentSearches(1, 60_000);
       expect(results).toHaveLength(0);
     });

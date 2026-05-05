@@ -1,15 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/lib/db";
-import { hashPassword, createSession, getUserCount, SESSION_COOKIE } from "@/server/lib/auth";
+import {
+  hashPassword,
+  createSession,
+  getUserCount,
+  SESSION_COOKIE,
+} from "@/server/lib/auth";
 import { credentialsSchema } from "@/shared/types/schemas";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
-import { HttpError, conflict, parseJson, tooManyRequests } from "@/server/lib/api-errors";
+import {
+  HttpError,
+  conflict,
+  parseJson,
+  tooManyRequests,
+} from "@/server/lib/api-errors";
 import { createApiHandler } from "@/server/lib/handler";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
-  const { allowed, retryAfterMs } = checkRateLimit(`setup:${clientIp(req)}`, { max: 10, windowMs: 15 * 60 * 1000 });
+  const { allowed, retryAfterMs } = checkRateLimit(`setup:${clientIp(req)}`, {
+    max: 10,
+    windowMs: 15 * 60 * 1000,
+  });
   if (!allowed) {
     throw tooManyRequests("Too many attempts", retryAfterMs);
   }
@@ -19,14 +32,21 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     throw conflict("Setup already completed");
   }
 
-  const { username, password } = await parseJson(req, credentialsSchema, "Invalid credentials format");
+  const { username, password } = await parseJson(
+    req,
+    credentialsSchema,
+    "Invalid credentials format",
+  );
 
   try {
     const user = await prisma.user.create({
       data: { username, passwordHash: hashPassword(password) },
     });
     const session = await createSession(user.id);
-    appLogger.info("Initial admin user created", { source: LogSource.Auth, context: { username } });
+    appLogger.info("Initial admin user created", {
+      source: LogSource.Auth,
+      context: { username },
+    });
     const res = NextResponse.json({ ok: true });
     res.cookies.set(SESSION_COOKIE, session.id, {
       httpOnly: true,

@@ -17,7 +17,9 @@ export const PUT = createApiHandler(async (req: NextRequest) => {
   // Defense-in-depth: never let a config PUT modify the API key or other reserved keys.
   const RESERVED = new Set(["apiKey"]);
   const writes = Object.entries(data).filter(([key]) => !RESERVED.has(key));
-  await Promise.all(writes.map(([key, value]) => configRepository.set(key, String(value))));
+  await Promise.all(
+    writes.map(([key, value]) => configRepository.set(key, String(value))),
+  );
 
   return NextResponse.json({ ok: true });
 });

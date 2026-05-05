@@ -39,10 +39,18 @@ async function readFrames(
         if (line.startsWith("id: ")) frame.id = Number(line.slice(4));
         else if (line.startsWith("event: ")) frame.event = line.slice(7);
         else if (line.startsWith("data: ")) {
-          try { frame.data = JSON.parse(line.slice(6)); } catch { /* skip */ }
+          try {
+            frame.data = JSON.parse(line.slice(6));
+          } catch {
+            /* skip */
+          }
         }
       }
-      if (frame.id !== null || frame.event !== null || frame.data !== undefined) {
+      if (
+        frame.id !== null ||
+        frame.event !== null ||
+        frame.data !== undefined
+      ) {
         frames.push(frame);
       }
     }
@@ -51,7 +59,11 @@ async function readFrames(
   return frames;
 }
 
-function makeEntry(id: number, message = `m${id}`, level: AppLogEntry["level"] = "info"): AppLogEntry {
+function makeEntry(
+  id: number,
+  message = `m${id}`,
+  level: AppLogEntry["level"] = "info",
+): AppLogEntry {
   return {
     id,
     level,
@@ -88,16 +100,25 @@ describe("GET /api/logs/stream (bus-driven)", () => {
 
   test("level filter drops non-matching applog events", async () => {
     const ac = new AbortController();
-    const req = new NextRequest("http://localhost/api/logs/stream?level=error", {
-      signal: ac.signal,
-    });
+    const req = new NextRequest(
+      "http://localhost/api/logs/stream?level=error",
+      {
+        signal: ac.signal,
+      },
+    );
     const res = await GET(req, { params: Promise.resolve({}) });
 
     const readPromise = readFrames(res.body!, 2, 500);
     await new Promise((r) => setTimeout(r, 30));
 
-    eventBus.emit({ type: "applog", entry: makeEntry(201, "info-noise", "info") });
-    eventBus.emit({ type: "applog", entry: makeEntry(202, "real-error", "error") });
+    eventBus.emit({
+      type: "applog",
+      entry: makeEntry(201, "info-noise", "info"),
+    });
+    eventBus.emit({
+      type: "applog",
+      entry: makeEntry(202, "real-error", "error"),
+    });
 
     const frames = await readPromise;
     const forwarded = frames.filter((f) => f.id !== null);
@@ -107,7 +128,8 @@ describe("GET /api/logs/stream (bus-driven)", () => {
   });
 
   test("dedupes by id when bus delivers an entry already in the backfill", async () => {
-    const { appLogRepository } = await import("@/server/repositories/AppLogRepository");
+    const { appLogRepository } =
+      await import("@/server/repositories/AppLogRepository");
     const persisted = await appLogRepository.create({
       level: "info",
       message: "already-here",
@@ -127,7 +149,10 @@ describe("GET /api/logs/stream (bus-driven)", () => {
     // Re-emit the same entry as if the bus race-fired during backfill.
     eventBus.emit({ type: "applog", entry: persisted });
     // Then a brand-new entry to confirm the stream is still alive.
-    eventBus.emit({ type: "applog", entry: makeEntry(persisted.id + 1, "fresh") });
+    eventBus.emit({
+      type: "applog",
+      entry: makeEntry(persisted.id + 1, "fresh"),
+    });
 
     const frames = await readPromise;
     const ids = frames.filter((f) => f.id !== null).map((f) => f.id);

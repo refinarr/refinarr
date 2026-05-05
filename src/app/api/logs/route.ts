@@ -13,11 +13,17 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const limit = Number(s.get("limit") ?? "50");
 
   const filter = {
-    level: LOG_LEVELS.includes(level as LogLevel) ? (level as LogLevel) : undefined,
+    level: LOG_LEVELS.includes(level as LogLevel)
+      ? (level as LogLevel)
+      : undefined,
     q,
   };
 
-  const { items, total } = await appLogRepository.findPaginated(filter, page, limit);
+  const { items, total } = await appLogRepository.findPaginated(
+    filter,
+    page,
+    limit,
+  );
   return NextResponse.json({
     items,
     total,

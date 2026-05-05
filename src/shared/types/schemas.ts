@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 export const credentialsSchema = z.object({
-  username: z.string().min(3).max(64).regex(/^[a-zA-Z0-9_.-]+$/, "Use letters, numbers, _ . -"),
+  username: z
+    .string()
+    .min(3)
+    .max(64)
+    .regex(/^[a-zA-Z0-9_.-]+$/, "Use letters, numbers, _ . -"),
   password: z.string().min(12).max(256),
 });
 
@@ -44,10 +48,14 @@ export const ignoreCreateSchema = z.object({
 
 export const preferencesSchema = z.object({
   instanceId: z.number().int().positive(),
-  cfs: z.array(z.object({
-    cfId: z.number().int().nonnegative(),
-    cfName: z.string().min(1).max(256),
-  })).max(500),
+  cfs: z
+    .array(
+      z.object({
+        cfId: z.number().int().nonnegative(),
+        cfName: z.string().min(1).max(256),
+      }),
+    )
+    .max(500),
 });
 
 export const radarrSearchSchema = z.object({
@@ -92,7 +100,10 @@ export const sonarrDeleteSchema = z.object({
   search: z.boolean().optional(),
 });
 
-export const configUpdateSchema = z.record(z.string().max(128), z.string().max(2048));
+export const configUpdateSchema = z.record(
+  z.string().max(128),
+  z.string().max(2048),
+);
 
 // Common shape required from any ActionLog.payload before retry. The retry
 // route validates this much; per-service retryFromPayload then runs its own

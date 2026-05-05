@@ -1,25 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { prisma } from "@/server/lib/db";
-import { verifyPassword, createSession, SESSION_COOKIE } from "@/server/lib/auth";
+import {
+  verifyPassword,
+  createSession,
+  SESSION_COOKIE,
+} from "@/server/lib/auth";
 import { credentialsSchema } from "@/shared/types/schemas";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import { createApiHandler } from "@/server/lib/handler";
-import { parseJson, tooManyRequests, unauthorized } from "@/server/lib/api-errors";
+import {
+  parseJson,
+  tooManyRequests,
+  unauthorized,
+} from "@/server/lib/api-errors";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
-  const { allowed, retryAfterMs } = checkRateLimit(`login:${clientIp(req)}`, { max: 10, windowMs: 15 * 60 * 1000 });
+  const { allowed, retryAfterMs } = checkRateLimit(`login:${clientIp(req)}`, {
+    max: 10,
+    windowMs: 15 * 60 * 1000,
+  });
   if (!allowed) {
     throw tooManyRequests("Too many attempts", retryAfterMs);
   }
 
-  const { username, password } = await parseJson(req, credentialsSchema, "Invalid credentials");
+  const { username, password } = await parseJson(
+    req,
+    credentialsSchema,
+    "Invalid credentials",
+  );
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user || !verifyPassword(password, user.passwordHash)) {
-    const usernameHash = createHash("sha256").update(username).digest("hex").slice(0, 8);
-    appLogger.warn("Failed login attempt", { source: LogSource.Auth, context: { usernameHash } });
+    const usernameHash = createHash("sha256")
+      .update(username)
+      .digest("hex")
+      .slice(0, 8);
+    appLogger.warn("Failed login attempt", {
+      source: LogSource.Auth,
+      context: { usernameHash },
+    });
     throw unauthorized("Invalid credentials");
   }
 

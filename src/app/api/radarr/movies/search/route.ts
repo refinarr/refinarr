@@ -7,12 +7,24 @@ import { radarrSearchSchema } from "@/shared/types/schemas";
 import { parseJson } from "@/server/lib/api-errors";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
-  const { instanceId, mediaId, title } = await parseJson(req, radarrSearchSchema, "Invalid search payload");
+  const { instanceId, mediaId, title } = await parseJson(
+    req,
+    radarrSearchSchema,
+    "Invalid search payload",
+  );
 
   if (await dryRunService.isDryRun()) {
     const result = await movieService.triggerSearch(instanceId, mediaId, title);
     return NextResponse.json(result);
   }
-  const entry = await searchQueueService.enqueue({ instanceId, action: "movie", mediaId, title });
-  return NextResponse.json({ queued: true, queueId: entry.id }, { status: 202 });
+  const entry = await searchQueueService.enqueue({
+    instanceId,
+    action: "movie",
+    mediaId,
+    title,
+  });
+  return NextResponse.json(
+    { queued: true, queueId: entry.id },
+    { status: 202 },
+  );
 });

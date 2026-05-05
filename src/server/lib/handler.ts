@@ -14,7 +14,7 @@ type ResolvedCtx = { params: Record<string, string> };
 
 type RouteHandler = (
   req: NextRequest,
-  ctx: ResolvedCtx
+  ctx: ResolvedCtx,
 ) => Promise<NextResponse>;
 
 export function createApiHandler(handler: RouteHandler) {
@@ -49,7 +49,7 @@ interface RequestLogContext extends Record<string, unknown> {
 function handleApiError(
   err: unknown,
   traceId: string,
-  requestContext: RequestLogContext
+  requestContext: RequestLogContext,
 ): NextResponse {
   if (err instanceof HttpError) {
     logHttpError(err, requestContext);
@@ -70,7 +70,11 @@ function handleApiError(
     err,
     context: requestContext,
   });
-  return errorResponse({ error: "Internal server error", traceId, status: 500 });
+  return errorResponse({
+    error: "Internal server error",
+    traceId,
+    status: 500,
+  });
 }
 
 function logHttpError(err: HttpError, requestContext: RequestLogContext): void {
@@ -89,7 +93,10 @@ function logHttpError(err: HttpError, requestContext: RequestLogContext): void {
   }
 }
 
-function validationErrorResponse(err: unknown, traceId: string): NextResponse | null {
+function validationErrorResponse(
+  err: unknown,
+  traceId: string,
+): NextResponse | null {
   if (err instanceof UnsafeUrlError) {
     return errorResponse({ error: err.message, traceId, status: 400 });
   }
@@ -107,8 +114,16 @@ interface ErrorResponseOptions extends ApiErrorResponse {
   headers?: HeadersInit;
 }
 
-function errorResponse({ error, code, traceId, status, headers }: ErrorResponseOptions): NextResponse {
-  const body: ApiErrorResponse = code ? { error, code, traceId } : { error, traceId };
+function errorResponse({
+  error,
+  code,
+  traceId,
+  status,
+  headers,
+}: ErrorResponseOptions): NextResponse {
+  const body: ApiErrorResponse = code
+    ? { error, code, traceId }
+    : { error, traceId };
   const res = NextResponse.json(body, { status, headers });
   res.headers.set("X-Trace-Id", traceId);
   return res;

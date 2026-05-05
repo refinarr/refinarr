@@ -87,20 +87,23 @@ class EventChannel {
     // return a promise that only resolves on tab close, so the lock is
     // held for the tab's lifetime. Other tabs queue and one takes over
     // after this tab releases.
-    void navigator.locks.request(LOCK_NAME, { mode: "exclusive" }, () =>
-      new Promise<void>((resolve) => {
-        this.isLeader = true;
-        this.openEventSource();
+    void navigator.locks.request(
+      LOCK_NAME,
+      { mode: "exclusive" },
+      () =>
+        new Promise<void>((resolve) => {
+          this.isLeader = true;
+          this.openEventSource();
 
-        const release = () => {
-          this.closeEventSource();
-          this.isLeader = false;
-          resolve();
-        };
-        // pagehide fires on bfcache, beforeunload doesn't always.
-        window.addEventListener("pagehide", release, { once: true });
-        window.addEventListener("beforeunload", release, { once: true });
-      }),
+          const release = () => {
+            this.closeEventSource();
+            this.isLeader = false;
+            resolve();
+          };
+          // pagehide fires on bfcache, beforeunload doesn't always.
+          window.addEventListener("pagehide", release, { once: true });
+          window.addEventListener("beforeunload", release, { once: true });
+        }),
     );
   }
 

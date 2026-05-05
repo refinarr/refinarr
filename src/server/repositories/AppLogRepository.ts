@@ -10,17 +10,21 @@ interface AppLogFilter {
 
 export class AppLogRepository extends BaseRepository<AppLogEntry> {
   async findById(id: number): Promise<AppLogEntry | null> {
-    return this.db.appLog.findUnique({ where: { id } }) as Promise<AppLogEntry | null>;
+    return this.db.appLog.findUnique({
+      where: { id },
+    }) as Promise<AppLogEntry | null>;
   }
 
   async findAll(): Promise<AppLogEntry[]> {
-    return this.db.appLog.findMany({ orderBy: { createdAt: "desc" } }) as Promise<AppLogEntry[]>;
+    return this.db.appLog.findMany({
+      orderBy: { createdAt: "desc" },
+    }) as Promise<AppLogEntry[]>;
   }
 
   async findPaginated(
     filter: AppLogFilter,
     page: number,
-    limit: number
+    limit: number,
   ): Promise<{ items: AppLogEntry[]; total: number }> {
     const where = {
       ...(filter.level ? { level: filter.level } : {}),
@@ -42,7 +46,7 @@ export class AppLogRepository extends BaseRepository<AppLogEntry> {
 
   async findSince(
     lastId: number,
-    filter?: { level?: LogLevel | null; q?: string }
+    filter?: { level?: LogLevel | null; q?: string },
   ): Promise<AppLogEntry[]> {
     const where = {
       id: { gt: lastId },
@@ -58,7 +62,7 @@ export class AppLogRepository extends BaseRepository<AppLogEntry> {
 
   async findLatest(
     limit: number,
-    filter?: { level?: LogLevel | null; q?: string }
+    filter?: { level?: LogLevel | null; q?: string },
   ): Promise<AppLogEntry[]> {
     const where = {
       ...(filter?.level ? { level: filter.level } : {}),
@@ -72,7 +76,9 @@ export class AppLogRepository extends BaseRepository<AppLogEntry> {
     return (rows as AppLogEntry[]).reverse();
   }
 
-  async create(data: Omit<AppLogEntry, "id" | "createdAt">): Promise<AppLogEntry> {
+  async create(
+    data: Omit<AppLogEntry, "id" | "createdAt">,
+  ): Promise<AppLogEntry> {
     const entry = await this.db.appLog.create({ data });
     void this.trim();
     return entry as AppLogEntry;
@@ -100,7 +106,9 @@ export class AppLogRepository extends BaseRepository<AppLogEntry> {
       select: { id: true },
     });
     if (oldest.length === 0) return;
-    await this.db.appLog.deleteMany({ where: { id: { in: oldest.map((e) => e.id) } } });
+    await this.db.appLog.deleteMany({
+      where: { id: { in: oldest.map((e) => e.id) } },
+    });
   }
 }
 

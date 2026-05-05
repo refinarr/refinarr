@@ -74,13 +74,19 @@ describe("MOVIE_BULK_CONFIG", () => {
   });
 
   it("isDeletable returns false when movie has no file", () => {
-    expect(MOVIE_BULK_CONFIG.delete.isDeletable!({ ...baseMovie, hasFile: false })).toBe(false);
-    expect(MOVIE_BULK_CONFIG.delete.isDeletable!({ ...baseMovie, movieFileId: 0 })).toBe(false);
+    expect(
+      MOVIE_BULK_CONFIG.delete.isDeletable!({ ...baseMovie, hasFile: false }),
+    ).toBe(false);
+    expect(
+      MOVIE_BULK_CONFIG.delete.isDeletable!({ ...baseMovie, movieFileId: 0 }),
+    ).toBe(false);
     expect(MOVIE_BULK_CONFIG.delete.isDeletable!(baseMovie)).toBe(true);
   });
 
   it("ignore.body carries mediaType=movie", () => {
-    expect(MOVIE_BULK_CONFIG.ignore.body(baseMovie, 1)).toMatchObject({ mediaType: "movie" });
+    expect(MOVIE_BULK_CONFIG.ignore.body(baseMovie, 1)).toMatchObject({
+      mediaType: "movie",
+    });
   });
 });
 
@@ -104,11 +110,18 @@ describe("SERIES_BULK_CONFIG", () => {
   });
 
   it("isDeletable returns false when series has no episode files", () => {
-    expect(SERIES_BULK_CONFIG.delete.isDeletable!({ ...baseSeries, episodeFiles: [] })).toBe(false);
+    expect(
+      SERIES_BULK_CONFIG.delete.isDeletable!({
+        ...baseSeries,
+        episodeFiles: [],
+      }),
+    ).toBe(false);
     expect(SERIES_BULK_CONFIG.delete.isDeletable!(baseSeries)).toBe(true);
   });
 
   it("ignore.body carries mediaType=series", () => {
-    expect(SERIES_BULK_CONFIG.ignore.body(baseSeries, 2)).toMatchObject({ mediaType: "series" });
+    expect(SERIES_BULK_CONFIG.ignore.body(baseSeries, 2)).toMatchObject({
+      mediaType: "series",
+    });
   });
 });

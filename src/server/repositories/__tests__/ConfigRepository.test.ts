@@ -67,7 +67,9 @@ describe("ConfigRepository", () => {
 
     test("ApiKey round-trips a stored string", async () => {
       await configRepository.setTyped(ConfigKey.ApiKey, "abcd1234");
-      expect(await configRepository.getTyped(ConfigKey.ApiKey)).toBe("abcd1234");
+      expect(await configRepository.getTyped(ConfigKey.ApiKey)).toBe(
+        "abcd1234",
+      );
     });
   });
 });

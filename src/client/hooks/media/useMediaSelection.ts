@@ -32,7 +32,9 @@ export function useMediaSelection<T extends HasId>(
   };
   const clear = () => setSelected(new Set());
   const selectedItems = items.filter((i) => selected.has(i.id));
-  const deletableSelected = isDeletable ? selectedItems.filter(isDeletable) : selectedItems;
+  const deletableSelected = isDeletable
+    ? selectedItems.filter(isDeletable)
+    : selectedItems;
   return {
     selected,
     selectedItems,

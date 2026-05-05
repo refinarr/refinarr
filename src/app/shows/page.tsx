@@ -11,7 +11,13 @@ import { SeriesDrawer } from "./components/SeriesDrawer";
 
 export default function ShowsPage() {
   return (
-    <Suspense fallback={<AppShell><MediaTableSkeleton rows={8} /></AppShell>}>
+    <Suspense
+      fallback={
+        <AppShell>
+          <MediaTableSkeleton rows={8} />
+        </AppShell>
+      }
+    >
       <MediaListShell
         arrType="sonarr"
         bulkConfig={SERIES_BULK_CONFIG}

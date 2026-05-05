@@ -7,7 +7,13 @@ import { HistoryTable } from "@/client/components/history/HistoryTable";
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
 import { EmptyLogs } from "@/client/components/states/EmptyLogs";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/client/components/ui/select";
 import { Label } from "@/client/components/ui/label";
 import { Button } from "@/client/components/ui/button";
 import { Trash2 } from "lucide-react";
@@ -28,7 +34,7 @@ function HistoryContent() {
   const searchParams = useSearchParams();
   const { data: instances } = useInstances();
   const [instanceId, setInstanceId] = useState<string>(
-    searchParams.get("instanceId") ?? ""
+    searchParams.get("instanceId") ?? "",
   );
   const [status, setStatus] = useState(searchParams.get("status") ?? "");
   const [action, setAction] = useState("");
@@ -39,40 +45,58 @@ function HistoryContent() {
     ...(action ? { action } : {}),
   };
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useHistory(filters);
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useHistory(filters);
   const sentinelRef = useInfiniteScroll(fetchNextPage, !!hasNextPage);
   const clear = useClearHistory();
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
-  const runClear = withToast(clear, { success: tToast("cleared"), error: tToast("clearFailed") });
+  const runClear = withToast(clear, {
+    success: tToast("cleared"),
+    error: tToast("clearFailed"),
+  });
   const handleClear = async () => {
-    if (await askConfirm({
-      title: tConfirm("title"),
-      body: tConfirm("body"),
-      confirmLabel: t("clear"),
-      destructive: true,
-    })) runClear(undefined);
+    if (
+      await askConfirm({
+        title: tConfirm("title"),
+        body: tConfirm("body"),
+        confirmLabel: t("clear"),
+        destructive: true,
+      })
+    )
+      runClear(undefined);
   };
 
   const allLogs: ActionLog[] = data?.pages.flatMap((p) => p.items) ?? [];
 
   const statusLabel = (key: string) => {
     switch (key) {
-      case "success": return tStatus("success");
-      case "failed":  return tStatus("failed");
-      case "dry_run": return tStatus("dryRun");
-      case "pending": return tStatus("pending");
-      default:        return tCommon("all");
+      case "success":
+        return tStatus("success");
+      case "failed":
+        return tStatus("failed");
+      case "dry_run":
+        return tStatus("dryRun");
+      case "pending":
+        return tStatus("pending");
+      default:
+        return tCommon("all");
     }
   };
 
   const actionLabel = (key: string) => {
     switch (key) {
-      case "search":         return tAction("search");
-      case "search_season":  return tAction("search_season");
-      case "search_episode": return tAction("search_episode");
-      case "delete":         return tAction("delete");
-      case "ignore":         return tAction("ignore");
-      default:               return tCommon("all");
+      case "search":
+        return tAction("search");
+      case "search_season":
+        return tAction("search_season");
+      case "search_episode":
+        return tAction("search_episode");
+      case "delete":
+        return tAction("delete");
+      case "ignore":
+        return tAction("ignore");
+      default:
+        return tCommon("all");
     }
   };
 
@@ -81,18 +105,24 @@ function HistoryContent() {
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex flex-col gap-1">
           <Label>{t("filters.instance")}</Label>
-          <Select value={instanceId} onValueChange={(v) => setInstanceId(v ?? "")}>
+          <Select
+            value={instanceId}
+            onValueChange={(v) => setInstanceId(v ?? "")}
+          >
             <SelectTrigger className="w-40">
               <SelectValue>
                 {instanceId
-                  ? (instances ?? []).find((i) => String(i.id) === instanceId)?.name ?? tCommon("all")
+                  ? ((instances ?? []).find((i) => String(i.id) === instanceId)
+                      ?.name ?? tCommon("all"))
                   : tCommon("all")}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">{tCommon("all")}</SelectItem>
               {(instances ?? []).map((i) => (
-                <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
+                <SelectItem key={i.id} value={String(i.id)}>
+                  {i.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -120,8 +150,12 @@ function HistoryContent() {
             <SelectContent>
               <SelectItem value="">{tCommon("all")}</SelectItem>
               <SelectItem value="search">{tAction("search")}</SelectItem>
-              <SelectItem value="search_season">{tAction("search_season")}</SelectItem>
-              <SelectItem value="search_episode">{tAction("search_episode")}</SelectItem>
+              <SelectItem value="search_season">
+                {tAction("search_season")}
+              </SelectItem>
+              <SelectItem value="search_episode">
+                {tAction("search_episode")}
+              </SelectItem>
               <SelectItem value="delete">{tAction("delete")}</SelectItem>
               <SelectItem value="ignore">{tAction("ignore")}</SelectItem>
             </SelectContent>

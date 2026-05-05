@@ -1,9 +1,24 @@
 import { describe, test, expect } from "vitest";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 
-const e1 = { instanceId: 1, mediaId: 100, mediaType: "movie" as const, title: "Movie 100" };
-const e2 = { instanceId: 1, mediaId: 200, mediaType: "movie" as const, title: "Movie 200" };
-const e3 = { instanceId: 2, mediaId: 100, mediaType: "movie" as const, title: "Movie 100 (other instance)" };
+const e1 = {
+  instanceId: 1,
+  mediaId: 100,
+  mediaType: "movie" as const,
+  title: "Movie 100",
+};
+const e2 = {
+  instanceId: 1,
+  mediaId: 200,
+  mediaType: "movie" as const,
+  title: "Movie 200",
+};
+const e3 = {
+  instanceId: 2,
+  mediaId: 100,
+  mediaType: "movie" as const,
+  title: "Movie 100 (other instance)",
+};
 
 describe("IgnoreRepository", () => {
   test("create persists a row and findById returns it", async () => {
@@ -14,7 +29,10 @@ describe("IgnoreRepository", () => {
 
   test("create is idempotent on (instanceId, mediaId, mediaType) — second call upserts", async () => {
     const a = await ignoreRepository.create(e1);
-    const b = await ignoreRepository.create({ ...e1, title: "Different title (ignored)" });
+    const b = await ignoreRepository.create({
+      ...e1,
+      title: "Different title (ignored)",
+    });
     expect(b.id).toBe(a.id);
   });
 

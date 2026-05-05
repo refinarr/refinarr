@@ -1,4 +1,5 @@
 import { defineConfig, globalIgnores } from "eslint/config";
+import prettier from "eslint-config-prettier/flat";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import sonarjs from "eslint-plugin-sonarjs";
@@ -16,7 +17,11 @@ const eslintConfig = defineConfig([
     rules: {
       "@typescript-eslint/no-unused-vars": [
         "warn",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
       ],
       // Complexity
       "sonarjs/cognitive-complexity": ["warn", 15],
@@ -45,20 +50,28 @@ const eslintConfig = defineConfig([
       "no-restricted-syntax": [
         "warn",
         {
-          selector: "BinaryExpression[operator='==='] > Literal[value='radarr']",
-          message: "Do not compare against the \"radarr\" literal. Use a type-keyed registry (mediaServiceFor / ArrClientFactory / a Record<ArrType, …>).",
+          selector:
+            "BinaryExpression[operator='==='] > Literal[value='radarr']",
+          message:
+            'Do not compare against the "radarr" literal. Use a type-keyed registry (mediaServiceFor / ArrClientFactory / a Record<ArrType, …>).',
         },
         {
-          selector: "BinaryExpression[operator='==='] > Literal[value='sonarr']",
-          message: "Do not compare against the \"sonarr\" literal. Use a type-keyed registry (mediaServiceFor / ArrClientFactory / a Record<ArrType, …>).",
+          selector:
+            "BinaryExpression[operator='==='] > Literal[value='sonarr']",
+          message:
+            'Do not compare against the "sonarr" literal. Use a type-keyed registry (mediaServiceFor / ArrClientFactory / a Record<ArrType, …>).',
         },
         {
-          selector: "BinaryExpression[operator='==='] > Literal[value='profile']",
-          message: "Do not compare against the \"profile\" scoring-mode literal. Use SCORE_FOR / ISSUES_FOR / ISSUES_HEADER_KEY from @/shared/scoring-mode.",
+          selector:
+            "BinaryExpression[operator='==='] > Literal[value='profile']",
+          message:
+            'Do not compare against the "profile" scoring-mode literal. Use SCORE_FOR / ISSUES_FOR / ISSUES_HEADER_KEY from @/shared/scoring-mode.',
         },
         {
-          selector: "BinaryExpression[operator='==='] > Literal[value='manual']",
-          message: "Do not compare against the \"manual\" scoring-mode literal. Use SCORE_FOR / ISSUES_FOR / ISSUES_HEADER_KEY from @/shared/scoring-mode.",
+          selector:
+            "BinaryExpression[operator='==='] > Literal[value='manual']",
+          message:
+            'Do not compare against the "manual" scoring-mode literal. Use SCORE_FOR / ISSUES_FOR / ISSUES_HEADER_KEY from @/shared/scoring-mode.',
         },
       ],
     },
@@ -112,6 +125,7 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
   ]),
+  prettier,
 ]);
 
 export default eslintConfig;

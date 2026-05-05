@@ -78,7 +78,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   try {
-    return await res.json() as T;
+    return (await res.json()) as T;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid API response";
     reportClientError({ message, path, method, status: res.status, traceId });
@@ -94,9 +94,10 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 async function parseErrorBody(res: Response): Promise<ApiErrorResponse> {
   try {
-    const body = await res.json() as Partial<ApiErrorResponse>;
+    const body = (await res.json()) as Partial<ApiErrorResponse>;
     return {
-      error: typeof body.error === "string" ? body.error : `API error ${res.status}`,
+      error:
+        typeof body.error === "string" ? body.error : `API error ${res.status}`,
       code: typeof body.code === "string" ? body.code : undefined,
       traceId: typeof body.traceId === "string" ? body.traceId : "",
     };
@@ -119,7 +120,10 @@ function parseRetryAfter(value: string | null): number | undefined {
 export const api = {
   get: <T>(path: string) => apiFetch<T>(path),
   post: <T>(path: string, data?: unknown) =>
-    apiFetch<T>(path, { method: "POST", body: data ? JSON.stringify(data) : undefined }),
+    apiFetch<T>(path, {
+      method: "POST",
+      body: data ? JSON.stringify(data) : undefined,
+    }),
   put: <T>(path: string, data: unknown) =>
     apiFetch<T>(path, { method: "PUT", body: JSON.stringify(data) }),
   delete: <T>(path: string) => apiFetch<T>(path, { method: "DELETE" }),

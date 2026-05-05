@@ -27,7 +27,8 @@ export function useInstanceSelection(arrType: ArrType): InstanceSelection {
 
   const typedInstances = instances?.filter((i) => i.type === arrType) ?? [];
   const typedInstanceIds = typedInstances.map((i) => i.id);
-  const activeInstance = instanceId > 0 ? instanceId : typedInstances[0]?.id ?? 0;
+  const activeInstance =
+    instanceId > 0 ? instanceId : (typedInstances[0]?.id ?? 0);
 
   return {
     instances,

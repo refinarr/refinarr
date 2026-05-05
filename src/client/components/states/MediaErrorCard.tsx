@@ -17,7 +17,9 @@ export function MediaErrorCard({ message, onRetry }: Props) {
         <AlertCircle className="h-8 w-8 text-destructive shrink-0" />
         <div className="flex-1">
           <p className="font-medium">{t("title")}</p>
-          <p className="text-sm text-muted-foreground">{message ?? t("body")}</p>
+          <p className="text-sm text-muted-foreground">
+            {message ?? t("body")}
+          </p>
         </div>
         {onRetry && (
           <Button variant="outline" size="sm" onClick={onRetry}>

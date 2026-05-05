@@ -35,11 +35,17 @@ export function BulkActionToolbar({
     "fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 bg-muted px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:sticky md:top-0 md:bottom-auto md:mb-4 md:gap-2 md:rounded-md md:border-0 md:bg-accent md:px-3 md:py-3 md:pb-3";
 
   if (progress) {
-    const pct = progress.total > 0 ? Math.min(100, (progress.current / progress.total) * 100) : 0;
+    const pct =
+      progress.total > 0
+        ? Math.min(100, (progress.current / progress.total) * 100)
+        : 0;
     return (
       <div className={wrapperClasses}>
         <div role="status" aria-live="polite" className="text-sm font-medium">
-          {t(`progress.${progress.action}`, { current: progress.current, total: progress.total })}
+          {t(`progress.${progress.action}`, {
+            current: progress.current,
+            total: progress.total,
+          })}
         </div>
         <div className="ml-auto h-1 w-24 overflow-hidden rounded bg-muted-foreground/20">
           <div
@@ -69,21 +75,51 @@ export function BulkActionToolbar({
 
   return (
     <div className={wrapperClasses}>
-      <span className="text-base font-medium md:text-sm">{t("selected", { count: selectedCount })}</span>
+      <span className="text-base font-medium md:text-sm">
+        {t("selected", { count: selectedCount })}
+      </span>
       <div className="ml-auto flex items-center gap-1">
-        <Button size="sm" variant="ghost" onClick={onSearch} disabled={disabled} aria-label={t("search")} className={buttonSize}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onSearch}
+          disabled={disabled}
+          aria-label={t("search")}
+          className={buttonSize}
+        >
           <Search className={iconSize} />
           <span className="hidden md:inline">{t("search")}</span>
         </Button>
-        <Button size="sm" variant="ghost" onClick={onIgnore} disabled={disabled} aria-label={t("ignore")} className={buttonSize}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onIgnore}
+          disabled={disabled}
+          aria-label={t("ignore")}
+          className={buttonSize}
+        >
           <EyeOff className={iconSize} />
           <span className="hidden md:inline">{t("ignore")}</span>
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => onDelete(false)} disabled={disabled} aria-label={t("delete")} className={`${buttonSize} text-destructive hover:text-destructive`}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onDelete(false)}
+          disabled={disabled}
+          aria-label={t("delete")}
+          className={`${buttonSize} text-destructive hover:text-destructive`}
+        >
           <Trash2 className={iconSize} />
           <span className="hidden md:inline">{t("delete")}</span>
         </Button>
-        <Button size="sm" variant="destructive" onClick={() => onDelete(true)} disabled={disabled} aria-label={t("deleteAndSearch")} className={buttonSize}>
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={() => onDelete(true)}
+          disabled={disabled}
+          aria-label={t("deleteAndSearch")}
+          className={buttonSize}
+        >
           <Trash2 className={iconSize} />
           <span className="hidden md:inline">{t("deleteAndSearch")}</span>
         </Button>

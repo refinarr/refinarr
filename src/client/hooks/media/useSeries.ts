@@ -17,7 +17,9 @@ export function useSeries(instanceId: number, filters: MediaQueryFilters = {}) {
   return useInfiniteQuery({
     queryKey: queryKeys.series(instanceId, filters),
     queryFn: ({ pageParam = 1 }) =>
-      api.get<PaginatedResponse<FlaggedSeries>>(`/sonarr/series?${params}&page=${pageParam}`),
+      api.get<PaginatedResponse<FlaggedSeries>>(
+        `/sonarr/series?${params}&page=${pageParam}`,
+      ),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
     placeholderData: keepPreviousData,

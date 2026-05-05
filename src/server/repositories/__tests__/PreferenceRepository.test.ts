@@ -34,23 +34,41 @@ describe("PreferenceRepository", () => {
   });
 
   test("findById returns the row", async () => {
-    const created = await preferenceRepository.create({ instanceId: 1, cfId: 5, cfName: "TrueHD" });
+    const created = await preferenceRepository.create({
+      instanceId: 1,
+      cfId: 5,
+      cfName: "TrueHD",
+    });
     expect(await preferenceRepository.findById(created.id)).not.toBeNull();
   });
 
   test("findAll lists every row", async () => {
-    await preferenceRepository.create({ instanceId: 1, cfId: 5, cfName: "TrueHD" });
-    await preferenceRepository.create({ instanceId: 2, cfId: 6, cfName: "DTS-HD" });
+    await preferenceRepository.create({
+      instanceId: 1,
+      cfId: 5,
+      cfName: "TrueHD",
+    });
+    await preferenceRepository.create({
+      instanceId: 2,
+      cfId: 6,
+      cfName: "DTS-HD",
+    });
     expect(await preferenceRepository.findAll()).toHaveLength(2);
   });
 
   test("delete removes the row", async () => {
-    const created = await preferenceRepository.create({ instanceId: 1, cfId: 5, cfName: "TrueHD" });
+    const created = await preferenceRepository.create({
+      instanceId: 1,
+      cfId: 5,
+      cfName: "TrueHD",
+    });
     await preferenceRepository.delete(created.id);
     expect(await preferenceRepository.findById(created.id)).toBeNull();
   });
 
   test("update throws — must go through setForInstance", async () => {
-    await expect(preferenceRepository.update(1, {})).rejects.toThrow(/setForInstance/);
+    await expect(preferenceRepository.update(1, {})).rejects.toThrow(
+      /setForInstance/,
+    );
   });
 });

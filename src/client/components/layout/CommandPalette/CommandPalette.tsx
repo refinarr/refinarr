@@ -35,7 +35,13 @@ import { ARR_LIBRARY_ROUTE } from "@/shared/arr-type";
 // and which icon. The route lives in @/shared/arr-type so this map only
 // owns UI choices. Adding Lidarr / Whisparr is one more entry; the JSX
 // below iterates this map and auto-renders.
-const ARR_GROUPS: Record<ArrType, { headingKey: "groups.radarrInstance" | "groups.sonarrInstance"; Icon: typeof Film }> = {
+const ARR_GROUPS: Record<
+  ArrType,
+  {
+    headingKey: "groups.radarrInstance" | "groups.sonarrInstance";
+    Icon: typeof Film;
+  }
+> = {
   radarr: { headingKey: "groups.radarrInstance", Icon: Film },
   sonarr: { headingKey: "groups.sonarrInstance", Icon: Tv2 },
 };
@@ -70,9 +76,14 @@ export function CommandPalette() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="overflow-hidden p-0 sm:max-w-[520px]" showCloseButton={false}>
+      <DialogContent
+        className="overflow-hidden p-0 sm:max-w-[520px]"
+        showCloseButton={false}
+      >
         <DialogTitle className="sr-only">{t("title")}</DialogTitle>
-        <DialogDescription className="sr-only">{t("description")}</DialogDescription>
+        <DialogDescription className="sr-only">
+          {t("description")}
+        </DialogDescription>
         <Command>
           <CommandInput placeholder={t("placeholder")} />
           <CommandList>
@@ -119,7 +130,9 @@ export function CommandPalette() {
                     <CommandItem
                       key={i.id}
                       keywords={[type, i.name]}
-                      onSelect={() => go(`${ARR_LIBRARY_ROUTE[type]}?instanceId=${i.id}`)}
+                      onSelect={() =>
+                        go(`${ARR_LIBRARY_ROUTE[type]}?instanceId=${i.id}`)
+                      }
                     >
                       <Icon className="h-4 w-4" />
                       {i.name}

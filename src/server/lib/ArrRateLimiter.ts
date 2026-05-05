@@ -17,7 +17,9 @@ class TokenBucket {
     // two callers race to consume the same refilled token.
     let release!: () => void;
     const prev = this.tail;
-    this.tail = new Promise<void>((resolve) => { release = resolve; });
+    this.tail = new Promise<void>((resolve) => {
+      release = resolve;
+    });
 
     await prev;
     try {
@@ -27,7 +29,10 @@ class TokenBucket {
           this.tokens -= 1;
           return;
         }
-        const waitMs = Math.max(1, Math.ceil((1 - this.tokens) / this.refillPerMs));
+        const waitMs = Math.max(
+          1,
+          Math.ceil((1 - this.tokens) / this.refillPerMs),
+        );
         await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
       }
     } finally {
@@ -37,7 +42,10 @@ class TokenBucket {
 
   private refill(): void {
     const now = Date.now();
-    this.tokens = Math.min(this.capacity, this.tokens + this.refillPerMs * (now - this.lastRefillMs));
+    this.tokens = Math.min(
+      this.capacity,
+      this.tokens + this.refillPerMs * (now - this.lastRefillMs),
+    );
     this.lastRefillMs = now;
   }
 }

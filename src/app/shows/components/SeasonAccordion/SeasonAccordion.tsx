@@ -1,7 +1,11 @@
 "use client";
 import { useTranslations } from "next-intl";
 import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
-import { AccordionItem, AccordionTrigger, AccordionContent } from "@/client/components/ui/accordion";
+import {
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/client/components/ui/accordion";
 import { Button } from "@/client/components/ui/button";
 import { Search, Trash2 } from "lucide-react";
 import { EpisodeFileRow } from "../EpisodeFileRow";
@@ -14,7 +18,11 @@ interface Props {
   onSearch: () => Promise<unknown>;
   onDelete: (search: boolean) => Promise<unknown>;
   onSearchFile: (fileId: number, relativePath: string) => Promise<unknown>;
-  onDeleteFile: (fileId: number, relativePath: string, search: boolean) => Promise<unknown>;
+  onDeleteFile: (
+    fileId: number,
+    relativePath: string,
+    search: boolean,
+  ) => Promise<unknown>;
 }
 
 export function SeasonAccordion({
@@ -33,9 +41,14 @@ export function SeasonAccordion({
       <div className="relative">
         <AccordionTrigger className="px-3 pr-24">
           <div className="flex w-full items-center justify-between pr-2 gap-2">
-            <span className="text-sm font-medium">{t("season", { season })}</span>
+            <span className="text-sm font-medium">
+              {t("season", { season })}
+            </span>
             <span className="text-xs text-muted-foreground">
-              {t("seasonProgress", { affected: affectedCount, total: files.length })}
+              {t("seasonProgress", {
+                affected: affectedCount,
+                total: files.length,
+              })}
             </span>
           </div>
         </AccordionTrigger>

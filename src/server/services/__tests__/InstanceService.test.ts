@@ -40,7 +40,10 @@ describe("InstanceService.create", () => {
   });
 
   test("respects explicit enabled=false", async () => {
-    const created = await instanceService.create({ ...baseData, enabled: false });
+    const created = await instanceService.create({
+      ...baseData,
+      enabled: false,
+    });
     expect(created.enabled).toBe(false);
   });
 });
@@ -55,7 +58,9 @@ describe("InstanceService.update", () => {
 
   test("renames an instance", async () => {
     const created = await instanceService.create(baseData);
-    const updated = await instanceService.update(created.id, { name: "Renamed" });
+    const updated = await instanceService.update(created.id, {
+      name: "Renamed",
+    });
     expect(updated.name).toBe("Renamed");
   });
 });

@@ -7,9 +7,17 @@ type Pattern = { name: string; re: RegExp; fn: (...args: string[]) => string };
 
 const PATTERNS: Pattern[] = [
   // querystring & body forms: apikey=…, api_key=…, apiKey=…
-  { name: "apiKey", re: /([?&;\s]?(?:api[_-]?key|apikey)\s*[=:]\s*)([^\s&"'<>]+)/gi, fn: (_, p) => `${p}***` },
+  {
+    name: "apiKey",
+    re: /([?&;\s]?(?:api[_-]?key|apikey)\s*[=:]\s*)([^\s&"'<>]+)/gi,
+    fn: (_, p) => `${p}***`,
+  },
   // X-Api-Key: value  /  Authorization: Bearer token  — capture entire rest of value
-  { name: "header", re: /((?:x-api-key|authorization)\s*:\s*)(.+)/gi, fn: (_, p) => `${p}***` },
+  {
+    name: "header",
+    re: /((?:x-api-key|authorization)\s*:\s*)(.+)/gi,
+    fn: (_, p) => `${p}***`,
+  },
   // 32-character hex tokens (typical Sonarr/Radarr API key shape)
   { name: "hex32", re: /\b[a-f0-9]{32}\b/gi, fn: () => "***" },
 ];
@@ -36,7 +44,9 @@ export function redactString(input: string): string {
   return out;
 }
 
-export function redactContext(ctx: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+export function redactContext(
+  ctx: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
   if (!ctx) return ctx;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(ctx)) {

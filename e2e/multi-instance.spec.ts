@@ -51,7 +51,11 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/api/radarr/movies**", (route) => {
     const url = new URL(route.request().url());
     const instanceId = url.searchParams.get("instanceId");
-    if (!instanceId) return route.fulfill({ status: 400, json: { error: "missing instanceId" } });
+    if (!instanceId)
+      return route.fulfill({
+        status: 400,
+        json: { error: "missing instanceId" },
+      });
     const tag = instanceId === "1" ? "Main" : "4K";
     const body: PaginatedResponse<FlaggedMovie> = {
       items: [makeMovie(tag, Number(instanceId) * 100)],
@@ -71,7 +75,9 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test("instance switcher reloads the table with the chosen instance's movies", async ({ page }) => {
+test("instance switcher reloads the table with the chosen instance's movies", async ({
+  page,
+}) => {
   await page.goto("/movies");
 
   // Default lands on Radarr-Main.
@@ -94,7 +100,9 @@ test("instance switcher reloads the table with the chosen instance's movies", as
   ).toHaveCount(0);
 });
 
-test("legacy ?instanceId=all URL silently falls back to the first instance", async ({ page }) => {
+test("legacy ?instanceId=all URL silently falls back to the first instance", async ({
+  page,
+}) => {
   await page.goto("/movies?instanceId=all");
 
   // No "All Radarr" option exists; URL is treated as invalid and falls back

@@ -47,8 +47,13 @@ export function KeyboardHelpDialog() {
         </DialogHeader>
         <ul className="mt-2 space-y-2">
           {SHORTCUTS.map((s) => (
-            <li key={s.keys.join("-")} className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{t(`shortcuts.${s.descKey}`)}</span>
+            <li
+              key={s.keys.join("-")}
+              className="flex items-center justify-between text-sm"
+            >
+              <span className="text-muted-foreground">
+                {t(`shortcuts.${s.descKey}`)}
+              </span>
               <span className="flex gap-1">
                 {s.keys.map((k) => (
                   <kbd

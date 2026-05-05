@@ -15,13 +15,18 @@ interface Props {
   onDelete: (search: boolean) => Promise<unknown>;
 }
 
-export function EpisodeFileRow({ file, scoringMode, onSearch, onDelete }: Props) {
+export function EpisodeFileRow({
+  file,
+  scoringMode,
+  onSearch,
+  onDelete,
+}: Props) {
   const t = useTranslations("common");
   const name = filename(file.relativePath);
-  const isBad =
-    isProfileMode(scoringMode)
-      ? file.minProfileScore !== undefined && file.customFormatScore < file.minProfileScore
-      : file.missingFormats.length > 0;
+  const isBad = isProfileMode(scoringMode)
+    ? file.minProfileScore !== undefined &&
+      file.customFormatScore < file.minProfileScore
+    : file.missingFormats.length > 0;
 
   return (
     <div
@@ -38,7 +43,10 @@ export function EpisodeFileRow({ file, scoringMode, onSearch, onDelete }: Props)
         </span>
         <div className="flex items-center gap-2 shrink-0">
           {isProfileMode(scoringMode) && (
-            <ScoreLabel score={file.customFormatScore} minProfileScore={file.minProfileScore} />
+            <ScoreLabel
+              score={file.customFormatScore}
+              minProfileScore={file.minProfileScore}
+            />
           )}
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
@@ -64,7 +72,10 @@ export function EpisodeFileRow({ file, scoringMode, onSearch, onDelete }: Props)
           </div>
         </div>
       </div>
-      <CfScoreList formats={file.customFormats} missingFormats={file.missingFormats} />
+      <CfScoreList
+        formats={file.customFormats}
+        missingFormats={file.missingFormats}
+      />
     </div>
   );
 }

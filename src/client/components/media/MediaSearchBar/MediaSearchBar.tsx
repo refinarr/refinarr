@@ -3,9 +3,19 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/client/components/ui/input";
 import { Slider } from "@/client/components/ui/slider";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/client/components/ui/select";
 import { MultiSelect } from "@/client/components/ui/multi-select";
-import { Popover, PopoverTrigger, PopoverContent } from "@/client/components/ui/popover";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/client/components/ui/popover";
 import { Search, ChevronDown, Check } from "lucide-react";
 import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
 import { usePreferences } from "@/client/hooks/data/usePreferences";
@@ -30,7 +40,13 @@ const PILL =
 const PILL_ACTIVE =
   "border-primary bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90";
 
-export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onChange }: Props) {
+export function MediaSearchBar({
+  arrType,
+  instanceId,
+  scoringMode,
+  filters,
+  onChange,
+}: Props) {
   const t = useTranslations("filters");
   const { data: profiles } = useQualityProfiles(arrType, instanceId);
   const { data: prefs } = usePreferences(instanceId);
@@ -86,7 +102,9 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={filters.profileId === null ? ALL : String(filters.profileId)}
-          onValueChange={(v) => onChange({ profileId: v === ALL ? null : Number(v) })}
+          onValueChange={(v) =>
+            onChange({ profileId: v === ALL ? null : Number(v) })
+          }
         >
           <SelectTrigger className={cn(PILL, profileActive && PILL_ACTIVE)}>
             <SelectValue>
@@ -98,7 +116,9 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
           <SelectContent>
             <SelectItem value={ALL}>{t("allProfiles")}</SelectItem>
             {(profiles ?? []).map((p) => (
-              <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+              <SelectItem key={p.id} value={String(p.id)}>
+                {p.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -118,7 +138,10 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
             matchAllLabel={t("matchAll")}
             matchAnySuffix={t("matchAnySuffix")}
             matchAllSuffix={t("matchAllSuffix")}
-            triggerClassName={cn(PILL, filters.missingCfIds.length > 0 && PILL_ACTIVE)}
+            triggerClassName={cn(
+              PILL,
+              filters.missingCfIds.length > 0 && PILL_ACTIVE,
+            )}
           />
         ) : (
           <MultiSelect
@@ -135,7 +158,10 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
             matchAllLabel={t("matchAll")}
             matchAnySuffix={t("matchAnySuffix")}
             matchAllSuffix={t("matchAllSuffix")}
-            triggerClassName={cn(PILL, filters.hasNegativeCfIds.length > 0 && PILL_ACTIVE)}
+            triggerClassName={cn(
+              PILL,
+              filters.hasNegativeCfIds.length > 0 && PILL_ACTIVE,
+            )}
           />
         )}
 

@@ -33,12 +33,16 @@ export default function SettingsPage() {
     const id = window.location.hash.replace(/^#/, "");
     if (!KNOWN_ANCHORS.has(id)) return;
     const t = setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document
+        .getElementById(id)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 50);
     return () => clearTimeout(t);
   }, []);
 
-  const manualInstances = (instances ?? []).filter((i) => isManualMode(i.scoringMode));
+  const manualInstances = (instances ?? []).filter((i) =>
+    isManualMode(i.scoringMode),
+  );
 
   return (
     <AppShell>
@@ -65,7 +69,13 @@ export default function SettingsPage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">{t("instances")}</h2>
-            <Button size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
               <Plus className="h-4 w-4 mr-1" /> {t("addInstance")}
             </Button>
           </div>
@@ -77,7 +87,10 @@ export default function SettingsPage() {
                 <InstanceCard
                   key={inst.id}
                   instance={inst}
-                  onEdit={() => { setEditing(inst); setDialogOpen(true); }}
+                  onEdit={() => {
+                    setEditing(inst);
+                    setDialogOpen(true);
+                  }}
                 />
               ))}
             </div>
@@ -93,7 +106,9 @@ export default function SettingsPage() {
             <div className="space-y-3">
               {(instances ?? []).map((inst) => (
                 <div key={inst.id} className="flex items-center gap-4">
-                  <span className="text-sm font-medium w-36 truncate">{inst.name}</span>
+                  <span className="text-sm font-medium w-36 truncate">
+                    {inst.name}
+                  </span>
                   <ScoringModeSelector instanceId={inst.id} />
                 </div>
               ))}
@@ -108,7 +123,9 @@ export default function SettingsPage() {
           <section className="space-y-4">
             <div>
               <h2 className="text-lg font-semibold">{t("wantedCfs")}</h2>
-              <p className="text-sm text-muted-foreground mt-1">{t("wantedCfsHelp")}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {t("wantedCfsHelp")}
+              </p>
             </div>
             <div className="space-y-3">
               {manualInstances.map((inst) => (

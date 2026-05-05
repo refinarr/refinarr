@@ -53,7 +53,11 @@ export function useConfirm() {
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={() => finish(true)}
-            className={opts?.destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
+            className={
+              opts?.destructive
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : undefined
+            }
           >
             {opts?.confirmLabel ?? tConfirm("confirmLabel")}
           </AlertDialogAction>
