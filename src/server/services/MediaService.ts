@@ -71,8 +71,9 @@ export abstract class MediaService {
       flagged = flagged.filter((m) => !hasFile(m));
     }
 
-    if (query.maxScore !== undefined) {
-      flagged = flagged.filter((m) => m.cfScore <= query.maxScore!);
+    const maxScore = query.maxScore;
+    if (maxScore !== undefined) {
+      flagged = flagged.filter((m) => m.cfScore <= maxScore);
     }
 
     if (query.q) {

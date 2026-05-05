@@ -19,9 +19,27 @@ class FakeEventSource {
   }
 }
 
+class FakeBroadcastChannel {
+  static instances: FakeBroadcastChannel[] = [];
+  onmessage: ((e: { data: unknown }) => void) | null = null;
+  closed = false;
+
+  constructor(readonly name: string) {
+    FakeBroadcastChannel.instances.push(this);
+  }
+
+  postMessage = vi.fn();
+
+  close() {
+    this.closed = true;
+  }
+}
+
 beforeEach(() => {
   FakeEventSource.instances = [];
+  FakeBroadcastChannel.instances = [];
   vi.stubGlobal("EventSource", FakeEventSource);
+  vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
   // Fall back to per-tab EventSource (no Web Locks) so the leader path
   // is deterministic in tests.
   Object.defineProperty(navigator, "locks", { value: undefined, configurable: true });
@@ -78,6 +96,16 @@ describe("EventChannel", () => {
     const es = FakeEventSource.instances[0];
     expect(() => es.onmessage?.({ data: "not-json" })).not.toThrow();
     expect(seen).toHaveLength(0);
+  });
+
+  test("fallback EventSource does not rebroadcast without leader lock", async () => {
+    const { eventChannel } = await import("@/client/lib/event-channel");
+    eventChannel.reset();
+    eventChannel.start();
+
+    FakeEventSource.instances[0].emit({ type: "queue-changed", instanceId: 1 });
+
+    expect(FakeBroadcastChannel.instances[0].postMessage).not.toHaveBeenCalled();
   });
 
   test("reset() closes the EventSource and clears listeners", async () => {

@@ -26,6 +26,7 @@ import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
 import { useRefreshInstance } from "@/client/hooks/data/useRefreshInstance";
 import { useQueuedMediaIds } from "@/client/hooks/data/useSearchQueue";
 import { useRecentSearchMap } from "@/client/hooks/data/useRecentSearches";
+import { withToast } from "@/client/lib/with-toast";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import { useInfiniteScroll } from "@/client/hooks/ui/useInfiniteScroll";
 import { useInstanceSelection } from "@/client/hooks/media/useInstanceSelection";
@@ -224,6 +225,8 @@ function Root<T extends FlaggedMedia>({
 
 function Header() {
   const { ctx, inst, refreshMutation, data, selection } = useShellContext();
+  const tRefresh = useTranslations("toast.refresh");
+  const refreshWithToast = withToast(refreshMutation, { success: tRefresh("done"), error: tRefresh("failed") });
   return (
     <MediaPageHeader
       title={ctx.t("title")}
@@ -233,7 +236,7 @@ function Header() {
       activeInstanceName={inst.typedInstances.find((i) => i.id === inst.activeInstance)?.name ?? null}
       typedInstances={inst.typedInstances}
       onSetInstance={inst.setInstanceId}
-      onRefresh={() => refreshMutation.mutate(inst.activeInstance)}
+      onRefresh={() => refreshWithToast(inst.activeInstance)}
       refreshPending={refreshMutation.isPending}
       isLoading={data.isLoading}
       isFetching={data.isFetching}
