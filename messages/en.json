@@ -250,7 +250,7 @@
     "actionMovie": "Movie search",
     "actionSeries": "Series search",
     "actionSeason": "Season search",
-    "actionEpisodeFile": "Episode file search",
+    "actionEpisode": "Episode search",
     "queuedAt": "Queued {time}"
   },
   "history": {

@@ -48,7 +48,7 @@ export function useClearQueue() {
 /**
  * Set of mediaIds with at least one pending row in this instance's queue.
  * Used by /movies and /shows row renderers to show the "Pending search"
- * badge inline. For action="episode-file" rows, mediaId is the series id
+ * badge inline. For action="episode" rows, mediaId is the series id
  * — so the parent series correctly shows pending even when the queued
  * row targets a specific file.
  */

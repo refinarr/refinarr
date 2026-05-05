@@ -27,11 +27,11 @@ export class SearchQueueService {
     if (input.action === "season" && typeof input.payload?.seasonNumber !== "number") {
       throw new Error("season action requires numeric seasonNumber in payload");
     }
-    if (input.action === "episode-file" && typeof input.payload?.fileId !== "number") {
-      throw new Error("episode-file action requires numeric fileId in payload");
+    if (input.action === "episode" && typeof input.payload?.fileId !== "number") {
+      throw new Error("episode action requires numeric fileId in payload");
     }
     const seasonNumber = input.action === "season" ? (input.payload!.seasonNumber as number) : 0;
-    const fileId = input.action === "episode-file" ? (input.payload!.fileId as number) : 0;
+    const fileId = input.action === "episode" ? (input.payload!.fileId as number) : 0;
 
     const { entry, created } = await searchQueueRepository.createUnique({
       instanceId: input.instanceId,

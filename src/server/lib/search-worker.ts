@@ -1,12 +1,58 @@
+import { z } from "zod";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { movieService } from "@/server/services/MovieService";
 import { seriesService } from "@/server/services/SeriesService";
-import type { ActionLog, Instance } from "@/shared/types/models";
-import type { SearchQueueEntry } from "@/shared/types/models";
+import type {
+  ActionLog,
+  Instance,
+  SearchQueueAction,
+  SearchQueueEntry,
+} from "@/shared/types/models";
 import { appLogger } from "./app-logger";
 import { LogSource } from "./log-sources";
 import { logger } from "./logger";
+
+function parsePayload(raw: string | null | undefined): unknown {
+  return raw ? JSON.parse(raw) : {};
+}
+
+const seasonPayload = z.object({ seasonNumber: z.number().int().nonnegative() });
+const episodePayload = z.object({ fileId: z.number().int().positive() });
+
+type SearchHandler = (
+  instance: Instance,
+  entry: SearchQueueEntry,
+  payload: unknown,
+) => Promise<ActionLog>;
+
+// One handler per queue action. Record<Union, …> makes TypeScript flag a
+// missing handler the moment a new SearchQueueAction is added — no runtime
+// "unknown action" branch needed.
+const SEARCH_HANDLERS: Record<SearchQueueAction, SearchHandler> = {
+  movie: (instance, entry) =>
+    movieService.triggerSearch(instance.id, entry.mediaId, entry.title),
+  series: (instance, entry) =>
+    seriesService.triggerSearch(instance.id, entry.mediaId, entry.title),
+  season: (instance, entry, payload) => {
+    const { seasonNumber } = seasonPayload.parse(payload);
+    return seriesService.triggerSeasonSearch(
+      instance.id,
+      entry.mediaId,
+      seasonNumber,
+      entry.title,
+    );
+  },
+  episode: (instance, entry, payload) => {
+    const { fileId } = episodePayload.parse(payload);
+    return seriesService.triggerEpisodeFileSearch(
+      instance.id,
+      entry.mediaId,
+      fileId,
+      entry.title,
+    );
+  },
+};
 
 /**
  * Per-instance loop that drains SearchQueue at the configured rate.
@@ -187,52 +233,12 @@ class SearchWorker {
     // Route through the service layer so executeAction writes the ActionLog
     // row + invalidates the data cache. Calling client.triggerSearch directly
     // would skip both and the user would see nothing in History.
-    const parsed: unknown = entry.payload ? JSON.parse(entry.payload) : {};
-    const payload: Record<string, unknown> =
-      parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
-        ? (parsed as Record<string, unknown>)
-        : {};
-    let log: ActionLog;
-    if (entry.action === "movie") {
-      log = await movieService.triggerSearch(
-        instance.id,
-        entry.mediaId,
-        entry.title,
-      );
-    } else if (entry.action === "series") {
-      log = await seriesService.triggerSearch(
-        instance.id,
-        entry.mediaId,
-        entry.title,
-      );
-    } else if (entry.action === "season") {
-      const seasonNumber =
-        typeof payload.seasonNumber === "number" ? payload.seasonNumber : NaN;
-      if (!Number.isFinite(seasonNumber))
-        throw new Error(
-          `Invalid seasonNumber in payload for queue entry ${entry.id}`,
-        );
-      log = await seriesService.triggerSeasonSearch(
-        instance.id,
-        entry.mediaId,
-        seasonNumber,
-        entry.title,
-      );
-    } else if (entry.action === "episode-file") {
-      const fileId = typeof payload.fileId === "number" ? payload.fileId : NaN;
-      if (!Number.isFinite(fileId))
-        throw new Error(
-          `Invalid fileId in payload for queue entry ${entry.id}`,
-        );
-      log = await seriesService.triggerEpisodeFileSearch(
-        instance.id,
-        entry.mediaId,
-        fileId,
-        entry.title,
-      );
-    } else {
-      throw new Error(`Unknown queue action: ${entry.action}`);
-    }
+    const payload = parsePayload(entry.payload);
+    // Lookup is type-safe at compile time, but the DB can hold any string
+    // in the action column — guard against a corrupt/legacy row.
+    const handler = SEARCH_HANDLERS[entry.action];
+    if (!handler) throw new Error(`Unknown queue action: ${entry.action}`);
+    const log = await handler(instance, entry, payload);
     // executeAction returns the ActionLog rather than throwing on upstream
     // failure. Re-throw so the queue row gets marked failed (and not done).
     if (log.status === "failed") {

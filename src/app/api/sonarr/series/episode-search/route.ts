@@ -17,7 +17,7 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     return NextResponse.json(result);
   }
   const entry = await searchQueueService.enqueue({
-    instanceId, action: "episode-file", mediaId, title, payload: { fileId },
+    instanceId, action: "episode", mediaId, title, payload: { fileId },
   });
   return NextResponse.json({ queued: true, queueId: entry.id }, { status: 202 });
 });

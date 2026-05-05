@@ -123,7 +123,7 @@ export interface IgnoreEntry {
   ignoredAt: Date;
 }
 
-export type SearchQueueAction = "movie" | "series" | "season" | "episode-file";
+export type SearchQueueAction = "movie" | "series" | "season" | "episode";
 export type SearchQueueStatus = "pending" | "done" | "failed";
 
 export interface SearchQueueEntry {

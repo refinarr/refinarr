@@ -157,7 +157,7 @@ describe("SearchWorker", () => {
     }, { timeout: 2000 });
   });
 
-  test("episode-file action resolves episodeIds via getEpisodes and posts EpisodeSearch", async () => {
+  test("episode action resolves episodeIds via getEpisodes and posts EpisodeSearch", async () => {
     const inst = await makeSonarr();
     const commands: Array<Record<string, unknown>> = [];
     mswServer.use(
@@ -174,7 +174,7 @@ describe("SearchWorker", () => {
     );
     await searchQueueService.enqueue({
       instanceId: inst.id,
-      action: "episode-file",
+      action: "episode",
       mediaId: 7,
       title: "Show — S01E02",
       payload: { fileId: 42 },

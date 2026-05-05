@@ -45,7 +45,7 @@ function InstanceQueueSection({ instanceId, instanceName, rows }: InstanceSectio
       case "movie": return t("actionMovie");
       case "series": return t("actionSeries");
       case "season": return t("actionSeason");
-      case "episode-file": return t("actionEpisodeFile");
+      case "episode": return t("actionEpisode");
     }
   };
 
