@@ -47,6 +47,8 @@ export function SeriesDetailDrawer({
   const tSeason = useTranslations("confirm.deleteSeason");
   const tEpisode = useTranslations("confirm.deleteEpisode");
   const tShows = useTranslations("shows");
+  const tDrawer = useTranslations("shows.drawer");
+  const tCommon = useTranslations("common");
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
   if (!series) return null;
 
@@ -69,16 +71,16 @@ export function SeriesDetailDrawer({
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-            <span className="text-muted-foreground">Score</span>
+            <span className="text-muted-foreground">{tDrawer("score")}</span>
             <span><ScoreLabel score={score} minProfileScore={series.minProfileScore} /></span>
-            <span className="text-muted-foreground">Profile</span>
+            <span className="text-muted-foreground">{tDrawer("profile")}</span>
             <span>{profileName ?? "—"}</span>
-            <span className="text-muted-foreground">Episodes</span>
+            <span className="text-muted-foreground">{tDrawer("episodes")}</span>
             <span className="tabular-nums">{series.affectedEpisodeCount} / {series.totalEpisodeCount}</span>
           </div>
 
           <div className="border-t pt-3">
-            <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Seasons</h3>
+            <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">{tDrawer("seasons")}</h3>
             {seasons.length > 0 ? (
               <Accordion>
                 {seasons.map((season) => {
@@ -133,7 +135,7 @@ export function SeriesDetailDrawer({
 
         <SheetFooter className="border-t flex-row gap-2 justify-end">
           <Button variant="outline" size="sm" onClick={() => onIgnore(series)}>
-            <EyeOff className="h-4 w-4 mr-1" /> Ignore
+            <EyeOff className="h-4 w-4 mr-1" /> {tCommon("ignore")}
           </Button>
         </SheetFooter>
         {confirmDialog}

@@ -148,7 +148,16 @@
       "missing": "Missing",
       "penalties": "Penalties"
     },
-    "noFile": "No file"
+    "noFile": "No file",
+    "drawer": {
+      "score": "Score",
+      "profile": "Profile",
+      "hasFile": "Has file",
+      "customFormats": "Custom Formats",
+      "noFileDownloaded": "No file downloaded.",
+      "noCfData": "No custom format data.",
+      "deleteAndSearch": "Delete + Search"
+    }
   },
   "shows": {
     "title": "Shows",
@@ -168,7 +177,13 @@
     "seasonProgress": "{affected} / {total} episodes",
     "noEpisodeFiles": "No episode files found.",
     "searchSeasonAria": "Search Season {season}",
-    "deleteSeasonAria": "Delete affected files in Season {season}"
+    "deleteSeasonAria": "Delete affected files in Season {season}",
+    "drawer": {
+      "score": "Score",
+      "profile": "Profile",
+      "episodes": "Episodes",
+      "seasons": "Seasons"
+    }
   },
   "filters": {
     "allProfiles": "All profiles",
