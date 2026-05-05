@@ -12,7 +12,7 @@ import { preferenceRepository } from "@/server/repositories/PreferenceRepository
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { RadarrClient } from "@/server/clients/RadarrClient";
-import { dataCache, CACHE_TTL_MS } from "@/server/lib/DataCache";
+import { dataCache, CACHE_TTL_MS, CACHE_STALE_MS } from "@/server/lib/DataCache";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import {
@@ -35,34 +35,69 @@ export class MovieService extends MediaService {
 
     const mode = instance.scoringMode;
     const cacheKey = `movies:${instanceId}:${mode}`;
-    let cached = dataCache.get<{ flagged: FlaggedMovie[] }>(
-      cacheKey,
-      CACHE_TTL_MS,
-    );
+    const cached = await this.readWithSwr(instance, mode, cacheKey);
+    return this.applyQuery(cached.flagged, query, mode, (m) => m.hasFile);
+  }
 
-    if (cached) {
+  private async readWithSwr(
+    instance: NonNullable<Awaited<ReturnType<typeof instanceRepository.findById>>>,
+    mode: ScoringMode,
+    cacheKey: string,
+  ): Promise<{ flagged: FlaggedMovie[] }> {
+    type Cached = { flagged: FlaggedMovie[] };
+    const result = dataCache.getWithStaleness<Cached>(cacheKey, CACHE_TTL_MS, CACHE_STALE_MS);
+
+    if (result.kind === "fresh") {
       appLogger.debug("Cache hit", {
         source: LogSource.MovieService,
         context: { cacheKey },
       });
-    } else {
-      const startedAt = Date.now();
-      const flagged = await this.buildFlaggedMovies(instanceId, instance, mode);
-      cached = { flagged };
-      dataCache.set(cacheKey, cached);
-      appLogger.debug("Built flagged movies cache", {
-        source: LogSource.MovieService,
-        context: {
-          instanceId,
-          instanceName: instance.name,
-          mode,
-          flagged: flagged.length,
-          durationMs: Date.now() - startedAt,
-        },
-      });
+      return result.value;
     }
 
-    return this.applyQuery(cached.flagged, query, mode, (m) => m.hasFile);
+    if (result.kind === "stale") {
+      // Serve cached data immediately and refresh in the background. The
+      // dataCache.rebuild guard ensures concurrent stale reads share one
+      // rebuild rather than firing parallel upstream calls.
+      if (!dataCache.isRebuilding(cacheKey)) {
+        void dataCache
+          .rebuild(cacheKey, () => this.buildFlaggedAndLog(instance.id, instance, mode))
+          .catch((err) => {
+            appLogger.error("Background flagged-movies rebuild failed", {
+              source: LogSource.MovieService,
+              err,
+              context: { instanceId: instance.id, cacheKey },
+            });
+          });
+      }
+      return result.value;
+    }
+
+    // Miss — block on rebuild. Concurrent miss callers share the same
+    // promise via dataCache.rebuild.
+    return dataCache.rebuild(cacheKey, () =>
+      this.buildFlaggedAndLog(instance.id, instance, mode),
+    );
+  }
+
+  private async buildFlaggedAndLog(
+    instanceId: number,
+    instance: NonNullable<Awaited<ReturnType<typeof instanceRepository.findById>>>,
+    mode: ScoringMode,
+  ): Promise<{ flagged: FlaggedMovie[] }> {
+    const startedAt = Date.now();
+    const flagged = await this.buildFlaggedMovies(instanceId, instance, mode);
+    appLogger.debug("Built flagged movies cache", {
+      source: LogSource.MovieService,
+      context: {
+        instanceId,
+        instanceName: instance.name,
+        mode,
+        flagged: flagged.length,
+        durationMs: Date.now() - startedAt,
+      },
+    });
+    return { flagged };
   }
 
   private async buildFlaggedMovies(

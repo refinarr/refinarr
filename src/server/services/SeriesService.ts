@@ -13,7 +13,7 @@ import { preferenceRepository } from "@/server/repositories/PreferenceRepository
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { SonarrClient } from "@/server/clients/SonarrClient";
-import { dataCache, CACHE_TTL_MS } from "@/server/lib/DataCache";
+import { dataCache, CACHE_TTL_MS, CACHE_STALE_MS } from "@/server/lib/DataCache";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import {
@@ -36,39 +36,67 @@ export class SeriesService extends MediaService {
 
     const mode = instance.scoringMode;
     const cacheKey = `series:${instanceId}:${mode}`;
-    let cached = dataCache.get<{ flagged: FlaggedSeries[] }>(
-      cacheKey,
-      CACHE_TTL_MS,
-    );
+    const cached = await this.readWithSwr(instance, mode, cacheKey);
+    return this.applyQuery(cached.flagged, query, mode, (s) => s.episodeFiles.length > 0);
+  }
 
-    if (cached) {
+  private async readWithSwr(
+    instance: NonNullable<Awaited<ReturnType<typeof instanceRepository.findById>>>,
+    mode: ScoringMode,
+    cacheKey: string,
+  ): Promise<{ flagged: FlaggedSeries[] }> {
+    type Cached = { flagged: FlaggedSeries[] };
+    const result = dataCache.getWithStaleness<Cached>(cacheKey, CACHE_TTL_MS, CACHE_STALE_MS);
+
+    if (result.kind === "fresh") {
       appLogger.debug("Cache hit", {
         source: LogSource.SeriesService,
         context: { cacheKey },
       });
-    } else {
-      const startedAt = Date.now();
-      const flagged = await this.buildFlaggedSeries(instanceId, instance, mode);
-      cached = { flagged };
-      dataCache.set(cacheKey, cached);
-      appLogger.debug("Built flagged series cache", {
-        source: LogSource.SeriesService,
-        context: {
-          instanceId,
-          instanceName: instance.name,
-          mode,
-          flagged: flagged.length,
-          durationMs: Date.now() - startedAt,
-        },
-      });
+      return result.value;
     }
 
-    return this.applyQuery(
-      cached.flagged,
-      query,
-      mode,
-      (s) => s.episodeFiles.length > 0,
+    if (result.kind === "stale") {
+      // Serve cached data immediately and refresh in the background. The
+      // dataCache.rebuild guard ensures concurrent stale reads share one
+      // rebuild rather than firing parallel upstream calls.
+      if (!dataCache.isRebuilding(cacheKey)) {
+        void dataCache
+          .rebuild(cacheKey, () => this.buildFlaggedAndLog(instance.id, instance, mode))
+          .catch((err) => {
+            appLogger.error("Background flagged-series rebuild failed", {
+              source: LogSource.SeriesService,
+              err,
+              context: { instanceId: instance.id, cacheKey },
+            });
+          });
+      }
+      return result.value;
+    }
+
+    return dataCache.rebuild(cacheKey, () =>
+      this.buildFlaggedAndLog(instance.id, instance, mode),
     );
+  }
+
+  private async buildFlaggedAndLog(
+    instanceId: number,
+    instance: NonNullable<Awaited<ReturnType<typeof instanceRepository.findById>>>,
+    mode: ScoringMode,
+  ): Promise<{ flagged: FlaggedSeries[] }> {
+    const startedAt = Date.now();
+    const flagged = await this.buildFlaggedSeries(instanceId, instance, mode);
+    appLogger.debug("Built flagged series cache", {
+      source: LogSource.SeriesService,
+      context: {
+        instanceId,
+        instanceName: instance.name,
+        mode,
+        flagged: flagged.length,
+        durationMs: Date.now() - startedAt,
+      },
+    });
+    return { flagged };
   }
 
   private async buildFlaggedSeries(
