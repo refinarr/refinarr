@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { BulkActionToolbar, type BulkProgress } from "@/client/components/media/BulkActionToolbar";
+import { SERIES_BULK_CONFIG } from "@/client/components/media/media-bulk-configs";
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
 import { MediaPageHeader } from "@/client/components/media/MediaPageHeader";
 import { MediaSearchBar } from "@/client/components/media/MediaSearchBar";
@@ -35,41 +36,13 @@ import { useFlaggedSeriesData } from "@/client/hooks/media/useFlaggedSeriesData"
 import { useQueuedMediaIds } from "@/client/hooks/data/useSearchQueue";
 import { useRecentSearchMap } from "@/client/hooks/data/useRecentSearches";
 import { useBulkAbort } from "@/client/hooks/media/useBulkAbort";
-import { useBulkMediaActions, type BulkActionsConfig } from "@/client/hooks/media/useBulkMediaActions";
+import { useBulkMediaActions } from "@/client/hooks/media/useBulkMediaActions";
 import { useBulkHandlers } from "@/client/hooks/media/useBulkHandlers";
 import { useShowSeasonEpisodeActions } from "@/client/hooks/media/useShowSeasonEpisodeActions";
 import { getSeverity } from "@/client/lib/severity";
 import { formatBytes } from "@/client/lib/format";
 import { formatRelative } from "@/client/lib/format-relative";
 import type { FlaggedSeries, ScoringMode } from "@/shared/types/models";
-
-type SeriesBulkConfig = Pick<
-  BulkActionsConfig<FlaggedSeries>,
-  "mediaType" | "search" | "ignore" | "delete"
->;
-
-const SERIES_BULK_CONFIG: SeriesBulkConfig = {
-  mediaType: "series",
-  search: {
-    endpoint: "/sonarr/series/search",
-    body: (s, instId) => ({ instanceId: instId, mediaId: s.id, title: s.title }),
-  },
-  ignore: {
-    endpoint: "/ignore",
-    body: (s, instId) => ({ instanceId: instId, mediaId: s.id, mediaType: "series", title: s.title }),
-  },
-  delete: {
-    endpoint: "/sonarr/series/delete",
-    isDeletable: (s) => s.episodeFiles.length > 0,
-    body: (s, instId, search) => ({
-      instanceId: instId,
-      mediaId: s.id,
-      fileIds: s.episodeFiles.map((f) => f.id),
-      title: s.title,
-      search,
-    }),
-  },
-};
 
 export default function ShowsPage() {
   return (

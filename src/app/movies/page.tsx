@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { BulkActionToolbar, type BulkProgress } from "@/client/components/media/BulkActionToolbar";
+import { MOVIE_BULK_CONFIG } from "@/client/components/media/media-bulk-configs";
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
 import { MediaPageHeader } from "@/client/components/media/MediaPageHeader";
 import { MediaSearchBar } from "@/client/components/media/MediaSearchBar";
@@ -35,36 +36,12 @@ import { useFlaggedMoviesData } from "@/client/hooks/media/useFlaggedMoviesData"
 import { useQueuedMediaIds } from "@/client/hooks/data/useSearchQueue";
 import { useRecentSearchMap } from "@/client/hooks/data/useRecentSearches";
 import { useBulkAbort } from "@/client/hooks/media/useBulkAbort";
-import { useBulkMediaActions, type BulkActionsConfig } from "@/client/hooks/media/useBulkMediaActions";
+import { useBulkMediaActions } from "@/client/hooks/media/useBulkMediaActions";
 import { useBulkHandlers } from "@/client/hooks/media/useBulkHandlers";
 import { getSeverity } from "@/client/lib/severity";
 import { formatBytes } from "@/client/lib/format";
 import { formatRelative } from "@/client/lib/format-relative";
 import type { FlaggedMovie, ScoringMode } from "@/shared/types/models";
-
-type MovieBulkConfig = Pick<
-  BulkActionsConfig<FlaggedMovie>,
-  "mediaType" | "search" | "ignore" | "delete"
->;
-
-const MOVIE_BULK_CONFIG: MovieBulkConfig = {
-  mediaType: "movie",
-  search: {
-    endpoint: "/radarr/movies/search",
-    body: (m, instId) => ({ instanceId: instId, mediaId: m.id, title: m.title }),
-  },
-  ignore: {
-    endpoint: "/ignore",
-    body: (m, instId) => ({ instanceId: instId, mediaId: m.id, mediaType: "movie", title: m.title }),
-  },
-  delete: {
-    endpoint: "/radarr/movies/delete",
-    isDeletable: (m) => m.hasFile && m.movieFileId > 0,
-    body: (m, instId, search) => ({
-      instanceId: instId, mediaId: m.id, fileId: m.movieFileId, title: m.title, search,
-    }),
-  },
-};
 
 export default function MoviesPage() {
   return (
