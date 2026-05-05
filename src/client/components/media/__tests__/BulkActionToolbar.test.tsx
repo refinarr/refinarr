@@ -22,14 +22,15 @@ describe("BulkActionToolbar", () => {
     expect(screen.getByRole("button", { name: /delete and search/i })).toBeInTheDocument();
   });
 
-  it("uses fixed-bottom positioning on mobile and static layout above md", () => {
+  it("uses fixed-bottom positioning on mobile and sticks to the top on md+", () => {
     renderWithProviders(
       <BulkActionToolbar selectedCount={1} onSearch={vi.fn()} onDelete={vi.fn()} onIgnore={vi.fn()} />
     );
     const toolbar = screen.getByText(/1 selected/i).parentElement!;
     expect(toolbar.className).toContain("fixed");
     expect(toolbar.className).toContain("bottom-0");
-    expect(toolbar.className).toContain("md:static");
+    expect(toolbar.className).toContain("md:sticky");
+    expect(toolbar.className).toContain("md:top-0");
   });
 
   it("renders an aria-live progress UI in place of action buttons when progress is provided", () => {

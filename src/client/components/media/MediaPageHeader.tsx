@@ -5,7 +5,7 @@ import { Button } from "@/client/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { Label } from "@/client/components/ui/label";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
-import { InstanceConnectionDot } from "@/client/components/media/InstanceConnectionDot";
+import { InstanceConnectionDot } from "@/client/components/common/InstanceConnectionDot";
 import { cn } from "@/client/lib/utils";
 import type { Instance, ScoringMode } from "@/shared/types/models";
 

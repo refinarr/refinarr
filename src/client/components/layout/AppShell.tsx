@@ -25,7 +25,7 @@ export function AppShell({ children }: Props) {
       <main
         id="main"
         tabIndex={-1}
-        className="flex-1 p-4 pb-20 focus:outline-none md:overflow-y-auto md:p-6 md:pb-6"
+        className="flex-1 p-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] focus:outline-none md:overflow-y-auto md:p-6 md:pb-6"
       >
         {children}
       </main>

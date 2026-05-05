@@ -8,9 +8,9 @@ import {
 } from "@/client/components/ui/sheet";
 import { Button } from "@/client/components/ui/button";
 import { Search, EyeOff, Trash2 } from "lucide-react";
-import { ScoreLabel } from "@/client/components/media/ScoreLabel";
-import { CfScoreList } from "@/client/components/media/CfScoreList";
-import { SeverityDot } from "@/client/components/media/SeverityDot";
+import { ScoreLabel } from "@/client/components/common/ScoreLabel";
+import { CfScoreList } from "@/client/components/common/CfScoreList";
+import { SeverityDot } from "@/client/components/common/SeverityDot";
 import { getSeverity } from "@/client/lib/severity";
 import type { FlaggedMovie, ScoringMode } from "@/shared/types/models";
 

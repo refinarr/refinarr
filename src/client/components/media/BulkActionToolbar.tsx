@@ -20,7 +20,6 @@ interface Props {
   progress?: BulkProgress | null;
   onCancel?: () => void;
 }
-
 export function BulkActionToolbar({
   selectedCount,
   onSearch,
@@ -33,8 +32,14 @@ export function BulkActionToolbar({
   const t = useTranslations("bulk");
   if (selectedCount === 0 && !progress) return null;
 
+  // Mobile: iOS Safari toolbar style — solid dark strip pinned to viewport
+  // bottom, no borders, ghost icon buttons, safe-area padding for the home
+  // indicator. Sized larger than desktop for thumb-friendly tap targets.
+  // Desktop: card-style strip that sticks to the top of the main scroll
+  // container so it stays visible while the user scrolls a long list and
+  // selects rows further down.
   const wrapperClasses =
-    "fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t bg-background px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:static md:mb-4 md:rounded-md md:border-0 md:bg-accent md:px-3 md:py-3";
+    "fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 bg-muted px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:sticky md:top-0 md:bottom-auto md:mb-4 md:gap-2 md:rounded-md md:border-0 md:bg-accent md:px-3 md:py-3 md:pb-3";
 
   if (progress) {
     const pct = progress.total > 0 ? Math.min(100, (progress.current / progress.total) * 100) : 0;
@@ -63,25 +68,31 @@ export function BulkActionToolbar({
     );
   }
 
+  // Buttons use size="default" on mobile (h-9 ~ 36px tap target, comfortable
+  // for touch) and shrink to size="sm" on desktop via the md:h-8 override.
+  // Icons grow from h-5 to h-4 the same way.
+  const buttonSize = "h-10 w-10 md:h-8 md:w-auto md:px-3";
+  const iconSize = "h-5 w-5 md:h-4 md:w-4 md:mr-1";
+
   return (
     <div className={wrapperClasses}>
-      <span className="text-sm font-medium">{t("selected", { count: selectedCount })}</span>
-      <div className="ml-auto flex gap-2">
-        <Button size="sm" variant="outline" onClick={onSearch} disabled={disabled} aria-label={t("search")}>
-          <Search className="h-4 w-4 sm:mr-1" />
-          <span className="hidden sm:inline">{t("search")}</span>
+      <span className="text-base font-medium md:text-sm">{t("selected", { count: selectedCount })}</span>
+      <div className="ml-auto flex items-center gap-1">
+        <Button size="sm" variant="ghost" onClick={onSearch} disabled={disabled} aria-label={t("search")} className={buttonSize}>
+          <Search className={iconSize} />
+          <span className="hidden md:inline">{t("search")}</span>
         </Button>
-        <Button size="sm" variant="outline" onClick={onIgnore} disabled={disabled} aria-label={t("ignore")}>
-          <EyeOff className="h-4 w-4 sm:mr-1" />
-          <span className="hidden sm:inline">{t("ignore")}</span>
+        <Button size="sm" variant="ghost" onClick={onIgnore} disabled={disabled} aria-label={t("ignore")} className={buttonSize}>
+          <EyeOff className={iconSize} />
+          <span className="hidden md:inline">{t("ignore")}</span>
         </Button>
-        <Button size="sm" variant="outline" onClick={() => onDelete(false)} disabled={disabled} aria-label={t("delete")}>
-          <Trash2 className="h-4 w-4 text-destructive sm:mr-1" />
-          <span className="hidden sm:inline">{t("delete")}</span>
+        <Button size="sm" variant="ghost" onClick={() => onDelete(false)} disabled={disabled} aria-label={t("delete")} className={`${buttonSize} text-destructive hover:text-destructive`}>
+          <Trash2 className={iconSize} />
+          <span className="hidden md:inline">{t("delete")}</span>
         </Button>
-        <Button size="sm" variant="destructive" onClick={() => onDelete(true)} disabled={disabled} aria-label={t("deleteAndSearch")}>
-          <Trash2 className="h-4 w-4 sm:mr-1" />
-          <span className="hidden sm:inline">{t("deleteAndSearch")}</span>
+        <Button size="sm" variant="destructive" onClick={() => onDelete(true)} disabled={disabled} aria-label={t("deleteAndSearch")} className={buttonSize}>
+          <Trash2 className={iconSize} />
+          <span className="hidden md:inline">{t("deleteAndSearch")}</span>
         </Button>
       </div>
     </div>

@@ -10,8 +10,8 @@ import {
 import { Button } from "@/client/components/ui/button";
 import { EyeOff } from "lucide-react";
 import { Accordion } from "@/client/components/ui/accordion";
-import { ScoreLabel } from "@/client/components/media/ScoreLabel";
-import { SeverityDot } from "@/client/components/media/SeverityDot";
+import { ScoreLabel } from "@/client/components/common/ScoreLabel";
+import { SeverityDot } from "@/client/components/common/SeverityDot";
 import { SeasonAccordion } from "@/client/components/shows/SeasonAccordion";
 import { groupBySeason, filename } from "@/client/components/shows/utils";
 import { getSeverity } from "@/client/lib/severity";

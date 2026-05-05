@@ -9,30 +9,6 @@ export interface FilterChip {
   onRemove: () => void;
 }
 
-// Helper for building per-CF filter chips (missing-CF / penalty-CF). Lives at
-// module scope so its inner functions don't count toward the call site's
-// nesting depth.
-export function buildCfChips(args: {
-  ids: number[];
-  options: { id: number; name: string }[];
-  label: (name: string) => string;
-  removeId: (id: number) => void;
-  keyPrefix: string;
-}): FilterChip[] {
-  return args.ids
-    .map((id): FilterChip | null => {
-      const name = args.options.find((c) => c.id === id)?.name;
-      return name
-        ? {
-            key: `${args.keyPrefix}-${id}`,
-            label: args.label(name),
-            onRemove: () => args.removeId(id),
-          }
-        : null;
-    })
-    .filter((c): c is FilterChip => c !== null);
-}
-
 interface Props {
   chips: FilterChip[];
 }

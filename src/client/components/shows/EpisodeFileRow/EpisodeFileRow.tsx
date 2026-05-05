@@ -3,8 +3,8 @@ import { useTranslations } from "next-intl";
 import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
 import { Button } from "@/client/components/ui/button";
 import { Search, Trash2 } from "lucide-react";
-import { ScoreLabel } from "@/client/components/media/ScoreLabel";
-import { CfScoreList } from "@/client/components/media/CfScoreList";
+import { ScoreLabel } from "@/client/components/common/ScoreLabel";
+import { CfScoreList } from "@/client/components/common/CfScoreList";
 import { filename } from "../utils";
 
 interface Props {

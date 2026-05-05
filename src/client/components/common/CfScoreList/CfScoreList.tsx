@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CfScore } from "@/client/components/media/CfScore";
+import { CfScore } from "@/client/components/common/CfScore";
 import type { CustomFormat } from "@/shared/types/models";
 
 interface Props {

@@ -9,12 +9,12 @@ import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton
 import { MediaPageHeader } from "@/client/components/media/MediaPageHeader";
 import { MediaSearchBar } from "@/client/components/media/MediaSearchBar";
 import { MediaTable, type ColumnDef } from "@/client/components/media/MediaTable";
-import { ActiveFilterChips } from "@/client/components/media/ActiveFilterChips";
-import { SeverityDot } from "@/client/components/media/SeverityDot";
-import { ScoreLabel } from "@/client/components/media/ScoreLabel";
-import { CfBadge } from "@/client/components/media/CfBadge";
+import { ActiveFilterChips } from "@/client/components/common/ActiveFilterChips";
+import { SeverityDot } from "@/client/components/common/SeverityDot";
+import { ScoreLabel } from "@/client/components/common/ScoreLabel";
+import { CfBadge } from "@/client/components/common/CfBadge";
 import { SearchStatusBadge } from "@/client/components/media/SearchStatusBadge";
-import { RowHoverActions } from "@/client/components/media/RowHoverActions";
+import { RowHoverActions } from "@/client/components/common/RowHoverActions";
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
 import { MediaPageEmptyState } from "@/client/components/states/MediaPageEmptyState";
@@ -214,7 +214,7 @@ function MoviesPageContent() {
   return (
     <AppShell>
       <PageErrorBoundary>
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <MediaPageHeader
             title={t("title")}
             total={data.total}

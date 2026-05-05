@@ -1,9 +1,32 @@
 "use client";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { buildCfChips, type FilterChip } from "@/client/components/media/ActiveFilterChips";
+import { type FilterChip } from "@/client/components/common/ActiveFilterChips";
 import type { CfPreference, QualityProfile } from "@/shared/types/models";
 import type { MediaFiltersResult } from "./useMediaFilters";
+
+// CF chip-building helper — used only by useFilterChips, so it lives here
+// rather than alongside the generic ActiveFilterChips component.
+function buildCfChips(args: {
+  ids: number[];
+  options: { id: number; name: string }[];
+  label: (name: string) => string;
+  removeId: (id: number) => void;
+  keyPrefix: string;
+}): FilterChip[] {
+  return args.ids
+    .map((id): FilterChip | null => {
+      const name = args.options.find((c) => c.id === id)?.name;
+      return name
+        ? {
+            key: `${args.keyPrefix}-${id}`,
+            label: args.label(name),
+            onRemove: () => args.removeId(id),
+          }
+        : null;
+    })
+    .filter((c): c is FilterChip => c !== null);
+}
 
 interface Args {
   filters: MediaFiltersResult;
