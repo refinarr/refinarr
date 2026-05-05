@@ -114,7 +114,11 @@ describe("POST /api/history/[id]/retry", () => {
     expect(logs).toHaveLength(1);
     expect(logs[0].id).toBe(original.id);
     expect(logs[0].error).toBe("Test Radarr API error: 500");
-    expect(logs[0].createdAt.getTime()).toBeGreaterThan(previousCreatedAt.getTime());
+    // The original failure timestamp survives; the retry is captured in
+    // lastRetriedAt so the History UI can render "Failed X · Retried Y".
+    expect(logs[0].createdAt.getTime()).toBe(previousCreatedAt.getTime());
+    expect(logs[0].lastRetriedAt).toBeTruthy();
+    expect(logs[0].lastRetriedAt!.getTime()).toBeGreaterThan(previousCreatedAt.getTime());
   });
 
   test("season-scoped retry preserves seasonNumber instead of broadening to a series search", async () => {
@@ -222,6 +226,32 @@ describe("POST /api/history/[id]/retry", () => {
     // The original row is untouched.
     const fresh = await logRepository.findById(corrupt.id);
     expect(fresh?.status).toBe("failed");
+  });
+
+  test("returns 400 (not 500) when the action is not retryable", async () => {
+    const instance = await instanceService.create({
+      type: "radarr",
+      name: "Test Radarr",
+      url: "http://192.168.1.10:7878",
+      apiKey: "abcd1234abcd1234abcd1234abcd1234",
+    });
+    // "ignore" isn't in MovieService's retry registry; the service throws
+    // RetryNotSupportedError, the route maps that to a 400 with the
+    // descriptive message instead of leaking a generic 500.
+    const corrupt = await logRepository.create({
+      ...baseLog,
+      instanceId: instance.id,
+      action: "ignore",
+      mediaId: 100,
+      status: "failed",
+      payload: JSON.stringify({
+        instanceId: instance.id, action: "ignore", mediaId: 100, title: "Movie",
+      }),
+    });
+    const res = await retry(retryReq(corrupt.id), { params: Promise.resolve({ id: String(corrupt.id) }) });
+    const body = await res.json();
+    expect(res.status).toBe(400);
+    expect(body.error).toMatch(/Cannot retry/);
   });
 
   test("rejects retry when payload action differs from the log row's action", async () => {

@@ -38,6 +38,8 @@ export interface RetryActionOptions {
   actionLogId?: number;
 }
 
+export { RetryNotSupportedError } from "./retry-errors";
+
 // Type-keyed registry of arr type → media service. Mirrors the established
 // ArrClientFactory pattern for HTTP clients.
 const services: Record<ArrType, MediaListService> = {

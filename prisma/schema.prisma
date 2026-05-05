@@ -44,16 +44,17 @@ model CfPreference {
 }
 
 model ActionLog {
-  id         Int      @id @default(autoincrement())
-  instanceId Int
-  action     String
-  mediaId    Int
-  title      String
-  isDryRun   Boolean  @default(false)
-  status     String
-  error      String?
-  payload    String?
-  createdAt  DateTime @default(now())
+  id            Int       @id @default(autoincrement())
+  instanceId    Int
+  action        String
+  mediaId       Int
+  title         String
+  isDryRun      Boolean   @default(false)
+  status        String
+  error         String?
+  payload       String?
+  createdAt     DateTime  @default(now())
+  lastRetriedAt DateTime?
 }
 
 model AppLog {

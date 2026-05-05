@@ -17,6 +17,7 @@ import {
   isBelowProfileScore,
   scoreProfileCoverage,
 } from "@/shared/scoring";
+import { RetryNotSupportedError } from "./retry-errors";
 import type { RetryActionOptions } from "./media-services";
 
 
@@ -241,7 +242,7 @@ export class SeriesService extends MediaService {
     const result = seriesRetryPayloadSchema.safeParse(payload);
     if (!result.success) {
       const action = typeof payload.action === "string" ? payload.action : "unknown";
-      throw new Error(`Cannot retry action type: ${action}`);
+      throw new RetryNotSupportedError(action);
     }
     const data = result.data;
     switch (data.action) {
