@@ -34,26 +34,31 @@ describe("POST /api/logs/client", () => {
   });
 
   test("logs valid client reports", async () => {
-    const res = await POST(makeReq({
-      message: "Client blew up",
-      path: "/dashboard",
-      method: "GET",
-      status: 500,
-      traceId: "trace-123",
-      component: "Dashboard",
-      stack: "Error: nope",
-    }));
-    expect(res.status).toBe(200);
-    expect(appLoggerMock.error).toHaveBeenCalledWith("Client blew up", {
-      source: "client",
-      context: expect.objectContaining({
+    const res = await POST(
+      makeReq({
+        message: "Client blew up apikey=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         path: "/dashboard",
         method: "GET",
         status: 500,
         traceId: "trace-123",
         component: "Dashboard",
+        stack: "Error: nope",
       }),
-    });
+    );
+    expect(res.status).toBe(200);
+    expect(appLoggerMock.error).toHaveBeenCalledWith(
+      "Client blew up apikey=***",
+      {
+        source: "client",
+        context: expect.objectContaining({
+          path: "/dashboard",
+          method: "GET",
+          status: 500,
+          traceId: "trace-123",
+          component: "Dashboard",
+        }),
+      },
+    );
   });
 
   test("rate-limits spam", async () => {

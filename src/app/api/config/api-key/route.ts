@@ -7,7 +7,13 @@ import { prisma } from "@/server/lib/db";
 import { verifyPassword, getSession, SESSION_COOKIE } from "@/server/lib/auth";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { apiKeyReauthSchema } from "@/shared/types/schemas";
-import { badRequest, internal, parseJson, tooManyRequests, unauthorized } from "@/server/lib/api-errors";
+import {
+  badRequest,
+  internal,
+  parseJson,
+  tooManyRequests,
+  unauthorized,
+} from "@/server/lib/api-errors";
 
 /**
  * The X-Api-Key for scripted access. Reading or rotating it requires the
@@ -15,7 +21,10 @@ import { badRequest, internal, parseJson, tooManyRequests, unauthorized } from "
  * this value through any other endpoint — it's a one-step-removed secret.
  */
 
-async function authenticatedUserPassword(req: NextRequest, pw: string): Promise<boolean> {
+async function authenticatedUserPassword(
+  req: NextRequest,
+  pw: string,
+): Promise<boolean> {
   const sid = req.cookies.get(SESSION_COOKIE)?.value;
   if (!sid) return false;
   const session = await getSession(sid);
@@ -27,19 +36,21 @@ async function authenticatedUserPassword(req: NextRequest, pw: string): Promise<
 
 export const POST = createApiHandler(async (req: NextRequest) => {
   // Rate-limit re-auth attempts.
-  const { allowed, retryAfterMs } = checkRateLimit(`apikey:${clientIp(req)}`, { max: 10, windowMs: 15 * 60 * 1000 });
-  if (!allowed) throw tooManyRequests("Too many attempts", retryAfterMs, "RATE_LIMITED");
+  const { allowed, retryAfterMs } = checkRateLimit(`apikey:${clientIp(req)}`, {
+    max: 10,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!allowed)
+    throw tooManyRequests("Too many attempts", retryAfterMs, "RATE_LIMITED");
 
-  const { password } = await parseJson(req, apiKeyReauthSchema, "Password required");
+  const { password } = await parseJson(
+    req,
+    apiKeyReauthSchema,
+    "Password required",
+  );
 
-  // If in reverse-proxy trust mode, the user has no password here. Fall back
-  // to allowing the read because the upstream proxy already authenticated.
-  const proxyMode = process.env.TRUST_PROXY_AUTH === "true"
-    && req.headers.get(process.env.PROXY_USER_HEADER ?? "X-Remote-User");
-  if (!proxyMode) {
-    const ok = await authenticatedUserPassword(req, password);
-    if (!ok) throw unauthorized("Invalid password", "WRONG_PASSWORD");
-  }
+  const ok = await authenticatedUserPassword(req, password);
+  if (!ok) throw unauthorized("Invalid password", "WRONG_PASSWORD");
 
   const action = req.nextUrl.searchParams.get("action");
   if (action !== null && action !== "rotate") {

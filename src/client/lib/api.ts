@@ -108,8 +108,12 @@ async function parseErrorBody(res: Response): Promise<ApiErrorResponse> {
 function parseRetryAfter(value: string | null): number | undefined {
   if (!value) return undefined;
   const seconds = Number(value);
-  if (!Number.isFinite(seconds) || seconds < 0) return undefined;
-  return seconds;
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds;
+
+  const retryAt = Date.parse(value);
+  if (Number.isNaN(retryAt)) return undefined;
+
+  return Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
 }
 
 export const api = {

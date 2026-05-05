@@ -31,10 +31,6 @@ export const POST = createApiHandler(async (_req, ctx) => {
   const inst = await instanceRepository.findById(payload.instanceId);
   if (!inst) throw notFound("Instance no longer exists");
 
-  try {
-    const result = await mediaServiceFor(inst.type).retryFromPayload(payload);
-    return NextResponse.json(result);
-  } catch (err) {
-    throw badRequest(err instanceof Error ? err.message : "Cannot retry this action type");
-  }
+  const result = await mediaServiceFor(inst.type).retryFromPayload(payload);
+  return NextResponse.json(result);
 });

@@ -20,10 +20,12 @@ export function reportClientError(details: ClientErrorReportDto): void {
     component: details.component,
   });
 
-  if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+  if (
+    typeof navigator !== "undefined" &&
+    typeof navigator.sendBeacon === "function"
+  ) {
     const blob = new Blob([body], { type: "application/json" });
-    navigator.sendBeacon(CLIENT_LOG_PATH, blob);
-    return;
+    if (navigator.sendBeacon(CLIENT_LOG_PATH, blob)) return;
   }
 
   fetch(CLIENT_LOG_PATH, {

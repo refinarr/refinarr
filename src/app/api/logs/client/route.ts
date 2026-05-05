@@ -5,17 +5,25 @@ import { appLogger } from "@/server/lib/app-logger";
 import { createApiHandler } from "@/server/lib/handler";
 import { LogSource } from "@/server/lib/log-sources";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
+import { redactString } from "@/server/lib/redact";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
-  const { allowed, retryAfterMs } = checkRateLimit(`client-log:${clientIp(req)}`, {
-    max: 30,
-    windowMs: 60 * 1000,
-  });
+  const { allowed, retryAfterMs } = checkRateLimit(
+    `client-log:${clientIp(req)}`,
+    {
+      max: 30,
+      windowMs: 60 * 1000,
+    },
+  );
   if (!allowed) {
     throw tooManyRequests("Too many client error reports", retryAfterMs);
   }
 
-  const report = await parseJson(req, clientErrorReportSchema, "Invalid client error report");
+  const report = await parseJson(
+    req,
+    clientErrorReportSchema,
+    "Invalid client error report",
+  );
   const context = {
     path: report.path,
     method: report.method,
@@ -26,10 +34,15 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     stack: report.stack,
   };
 
-  if (report.status === undefined || report.status === 0 || report.status >= 500) {
-    appLogger.error(report.message, { source: LogSource.Client, context });
+  const message = redactString(report.message);
+  if (
+    report.status === undefined ||
+    report.status === 0 ||
+    report.status >= 500
+  ) {
+    appLogger.error(message, { source: LogSource.Client, context });
   } else {
-    appLogger.warn(report.message, { source: LogSource.Client, context });
+    appLogger.warn(message, { source: LogSource.Client, context });
   }
 
   return NextResponse.json({ ok: true });

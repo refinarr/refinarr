@@ -82,6 +82,20 @@ describe("api.get", () => {
     });
   });
 
+  test("parses HTTP-date retry-after", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-06T00:00:00.000Z"));
+    const res = jsonResponse({ error: "Slow", traceId: "trace-body" }, 429);
+    res.headers.set("Retry-After", "Wed, 06 May 2026 00:00:10 GMT");
+    fetchMock.mockResolvedValue(res);
+    await expect(api.get("/x")).rejects.toMatchObject({
+      status: 429,
+      retryAfter: 10,
+      traceId: "trace-body",
+    });
+    vi.useRealTimers();
+  });
+
   test("reports network errors", async () => {
     fetchMock.mockRejectedValue(new Error("offline"));
     await expect(api.get("/x")).rejects.toBeInstanceOf(ApiClientError);

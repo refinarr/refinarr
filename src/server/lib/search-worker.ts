@@ -6,6 +6,7 @@ import type { ActionLog, Instance } from "@/shared/types/models";
 import type { SearchQueueEntry } from "@/shared/types/models";
 import { appLogger } from "./app-logger";
 import { LogSource } from "./log-sources";
+import { logger } from "./logger";
 
 /**
  * Per-instance loop that drains SearchQueue at the configured rate.
@@ -24,16 +25,30 @@ class SearchWorker {
   private processing = new Set<number>();
   private lastProcessedAt = new Map<number, number>();
   private started = false;
+  private startPromise: Promise<void> | null = null;
 
   async start(): Promise<void> {
+    if (this.started) return;
+    if (this.startPromise) return this.startPromise;
+    this.startPromise = this.startInternal().finally(() => {
+      this.startPromise = null;
+    });
+    return this.startPromise;
+  }
+
+  private async startInternal(): Promise<void> {
     if (this.started) return;
     const instances = await instanceRepository.findAllEnabled();
     for (const inst of instances) this.startForInstance(inst);
     this.started = true;
-    appLogger.info("Search worker started", {
-      source: LogSource.SearchWorker,
-      context: { instances: instances.length },
-    });
+    logger.info(
+      {
+        source: LogSource.SearchWorker,
+        instances: instances.length,
+        pid: process.pid,
+      },
+      "Search worker started",
+    );
   }
 
   stop(): void {
@@ -94,11 +109,13 @@ class SearchWorker {
       // Only stamp on actual drain. Stamping on empty-queue ticks would
       // rate-limit a follow-up enqueue's kick(), which is the foot-gun
       // behind "queue keeps growing after it empties" reports.
-      if (drained) this.lastProcessedAt.set(instanceId, Date.now());
-      appLogger.debug("Search worker tick", {
-        source: LogSource.SearchWorker,
-        context: { instanceId, drained },
-      });
+      if (drained) {
+        this.lastProcessedAt.set(instanceId, Date.now());
+        appLogger.debug("Search worker drained", {
+          source: LogSource.SearchWorker,
+          context: { instanceId, drained },
+        });
+      }
     }
   }
 
@@ -108,7 +125,9 @@ class SearchWorker {
     // Capture only the id so the next tick re-reads instance config from the
     // repo via processOne / kick. Avoids stale closure values after a config
     // change (rate, enabled) lands without a refresh().
-    const tick = () => { void this.processWithGuard(instanceId); };
+    const tick = () => {
+      void this.processWithGuard(instanceId);
+    };
     const handle = setInterval(tick, minDelayMs);
     handle.unref?.();
     this.timers.set(instanceId, handle);
@@ -123,7 +142,10 @@ class SearchWorker {
 
     const instance = await instanceRepository.findById(instanceId);
     if (!instance || !instance.enabled) {
-      await searchQueueService.markFailed(next.id, "Instance not found or disabled");
+      await searchQueueService.markFailed(
+        next.id,
+        "Instance not found or disabled",
+      );
       return true;
     }
 
@@ -158,24 +180,54 @@ class SearchWorker {
     return true;
   }
 
-  private async runSearch(instance: Instance, entry: SearchQueueEntry): Promise<void> {
+  private async runSearch(
+    instance: Instance,
+    entry: SearchQueueEntry,
+  ): Promise<void> {
     // Route through the service layer so executeAction writes the ActionLog
     // row + invalidates the data cache. Calling client.triggerSearch directly
     // would skip both and the user would see nothing in History.
-    const payload = entry.payload ? (JSON.parse(entry.payload) as Record<string, unknown>) : {};
+    const payload = entry.payload
+      ? (JSON.parse(entry.payload) as Record<string, unknown>)
+      : {};
     let log: ActionLog;
     if (entry.action === "movie") {
-      log = await movieService.triggerSearch(instance.id, entry.mediaId, entry.title);
+      log = await movieService.triggerSearch(
+        instance.id,
+        entry.mediaId,
+        entry.title,
+      );
     } else if (entry.action === "series") {
-      log = await seriesService.triggerSearch(instance.id, entry.mediaId, entry.title);
+      log = await seriesService.triggerSearch(
+        instance.id,
+        entry.mediaId,
+        entry.title,
+      );
     } else if (entry.action === "season") {
-      const seasonNumber = typeof payload.seasonNumber === "number" ? payload.seasonNumber : NaN;
-      if (!Number.isFinite(seasonNumber)) throw new Error(`Invalid seasonNumber in payload for queue entry ${entry.id}`);
-      log = await seriesService.triggerSeasonSearch(instance.id, entry.mediaId, seasonNumber, entry.title);
+      const seasonNumber =
+        typeof payload.seasonNumber === "number" ? payload.seasonNumber : NaN;
+      if (!Number.isFinite(seasonNumber))
+        throw new Error(
+          `Invalid seasonNumber in payload for queue entry ${entry.id}`,
+        );
+      log = await seriesService.triggerSeasonSearch(
+        instance.id,
+        entry.mediaId,
+        seasonNumber,
+        entry.title,
+      );
     } else if (entry.action === "episode-file") {
       const fileId = typeof payload.fileId === "number" ? payload.fileId : NaN;
-      if (!Number.isFinite(fileId)) throw new Error(`Invalid fileId in payload for queue entry ${entry.id}`);
-      log = await seriesService.triggerEpisodeFileSearch(instance.id, entry.mediaId, fileId, entry.title);
+      if (!Number.isFinite(fileId))
+        throw new Error(
+          `Invalid fileId in payload for queue entry ${entry.id}`,
+        );
+      log = await seriesService.triggerEpisodeFileSearch(
+        instance.id,
+        entry.mediaId,
+        fileId,
+        entry.title,
+      );
     } else {
       throw new Error(`Unknown queue action: ${entry.action}`);
     }
@@ -191,7 +243,9 @@ class SearchWorker {
 // this, file edits create a fresh SearchWorker, the old setInterval keeps
 // running on a dead instance, and the new instance never picks up the queue
 // until process restart.
-const globalForSearchWorker = globalThis as unknown as { searchWorker?: SearchWorker };
+const globalForSearchWorker = globalThis as unknown as {
+  searchWorker?: SearchWorker;
+};
 const previousSearchWorker = globalForSearchWorker.searchWorker;
 export const searchWorker = previousSearchWorker ?? new SearchWorker();
 if (process.env.NODE_ENV !== "production") {

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui
 import { Input } from "@/client/components/ui/input";
 import { Button } from "@/client/components/ui/button";
 import { FormField } from "@/client/components/ui/form-field";
-import { api } from "@/client/lib/api";
+import { api, ApiClientError } from "@/client/lib/api";
 import { Loader2 } from "lucide-react";
 
 export default function SetupPage() {
@@ -28,8 +28,14 @@ export default function SetupPage() {
     try {
       await api.post("/auth/setup", { username, password });
       router.push("/dashboard");
-    } catch {
-      setErr(t("failed"));
+    } catch (caught) {
+      if (caught instanceof ApiClientError && caught.status === 409) {
+        setErr(t("alreadyCompleted"));
+      } else if (caught instanceof ApiClientError && caught.status === 429) {
+        setErr(t("tooManyAttempts"));
+      } else {
+        setErr(t("failed"));
+      }
     } finally {
       setSubmitting(false);
     }
