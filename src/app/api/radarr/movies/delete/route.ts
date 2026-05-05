@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
+import { parseJson } from "@/server/lib/api-errors";
 import { movieService } from "@/server/services/MovieService";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { dryRunService } from "@/server/services/DryRunService";
@@ -7,11 +8,11 @@ import { dataCache } from "@/server/lib/DataCache";
 import { radarrDeleteSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
-  let body: unknown;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
-  const parsed = radarrDeleteSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid delete payload" }, { status: 400 });
-  const { instanceId, mediaId, fileId, title, search = false } = parsed.data;
+  const { instanceId, mediaId, fileId, title, search = false } = await parseJson(
+    req,
+    radarrDeleteSchema,
+    "Invalid delete payload",
+  );
 
   // Delete fires inline; the optional follow-up search goes through the
   // queue (live) or fires inline as a dry-run preview.

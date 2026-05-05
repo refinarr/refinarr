@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
+import { parseJson } from "@/server/lib/api-errors";
 import { instanceService } from "@/server/services/InstanceService";
 import { instanceCreateSchema } from "@/shared/types/schemas";
 import type { Instance } from "@/shared/types/models";
@@ -15,12 +16,7 @@ export const GET = createApiHandler(async () => {
 });
 
 export const POST = createApiHandler(async (req: NextRequest) => {
-  let body: unknown;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
-  const parsed = instanceCreateSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid instance" }, { status: 400 });
-  }
-  const instance = await instanceService.create(parsed.data);
+  const data = await parseJson(req, instanceCreateSchema, "Invalid instance");
+  const instance = await instanceService.create(data);
   return NextResponse.json(publicView(instance), { status: 201 });
 });
