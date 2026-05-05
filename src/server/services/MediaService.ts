@@ -134,12 +134,16 @@ export abstract class MediaService {
       status: isDryRun ? "dry_run" : "pending",
       error: null,
       payload: opts.payload ? JSON.stringify(opts.payload) : null,
-    } satisfies Omit<ActionLog, "id" | "createdAt">;
+    } satisfies Omit<ActionLog, "id" | "createdAt" | "lastRetriedAt">;
 
+    // Retry path keeps the original createdAt so the History UI can show
+    // "Failed Mar 3 · Retried Mar 5". lastRetriedAt drives the sort so
+    // the row floats to the top of recent activity without losing the
+    // first-failure timestamp.
     const logEntry = opts.actionLogId
       ? await logRepository.update(opts.actionLogId, {
           ...logData,
-          createdAt: new Date(),
+          lastRetriedAt: new Date(),
         })
       : await logRepository.create(logData);
 

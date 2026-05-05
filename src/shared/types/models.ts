@@ -99,6 +99,7 @@ export interface ActionLog {
   error?: string | null;
   payload?: string | null;
   createdAt: Date;
+  lastRetriedAt?: Date | null;
 }
 
 export interface CfPreference {

@@ -37,8 +37,11 @@ export function RecentActivityList({ logs }: Props) {
                   <ActionTypeBadge action={log.action} />
                 </div>
                 <span className="text-sm truncate flex-1" title={log.title}>{log.title}</span>
-                <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                  {formatRelative(log.createdAt)}
+                <span
+                  className="text-xs text-muted-foreground tabular-nums shrink-0"
+                  title={new Date(log.lastRetriedAt ?? log.createdAt).toLocaleString()}
+                >
+                  {formatRelative(log.lastRetriedAt ?? log.createdAt)}
                 </span>
               </li>
             ))}

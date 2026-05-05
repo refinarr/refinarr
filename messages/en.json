@@ -279,6 +279,9 @@
       "title": "Title",
       "status": "Status"
     },
+    "retry": {
+      "retried": "Retried {time}"
+    },
     "clear": "Clear history"
   },
   "logs": {

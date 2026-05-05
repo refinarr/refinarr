@@ -44,6 +44,9 @@ export const POST = createApiHandler(async (_req, ctx) => {
   const inst = await instanceRepository.findById(payload.instanceId);
   if (!inst) throw notFound("Instance no longer exists");
 
+  // Unsupported actions throw badRequest from the service, so createApiHandler
+  // turns them into a 400 with the descriptive message — no per-route catch
+  // needed.
   const result = await mediaServiceFor(inst.type).retryFromPayload(payload, { actionLogId: id });
   return NextResponse.json(result);
 });

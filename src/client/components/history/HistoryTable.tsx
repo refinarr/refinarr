@@ -13,6 +13,7 @@ interface Props {
 
 export function HistoryTable({ logs }: Props) {
   const tCols = useTranslations("history.columns");
+  const tRetry = useTranslations("history.retry");
   return (
     <Table>
       <TableHeader>
@@ -32,6 +33,14 @@ export function HistoryTable({ logs }: Props) {
               title={new Date(log.createdAt).toLocaleString()}
             >
               {formatRelative(log.createdAt)}
+              {log.lastRetriedAt && (
+                <span
+                  className="ml-1 text-muted-foreground/70"
+                  title={new Date(log.lastRetriedAt).toLocaleString()}
+                >
+                  · {tRetry("retried", { time: formatRelative(log.lastRetriedAt) })}
+                </span>
+              )}
             </TableCell>
             <TableCell>
               <ActionTypeBadge action={log.action} />

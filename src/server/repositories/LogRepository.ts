@@ -15,7 +15,7 @@ export class LogRepository extends BaseRepository<ActionLog> {
   }
 
   async findAll(): Promise<ActionLog[]> {
-    return this.db.actionLog.findMany({ orderBy: { createdAt: "desc" } }) as Promise<ActionLog[]>;
+    return this.db.actionLog.findMany({ orderBy: [{ lastRetriedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }] }) as Promise<ActionLog[]>;
   }
 
   async findPaginated(
@@ -32,7 +32,7 @@ export class LogRepository extends BaseRepository<ActionLog> {
     const [items, total] = await Promise.all([
       this.db.actionLog.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ lastRetriedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -45,7 +45,7 @@ export class LogRepository extends BaseRepository<ActionLog> {
   async findFailedByInstance(instanceId: number): Promise<ActionLog[]> {
     return this.db.actionLog.findMany({
       where: { instanceId, status: "failed" },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ lastRetriedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     }) as Promise<ActionLog[]>;
   }
 
@@ -57,7 +57,7 @@ export class LogRepository extends BaseRepository<ActionLog> {
 
   async findRecent(limit: number): Promise<ActionLog[]> {
     return this.db.actionLog.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ lastRetriedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
       take: limit,
     }) as Promise<ActionLog[]>;
   }
@@ -79,16 +79,25 @@ export class LogRepository extends BaseRepository<ActionLog> {
         action: "search",
         status: "success",
         isDryRun: false,
-        createdAt: { gte: since },
+        // A retry that succeeded counts as a recent search even if the
+        // original row was created outside the window.
+        OR: [{ createdAt: { gte: since } }, { lastRetriedAt: { gte: since } }],
       },
-      orderBy: { createdAt: "desc" },
-      select: { mediaId: true, createdAt: true },
+      select: { mediaId: true, createdAt: true, lastRetriedAt: true },
     });
+    // We need max(lastRetriedAt ?? createdAt) per mediaId — the multi-key
+    // sort would put any retried row ahead of any non-retried one, so an
+    // older retried success could mask a newer plain success. Compute the
+    // max in code instead.
     const seen = new Map<number, Date>();
     for (const r of rows) {
-      if (!seen.has(r.mediaId)) seen.set(r.mediaId, r.createdAt);
+      const at = r.lastRetriedAt ?? r.createdAt;
+      const prev = seen.get(r.mediaId);
+      if (!prev || at.getTime() > prev.getTime()) seen.set(r.mediaId, at);
     }
-    return [...seen.entries()].map(([mediaId, lastSearchedAt]) => ({ mediaId, lastSearchedAt }));
+    return [...seen.entries()]
+      .map(([mediaId, lastSearchedAt]) => ({ mediaId, lastSearchedAt }))
+      .sort((a, b) => b.lastSearchedAt.getTime() - a.lastSearchedAt.getTime());
   }
 
   async create(
