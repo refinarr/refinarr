@@ -38,7 +38,10 @@ export async function POST(req: NextRequest) {
   const { currentPassword, newPassword } = parsed.data;
 
   if (currentPassword === newPassword) {
-    return NextResponse.json({ error: "New password must differ from current" }, { status: 400 });
+    return NextResponse.json(
+      { error: "New password must differ from current", code: "SAME_AS_CURRENT" },
+      { status: 400 },
+    );
   }
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });

@@ -1,4 +1,5 @@
 "use client";
+import * as React from "react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -20,7 +21,7 @@ export function usePasswordChangeForm() {
     setConfirm("");
   };
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (next.length < 12) { setErr(t("tooShort")); return; }
     if (next !== confirm) { setErr(t("mismatch")); return; }
@@ -37,7 +38,7 @@ export function usePasswordChangeForm() {
       if (res.status === 429) { setErr(t("tooManyAttempts")); setSubmitting(false); return; }
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        setErr(body?.error === "New password must differ from current" ? t("sameAsCurrent") : t("failed"));
+        setErr(body?.code === "SAME_AS_CURRENT" ? t("sameAsCurrent") : t("failed"));
         setSubmitting(false);
         return;
       }
