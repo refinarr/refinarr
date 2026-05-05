@@ -55,6 +55,9 @@ model ActionLog {
   payload       String?
   createdAt     DateTime  @default(now())
   lastRetriedAt DateTime?
+
+  @@index([lastRetriedAt])
+  @@index([instanceId, lastRetriedAt])
 }
 
 model AppLog {

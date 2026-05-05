@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
-import { mediaServiceFor, RetryNotSupportedError } from "@/server/services/media-services";
+import { mediaServiceFor } from "@/server/services/media-services";
 import { retryPayloadSchema } from "@/shared/types/schemas";
 import { badRequest, notFound, positiveInt } from "@/server/lib/api-errors";
 
@@ -44,14 +44,9 @@ export const POST = createApiHandler(async (_req, ctx) => {
   const inst = await instanceRepository.findById(payload.instanceId);
   if (!inst) throw notFound("Instance no longer exists");
 
-  try {
-    const result = await mediaServiceFor(inst.type).retryFromPayload(payload, { actionLogId: id });
-    return NextResponse.json(result);
-  } catch (err) {
-    // User-correctable: the row's action isn't in this service's registry
-    // (legacy or corrupt). Surface as 400 instead of letting the handler
-    // log it as an unhandled 500.
-    if (err instanceof RetryNotSupportedError) throw badRequest(err.message);
-    throw err;
-  }
+  // Unsupported actions throw badRequest from the service, so createApiHandler
+  // turns them into a 400 with the descriptive message — no per-route catch
+  // needed.
+  const result = await mediaServiceFor(inst.type).retryFromPayload(payload, { actionLogId: id });
+  return NextResponse.json(result);
 });

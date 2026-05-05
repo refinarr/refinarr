@@ -17,7 +17,7 @@ import {
   isBelowProfileScore,
   scoreProfileCoverage,
 } from "@/shared/scoring";
-import { RetryNotSupportedError } from "./retry-errors";
+import { badRequest } from "@/server/lib/api-errors";
 import type { RetryActionOptions } from "./media-services";
 
 
@@ -191,7 +191,7 @@ export class MovieService extends MediaService {
     const result = movieRetryPayloadSchema.safeParse(payload);
     if (!result.success) {
       const action = typeof payload.action === "string" ? payload.action : "unknown";
-      throw new RetryNotSupportedError(action);
+      throw badRequest(`Cannot retry action type: ${action}`);
     }
     const data = result.data;
     switch (data.action) {

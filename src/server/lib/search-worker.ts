@@ -11,7 +11,6 @@ import type {
 } from "@/shared/types/models";
 import { appLogger } from "./app-logger";
 import { LogSource } from "./log-sources";
-import { logger } from "./logger";
 
 function parsePayload(raw: string | null | undefined): unknown {
   return raw ? JSON.parse(raw) : {};
@@ -87,14 +86,10 @@ class SearchWorker {
     const instances = await instanceRepository.findAllEnabled();
     for (const inst of instances) this.startForInstance(inst);
     this.started = true;
-    logger.info(
-      {
-        source: LogSource.SearchWorker,
-        instances: instances.length,
-        pid: process.pid,
-      },
-      "Search worker started",
-    );
+    appLogger.info("Search worker started", {
+      source: LogSource.SearchWorker,
+      context: { instances: instances.length, pid: process.pid },
+    });
   }
 
   stop(): void {

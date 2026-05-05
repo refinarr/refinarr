@@ -83,12 +83,17 @@ export class LogRepository extends BaseRepository<ActionLog> {
         // original row was created outside the window.
         OR: [{ createdAt: { gte: since } }, { lastRetriedAt: { gte: since } }],
       },
-      orderBy: [{ lastRetriedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
       select: { mediaId: true, createdAt: true, lastRetriedAt: true },
     });
+    // We need max(lastRetriedAt ?? createdAt) per mediaId — the multi-key
+    // sort would put any retried row ahead of any non-retried one, so an
+    // older retried success could mask a newer plain success. Compute the
+    // max in code instead.
     const seen = new Map<number, Date>();
     for (const r of rows) {
-      if (!seen.has(r.mediaId)) seen.set(r.mediaId, r.lastRetriedAt ?? r.createdAt);
+      const at = r.lastRetriedAt ?? r.createdAt;
+      const prev = seen.get(r.mediaId);
+      if (!prev || at.getTime() > prev.getTime()) seen.set(r.mediaId, at);
     }
     return [...seen.entries()].map(([mediaId, lastSearchedAt]) => ({ mediaId, lastSearchedAt }));
   }
