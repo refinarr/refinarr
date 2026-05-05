@@ -15,12 +15,6 @@ const DOT_CLASS: Record<ConnState, string> = {
   disconnected: "bg-destructive",
 };
 
-const LABEL_KEY: Record<ConnState, string> = {
-  checking: "checking",
-  connected: "connected",
-  disconnected: "disconnected",
-};
-
 function getConnState(isLoading: boolean, ok: boolean): ConnState {
   if (isLoading) return "checking";
   return ok ? "connected" : "disconnected";
@@ -31,7 +25,7 @@ export function InstanceConnectionDot({ instanceId }: Props) {
   const { data, isError, isLoading } = useInstanceHealth(instanceId);
   const ok = !isError && data?.ok === true;
   const state = getConnState(isLoading, ok);
-  const label = t(LABEL_KEY[state]);
+  const label = t(state);
 
   return (
     <span

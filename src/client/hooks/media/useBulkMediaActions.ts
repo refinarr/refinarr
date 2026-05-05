@@ -5,7 +5,7 @@ import { api } from "@/client/lib/api";
 import { withToast } from "@/client/lib/with-toast";
 import { runSerial } from "@/client/lib/run-serial";
 import { isAbortError } from "./useBulkAbort";
-import type { ActionLog } from "@/shared/types/models";
+import type { ActionLog, MediaType } from "@/shared/types/models";
 import type { BulkAction, BulkProgress } from "@/client/components/media/BulkActionToolbar";
 
 export interface BulkVars<T> {
@@ -29,13 +29,11 @@ interface DeleteEndpointConfig<T> {
   body: (item: T, instId: number, search: boolean) => Record<string, unknown>;
 }
 
-type MediaToastVariant = "movie" | "series";
-
 export interface BulkActionsConfig<T> {
   instanceId: number;
   setProgress: (p: BulkProgress | null) => void;
   refetch: () => unknown;
-  mediaType: MediaToastVariant;
+  mediaType: MediaType;
   search: EndpointConfig<T>;
   ignore: EndpointConfig<T>;
   delete: DeleteEndpointConfig<T>;

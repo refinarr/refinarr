@@ -1,5 +1,11 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
@@ -41,11 +47,11 @@ import type {
   ScoringMode,
 } from "@/shared/types/models";
 
-// Translation function returned by next-intl's useTranslations.
 type TFn = ReturnType<typeof useTranslations>;
 
-// Context handed to each per-domain render function. Carries everything the
-// columns / cards / drawer need to render without re-running hooks.
+// Render-time context handed to leaf components (Card, Drawer). Same shape
+// the props-based shell exposed; promoted to React Context so compound
+// sub-components don't need to receive ctx through props.
 export interface MediaListShellRenderCtx<T extends FlaggedMedia> {
   arrType: ArrType;
   scoringMode: ScoringMode;
@@ -62,37 +68,66 @@ export interface MediaListShellRenderCtx<T extends FlaggedMedia> {
   tTime: TFn;
 }
 
-interface Props<T extends FlaggedMedia> {
-  arrType: ArrType;
-  bulkConfig: Pick<BulkActionsConfig<T>, "mediaType" | "search" | "ignore" | "delete">;
-  // Hook factory passed in (useMovies, useSeries, …); the shell wraps it with
-  // useFlaggedMediaData so domain pages don't each redeclare a wrapper.
-  useQuery: FlaggedMediaQueryHook<T>;
-  // Per-domain render functions. Each receives the same ctx so they can pull
-  // exactly the bits they need.
-  columns: (ctx: MediaListShellRenderCtx<T>) => ColumnDef<T>[];
-  renderCard: (item: T, ctx: MediaListShellRenderCtx<T>) => ReactNode;
-  renderDrawer: (item: T | null, ctx: MediaListShellRenderCtx<T>, close: () => void) => ReactNode;
-  // i18n keys: the shell uses the page's namespace (movies / shows / future
-  // music / anime) for title + columns subset, plus a separate confirm
-  // namespace for bulk-delete dialog text.
+// Internal context — exposes everything sub-components need. Typed against
+// FlaggedMedia base; consumers narrow via useShellContext<T>().
+interface InternalShellContext {
+  ctx: MediaListShellRenderCtx<FlaggedMedia>;
+  inst: ReturnType<typeof useInstanceSelection>;
+  filters: ReturnType<typeof useMediaFilters>;
+  data: ReturnType<typeof useFlaggedMediaData<FlaggedMedia>>;
+  selection: ReturnType<typeof useMediaSelection<FlaggedMedia>>;
+  drawer: ReturnType<typeof useDetailDrawer<FlaggedMedia>>;
+  handlers: ReturnType<typeof useBulkHandlers<FlaggedMedia>>;
+  bulkProgress: BulkProgress | null;
+  abort: ReturnType<typeof useBulkAbort>;
+  refreshMutation: ReturnType<typeof useRefreshInstance>;
+  chips: ReturnType<typeof useFilterChips>["chips"];
+  clearActiveFilters: () => void;
+  noCfsConfigured: boolean;
+  askConfirm: ReturnType<typeof useConfirm>["confirm"];
   i18nNamespace: string;
   confirmDeleteBulkKey: string;
 }
 
-export function MediaListShell<T extends FlaggedMedia>({
+const ShellContext = createContext<InternalShellContext | null>(null);
+
+function useShellContext<T extends FlaggedMedia>(): Omit<InternalShellContext, "ctx"> & {
+  ctx: MediaListShellRenderCtx<T>;
+  data: ReturnType<typeof useFlaggedMediaData<T>>;
+  selection: ReturnType<typeof useMediaSelection<T>>;
+  drawer: ReturnType<typeof useDetailDrawer<T>>;
+  handlers: ReturnType<typeof useBulkHandlers<T>>;
+} {
+  const value = useContext(ShellContext);
+  if (!value) throw new Error("MediaListShell sub-components must be rendered inside <MediaListShell>");
+  // Internal context erases T to FlaggedMedia. Narrow via cast — caller
+  // supplies the type parameter when the page knows what kind of media this is.
+  return value as never;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Root
+// ─────────────────────────────────────────────────────────────────────────
+
+interface RootProps<T extends FlaggedMedia> {
+  arrType: ArrType;
+  bulkConfig: Pick<BulkActionsConfig<T>, "mediaType" | "search" | "ignore" | "delete">;
+  useQuery: FlaggedMediaQueryHook<T>;
+  i18nNamespace: string;
+  confirmDeleteBulkKey: string;
+  children: ReactNode;
+}
+
+function Root<T extends FlaggedMedia>({
   arrType,
   bulkConfig,
   useQuery,
-  columns,
-  renderCard,
-  renderDrawer,
   i18nNamespace,
   confirmDeleteBulkKey,
-}: Props<T>) {
+  children,
+}: RootProps<T>) {
   const t = useTranslations(i18nNamespace);
   const tCols = useTranslations(`${i18nNamespace}.columns`);
-  const tConfirmDeleteBulk = useTranslations(confirmDeleteBulkKey);
   const tTime = useTranslations("time");
   const router = useRouter();
 
@@ -110,7 +145,6 @@ export function MediaListShell<T extends FlaggedMedia>({
   const data = useFlaggedMediaData<T>(useQuery, inst.activeInstance, filters.forQuery);
   const queuedIds = useQueuedMediaIds(inst.activeInstance);
   const recentMap = useRecentSearchMap(inst.activeInstance);
-  const sentinelRef = useInfiniteScroll(data.fetchNextPage, data.hasNextPage);
   const selection = useMediaSelection<T>(data.items, bulkConfig.delete.isDeletable);
   const drawer = useDetailDrawer<T>(data.items);
 
@@ -150,104 +184,193 @@ export function MediaListShell<T extends FlaggedMedia>({
     );
   }
 
-  const closeDrawer = () => drawer.setSelectedId(null);
+  // Cast to the FlaggedMedia-erased shape the context exposes. Sub-components
+  // re-narrow with their own T parameter via useShellContext<T>().
+  const value: InternalShellContext = {
+    ctx: ctx as MediaListShellRenderCtx<FlaggedMedia>,
+    inst,
+    filters,
+    data: data as ReturnType<typeof useFlaggedMediaData<FlaggedMedia>>,
+    selection: selection as ReturnType<typeof useMediaSelection<FlaggedMedia>>,
+    drawer: drawer as ReturnType<typeof useDetailDrawer<FlaggedMedia>>,
+    handlers: handlers as ReturnType<typeof useBulkHandlers<FlaggedMedia>>,
+    bulkProgress,
+    abort,
+    refreshMutation,
+    chips,
+    clearActiveFilters,
+    noCfsConfigured,
+    askConfirm,
+    i18nNamespace,
+    confirmDeleteBulkKey,
+  };
 
   return (
     <AppShell>
       <PageErrorBoundary>
-        <div className="flex flex-col gap-4">
-          <MediaPageHeader
-            title={t("title")}
-            total={data.total}
-            selected={selection.selected.size}
-            activeInstance={inst.activeInstance}
-            activeInstanceName={inst.typedInstances.find((i) => i.id === inst.activeInstance)?.name ?? null}
-            typedInstances={inst.typedInstances}
-            onSetInstance={inst.setInstanceId}
-            onRefresh={() => refreshMutation.mutate(inst.activeInstance)}
-            refreshPending={refreshMutation.isPending}
-            isLoading={data.isLoading}
-            isFetching={data.isFetching}
-          />
-
-          <MediaSearchBar
-            arrType={arrType}
-            instanceId={inst.activeInstance}
-            scoringMode={scoringMode}
-            filters={filters.filters}
-            onChange={(next) => filters.setFilters((prev) => ({ ...prev, ...next }))}
-          />
-
-          <ActiveFilterChips chips={chips} />
-
-          <BulkActionToolbar
-            selectedCount={selection.selected.size}
-            progress={bulkProgress}
-            onCancel={abort.cancel}
-            onSearch={handlers.handleSearch}
-            onDelete={async (search) => {
-              const items = selection.deletableSelected;
-              if (!items.length) return;
-              const ok = await askConfirm({
-                title: tConfirmDeleteBulk("title"),
-                body: tConfirmDeleteBulk("body", { count: items.length }),
-                destructive: true,
-              });
-              if (ok) handlers.handleDelete(search);
-            }}
-            onIgnore={handlers.handleIgnore}
-          />
-
-          {(data.isLoading || inst.loadingInstances) && <MediaTableSkeleton />}
-          {data.isError && <MediaErrorCard onRetry={data.refetch} />}
-          {!inst.loadingInstances && !data.isLoading && !data.isError && data.items.length === 0 && (
-            <MediaPageEmptyState
-              hasInstance={inst.activeInstance > 0}
-              noCfsConfigured={noCfsConfigured}
-              hasActiveFilters={chips.length > 0}
-              onClear={clearActiveFilters}
-            />
-          )}
-
-          {!data.isLoading && data.items.length > 0 && (
-            <div className={data.isFetching ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
-              <MediaTable
-                rows={data.items}
-                columns={columns(ctx)}
-                selectedIds={selection.selected}
-                onToggleSelect={selection.toggle}
-                onRowClick={drawer.setSelectedId}
-                sortBy={filters.filters.sortBy}
-                order={filters.filters.order}
-                onSortChange={(key) =>
-                  filters.setFilters((f) => ({
-                    ...f,
-                    sortBy: key,
-                    order: f.sortBy === key && f.order === "asc" ? "desc" : "asc",
-                  }))
-                }
-                rowActions={(item) => (
-                  <RowHoverActions
-                    onSearch={() => ctx.runSearch(item)}
-                    onIgnore={async () => { await ctx.runIgnore(item); }}
-                  />
-                )}
-                renderCard={(item) => renderCard(item, ctx)}
-              />
-            </div>
-          )}
-
-          <div ref={sentinelRef} className="h-4" />
-          {data.isFetchingNextPage && (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </div>
-
-        {renderDrawer(drawer.selectedItem, ctx, closeDrawer)}
-        {confirmDialog}
+        <ShellContext.Provider value={value}>
+          <div className="flex flex-col gap-4">{children}</div>
+          {confirmDialog}
+        </ShellContext.Provider>
       </PageErrorBoundary>
     </AppShell>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Sub-components — each consumes ShellContext, no props (or minimal)
+// ─────────────────────────────────────────────────────────────────────────
+
+function Header() {
+  const { ctx, inst, refreshMutation, data, selection } = useShellContext();
+  return (
+    <MediaPageHeader
+      title={ctx.t("title")}
+      total={data.total}
+      selected={selection.selected.size}
+      activeInstance={inst.activeInstance}
+      activeInstanceName={inst.typedInstances.find((i) => i.id === inst.activeInstance)?.name ?? null}
+      typedInstances={inst.typedInstances}
+      onSetInstance={inst.setInstanceId}
+      onRefresh={() => refreshMutation.mutate(inst.activeInstance)}
+      refreshPending={refreshMutation.isPending}
+      isLoading={data.isLoading}
+      isFetching={data.isFetching}
+    />
+  );
+}
+
+function SearchBar() {
+  const { ctx, inst, filters } = useShellContext();
+  return (
+    <MediaSearchBar
+      arrType={ctx.arrType}
+      instanceId={inst.activeInstance}
+      scoringMode={ctx.scoringMode}
+      filters={filters.filters}
+      onChange={(next) => filters.setFilters((prev) => ({ ...prev, ...next }))}
+    />
+  );
+}
+
+function Chips() {
+  const { chips } = useShellContext();
+  return <ActiveFilterChips chips={chips} />;
+}
+
+function BulkBar() {
+  const { selection, bulkProgress, abort, handlers, askConfirm, confirmDeleteBulkKey } = useShellContext();
+  const tConfirmDeleteBulk = useTranslations(confirmDeleteBulkKey);
+
+  return (
+    <BulkActionToolbar
+      selectedCount={selection.selected.size}
+      progress={bulkProgress}
+      onCancel={abort.cancel}
+      onSearch={handlers.handleSearch}
+      onDelete={async (search) => {
+        const items = selection.deletableSelected;
+        if (!items.length) return;
+        const ok = await askConfirm({
+          title: tConfirmDeleteBulk("title"),
+          body: tConfirmDeleteBulk("body", { count: items.length }),
+          destructive: true,
+        });
+        if (ok) handlers.handleDelete(search);
+      }}
+      onIgnore={handlers.handleIgnore}
+    />
+  );
+}
+
+interface BodyProps<T extends FlaggedMedia> {
+  columns: (ctx: MediaListShellRenderCtx<T>) => ColumnDef<T>[];
+  Card: ComponentType<{ item: T; ctx: MediaListShellRenderCtx<T> }>;
+}
+
+function Body<T extends FlaggedMedia>({ columns, Card }: BodyProps<T>) {
+  const {
+    ctx,
+    inst,
+    data,
+    selection,
+    drawer,
+    filters,
+    chips,
+    clearActiveFilters,
+    noCfsConfigured,
+  } = useShellContext<T>();
+  const sentinelRef = useInfiniteScroll(data.fetchNextPage, data.hasNextPage);
+
+  return (
+    <>
+      {(data.isLoading || inst.loadingInstances) && <MediaTableSkeleton />}
+      {data.isError && <MediaErrorCard onRetry={data.refetch} />}
+      {!inst.loadingInstances && !data.isLoading && !data.isError && data.items.length === 0 && (
+        <MediaPageEmptyState
+          hasInstance={inst.activeInstance > 0}
+          noCfsConfigured={noCfsConfigured}
+          hasActiveFilters={chips.length > 0}
+          onClear={clearActiveFilters}
+        />
+      )}
+
+      {!data.isLoading && data.items.length > 0 && (
+        <div className={data.isFetching ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+          <MediaTable
+            rows={data.items}
+            columns={columns(ctx)}
+            selectedIds={selection.selected}
+            onToggleSelect={selection.toggle}
+            onRowClick={drawer.setSelectedId}
+            sortBy={filters.filters.sortBy}
+            order={filters.filters.order}
+            onSortChange={(key) =>
+              filters.setFilters((f) => ({
+                ...f,
+                sortBy: key,
+                order: f.sortBy === key && f.order === "asc" ? "desc" : "asc",
+              }))
+            }
+            rowActions={(item) => (
+              <RowHoverActions
+                onSearch={() => ctx.runSearch(item)}
+                onIgnore={async () => { await ctx.runIgnore(item); }}
+              />
+            )}
+            renderCard={(item) => <Card item={item} ctx={ctx} />}
+          />
+        </div>
+      )}
+
+      <div ref={sentinelRef} className="h-4" />
+      {data.isFetchingNextPage && (
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+    </>
+  );
+}
+
+interface DrawerProps<T extends FlaggedMedia> {
+  as: ComponentType<{ item: T | null; ctx: MediaListShellRenderCtx<T>; close: () => void }>;
+}
+
+function Drawer<T extends FlaggedMedia>({ as: Component }: DrawerProps<T>) {
+  const { ctx, drawer } = useShellContext<T>();
+  return <Component item={drawer.selectedItem} ctx={ctx} close={() => drawer.setSelectedId(null)} />;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Compound export
+// ─────────────────────────────────────────────────────────────────────────
+
+export const MediaListShell = Object.assign(Root, {
+  Header,
+  SearchBar,
+  Chips,
+  BulkBar,
+  Body,
+  Drawer,
+});

@@ -113,37 +113,34 @@ function makeUseQuery(items: FlaggedMovie[] = []): FlaggedMediaQueryHook<Flagged
 describe("MediaListShell", () => {
   it("renders the empty state when no items match", () => {
     renderWithShellProviders(
-      <MediaListShell<FlaggedMovie>
+      <MediaListShell
         arrType="radarr"
         bulkConfig={MOVIE_BULK_CONFIG}
         useQuery={makeUseQuery([])}
-        columns={() => []}
-        renderCard={() => null}
-        renderDrawer={() => null}
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
-      />,
+      >
+        <MediaListShell.Body<FlaggedMovie> columns={() => []} Card={() => null} />
+        <MediaListShell.Drawer<FlaggedMovie> as={() => null} />
+      </MediaListShell>,
     );
-    // Empty state surfaces an "All clear" message when there are no items
-    // and no active filters.
     expect(screen.getByText(/all clear/i)).toBeInTheDocument();
   });
 
-  it("invokes the columns + renderCard factories with ctx when items load", () => {
+  it("invokes the columns factory + Card component with ctx when items load", () => {
     const columns = vi.fn().mockReturnValue([]);
-    const renderCard = vi.fn().mockReturnValue(null);
+    const Card = vi.fn().mockReturnValue(null);
 
     renderWithShellProviders(
-      <MediaListShell<FlaggedMovie>
+      <MediaListShell
         arrType="radarr"
         bulkConfig={MOVIE_BULK_CONFIG}
         useQuery={makeUseQuery([baseMovie])}
-        columns={columns}
-        renderCard={renderCard}
-        renderDrawer={() => null}
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
-      />,
+      >
+        <MediaListShell.Body<FlaggedMovie> columns={columns} Card={Card} />
+      </MediaListShell>,
     );
 
     expect(columns).toHaveBeenCalled();
@@ -151,29 +148,31 @@ describe("MediaListShell", () => {
     expect(ctx.arrType).toBe("radarr");
     expect(ctx.activeInstance).toBe(1);
     expect(ctx.scoringMode).toBe("manual");
-    // The renderCard factory is invoked once per row when the table mounts.
-    expect(renderCard).toHaveBeenCalledWith(baseMovie, expect.any(Object));
+    expect(Card).toHaveBeenCalled();
+    const cardProps = Card.mock.calls[0][0];
+    expect(cardProps.item).toEqual(baseMovie);
+    expect(cardProps.ctx.activeInstance).toBe(1);
   });
 
-  it("invokes renderDrawer with the current selection (initially null)", () => {
-    const renderDrawer = vi.fn().mockReturnValue(null);
+  it("renders the Drawer with the current selection (initially null)", () => {
+    const Drawer = vi.fn().mockReturnValue(null);
 
     renderWithShellProviders(
-      <MediaListShell<FlaggedMovie>
+      <MediaListShell
         arrType="radarr"
         bulkConfig={MOVIE_BULK_CONFIG}
         useQuery={makeUseQuery([baseMovie])}
-        columns={() => []}
-        renderCard={() => null}
-        renderDrawer={renderDrawer}
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
-      />,
+      >
+        <MediaListShell.Drawer<FlaggedMovie> as={Drawer} />
+      </MediaListShell>,
     );
 
-    expect(renderDrawer).toHaveBeenCalled();
-    const [item, ctx] = renderDrawer.mock.calls[0];
-    expect(item).toBeNull();
-    expect(ctx.activeInstance).toBe(1);
+    expect(Drawer).toHaveBeenCalled();
+    const props = Drawer.mock.calls[0][0];
+    expect(props.item).toBeNull();
+    expect(props.ctx.activeInstance).toBe(1);
+    expect(typeof props.close).toBe("function");
   });
 });
