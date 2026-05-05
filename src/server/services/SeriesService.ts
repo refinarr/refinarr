@@ -1,4 +1,4 @@
-import type { FlaggedSeries, EpisodeFileEntry, ActionLog, ScoringMode } from "@/shared/types/models";
+import type { FlaggedSeries, EpisodeFileEntry, ActionLog, MediaQuery, ScoringMode } from "@/shared/types/models";
 import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
@@ -16,48 +16,11 @@ import {
   scoreProfileCoverage,
 } from "@/server/lib/scoring";
 
-interface SeriesQuery {
-  page: number;
-  limit: number;
-  sortBy: "score" | "title" | "added" | "size";
-  order: "asc" | "desc";
-  maxScore?: number;
-  q?: string;
-  profileId?: number;
-  missingCfIds?: number[];
-  missingCfMatch?: "any" | "all";
-  hasNegativeCfIds?: number[];
-  hasNegativeCfMatch?: "any" | "all";
-}
-
-function compareFlaggedSeries(
-  a: FlaggedSeries,
-  b: FlaggedSeries,
-  sortBy: SeriesQuery["sortBy"],
-  mode: ScoringMode,
-  dir: 1 | -1,
-): number {
-  if (sortBy === "added") return 0;
-  if (sortBy === "title") return a.title.localeCompare(b.title) * dir;
-  // Numeric sorts: series with no episode files sink to the bottom regardless
-  // of direction, so the "worst N" view is never polluted by entries with
-  // nothing to compare against.
-  const aFileless = a.episodeFiles.length === 0;
-  const bFileless = b.episodeFiles.length === 0;
-  if (aFileless !== bFileless) return aFileless ? 1 : -1;
-  if (aFileless) return 0;
-  if (sortBy === "score") {
-    const av = mode === "profile" ? a.customFormatScore : a.cfScore;
-    const bv = mode === "profile" ? b.customFormatScore : b.cfScore;
-    return (av - bv) * dir;
-  }
-  return (a.sizeOnDisk - b.sizeOnDisk) * dir;
-}
 
 export class SeriesService extends MediaService {
   async getFlaggedSeries(
     instanceId: number,
-    query: SeriesQuery
+    query: MediaQuery
   ): Promise<{ items: FlaggedSeries[]; total: number }> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -85,7 +48,7 @@ export class SeriesService extends MediaService {
       });
     }
 
-    return this.applyQuery(cached.flagged, query, mode);
+    return this.applyQuery(cached.flagged, query, mode, (s) => s.episodeFiles.length > 0);
   }
 
   private async buildFlaggedSeries(
@@ -247,57 +210,6 @@ export class SeriesService extends MediaService {
       });
   }
 
-  private applyQuery(
-    source: FlaggedSeries[],
-    query: SeriesQuery,
-    mode: ScoringMode
-  ): { items: FlaggedSeries[]; total: number } {
-    let flagged = source;
-
-    if (query.maxScore !== undefined) {
-      flagged = flagged.filter((s) => s.cfScore <= query.maxScore!);
-    }
-
-    if (query.q) {
-      const q = query.q.toLowerCase();
-      flagged = flagged.filter(
-        (s) =>
-          s.title.toLowerCase().includes(q) ||
-          s.missingFormats.some((cf) => cf.name.toLowerCase().includes(q))
-      );
-    }
-
-    if (query.profileId !== undefined) {
-      flagged = flagged.filter((s) => s.qualityProfileId === query.profileId);
-    }
-
-    if (query.missingCfIds && query.missingCfIds.length > 0) {
-      const wanted = query.missingCfIds;
-      const matchAll = (query.missingCfMatch ?? "all") === "all";
-      flagged = flagged.filter((s) => {
-        const have = new Set(s.missingFormats.map((cf) => cf.id));
-        return matchAll ? wanted.every((id) => have.has(id)) : wanted.some((id) => have.has(id));
-      });
-    }
-
-    if (query.hasNegativeCfIds && query.hasNegativeCfIds.length > 0) {
-      const wanted = query.hasNegativeCfIds;
-      const matchAll = (query.hasNegativeCfMatch ?? "all") === "all";
-      flagged = flagged.filter((s) => {
-        const have = new Set(s.unwantedFormats.map((cf) => cf.id));
-        return matchAll ? wanted.every((id) => have.has(id)) : wanted.some((id) => have.has(id));
-      });
-    }
-
-    const dir = query.order === "asc" ? 1 : -1;
-    const sorted = [...flagged].sort((a, b) =>
-      compareFlaggedSeries(a, b, query.sortBy, mode, dir),
-    );
-
-    const total = sorted.length;
-    const start = (query.page - 1) * query.limit;
-    return { items: sorted.slice(start, start + query.limit), total };
-  }
 
   async deleteFiles(
     instanceId: number,

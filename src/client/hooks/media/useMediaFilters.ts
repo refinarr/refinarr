@@ -14,7 +14,13 @@ export interface MediaFilters {
   missingCfMatch: MatchMode;
   hasNegativeCfIds: number[];
   hasNegativeCfMatch: MatchMode;
+  onlyMissing: boolean;
 }
+
+// Hook query input — every field optional, plus scoringMode. useMovies /
+// useSeries / useFlaggedMediaData accept this so they don't each redeclare
+// their own near-identical filter type.
+export type MediaQueryFilters = Partial<MediaFilters> & { scoringMode?: ScoringMode };
 
 export const defaultMediaFilters: MediaFilters = {
   sortBy: "score",
@@ -26,6 +32,7 @@ export const defaultMediaFilters: MediaFilters = {
   missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
+  onlyMissing: false,
 };
 
 export interface MediaFiltersResult {

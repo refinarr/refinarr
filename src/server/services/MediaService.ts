@@ -1,4 +1,4 @@
-import type { ActionLog, ActionType } from "@/shared/types/models";
+import type { ActionLog, ActionType, FlaggedMedia, MediaQuery, ScoringMode } from "@/shared/types/models";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { dryRunService } from "./DryRunService";
 import { appLogger } from "@/server/lib/app-logger";
@@ -32,7 +32,88 @@ function logContext(opts: ExecuteActionOptions, isDryRun: boolean) {
   };
 }
 
+function compareMedia<T extends FlaggedMedia>(
+  a: T,
+  b: T,
+  sortBy: MediaQuery["sortBy"],
+  mode: ScoringMode,
+  dir: 1 | -1,
+  hasFile: (item: T) => boolean,
+): number {
+  if (sortBy === "added") return 0;
+  if (sortBy === "title") return a.title.localeCompare(b.title) * dir;
+  // Items without a file sink to the bottom regardless of sort direction so
+  // the "worst N" view is never polluted by entries with no on-disk reference.
+  const aHas = hasFile(a);
+  const bHas = hasFile(b);
+  if (aHas !== bHas) return aHas ? -1 : 1;
+  if (!aHas) return 0;
+  if (sortBy === "score") {
+    const av = mode === "profile" ? a.customFormatScore : a.cfScore;
+    const bv = mode === "profile" ? b.customFormatScore : b.cfScore;
+    return (av - bv) * dir;
+  }
+  return (a.sizeOnDisk - b.sizeOnDisk) * dir;
+}
+
 export abstract class MediaService {
+  protected applyQuery<T extends FlaggedMedia>(
+    source: T[],
+    query: MediaQuery,
+    mode: ScoringMode,
+    hasFile: (item: T) => boolean,
+  ): { items: T[]; total: number } {
+    let flagged = source;
+
+    if (query.onlyMissing) {
+      flagged = flagged.filter((m) => !hasFile(m));
+    }
+
+    if (query.maxScore !== undefined) {
+      flagged = flagged.filter((m) => m.cfScore <= query.maxScore!);
+    }
+
+    if (query.q) {
+      const q = query.q.toLowerCase();
+      flagged = flagged.filter(
+        (m) =>
+          m.title.toLowerCase().includes(q) ||
+          m.missingFormats.some((cf) => cf.name.toLowerCase().includes(q)),
+      );
+    }
+
+    if (query.profileId !== undefined) {
+      flagged = flagged.filter((m) => m.qualityProfileId === query.profileId);
+    }
+
+    if (query.missingCfIds && query.missingCfIds.length > 0) {
+      const wanted = query.missingCfIds;
+      const matchAll = (query.missingCfMatch ?? "all") === "all";
+      flagged = flagged.filter((m) => {
+        const have = new Set(m.missingFormats.map((cf) => cf.id));
+        return matchAll ? wanted.every((id) => have.has(id)) : wanted.some((id) => have.has(id));
+      });
+    }
+
+    if (query.hasNegativeCfIds && query.hasNegativeCfIds.length > 0) {
+      const wanted = query.hasNegativeCfIds;
+      const matchAll = (query.hasNegativeCfMatch ?? "all") === "all";
+      flagged = flagged.filter((m) => {
+        const have = new Set(m.unwantedFormats.map((cf) => cf.id));
+        return matchAll ? wanted.every((id) => have.has(id)) : wanted.some((id) => have.has(id));
+      });
+    }
+
+    const dir = query.order === "asc" ? 1 : -1;
+    const sorted = [...flagged].sort((a, b) =>
+      compareMedia(a, b, query.sortBy, mode, dir, hasFile),
+    );
+
+    const total = sorted.length;
+    const start = (query.page - 1) * query.limit;
+    return { items: sorted.slice(start, start + query.limit), total };
+  }
+
   protected async executeAction(opts: ExecuteActionOptions): Promise<ActionLog> {
     const isDryRun = await dryRunService.isDryRun();
 

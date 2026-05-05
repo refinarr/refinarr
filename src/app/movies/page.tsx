@@ -265,6 +265,11 @@ function MoviesPageContent() {
     },
     ...missingChips,
     ...penaltyChips,
+    filters.filters.onlyMissing && {
+      key: "onlyMissing",
+      label: tFilters("onlyMissing"),
+      onRemove: () => filters.setFilters((f) => ({ ...f, onlyMissing: false })),
+    },
   ].filter(Boolean) as FilterChip[];
 
   const renderEmptyState = () => {
@@ -273,7 +278,7 @@ function MoviesPageContent() {
       return (
         <NoFilterMatchState
           onClear={() =>
-            filters.setFilters((f) => ({ ...f, q: "", profileId: null, missingCfIds: [], hasNegativeCfIds: [], maxScore: 1 }))
+            filters.setFilters((f) => ({ ...f, q: "", profileId: null, missingCfIds: [], hasNegativeCfIds: [], maxScore: 1, onlyMissing: false }))
           }
         />
       );

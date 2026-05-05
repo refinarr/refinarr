@@ -24,10 +24,11 @@ const baseFilters: MediaFilters = {
   missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
+  onlyMissing: false,
 };
 
 describe("MediaSearchBar", () => {
-  it("renders the inline filter controls (visible on md+) and a mobile Filters trigger", () => {
+  it("renders the search input and the Only missing toggle pill", () => {
     renderWithProviders(
       <MediaSearchBar
         arrType="radarr"
@@ -35,39 +36,70 @@ describe("MediaSearchBar", () => {
         scoringMode="manual"
         filters={baseFilters}
         onChange={vi.fn()}
-      />
+      />,
     );
     expect(screen.getByPlaceholderText(/search title/i)).toBeInTheDocument();
-    const filtersBtn = screen.getByRole("button", { name: /^filters$/i });
-    expect(filtersBtn.className).toContain("md:hidden");
+    expect(screen.getByRole("button", { name: /only missing/i })).toBeInTheDocument();
   });
 
-  it("opens the bottom filter sheet when the mobile Filters trigger is clicked", async () => {
+  it("invokes onChange when the Only missing pill is toggled", async () => {
+    const onChange = vi.fn();
     renderWithProviders(
       <MediaSearchBar
         arrType="radarr"
         instanceId={1}
         scoringMode="manual"
         filters={baseFilters}
-        onChange={vi.fn()}
-      />
+        onChange={onChange}
+      />,
     );
-    expect(screen.queryByRole("button", { name: /^apply$/i })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /^filters$/i }));
-    expect(await screen.findByRole("button", { name: /^apply$/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /only missing/i }));
+    expect(onChange).toHaveBeenCalledWith({ onlyMissing: true });
   });
 
-  it("shows an active-filter count badge when filters are applied", () => {
+  it("shows Clear all only when at least one filter is active", async () => {
+    const { rerender } = renderWithProviders(
+      <MediaSearchBar
+        arrType="radarr"
+        instanceId={1}
+        scoringMode="manual"
+        filters={baseFilters}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /clear all/i })).not.toBeInTheDocument();
+
+    rerender(
+      <MediaSearchBar
+        arrType="radarr"
+        instanceId={1}
+        scoringMode="manual"
+        filters={{ ...baseFilters, onlyMissing: true }}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /clear all/i })).toBeInTheDocument();
+  });
+
+  it("Clear all resets every value-bearing filter", async () => {
+    const onChange = vi.fn();
     renderWithProviders(
       <MediaSearchBar
         arrType="radarr"
         instanceId={1}
         scoringMode="manual"
-        filters={{ ...baseFilters, profileId: 1, maxScore: 0.5 }}
-        onChange={vi.fn()}
-      />
+        filters={{ ...baseFilters, profileId: 1, maxScore: 0.5, onlyMissing: true, q: "x" }}
+        onChange={onChange}
+      />,
     );
-    const trigger = screen.getByRole("button", { name: /^filters/i });
-    expect(trigger).toHaveTextContent("2");
+    await userEvent.click(screen.getByRole("button", { name: /clear all/i }));
+    expect(onChange).toHaveBeenCalledWith({
+      q: "",
+      profileId: null,
+      missingCfIds: [],
+      hasNegativeCfIds: [],
+      maxScore: 1,
+      onlyMissing: false,
+    });
   });
 });

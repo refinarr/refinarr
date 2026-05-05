@@ -68,25 +68,29 @@ test("topbar hamburger replaces the sidebar on mobile and opens the nav sheet", 
   await expect(page.getByRole("link", { name: /shows/i })).toBeVisible();
 });
 
-test("movies page renders cards and the inline desktop filters are hidden", async ({ page }) => {
+test("movies page renders cards and the filter pills are visible on mobile", async ({ page }) => {
   await page.goto("/movies");
 
-  // Both card and table render in the DOM (the table is CSS-hidden below md);
+  // Both card and table render in the DOM (the table is CSS-hidden below lg);
   // the card list testid scopes us to the visible mobile rows.
   const cardList = page.getByTestId("media-card-list");
   await expect(cardList).toBeVisible({ timeout: 10_000 });
   await expect(cardList.getByText("The Missing Format")).toBeVisible();
 
-  // The mobile-only Filters trigger is visible.
-  await expect(page.getByRole("button", { name: /^filters/i })).toBeVisible();
+  // Filter pills wrap naturally on mobile — no separate sheet trigger.
+  // The Only-missing toggle is the always-visible quick filter.
+  await expect(page.getByRole("button", { name: /only missing/i })).toBeVisible();
 });
 
-test("filters trigger opens a bottom sheet with an apply button", async ({ page }) => {
+test("only-missing pill toggles to active state when tapped", async ({ page }) => {
   await page.goto("/movies");
   await page
     .getByTestId("media-card-list")
     .getByText("The Missing Format")
     .waitFor({ timeout: 10_000 });
-  await page.getByRole("button", { name: /^filters/i }).click();
-  await expect(page.getByRole("button", { name: /^apply$/i })).toBeVisible({ timeout: 5_000 });
+
+  const toggle = page.getByRole("button", { name: /only missing/i });
+  await toggle.click();
+  // After tapping, a "Clear all" link appears since at least one filter is now active.
+  await expect(page.getByRole("button", { name: /clear all/i })).toBeVisible({ timeout: 5_000 });
 });

@@ -31,20 +31,38 @@ export interface QualityProfile {
   formatItems: Array<{ format: number; name: string; score: number }>;
 }
 
-export interface FlaggedMovie {
+export interface MediaQuery {
+  page: number;
+  limit: number;
+  sortBy: "score" | "title" | "added" | "size";
+  order: "asc" | "desc";
+  maxScore?: number;
+  q?: string;
+  profileId?: number;
+  missingCfIds?: number[];
+  missingCfMatch?: "any" | "all";
+  hasNegativeCfIds?: number[];
+  hasNegativeCfMatch?: "any" | "all";
+  onlyMissing?: boolean;
+}
+
+export interface FlaggedMedia {
   id: number;
   title: string;
   year: number;
   qualityProfileId: number;
-  movieFileId: number;
   customFormats: CustomFormat[];
   customFormatScore: number;
-  hasFile: boolean;
   cfScore: number;
   missingFormats: CustomFormat[];
   unwantedFormats: CustomFormat[];
   minProfileScore?: number;
   sizeOnDisk: number;
+}
+
+export interface FlaggedMovie extends FlaggedMedia {
+  movieFileId: number;
+  hasFile: boolean;
 }
 
 export interface EpisodeFileEntry {
@@ -59,21 +77,10 @@ export interface EpisodeFileEntry {
   size: number;
 }
 
-export interface FlaggedSeries {
-  id: number;
-  title: string;
-  year: number;
-  qualityProfileId: number;
-  customFormats: CustomFormat[];
-  customFormatScore: number;
-  cfScore: number;
-  missingFormats: CustomFormat[];
-  unwantedFormats: CustomFormat[];
-  minProfileScore?: number;
+export interface FlaggedSeries extends FlaggedMedia {
   affectedEpisodeCount: number;
   totalEpisodeCount: number;
   episodeFiles: EpisodeFileEntry[];
-  sizeOnDisk: number;
 }
 
 export interface ActionLog {
