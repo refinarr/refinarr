@@ -20,8 +20,7 @@ export function CfPreferencePicker({ instance }: Props) {
   const t = useTranslations("settings.cfPicker");
   const tToast = useTranslations("toast.cfs");
   const tCommon = useTranslations("common");
-  const type = instance.type === "radarr" ? "radarr" : "sonarr";
-  const { data: available, isLoading: loadingCfs } = useCustomFormats(type, instance.id);
+  const { data: available, isLoading: loadingCfs } = useCustomFormats(instance.type, instance.id);
   const { data: saved } = usePreferences(instance.id);
   const setPreferences = useSetPreferences();
 

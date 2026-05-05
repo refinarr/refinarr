@@ -41,11 +41,24 @@ const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "off" },
 ];
 
+// Hosts allowed to hit the Next.js dev server (HMR websocket, _next/* assets)
+// from a non-localhost origin. Needed when testing on a phone over LAN —
+// otherwise Next.js blocks the cross-origin request. Set via env only — the
+// repo doesn't ship machine-specific IPs.
+const envAllowedDevOrigins = process.env.NEXT_DEV_ALLOWED_ORIGINS
+  ?.split(",")
+  .map((s) => s.trim())
+  .filter(Boolean) ?? [];
+const allowedDevOrigins = isDev && envAllowedDevOrigins.length > 0
+  ? envAllowedDevOrigins
+  : undefined;
+
 const nextConfig: NextConfig = {
   output: "standalone",
   // Allow E2E tests to use a separate dist dir so a second `next dev` on a
   // different port doesn't collide with the primary dev server's lock file.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
+  ...(allowedDevOrigins ? { allowedDevOrigins } : {}),
   async headers() {
     return [
       {

@@ -1,4 +1,5 @@
 "use client";
+import * as React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -17,7 +18,7 @@ export default function SetupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (password.length < 12) { setErr(t("tooShort")); return; }
     if (password !== confirm) { setErr(t("mismatch")); return; }

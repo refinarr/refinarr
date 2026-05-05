@@ -9,6 +9,7 @@ import { ApiKeyCard } from "@/client/components/settings/ApiKeyCard";
 import { PasswordChangeCard } from "@/client/components/settings/PasswordChangeCard";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { AppearanceSelector } from "@/client/components/settings/AppearanceSelector";
+import { isManualMode } from "@/shared/scoring-mode";
 import { CfPreferencePicker } from "@/client/components/settings/CfPreferencePicker";
 import { SettingsCardSkeleton } from "@/client/components/states/SettingsCardSkeleton";
 import { Button } from "@/client/components/ui/button";
@@ -37,7 +38,7 @@ export default function SettingsPage() {
     return () => clearTimeout(t);
   }, []);
 
-  const manualInstances = (instances ?? []).filter((i) => i.scoringMode === "manual");
+  const manualInstances = (instances ?? []).filter((i) => isManualMode(i.scoringMode));
 
   return (
     <AppShell>

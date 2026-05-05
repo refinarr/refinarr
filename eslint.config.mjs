@@ -36,10 +36,37 @@ const eslintConfig = defineConfig([
       "sonarjs/no-unused-collection": "warn",
       "sonarjs/no-redundant-boolean": "warn",
       "sonarjs/prefer-immediate-return": "warn",
+      // Forbid comparing against the ArrType / ScoringMode literals directly
+      // (e.g. `inst.type === "radarr"` or `mode === "profile"`). Use a
+      // type-keyed registry instead — see mediaServiceFor, ArrClientFactory,
+      // SCORE_FOR / ISSUES_FOR in src/shared/scoring-mode.ts. Adding a new
+      // arr or scoring mode then needs one entry per registry; no
+      // conditional churn across the codebase.
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "BinaryExpression[operator='==='] > Literal[value='radarr']",
+          message: "Do not compare against the \"radarr\" literal. Use a type-keyed registry (mediaServiceFor / ArrClientFactory / a Record<ArrType, …>).",
+        },
+        {
+          selector: "BinaryExpression[operator='==='] > Literal[value='sonarr']",
+          message: "Do not compare against the \"sonarr\" literal. Use a type-keyed registry (mediaServiceFor / ArrClientFactory / a Record<ArrType, …>).",
+        },
+        {
+          selector: "BinaryExpression[operator='==='] > Literal[value='profile']",
+          message: "Do not compare against the \"profile\" scoring-mode literal. Use SCORE_FOR / ISSUES_FOR / ISSUES_HEADER_KEY from @/shared/scoring-mode.",
+        },
+        {
+          selector: "BinaryExpression[operator='==='] > Literal[value='manual']",
+          message: "Do not compare against the \"manual\" scoring-mode literal. Use SCORE_FOR / ISSUES_FOR / ISSUES_HEADER_KEY from @/shared/scoring-mode.",
+        },
+      ],
     },
   },
   // Tests are allowed to repeat literals, have looser complexity budgets,
   // and intentionally overwrite collection keys to verify replacement paths.
+  // They also assert ArrType / ScoringMode literals via expect() — that's
+  // a comparison shape but not a domain branch.
   {
     files: ["**/__tests__/**", "**/*.test.{ts,tsx}", "e2e/**", "src/test/**"],
     rules: {
@@ -47,6 +74,21 @@ const eslintConfig = defineConfig([
       "sonarjs/no-identical-functions": "off",
       "sonarjs/cognitive-complexity": "off",
       "sonarjs/no-element-overwrite": "off",
+      "no-restricted-syntax": "off",
+    },
+  },
+  // Registry / factory files legitimately reference the literals as keys
+  // and must enumerate them. The forbidden pattern is comparing AGAINST
+  // them, which these files don't do.
+  {
+    files: [
+      "src/server/services/media-services.ts",
+      "src/server/clients/ArrClientFactory.ts",
+      "src/shared/scoring-mode.ts",
+      "src/shared/arr-type.ts",
+    ],
+    rules: {
+      "no-restricted-syntax": "off",
     },
   },
   // shadcn-installed primitives in src/client/components/ui are vendored and

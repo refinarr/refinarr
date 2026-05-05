@@ -20,6 +20,7 @@ export default defineConfig({
         "src/server/repositories/**",
         "src/server/services/**",
         "src/client/lib/**",
+        "src/shared/**",
       ],
       exclude: [
         "src/server/lib/db.ts",

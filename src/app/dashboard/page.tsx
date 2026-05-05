@@ -32,7 +32,13 @@ export default function DashboardPage() {
   }
 
   const totals = summary?.totals;
-  const totalFlagged = (totals?.flaggedMovies ?? 0) + (totals?.flaggedSeries ?? 0);
+  const flaggedMovies = totals?.flaggedMovies ?? null;
+  const flaggedSeries = totals?.flaggedSeries ?? null;
+  // Both totals must be known before we can claim "all clear" — a null on
+  // either side means at least one instance of that type is still cold and
+  // its real count could be non-zero.
+  const totalsKnown = flaggedMovies !== null && flaggedSeries !== null;
+  const totalFlagged = (flaggedMovies ?? 0) + (flaggedSeries ?? 0);
   const enabledInstances = (summary?.perInstance ?? []).filter((i) => i.enabled);
 
   return (
@@ -64,16 +70,16 @@ export default function DashboardPage() {
             />
             <KpiCard
               label={t("kpi.flaggedMovies")}
-              value={totals?.flaggedMovies ?? 0}
+              value={flaggedMovies ?? "—"}
               href="/movies"
-              tone={(totals?.flaggedMovies ?? 0) > 0 ? "warning" : "default"}
+              tone={(flaggedMovies ?? 0) > 0 ? "warning" : "default"}
               loading={loadingSummary}
             />
             <KpiCard
               label={t("kpi.flaggedSeries")}
-              value={totals?.flaggedSeries ?? 0}
+              value={flaggedSeries ?? "—"}
               href="/shows"
-              tone={(totals?.flaggedSeries ?? 0) > 0 ? "warning" : "default"}
+              tone={(flaggedSeries ?? 0) > 0 ? "warning" : "default"}
               loading={loadingSummary}
             />
             <KpiCard
@@ -85,7 +91,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          {!loadingSummary && totalFlagged === 0 && enabledInstances.length > 0 && (
+          {!loadingSummary && totalsKnown && totalFlagged === 0 && enabledInstances.length > 0 && (
             <AllClearState />
           )}
 

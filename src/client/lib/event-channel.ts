@@ -113,7 +113,7 @@ class EventChannel {
         this.dispatch(data);
         // Forward to other tabs. BroadcastChannel doesn't echo back to
         // the originator, so leader's own dispatch above isn't doubled.
-        if (this.broadcast) this.broadcast.postMessage(data);
+        if (this.isLeader && this.broadcast) this.broadcast.postMessage(data);
       } catch {
         // Malformed event — ignore.
       }

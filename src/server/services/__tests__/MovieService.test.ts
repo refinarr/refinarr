@@ -382,6 +382,39 @@ describe("MovieService — cache reuse", () => {
   });
 });
 
+describe("MovieService.getCachedFlaggedTotal", () => {
+  test("returns null when cache is cold", async () => {
+    const instance = await createInstance("manual");
+    expect(movieService.getCachedFlaggedTotal(instance.id, "manual")).toBeNull();
+  });
+
+  test("returns the count of flagged items when cache is warm", async () => {
+    const instance = await createInstance("manual");
+    await preferenceRepository.setForInstance(instance.id, [{ cfId: 10, cfName: "HDR" }]);
+    setupRadarrMocks({
+      movies: [
+        { id: 1, title: "A", year: 2024, qualityProfileId: 1, hasFile: true, movieFileId: 100 },
+        { id: 2, title: "B", year: 2024, qualityProfileId: 1, hasFile: true, movieFileId: 101 },
+      ],
+      files: [
+        { id: 100, movieId: 1, size: 0, customFormats: [], customFormatScore: 0 },
+        { id: 101, movieId: 2, size: 0, customFormats: [], customFormatScore: 0 },
+      ],
+      profiles: [profile],
+    });
+    // Warm the cache via the normal path.
+    await movieService.getFlaggedMovies(instance.id, { page: 1, limit: 50, sortBy: "score", order: "asc" });
+    expect(movieService.getCachedFlaggedTotal(instance.id, "manual")).toBe(2);
+  });
+
+  test("does not trigger any upstream fetch on a cold call", async () => {
+    const instance = await createInstance("manual");
+    const callsBefore = fetchMock.mock.calls.length;
+    movieService.getCachedFlaggedTotal(instance.id, "manual");
+    expect(fetchMock.mock.calls.length).toBe(callsBefore);
+  });
+});
+
 describe("MovieService.triggerSearch", () => {
   test("creates a successful action log when live", async () => {
     const instance = await instanceService.create(baseInstance);
@@ -455,6 +488,47 @@ describe("MovieService.triggerSearch", () => {
     await movieService.triggerSearch(instance.id, 1, "A");
 
     expect(dataCache.get(`movies:${instance.id}:manual`, 60_000)).toEqual(["preserve"]);
+  });
+});
+
+describe("MovieService.retryFromPayload", () => {
+  test("dispatches search payloads to triggerSearch", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupRadarrMocks({ movies: [], files: [], profiles: [] });
+    const log = await movieService.retryFromPayload({
+      action: "search", instanceId: instance.id, mediaId: 1, title: "A",
+    });
+    expect(log.action).toBe("search");
+    expect(log.status).toBe("success");
+  });
+
+  test("dispatches delete payloads to deleteFile (default triggerSearch=true)", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupRadarrMocks({ movies: [], files: [], profiles: [] });
+    const log = await movieService.retryFromPayload({
+      action: "delete", instanceId: instance.id, mediaId: 1, fileId: 100, title: "A",
+    });
+    expect(log.action).toBe("delete");
+    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(calls.some((u) => u.includes("/command"))).toBe(true);
+  });
+
+  test("dispatches delete_blacklist payloads with triggerSearch=false", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupRadarrMocks({ movies: [], files: [], profiles: [] });
+    const log = await movieService.retryFromPayload({
+      action: "delete_blacklist", instanceId: instance.id, mediaId: 1, fileId: 100, title: "A",
+      triggerSearch: false,
+    });
+    expect(log.action).toBe("delete");
+    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(calls.some((u) => u.includes("/command"))).toBe(false);
+  });
+
+  test("throws on unknown action", async () => {
+    await expect(
+      movieService.retryFromPayload({ action: "unknown", instanceId: 1, mediaId: 1, title: "X" }),
+    ).rejects.toThrow(/Cannot retry/);
   });
 });
 

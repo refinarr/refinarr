@@ -1,9 +1,11 @@
 import type { ActionLog, ActionType, FlaggedMedia, MediaQuery, ScoringMode } from "@/shared/types/models";
+import { SCORE_FOR } from "@/shared/scoring-mode";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { dryRunService } from "./DryRunService";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import { dataCache } from "@/server/lib/DataCache";
+
 
 interface ExecuteActionOptions {
   instanceId: number;
@@ -49,8 +51,8 @@ function compareMedia<T extends FlaggedMedia>(
   if (aHas !== bHas) return aHas ? -1 : 1;
   if (!aHas) return 0;
   if (sortBy === "score") {
-    const av = mode === "profile" ? a.customFormatScore : a.cfScore;
-    const bv = mode === "profile" ? b.customFormatScore : b.cfScore;
+    const av = SCORE_FOR[mode](a);
+    const bv = SCORE_FOR[mode](b);
     return (av - bv) * dir;
   }
   return (a.sizeOnDisk - b.sizeOnDisk) * dir;
@@ -69,8 +71,12 @@ export abstract class MediaService {
       flagged = flagged.filter((m) => !hasFile(m));
     }
 
-    if (query.maxScore !== undefined) {
-      flagged = flagged.filter((m) => m.cfScore <= query.maxScore!);
+    const maxScore = query.maxScore;
+    if (maxScore !== undefined) {
+      // Filter against the same accessor the score sort uses, so the
+      // "max score" slider behaves consistently across modes.
+      const scoreOf = SCORE_FOR[mode];
+      flagged = flagged.filter((m) => scoreOf(m) <= maxScore);
     }
 
     if (query.q) {

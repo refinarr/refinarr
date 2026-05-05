@@ -6,6 +6,7 @@ import { Film, Tv2, LayoutDashboard, History, Settings, EyeOff, AlertCircle, Log
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/client/lib/utils";
 import { useMe, useLogout } from "@/client/hooks/data/useMe";
+import { ARR_LIBRARY_ROUTE } from "@/shared/arr-type";
 
 interface NavLink {
   href: string;
@@ -15,8 +16,8 @@ interface NavLink {
 
 const links: NavLink[] = [
   { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
-  { href: "/movies", key: "movies", icon: Film },
-  { href: "/shows", key: "shows", icon: Tv2 },
+  { href: ARR_LIBRARY_ROUTE.radarr, key: "movies", icon: Film },
+  { href: ARR_LIBRARY_ROUTE.sonarr, key: "shows", icon: Tv2 },
   { href: "/ignored", key: "ignored", icon: EyeOff },
   { href: "/queue", key: "queue", icon: Hourglass },
   { href: "/history", key: "history", icon: History },

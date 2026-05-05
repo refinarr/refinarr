@@ -148,7 +148,16 @@
       "missing": "Missing",
       "penalties": "Penalties"
     },
-    "noFile": "No file"
+    "noFile": "No file",
+    "drawer": {
+      "score": "Score",
+      "profile": "Profile",
+      "hasFile": "Has file",
+      "customFormats": "Custom Formats",
+      "noFileDownloaded": "No file downloaded.",
+      "noCfData": "No custom format data.",
+      "deleteAndSearch": "Delete + Search"
+    }
   },
   "shows": {
     "title": "Shows",
@@ -167,8 +176,15 @@
     "season": "Season {season}",
     "seasonProgress": "{affected} / {total} episodes",
     "noEpisodeFiles": "No episode files found.",
+    "episodeCountShort": "{affected}/{total} ep",
     "searchSeasonAria": "Search Season {season}",
-    "deleteSeasonAria": "Delete affected files in Season {season}"
+    "deleteSeasonAria": "Delete affected files in Season {season}",
+    "drawer": {
+      "score": "Score",
+      "profile": "Profile",
+      "episodes": "Episodes",
+      "seasons": "Seasons"
+    }
   },
   "filters": {
     "allProfiles": "All profiles",
@@ -318,12 +334,20 @@
       "wrongPassword": "Wrong password.",
       "tooManyAttempts": "Too many attempts. Try again later.",
       "copied": "API key copied",
-      "rotated": "API key rotated"
+      "copyFailed": "Couldn't copy to clipboard",
+      "revealed": "API key revealed",
+      "revealFailed": "Couldn't reveal API key",
+      "rotated": "API key rotated",
+      "rotateFailed": "Couldn't rotate API key"
     },
     "instanceForm": {
       "addTitle": "Add Instance",
       "editTitle": "Edit Instance",
       "type": "Type",
+      "types": {
+        "radarr": "Radarr",
+        "sonarr": "Sonarr"
+      },
       "name": "Name",
       "namePlaceholder": "My Radarr",
       "namePlaceholderSonarr": "My Sonarr",

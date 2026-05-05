@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
-import type { Instance } from "@/shared/types/models";
+import type { ArrType, Instance } from "@/shared/types/models";
 import type { CreateInstanceDto, UpdateInstanceDto } from "@/shared/types/api";
 
 export function useInstances() {
@@ -57,7 +57,7 @@ export function useTestConnection() {
 
 export function useTestCredentials() {
   return useMutation({
-    mutationFn: async (data: { type: "radarr" | "sonarr"; url: string; apiKey: string }) => {
+    mutationFn: async (data: { type: ArrType; url: string; apiKey: string }) => {
       const result = await api.post<{ ok: boolean }>("/instances/test", data);
       if (!result.ok) throw new Error("Connection failed");
       return result;

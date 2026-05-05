@@ -1,3 +1,14 @@
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code?: string;
+  constructor(status: number, message: string, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
     ...init,
@@ -9,7 +20,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(body.error ?? `API error ${res.status}`);
+    throw new ApiError(res.status, body.error ?? `API error ${res.status}`, body.code);
   }
 
   return res.json() as Promise<T>;

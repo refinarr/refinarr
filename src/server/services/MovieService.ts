@@ -1,4 +1,5 @@
 import type { FlaggedMovie, ActionLog, MediaQuery, ScoringMode } from "@/shared/types/models";
+import { isProfileMode } from "@/shared/scoring-mode";
 import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
@@ -14,7 +15,7 @@ import {
   scoreCfCoverage,
   isBelowProfileScore,
   scoreProfileCoverage,
-} from "@/server/lib/scoring";
+} from "@/shared/scoring";
 
 
 export class MovieService extends MediaService {
@@ -85,7 +86,7 @@ export class MovieService extends MediaService {
         .map((e) => e.mediaId)
     );
 
-    if (mode === "profile") {
+    if (isProfileMode(mode)) {
       return movies
         .filter((m) => !ignoredSet.has(m.id))
         .filter((m) => {
@@ -154,6 +155,50 @@ export class MovieService extends MediaService {
           sizeOnDisk: file?.size ?? 0,
         };
       });
+  }
+
+  // Returns the flagged-count from cache if warm, or null if cold. Used by
+  // the dashboard summary route to avoid triggering a multi-second upstream
+  // build inline. Caller is responsible for kicking off a background warm
+  // when null is returned.
+  getCachedFlaggedTotal(instanceId: number, mode: ScoringMode): number | null {
+    const cached = dataCache.get<{ flagged: FlaggedMovie[] }>(
+      `movies:${instanceId}:${mode}`,
+      CACHE_TTL_MS,
+    );
+    return cached?.flagged.length ?? null;
+  }
+
+  // Uniform name across MovieService / SeriesService for use via
+  // mediaServiceFor(arrType) in routes that don't care which media type.
+  // Warms the flagged-media cache by issuing a minimal getFlaggedMovies
+  // call. Errors propagate to the caller (the dashboard route swallows
+  // them since this is fire-and-forget).
+  warmFlaggedCache(instanceId: number): Promise<unknown> {
+    return this.getFlaggedMovies(instanceId, { page: 1, limit: 1, sortBy: "score", order: "asc" });
+  }
+
+  // Re-runs a stored ActionLog payload. Movies-specific fields:
+  //   - search: { instanceId, mediaId, title }
+  //   - delete: { instanceId, mediaId, fileId, title, triggerSearch? }
+  async retryFromPayload(payload: Record<string, unknown>): Promise<ActionLog> {
+    const action = payload.action as string;
+    const instanceId = payload.instanceId as number;
+    const mediaId = payload.mediaId as number;
+    const title = payload.title as string;
+    if (action === "search") {
+      return this.triggerSearch(instanceId, mediaId, title);
+    }
+    if (action === "delete" || action === "delete_blacklist") {
+      return this.deleteFile(
+        instanceId,
+        mediaId,
+        payload.fileId as number,
+        title,
+        payload.triggerSearch !== false,
+      );
+    }
+    throw new Error(`Cannot retry action type: ${action}`);
   }
 
   async triggerSearch(instanceId: number, mediaId: number, title: string): Promise<ActionLog> {

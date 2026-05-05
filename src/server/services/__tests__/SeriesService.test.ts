@@ -445,3 +445,44 @@ describe("SeriesService — cache reuse", () => {
     expect(fetchMock.mock.calls.length).toBe(callsAfterFirst);
   });
 });
+
+describe("SeriesService.retryFromPayload", () => {
+  test("dispatches search payloads to triggerSearch", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
+    const log = await seriesService.retryFromPayload({
+      action: "search", instanceId: instance.id, mediaId: 1, title: "S",
+    });
+    expect(log.action).toBe("search");
+    expect(log.status).toBe("success");
+  });
+
+  test("dispatches delete payloads to deleteFiles with triggerSearch=true", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
+    const log = await seriesService.retryFromPayload({
+      action: "delete", instanceId: instance.id, mediaId: 1, fileIds: [10, 11], title: "S",
+      triggerSearch: true,
+    });
+    expect(log.action).toBe("delete");
+    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(calls.some((u) => u.includes("/command"))).toBe(true);
+  });
+
+  test("dispatches delete_blacklist payloads with default triggerSearch=false", async () => {
+    const instance = await instanceService.create(baseInstance);
+    setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
+    const log = await seriesService.retryFromPayload({
+      action: "delete_blacklist", instanceId: instance.id, mediaId: 1, fileIds: [10], title: "S",
+    });
+    expect(log.action).toBe("delete");
+    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(calls.some((u) => u.includes("/command"))).toBe(false);
+  });
+
+  test("throws on unknown action", async () => {
+    await expect(
+      seriesService.retryFromPayload({ action: "unknown", instanceId: 1, mediaId: 1, title: "X" }),
+    ).rejects.toThrow(/Cannot retry/);
+  });
+});

@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/client/components/ui/label";
 import { useInstances, useUpdateInstance } from "@/client/hooks/data/useInstances";
 import { toast } from "sonner";
+import { ALL_SCORING_MODES, DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
 import type { ScoringMode } from "@/shared/types/models";
 
 interface Props {
@@ -18,7 +19,7 @@ export function ScoringModeSelector({ instanceId, compact = false }: Props) {
   const tToast = useTranslations("toast");
   const { data: instances } = useInstances();
   const updateInstance = useUpdateInstance();
-  const mode = (instances?.find((i) => i.id === instanceId)?.scoringMode ?? "profile") as ScoringMode;
+  const mode = (instances?.find((i) => i.id === instanceId)?.scoringMode ?? DEFAULT_SCORING_MODE) as ScoringMode;
 
   const handleChange = async (value: string) => {
     await updateInstance.mutateAsync({ id: instanceId, data: { scoringMode: value as ScoringMode } });
@@ -31,8 +32,9 @@ export function ScoringModeSelector({ instanceId, compact = false }: Props) {
         <SelectValue>{t(`scoringModeOptions.${mode}`)}</SelectValue>
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="manual">{t("scoringModeOptions.manual")}</SelectItem>
-        <SelectItem value="profile">{t("scoringModeOptions.profile")}</SelectItem>
+        {ALL_SCORING_MODES.map((m) => (
+          <SelectItem key={m} value={m}>{t(`scoringModeOptions.${m}`)}</SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
