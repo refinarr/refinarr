@@ -12,7 +12,11 @@ import { preferenceRepository } from "@/server/repositories/PreferenceRepository
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { RadarrClient } from "@/server/clients/RadarrClient";
-import { dataCache, CACHE_TTL_MS, CACHE_STALE_MS } from "@/server/lib/DataCache";
+import {
+  dataCache,
+  CACHE_TTL_MS,
+  CACHE_STALE_MS,
+} from "@/server/lib/DataCache";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import {
@@ -40,12 +44,18 @@ export class MovieService extends MediaService {
   }
 
   private async readWithSwr(
-    instance: NonNullable<Awaited<ReturnType<typeof instanceRepository.findById>>>,
+    instance: NonNullable<
+      Awaited<ReturnType<typeof instanceRepository.findById>>
+    >,
     mode: ScoringMode,
     cacheKey: string,
   ): Promise<{ flagged: FlaggedMovie[] }> {
     type Cached = { flagged: FlaggedMovie[] };
-    const result = dataCache.getWithStaleness<Cached>(cacheKey, CACHE_TTL_MS, CACHE_STALE_MS);
+    const result = dataCache.getWithStaleness<Cached>(
+      cacheKey,
+      CACHE_TTL_MS,
+      CACHE_STALE_MS,
+    );
 
     if (result.kind === "fresh") {
       appLogger.debug("Cache hit", {
@@ -61,7 +71,9 @@ export class MovieService extends MediaService {
       // rebuild rather than firing parallel upstream calls.
       if (!dataCache.isRebuilding(cacheKey)) {
         void dataCache
-          .rebuild(cacheKey, () => this.buildFlaggedAndLog(instance.id, instance, mode))
+          .rebuild(cacheKey, () =>
+            this.buildFlaggedAndLog(instance.id, instance, mode),
+          )
           .catch((err) => {
             appLogger.error("Background flagged-movies rebuild failed", {
               source: LogSource.MovieService,
@@ -82,7 +94,9 @@ export class MovieService extends MediaService {
 
   private async buildFlaggedAndLog(
     instanceId: number,
-    instance: NonNullable<Awaited<ReturnType<typeof instanceRepository.findById>>>,
+    instance: NonNullable<
+      Awaited<ReturnType<typeof instanceRepository.findById>>
+    >,
     mode: ScoringMode,
   ): Promise<{ flagged: FlaggedMovie[] }> {
     const startedAt = Date.now();

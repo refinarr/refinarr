@@ -68,28 +68,38 @@ describe("DataCache.clear", () => {
 
 describe("DataCache.getWithStaleness", () => {
   test("returns miss for unknown key", () => {
-    expect(dataCache.getWithStaleness("missing", 1000, 5000)).toEqual({ kind: "miss" });
+    expect(dataCache.getWithStaleness("missing", 1000, 5000)).toEqual({
+      kind: "miss",
+    });
   });
 
   test("returns fresh while age <= freshMs", () => {
     vi.useFakeTimers();
     dataCache.set("k", "v");
     vi.advanceTimersByTime(900);
-    expect(dataCache.getWithStaleness("k", 1000, 5000)).toEqual({ kind: "fresh", value: "v" });
+    expect(dataCache.getWithStaleness("k", 1000, 5000)).toEqual({
+      kind: "fresh",
+      value: "v",
+    });
   });
 
   test("returns stale once age exceeds freshMs but is within freshMs+staleMs", () => {
     vi.useFakeTimers();
     dataCache.set("k", "v");
     vi.advanceTimersByTime(2000);
-    expect(dataCache.getWithStaleness("k", 1000, 5000)).toEqual({ kind: "stale", value: "v" });
+    expect(dataCache.getWithStaleness("k", 1000, 5000)).toEqual({
+      kind: "stale",
+      value: "v",
+    });
   });
 
   test("evicts and returns miss past the stale window", () => {
     vi.useFakeTimers();
     dataCache.set("k", "v");
     vi.advanceTimersByTime(7000);
-    expect(dataCache.getWithStaleness("k", 1000, 5000)).toEqual({ kind: "miss" });
+    expect(dataCache.getWithStaleness("k", 1000, 5000)).toEqual({
+      kind: "miss",
+    });
     // Subsequent get returns null too — entry was evicted.
     expect(dataCache.get("k", 60_000)).toBeNull();
   });
@@ -122,10 +132,12 @@ describe("DataCache.rebuild", () => {
 
   test("isRebuilding reports true during the build, false after", async () => {
     let resolveBuild: ((v: string) => void) | undefined;
-    const promise = dataCache.rebuild("ib", () =>
-      new Promise<string>((res) => {
-        resolveBuild = res;
-      }),
+    const promise = dataCache.rebuild(
+      "ib",
+      () =>
+        new Promise<string>((res) => {
+          resolveBuild = res;
+        }),
     );
     expect(dataCache.isRebuilding("ib")).toBe(true);
     resolveBuild!("done");
@@ -141,6 +153,8 @@ describe("DataCache.rebuild", () => {
     ).rejects.toThrow("boom");
     expect(dataCache.isRebuilding("err")).toBe(false);
     // Next attempt with a working builder succeeds.
-    await expect(dataCache.rebuild("err", async () => "ok")).resolves.toBe("ok");
+    await expect(dataCache.rebuild("err", async () => "ok")).resolves.toBe(
+      "ok",
+    );
   });
 });

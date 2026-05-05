@@ -37,7 +37,8 @@ class DataCache {
     if (!entry) return { kind: "miss" };
     const age = Date.now() - entry.ts;
     if (age <= freshMs) return { kind: "fresh", value: entry.data as T };
-    if (age <= freshMs + staleMs) return { kind: "stale", value: entry.data as T };
+    if (age <= freshMs + staleMs)
+      return { kind: "stale", value: entry.data as T };
     this.store.delete(key);
     return { kind: "miss" };
   }
