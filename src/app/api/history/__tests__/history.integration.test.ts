@@ -131,11 +131,12 @@ describe("POST /api/history/[id]/retry", () => {
       apiKey: "abcd1234abcd1234abcd1234abcd1234",
     });
     const payload = {
-      instanceId: instance.id, action: "search", mediaId: 7, seasonNumber: 3, title: "Show",
+      instanceId: instance.id, action: "search_season", mediaId: 7, seasonNumber: 3, title: "Show",
     };
     const original = await logRepository.create({
       ...baseLog,
       instanceId: instance.id,
+      action: "search_season",
       mediaId: 7,
       title: "Show",
       status: "failed",
@@ -149,8 +150,11 @@ describe("POST /api/history/[id]/retry", () => {
     const logs = await logRepository.findAll();
     expect(logs).toHaveLength(1);
     expect(logs[0].id).toBe(original.id);
-    // The row's payload must keep seasonNumber so future retries stay scoped.
+    // The action column and payload both stay scoped to the season variant
+    // so future retries dispatch via the same registry handler.
+    expect(logs[0].action).toBe("search_season");
     const rewritten = JSON.parse(logs[0].payload!);
+    expect(rewritten.action).toBe("search_season");
     expect(rewritten.seasonNumber).toBe(3);
   });
 

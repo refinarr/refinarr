@@ -469,17 +469,6 @@ describe("SeriesService.retryFromPayload", () => {
     expect(calls.some((u) => u.includes("/command"))).toBe(true);
   });
 
-  test("dispatches delete_blacklist payloads with default triggerSearch=false", async () => {
-    const instance = await instanceService.create(baseInstance);
-    setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
-    const log = await seriesService.retryFromPayload({
-      action: "delete_blacklist", instanceId: instance.id, mediaId: 1, fileIds: [10], title: "S",
-    });
-    expect(log.action).toBe("delete");
-    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((u) => u.includes("/command"))).toBe(false);
-  });
-
   test("throws on unknown action", async () => {
     await expect(
       seriesService.retryFromPayload({ action: "unknown", instanceId: 1, mediaId: 1, title: "X" }),

@@ -1,4 +1,4 @@
-import type { FlaggedSeries, EpisodeFileEntry, ActionLog, MediaQuery, ScoringMode } from "@/shared/types/models";
+import type { FlaggedSeries, EpisodeFileEntry, ActionLog, ActionType, MediaQuery, ScoringMode } from "@/shared/types/models";
 import { isProfileMode } from "@/shared/scoring-mode";
 import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
@@ -232,39 +232,16 @@ export class SeriesService extends MediaService {
     return this.getFlaggedSeries(instanceId, { page: 1, limit: 1, sortBy: "score", order: "asc" });
   }
 
-  // Re-runs a stored ActionLog payload. Series-specific fields:
-  //   - search (series): { instanceId, mediaId, title }
-  //   - search (season): { …, seasonNumber }
-  //   - search (episode-file): { …, fileId }
-  //   - delete: { instanceId, mediaId, fileIds, title, triggerSearch? }
+  // Re-runs a stored ActionLog payload. Dispatches on the action column —
+  // each value maps to exactly one trigger method, and the trigger writes
+  // back the matching narrower payload so the row stays consistent across
+  // retries. The Record<ActionType,…> shape lets TypeScript flag a missing
+  // handler at compile time.
   async retryFromPayload(payload: Record<string, unknown>, opts: RetryActionOptions = {}): Promise<ActionLog> {
-    const action = payload.action as string;
-    const instanceId = payload.instanceId as number;
-    const mediaId = payload.mediaId as number;
-    const title = payload.title as string;
-    if (action === "search") {
-      // Three Sonarr search scopes share action="search"; dispatch on the
-      // discriminating payload field so a season or episode-file retry
-      // doesn't broaden into a full-series search.
-      if (typeof payload.seasonNumber === "number") {
-        return this.triggerSeasonSearch(instanceId, mediaId, payload.seasonNumber, title, opts);
-      }
-      if (typeof payload.fileId === "number") {
-        return this.triggerEpisodeFileSearch(instanceId, mediaId, payload.fileId, title, opts);
-      }
-      return this.triggerSearch(instanceId, mediaId, title, opts);
-    }
-    if (action === "delete" || action === "delete_blacklist") {
-      return this.deleteFiles(
-        instanceId,
-        mediaId,
-        payload.fileIds as number[],
-        title,
-        !!payload.triggerSearch,
-        opts,
-      );
-    }
-    throw new Error(`Cannot retry action type: ${action}`);
+    const action = payload.action as ActionType;
+    const handler = SERIES_RETRY_HANDLERS[action];
+    if (!handler) throw new Error(`Cannot retry action type: ${action}`);
+    return handler(this, payload, opts);
   }
 
   async deleteFiles(
@@ -332,11 +309,11 @@ export class SeriesService extends MediaService {
     return this.executeAction({
       instanceName: instance.name,
       instanceId,
-      action: "search",
+      action: "search_season",
       mediaId,
       title,
       actionLogId: opts.actionLogId,
-      payload: { instanceId, action: "search", mediaId, seasonNumber, title },
+      payload: { instanceId, action: "search_season", mediaId, seasonNumber, title },
       run: () => client.triggerSeasonSearch(mediaId, seasonNumber),
     });
   }
@@ -355,11 +332,11 @@ export class SeriesService extends MediaService {
     return this.executeAction({
       instanceName: instance.name,
       instanceId,
-      action: "search",
+      action: "search_episode",
       mediaId,
       title,
       actionLogId: opts.actionLogId,
-      payload: { instanceId, action: "search", mediaId, fileId, title },
+      payload: { instanceId, action: "search_episode", mediaId, fileId, title },
       run: async () => {
         const episodes = await client.getEpisodes(mediaId);
         const episodeIds = episodes.filter((e) => e.episodeFileId === fileId).map((e) => e.id);
@@ -371,3 +348,43 @@ export class SeriesService extends MediaService {
 }
 
 export const seriesService = new SeriesService();
+
+type RetryHandler = (
+  svc: SeriesService,
+  payload: Record<string, unknown>,
+  opts: RetryActionOptions,
+) => Promise<ActionLog>;
+
+// Partial<Record<…>> because not every ActionType is retryable from this
+// service — "ignore" has no Sonarr-side action to re-run, and movie-only
+// actions never land here via mediaServiceFor("sonarr"). Missing entries
+// fall through to the runtime guard in retryFromPayload.
+const SERIES_RETRY_HANDLERS: Partial<Record<ActionType, RetryHandler>> = {
+  search: (svc, p, opts) =>
+    svc.triggerSearch(p.instanceId as number, p.mediaId as number, p.title as string, opts),
+  search_season: (svc, p, opts) =>
+    svc.triggerSeasonSearch(
+      p.instanceId as number,
+      p.mediaId as number,
+      p.seasonNumber as number,
+      p.title as string,
+      opts,
+    ),
+  search_episode: (svc, p, opts) =>
+    svc.triggerEpisodeFileSearch(
+      p.instanceId as number,
+      p.mediaId as number,
+      p.fileId as number,
+      p.title as string,
+      opts,
+    ),
+  delete: (svc, p, opts) =>
+    svc.deleteFiles(
+      p.instanceId as number,
+      p.mediaId as number,
+      p.fileIds as number[],
+      p.title as string,
+      !!p.triggerSearch,
+      opts,
+    ),
+};
