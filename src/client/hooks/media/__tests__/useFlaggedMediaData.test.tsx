@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
+import type { FlaggedMedia, ScoringMode } from "@/shared/types/models";
 import { useFlaggedMediaData } from "../useFlaggedMediaData";
 import type { FlaggedMediaQueryHook } from "../useFlaggedMediaData";
 import type { MediaFilters } from "../useMediaFilters";
-import type { FlaggedMedia, ScoringMode } from "@/shared/types/models";
 
 type Item = FlaggedMedia;
 
