@@ -31,6 +31,6 @@ export const POST = createApiHandler(async (_req, ctx) => {
   const inst = await instanceRepository.findById(payload.instanceId);
   if (!inst) throw notFound("Instance no longer exists");
 
-  const result = await mediaServiceFor(inst.type).retryFromPayload(payload);
+  const result = await mediaServiceFor(inst.type).retryFromPayload(payload, { actionLogId: id });
   return NextResponse.json(result);
 });

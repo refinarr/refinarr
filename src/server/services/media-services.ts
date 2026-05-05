@@ -31,7 +31,11 @@ export interface MediaListService {
    * `fileIds`). Throws if the action type isn't retryable; the retry
    * route maps that to a 400.
    */
-  retryFromPayload(payload: Record<string, unknown>): Promise<ActionLog>;
+  retryFromPayload(payload: Record<string, unknown>, opts?: RetryActionOptions): Promise<ActionLog>;
+}
+
+export interface RetryActionOptions {
+  actionLogId?: number;
 }
 
 // Type-keyed registry of arr type → media service. Mirrors the established
