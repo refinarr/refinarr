@@ -19,7 +19,7 @@ import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt"
 import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
 import { MediaPageEmptyState } from "@/client/components/states/MediaPageEmptyState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
-import { SeriesDetailDrawer } from "@/client/components/shows/SeriesDetailDrawer";
+import { SeriesDetailDrawer } from "@/app/shows/components/SeriesDetailDrawer";
 
 import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
