@@ -16,13 +16,14 @@ import { SeasonAccordion } from "@/client/components/shows/SeasonAccordion";
 import { groupBySeason, filename } from "@/client/components/shows/utils";
 import { getSeverity } from "@/client/lib/severity";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
-import type { FlaggedSeries, ScoringMode } from "@/shared/types/models";
+import type { FlaggedSeries, QualityProfile, ScoringMode } from "@/shared/types/models";
 
 interface Props {
   series: FlaggedSeries | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   scoringMode: ScoringMode;
+  profiles: QualityProfile[] | undefined;
   onIgnore: (series: FlaggedSeries) => void;
   onSearchSeason: (series: FlaggedSeries, seasonNumber: number) => Promise<unknown>;
   onSearchEpisode: (series: FlaggedSeries, fileId: number, label: string) => Promise<unknown>;
@@ -35,6 +36,7 @@ export function SeriesDetailDrawer({
   open,
   onOpenChange,
   scoringMode,
+  profiles,
   onIgnore,
   onSearchSeason,
   onSearchEpisode,
@@ -51,6 +53,7 @@ export function SeriesDetailDrawer({
   const severity = getSeverity(score, series.minProfileScore, scoringMode, series.episodeFiles.length > 0);
   const seasonMap = groupBySeason(series.episodeFiles);
   const seasons = Array.from(seasonMap.keys()).sort((a, b) => a - b);
+  const profileName = profiles?.find((p) => p.id === series.qualityProfileId)?.name;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -67,6 +70,8 @@ export function SeriesDetailDrawer({
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
             <span className="text-muted-foreground">Score</span>
             <span><ScoreLabel score={score} minProfileScore={series.minProfileScore} /></span>
+            <span className="text-muted-foreground">Profile</span>
+            <span>{profileName ?? "—"}</span>
             <span className="text-muted-foreground">Episodes</span>
             <span className="tabular-nums">{series.affectedEpisodeCount} / {series.totalEpisodeCount}</span>
           </div>

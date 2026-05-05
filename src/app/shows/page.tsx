@@ -359,6 +359,7 @@ function ShowsPageContent() {
           open={drawer.selectedId !== null}
           onOpenChange={(open) => !open && drawer.setSelectedId(null)}
           scoringMode={scoringMode}
+          profiles={profiles}
           onIgnore={async () => {
             if (!drawer.selectedItem) return;
             await runIgnore(drawer.selectedItem);

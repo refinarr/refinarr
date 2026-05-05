@@ -12,13 +12,14 @@ import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { CfScoreList } from "@/client/components/common/CfScoreList";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
 import { getSeverity } from "@/client/lib/severity";
-import type { FlaggedMovie, ScoringMode } from "@/shared/types/models";
+import type { FlaggedMovie, QualityProfile, ScoringMode } from "@/shared/types/models";
 
 interface Props {
   movie: FlaggedMovie | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   scoringMode: ScoringMode;
+  profiles: QualityProfile[] | undefined;
   onSearch: (movie: FlaggedMovie) => void;
   onIgnore: (movie: FlaggedMovie) => void;
   onDelete?: (movie: FlaggedMovie, triggerSearch: boolean) => void;
@@ -29,6 +30,7 @@ export function MovieDetailDrawer({
   open,
   onOpenChange,
   scoringMode,
+  profiles,
   onSearch,
   onIgnore,
   onDelete,
@@ -38,6 +40,7 @@ export function MovieDetailDrawer({
   const score = scoringMode === "profile" ? movie.customFormatScore : movie.cfScore;
   const severity = getSeverity(score, movie.minProfileScore, scoringMode, movie.hasFile);
   const hasCfs = movie.customFormats.length > 0 || movie.missingFormats.length > 0;
+  const profileName = profiles?.find((p) => p.id === movie.qualityProfileId)?.name;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -54,6 +57,8 @@ export function MovieDetailDrawer({
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
             <span className="text-muted-foreground">Score</span>
             <span><ScoreLabel score={score} minProfileScore={movie.minProfileScore} /></span>
+            <span className="text-muted-foreground">Profile</span>
+            <span>{profileName ?? "—"}</span>
             <span className="text-muted-foreground">Has file</span>
             <span>{movie.hasFile ? "Yes" : "No"}</span>
           </div>

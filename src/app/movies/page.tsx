@@ -338,6 +338,7 @@ function MoviesPageContent() {
           open={drawer.selectedId !== null}
           onOpenChange={(open) => !open && drawer.setSelectedId(null)}
           scoringMode={scoringMode}
+          profiles={profiles}
           onSearch={async () => {
             if (!drawer.selectedItem) return;
             await runSearch(drawer.selectedItem);
