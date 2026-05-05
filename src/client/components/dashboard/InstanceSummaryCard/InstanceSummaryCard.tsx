@@ -8,13 +8,15 @@ import { InstanceErrorSummary } from "@/client/components/history/InstanceErrorS
 import { useInstanceHealth } from "@/client/hooks/data/useInstances";
 import type { DashboardInstanceSummary } from "@/shared/types/api";
 import type { ArrType } from "@/shared/types/models";
+import { ARR_LIBRARY_ROUTE } from "@/shared/arr-type";
 
-// Type-keyed mapping for the per-type bits of the dashboard card. Adding
-// Lidarr / Whisparr means dropping a third entry — the rest of the card
-// is type-agnostic.
-const PER_TYPE: Record<ArrType, { libraryHref: string; nounKey: "flaggedMoviesNoun" | "flaggedSeriesNoun" }> = {
-  radarr: { libraryHref: "/movies", nounKey: "flaggedMoviesNoun" },
-  sonarr: { libraryHref: "/shows", nounKey: "flaggedSeriesNoun" },
+// Per-type i18n key for the "N flagged X" noun. The library route lives
+// in @/shared/arr-type, so this map only owns UI strings. Adding Lidarr
+// / Whisparr means dropping a third entry — the rest of the card is
+// type-agnostic.
+const NOUN_KEY: Record<ArrType, "flaggedMoviesNoun" | "flaggedSeriesNoun"> = {
+  radarr: "flaggedMoviesNoun",
+  sonarr: "flaggedSeriesNoun",
 };
 
 interface Props {
@@ -52,7 +54,8 @@ export function InstanceSummaryCard({ instance }: Props) {
   const dotClass = DOT_CLASS[state];
   const healthLabel = t(LABEL_KEY[state]);
 
-  const { libraryHref, nounKey: flaggedNounKey } = PER_TYPE[instance.type];
+  const libraryHref = ARR_LIBRARY_ROUTE[instance.type];
+  const flaggedNounKey = NOUN_KEY[instance.type];
 
   return (
     <Card className={!instance.enabled ? "opacity-60" : ""}>

@@ -6,10 +6,12 @@ import type { ArrType } from "./types/models";
 // all agree on the same default without duplicating the literal.
 export const DEFAULT_ARR_TYPE: ArrType = "radarr";
 
-// Stable iteration order over every supported arr type. Keep in sync
-// with the Record<ArrType, ...> registries scattered across the codebase
-// (mediaServiceFor, ArrClientFactory, PER_TYPE in InstanceSummaryCard,
-// ARR_GROUPS in CommandPalette, TYPE_LABELS in AddInstanceDialog).
-// TypeScript catches missing entries on those Records; this list mainly
-// helps UI iteration where Object.keys() loses the typed key.
-export const ALL_ARR_TYPES: readonly ArrType[] = ["radarr", "sonarr"] as const;
+// Canonical list-page route per arr type. The home of "movies in this
+// instance" is /movies for radarr and /shows for sonarr; multiple UI
+// surfaces (dashboard summary card, command palette, sidebar nav) link
+// to it. Lives here so adding Lidarr/Whisparr is one entry instead of
+// chasing the literal across components.
+export const ARR_LIBRARY_ROUTE: Record<ArrType, string> = {
+  radarr: "/movies",
+  sonarr: "/shows",
+};
