@@ -182,7 +182,10 @@ export class MovieService extends MediaService {
 
   // Re-runs a stored ActionLog payload. Movies-specific fields:
   //   - search: { instanceId, mediaId, title }
-  //   - delete / delete_blacklist: { instanceId, mediaId, fileId, title, triggerSearch? }
+  //   - delete: { instanceId, mediaId, fileId, title, triggerSearch? }
+  //     (legacy rows stamped action="delete_blacklist" inside the payload;
+  //     the schema still accepts them, the migration backfills them to
+  //     "delete" so the action-parity guard passes)
   async retryFromPayload(payload: Record<string, unknown>, opts: RetryActionOptions = {}): Promise<ActionLog> {
     const result = movieRetryPayloadSchema.safeParse(payload);
     if (!result.success) {
@@ -247,7 +250,7 @@ export class MovieService extends MediaService {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
-      payload: { instanceId, action: "delete_blacklist", mediaId, fileId, title, triggerSearch },
+      payload: { instanceId, action: "delete", mediaId, fileId, title, triggerSearch },
       run: async () => {
         await client.deleteFile(fileId);
         if (triggerSearch) await client.triggerSearch(mediaId);
