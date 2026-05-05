@@ -1,4 +1,5 @@
 import type { Instance, ArrType, ScoringMode } from "@/shared/types/models";
+import { DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { appLogger } from "@/server/lib/app-logger";
@@ -95,7 +96,7 @@ export class InstanceService {
       url: data.url,
       apiKey: data.apiKey,
       enabled: true,
-      scoringMode: "profile",
+      scoringMode: DEFAULT_SCORING_MODE,
       searchesPerHour: 20,
       createdAt: new Date(),
     };

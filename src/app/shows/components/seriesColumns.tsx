@@ -7,6 +7,7 @@ import type { MediaListShellRenderCtx } from "@/client/components/media/MediaLis
 import { formatBytes } from "@/client/lib/format";
 import { formatRelative } from "@/client/lib/format-relative";
 import { getSeverity } from "@/client/lib/severity";
+import { ISSUES_FOR, ISSUES_HEADER_KEY, SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
 import type { FlaggedSeries } from "@/shared/types/models";
 
 export function seriesColumns(
@@ -20,7 +21,7 @@ export function seriesColumns(
       header: "",
       className: "w-8",
       render: (s) => {
-        const score = scoringMode === "profile" ? s.customFormatScore : s.cfScore;
+        const score = SCORE_FOR[scoringMode](s);
         const hasFile = s.episodeFiles.length > 0;
         return <SeverityDot severity={getSeverity(score, s.minProfileScore, scoringMode, hasFile)} />;
       },
@@ -66,12 +67,12 @@ export function seriesColumns(
       sortKey: "score",
       className: "w-36 whitespace-nowrap",
       render: (s) => {
-        if (scoringMode === "profile" && s.episodeFiles.length === 0) {
+        if (isProfileMode(scoringMode) && s.episodeFiles.length === 0) {
           return <span className="text-xs text-muted-foreground">{t("noFile")}</span>;
         }
         return (
           <ScoreLabel
-            score={scoringMode === "profile" ? s.customFormatScore : s.cfScore}
+            score={SCORE_FOR[scoringMode](s)}
             minProfileScore={s.minProfileScore}
           />
         );
@@ -92,9 +93,9 @@ export function seriesColumns(
     },
     {
       key: "issues",
-      header: scoringMode === "profile" ? tCols("penalties") : tCols("missing"),
+      header: tCols(ISSUES_HEADER_KEY[scoringMode]),
       render: (s) => {
-        const items = scoringMode === "profile" ? s.unwantedFormats : s.missingFormats;
+        const items = ISSUES_FOR[scoringMode](s);
         if (!items.length) return null;
         return (
           <div className="flex flex-wrap gap-1">

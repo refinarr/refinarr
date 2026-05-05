@@ -1,4 +1,4 @@
-import type { ActionLog } from "./models";
+import type { ActionLog, ArrType } from "./models";
 
 export interface PaginatedResponse<T> {
   items: T[];
@@ -14,7 +14,7 @@ export interface ApiError {
 }
 
 export interface CreateInstanceDto {
-  type: "radarr" | "sonarr";
+  type: ArrType;
   name: string;
   url: string;
   apiKey: string;
@@ -31,7 +31,7 @@ export type UpdateInstanceDto = Partial<CreateInstanceDto> & {
  */
 export interface InstanceListItem {
   id: number;
-  type: "radarr" | "sonarr";
+  type: ArrType;
   name: string;
   url: string;
   enabled: boolean;
@@ -66,10 +66,13 @@ export interface HistoryQuery {
 
 export interface DashboardInstanceSummary {
   id: number;
-  type: "radarr" | "sonarr";
+  type: ArrType;
   name: string;
   enabled: boolean;
-  flaggedCount: number;
+  // null when the flagged-media cache is cold for this instance — the
+  // dashboard avoids triggering an expensive build inline. The route fires
+  // a background warm; counts appear on the next dashboard refetch.
+  flaggedCount: number | null;
   failedActionsCount: number;
   hasPreferences: boolean;
 }

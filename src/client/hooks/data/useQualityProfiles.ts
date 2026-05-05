@@ -2,9 +2,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
-import type { QualityProfile } from "@/shared/types/models";
+import type { ArrType, QualityProfile } from "@/shared/types/models";
 
-export function useQualityProfiles(type: "radarr" | "sonarr", instanceId: number) {
+export function useQualityProfiles(type: ArrType, instanceId: number) {
   return useQuery({
     queryKey: queryKeys.qualityProfiles(type, instanceId),
     queryFn: () =>

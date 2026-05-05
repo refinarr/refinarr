@@ -7,8 +7,16 @@ import { Label } from "@/client/components/ui/label";
 import { FormField } from "@/client/components/ui/form-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { Loader2, Plug } from "lucide-react";
-import type { Instance } from "@/shared/types/models";
+import type { ArrType, Instance } from "@/shared/types/models";
 import { useAddInstanceForm } from "./useAddInstanceForm";
+
+// Per-arr-type UI bits the dialog needs: display label and i18n keys for
+// the type-specific placeholders. Adding Lidarr / Whisparr is a third
+// entry; the JSX below stays untouched.
+const TYPE_LABELS: Record<ArrType, { display: string; namePlaceholderKey: string; urlPlaceholderKey: string }> = {
+  radarr: { display: "Radarr", namePlaceholderKey: "namePlaceholder", urlPlaceholderKey: "urlPlaceholder" },
+  sonarr: { display: "Sonarr", namePlaceholderKey: "namePlaceholderSonarr", urlPlaceholderKey: "urlPlaceholderSonarr" },
+};
 
 interface Props {
   open: boolean;
@@ -44,22 +52,25 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
             <Label>{t("type")}</Label>
             <Select
               value={selectedType}
-              onValueChange={(v) => v && onChangeType(v as "radarr" | "sonarr")}
+              onValueChange={(v) => v && onChangeType(v as ArrType)}
             >
               <SelectTrigger>
-                <SelectValue>{selectedType === "radarr" ? "Radarr" : "Sonarr"}</SelectValue>
+                <SelectValue>{TYPE_LABELS[selectedType].display}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="radarr">Radarr</SelectItem>
-                <SelectItem value="sonarr">Sonarr</SelectItem>
+                {(Object.keys(TYPE_LABELS) as ArrType[]).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {TYPE_LABELS[type].display}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <FormField id="instance-name" label={t("name")} error={errors.name?.message}>
-            <Input {...register("name")} placeholder={selectedType === "sonarr" ? t("namePlaceholderSonarr") : t("namePlaceholder")} />
+            <Input {...register("name")} placeholder={t(TYPE_LABELS[selectedType].namePlaceholderKey)} />
           </FormField>
           <FormField id="instance-url" label={t("url")} error={errors.url?.message}>
-            <Input {...register("url")} placeholder={selectedType === "sonarr" ? t("urlPlaceholderSonarr") : t("urlPlaceholder")} />
+            <Input {...register("url")} placeholder={t(TYPE_LABELS[selectedType].urlPlaceholderKey)} />
           </FormField>
           <FormField id="instance-apikey" label={t("apiKey")} error={errors.apiKey?.message}>
             <Input

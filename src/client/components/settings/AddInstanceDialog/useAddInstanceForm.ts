@@ -6,7 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useCreateInstance, useUpdateInstance, useTestCredentials } from "@/client/hooks/data/useInstances";
 import { withToast } from "@/client/lib/with-toast";
-import type { Instance } from "@/shared/types/models";
+import { DEFAULT_ARR_TYPE } from "@/shared/arr-type";
+import type { ArrType, Instance } from "@/shared/types/models";
 
 interface Args {
   editing?: Instance | null;
@@ -28,7 +29,7 @@ export function useAddInstanceForm({ editing, onSuccess }: Args) {
   const update = useUpdateInstance();
   const test = useTestCredentials();
 
-  const [selectedType, setSelectedType] = useState<"radarr" | "sonarr">(editing?.type ?? "radarr");
+  const [selectedType, setSelectedType] = useState<ArrType>(editing?.type ?? DEFAULT_ARR_TYPE);
 
   const schema = useMemo(
     () =>
@@ -47,7 +48,7 @@ export function useAddInstanceForm({ editing, onSuccess }: Args) {
     resolver: zodResolver(schema),
     defaultValues: editing
       ? { type: editing.type, name: editing.name, url: editing.url, apiKey: "", searchesPerHour: editing.searchesPerHour }
-      : { type: "radarr", name: "", url: "", apiKey: "", searchesPerHour: 20 },
+      : { type: DEFAULT_ARR_TYPE, name: "", url: "", apiKey: "", searchesPerHour: 20 },
   });
 
   const runUpdate = withToast(update, { success: tToast("updated"), error: tToast("updateFailed") });
@@ -66,7 +67,7 @@ export function useAddInstanceForm({ editing, onSuccess }: Args) {
     return runTest({ type: v.type, url: normalizeUrl(v.url), apiKey: v.apiKey });
   };
 
-  const onChangeType = (next: "radarr" | "sonarr") => {
+  const onChangeType = (next: ArrType) => {
     setSelectedType(next);
     setValue("type", next);
   };

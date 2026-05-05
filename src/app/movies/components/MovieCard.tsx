@@ -6,6 +6,7 @@ import type { MediaListShellRenderCtx } from "@/client/components/media/MediaLis
 import { formatBytes } from "@/client/lib/format";
 import { formatRelative } from "@/client/lib/format-relative";
 import { getSeverity } from "@/client/lib/severity";
+import { ISSUES_FOR, SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
 import type { FlaggedMovie } from "@/shared/types/models";
 
 interface Props {
@@ -15,8 +16,8 @@ interface Props {
 
 export function MovieCard({ item, ctx }: Props) {
   const { scoringMode, queuedIds, recentMap, activeInstance, t, tTime } = ctx;
-  const score = scoringMode === "profile" ? item.customFormatScore : item.cfScore;
-  const issues = scoringMode === "profile" ? item.unwantedFormats : item.missingFormats;
+  const score = SCORE_FOR[scoringMode](item);
+  const issues = ISSUES_FOR[scoringMode](item);
   const recent = !queuedIds.has(item.id) ? recentMap.get(item.id) : undefined;
 
   return (
@@ -38,7 +39,7 @@ export function MovieCard({ item, ctx }: Props) {
         )}
       </div>
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        {scoringMode === "profile" && !item.hasFile ? (
+        {isProfileMode(scoringMode) && !item.hasFile ? (
           <span>{t("noFile")}</span>
         ) : (
           <ScoreLabel score={score} minProfileScore={item.minProfileScore} />

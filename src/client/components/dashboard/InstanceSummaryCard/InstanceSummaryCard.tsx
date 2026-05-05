@@ -7,6 +7,15 @@ import { Badge } from "@/client/components/ui/badge";
 import { InstanceErrorSummary } from "@/client/components/history/InstanceErrorSummary";
 import { useInstanceHealth } from "@/client/hooks/data/useInstances";
 import type { DashboardInstanceSummary } from "@/shared/types/api";
+import type { ArrType } from "@/shared/types/models";
+
+// Type-keyed mapping for the per-type bits of the dashboard card. Adding
+// Lidarr / Whisparr means dropping a third entry — the rest of the card
+// is type-agnostic.
+const PER_TYPE: Record<ArrType, { libraryHref: string; nounKey: "flaggedMoviesNoun" | "flaggedSeriesNoun" }> = {
+  radarr: { libraryHref: "/movies", nounKey: "flaggedMoviesNoun" },
+  sonarr: { libraryHref: "/shows", nounKey: "flaggedSeriesNoun" },
+};
 
 interface Props {
   instance: DashboardInstanceSummary;
@@ -43,8 +52,7 @@ export function InstanceSummaryCard({ instance }: Props) {
   const dotClass = DOT_CLASS[state];
   const healthLabel = t(LABEL_KEY[state]);
 
-  const libraryHref = instance.type === "radarr" ? "/movies" : "/shows";
-  const flaggedNounKey = instance.type === "radarr" ? "flaggedMoviesNoun" : "flaggedSeriesNoun";
+  const { libraryHref, nounKey: flaggedNounKey } = PER_TYPE[instance.type];
 
   return (
     <Card className={!instance.enabled ? "opacity-60" : ""}>
@@ -63,10 +71,19 @@ export function InstanceSummaryCard({ instance }: Props) {
           className="flex items-center justify-between rounded-md border bg-muted/20 px-3 py-2 hover:bg-muted/40 transition-colors"
         >
           <span className="text-sm flex items-baseline gap-1">
-            <span className="text-2xl font-bold tabular-nums">{instance.flaggedCount}</span>
-            <span className="text-muted-foreground">
-              {t(flaggedNounKey, { count: instance.flaggedCount })}
-            </span>
+            {instance.flaggedCount === null ? (
+              <>
+                <span className="text-2xl font-bold tabular-nums text-muted-foreground">—</span>
+                <span className="text-muted-foreground">{t(flaggedNounKey, { count: 0 })}</span>
+              </>
+            ) : (
+              <>
+                <span className="text-2xl font-bold tabular-nums">{instance.flaggedCount}</span>
+                <span className="text-muted-foreground">
+                  {t(flaggedNounKey, { count: instance.flaggedCount })}
+                </span>
+              </>
+            )}
           </span>
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
         </Link>

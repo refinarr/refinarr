@@ -40,6 +40,7 @@ import {
 import { useBulkAbort } from "@/client/hooks/media/useBulkAbort";
 import { useBulkMediaActions, type BulkActionsConfig } from "@/client/hooks/media/useBulkMediaActions";
 import { useBulkHandlers } from "@/client/hooks/media/useBulkHandlers";
+import { DEFAULT_SCORING_MODE, isManualMode } from "@/shared/scoring-mode";
 import type {
   ArrType,
   FlaggedMedia,
@@ -138,8 +139,8 @@ function Root<T extends FlaggedMedia>({
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
 
   const scoringMode: ScoringMode =
-    inst.typedInstances.find((i) => i.id === inst.activeInstance)?.scoringMode ?? "profile";
-  const noCfsConfigured = scoringMode === "manual" && (prefs?.length ?? 0) === 0;
+    inst.typedInstances.find((i) => i.id === inst.activeInstance)?.scoringMode ?? DEFAULT_SCORING_MODE;
+  const noCfsConfigured = isManualMode(scoringMode) && (prefs?.length ?? 0) === 0;
 
   const filters = useMediaFilters(scoringMode, inst.activeInstance);
   const data = useFlaggedMediaData<T>(useQuery, inst.activeInstance, filters.forQuery);

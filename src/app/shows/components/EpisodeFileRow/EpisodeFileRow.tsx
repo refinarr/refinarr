@@ -1,6 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
 import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
+import { isProfileMode } from "@/shared/scoring-mode";
 import { Button } from "@/client/components/ui/button";
 import { Search, Trash2 } from "lucide-react";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
@@ -18,7 +19,7 @@ export function EpisodeFileRow({ file, scoringMode, onSearch, onDelete }: Props)
   const t = useTranslations("common");
   const name = filename(file.relativePath);
   const isBad =
-    scoringMode === "profile"
+    isProfileMode(scoringMode)
       ? file.minProfileScore !== undefined && file.customFormatScore < file.minProfileScore
       : file.missingFormats.length > 0;
 
@@ -36,7 +37,7 @@ export function EpisodeFileRow({ file, scoringMode, onSearch, onDelete }: Props)
           {name}
         </span>
         <div className="flex items-center gap-2 shrink-0">
-          {scoringMode === "profile" && (
+          {isProfileMode(scoringMode) && (
             <ScoreLabel score={file.customFormatScore} minProfileScore={file.minProfileScore} />
           )}
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">

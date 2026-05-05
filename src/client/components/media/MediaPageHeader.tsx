@@ -7,6 +7,7 @@ import { Label } from "@/client/components/ui/label";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { InstanceConnectionDot } from "@/client/components/common/InstanceConnectionDot";
 import { cn } from "@/client/lib/utils";
+import { DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
 import type { Instance, ScoringMode } from "@/shared/types/models";
 
 interface Props {
@@ -44,7 +45,7 @@ export function MediaPageHeader({
   const showInstanceContext = activeInstance > 0 && !!activeInstanceName;
 
   const mode: ScoringMode =
-    typedInstances.find((i) => i.id === activeInstance)?.scoringMode ?? "profile";
+    typedInstances.find((i) => i.id === activeInstance)?.scoringMode ?? DEFAULT_SCORING_MODE;
 
   return (
     <div className="space-y-3">

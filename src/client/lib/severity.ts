@@ -1,3 +1,4 @@
+import { isProfileMode } from "@/shared/scoring-mode";
 import type { ScoringMode, Severity } from "@/shared/types/models";
 
 export type { Severity };
@@ -9,7 +10,7 @@ export function getSeverity(
   hasFile = true,
 ): Severity {
   if (!hasFile) return "missing";
-  if (mode === "profile" && target !== undefined && target > 0) {
+  if (isProfileMode(mode) && target !== undefined && target > 0) {
     if (score < 0) return "critical";
     if (score < target * 0.33) return "low";
     if (score < target * 0.75) return "warning";

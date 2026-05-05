@@ -1,4 +1,5 @@
 import type { FlaggedSeries, EpisodeFileEntry, ActionLog, MediaQuery, ScoringMode } from "@/shared/types/models";
+import { isProfileMode } from "@/shared/scoring-mode";
 import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
@@ -84,7 +85,7 @@ export class SeriesService extends MediaService {
     const seriesIds = series.filter((s) => !ignoredSet.has(s.id)).map((s) => s.id);
     const episodeFilesMap = await client.getAllEpisodeFiles(seriesIds);
 
-    if (mode === "profile") {
+    if (isProfileMode(mode)) {
       return series
         .filter((s) => !ignoredSet.has(s.id))
         .filter((s) => {
@@ -211,6 +212,48 @@ export class SeriesService extends MediaService {
   }
 
 
+  // Returns the flagged-count from cache if warm, or null if cold. Used by
+  // the dashboard summary route to avoid triggering a multi-second upstream
+  // build inline. Caller is responsible for kicking off a background warm
+  // when null is returned.
+  getCachedFlaggedTotal(instanceId: number, mode: ScoringMode): number | null {
+    const cached = dataCache.get<{ flagged: FlaggedSeries[] }>(
+      `series:${instanceId}:${mode}`,
+      CACHE_TTL_MS,
+    );
+    return cached?.flagged.length ?? null;
+  }
+
+  // Uniform name across MovieService / SeriesService for use via
+  // mediaServiceFor(arrType). Warms the flagged-media cache by issuing a
+  // minimal getFlaggedSeries call.
+  warmFlaggedCache(instanceId: number): Promise<unknown> {
+    return this.getFlaggedSeries(instanceId, { page: 1, limit: 1, sortBy: "score", order: "asc" });
+  }
+
+  // Re-runs a stored ActionLog payload. Series-specific fields:
+  //   - search: { instanceId, mediaId, title }
+  //   - delete: { instanceId, mediaId, fileIds, title, triggerSearch? }
+  async retryFromPayload(payload: Record<string, unknown>): Promise<ActionLog> {
+    const action = payload.action as string;
+    const instanceId = payload.instanceId as number;
+    const mediaId = payload.mediaId as number;
+    const title = payload.title as string;
+    if (action === "search") {
+      return this.triggerSearch(instanceId, mediaId, title);
+    }
+    if (action === "delete" || action === "delete_blacklist") {
+      return this.deleteFiles(
+        instanceId,
+        mediaId,
+        payload.fileIds as number[],
+        title,
+        !!payload.triggerSearch,
+      );
+    }
+    throw new Error(`Cannot retry action type: ${action}`);
+  }
+
   async deleteFiles(
     instanceId: number,
     mediaId: number,
@@ -228,7 +271,7 @@ export class SeriesService extends MediaService {
       action: "delete",
       mediaId,
       title,
-      payload: { instanceId, action: "delete", mediaId, fileIds, title, triggerSearch, type: "sonarr" },
+      payload: { instanceId, action: "delete", mediaId, fileIds, title, triggerSearch },
       run: async () => {
         for (const fileId of fileIds) {
           await client.deleteEpisodeFile(fileId);
@@ -249,7 +292,7 @@ export class SeriesService extends MediaService {
       action: "search",
       mediaId,
       title,
-      payload: { instanceId, action: "search", mediaId, title, type: "sonarr" },
+      payload: { instanceId, action: "search", mediaId, title },
       run: () => client.triggerSearch(mediaId),
     });
   }
@@ -270,7 +313,7 @@ export class SeriesService extends MediaService {
       action: "search",
       mediaId,
       title,
-      payload: { instanceId, action: "search", mediaId, seasonNumber, title, type: "sonarr" },
+      payload: { instanceId, action: "search", mediaId, seasonNumber, title },
       run: () => client.triggerSeasonSearch(mediaId, seasonNumber),
     });
   }
@@ -291,7 +334,7 @@ export class SeriesService extends MediaService {
       action: "search",
       mediaId,
       title,
-      payload: { instanceId, action: "search", mediaId, fileId, title, type: "sonarr" },
+      payload: { instanceId, action: "search", mediaId, fileId, title },
       run: async () => {
         const episodes = await client.getEpisodes(mediaId);
         const episodeIds = episodes.filter((e) => e.episodeFileId === fileId).map((e) => e.id);

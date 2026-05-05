@@ -28,6 +28,15 @@ import {
   CommandList,
 } from "@/client/components/ui/command";
 import { useInstances } from "@/client/hooks/data/useInstances";
+import type { ArrType } from "@/shared/types/models";
+
+// Per-arr-type bits the command palette needs: which heading key to use,
+// which icon, and which route to open. Adding Lidarr / Whisparr is one
+// more entry; the JSX below iterates this map and auto-renders.
+const ARR_GROUPS: Record<ArrType, { headingKey: "groups.radarrInstance" | "groups.sonarrInstance"; route: string; Icon: typeof Film }> = {
+  radarr: { headingKey: "groups.radarrInstance", route: "/movies", Icon: Film },
+  sonarr: { headingKey: "groups.sonarrInstance", route: "/shows", Icon: Tv2 },
+};
 import { useConfig } from "@/client/hooks/data/useConfig";
 
 export function CommandPalette() {
@@ -55,8 +64,7 @@ export function CommandPalette() {
     setOpen(false);
   };
 
-  const radarrInstances = instances?.filter((i) => i.type === "radarr") ?? [];
-  const sonarrInstances = instances?.filter((i) => i.type === "sonarr") ?? [];
+  const arrTypes = Object.keys(ARR_GROUPS) as ArrType[];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -99,35 +107,25 @@ export function CommandPalette() {
               </CommandItem>
             </CommandGroup>
 
-            {radarrInstances.length > 0 && (
-              <CommandGroup heading={t("groups.radarrInstance")}>
-                {radarrInstances.map((i) => (
-                  <CommandItem
-                    key={i.id}
-                    keywords={["radarr", i.name]}
-                    onSelect={() => go(`/movies?instanceId=${i.id}`)}
-                  >
-                    <Film className="h-4 w-4" />
-                    {i.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-
-            {sonarrInstances.length > 0 && (
-              <CommandGroup heading={t("groups.sonarrInstance")}>
-                {sonarrInstances.map((i) => (
-                  <CommandItem
-                    key={i.id}
-                    keywords={["sonarr", i.name]}
-                    onSelect={() => go(`/shows?instanceId=${i.id}`)}
-                  >
-                    <Tv2 className="h-4 w-4" />
-                    {i.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
+            {arrTypes.map((type) => {
+              const matches = instances?.filter((i) => i.type === type) ?? [];
+              if (matches.length === 0) return null;
+              const { headingKey, route, Icon } = ARR_GROUPS[type];
+              return (
+                <CommandGroup key={type} heading={t(headingKey)}>
+                  {matches.map((i) => (
+                    <CommandItem
+                      key={i.id}
+                      keywords={[type, i.name]}
+                      onSelect={() => go(`${route}?instanceId=${i.id}`)}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {i.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              );
+            })}
 
             <CommandGroup heading={t("groups.actions")}>
               <CommandItem

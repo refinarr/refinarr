@@ -16,6 +16,7 @@ import { SeasonAccordion } from "@/app/shows/components/SeasonAccordion";
 import { groupBySeason, filename } from "@/app/shows/components/utils";
 import { getSeverity } from "@/client/lib/severity";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
+import { SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
 import type { FlaggedSeries, QualityProfile, ScoringMode } from "@/shared/types/models";
 
 interface Props {
@@ -49,7 +50,7 @@ export function SeriesDetailDrawer({
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
   if (!series) return null;
 
-  const score = scoringMode === "profile" ? series.customFormatScore : series.cfScore;
+  const score = SCORE_FOR[scoringMode](series);
   const severity = getSeverity(score, series.minProfileScore, scoringMode, series.episodeFiles.length > 0);
   const seasonMap = groupBySeason(series.episodeFiles);
   const seasons = Array.from(seasonMap.keys()).sort((a, b) => a - b);
@@ -84,7 +85,7 @@ export function SeriesDetailDrawer({
                   const files = seasonMap.get(season)!;
                   const affectedFileIds = files
                     .filter((f) =>
-                      scoringMode === "profile"
+                      isProfileMode(scoringMode)
                         ? f.minProfileScore !== undefined && f.customFormatScore < f.minProfileScore
                         : f.missingFormats.length > 0
                     )

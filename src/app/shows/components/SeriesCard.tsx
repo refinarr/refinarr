@@ -4,6 +4,7 @@ import { SeverityDot } from "@/client/components/common/SeverityDot";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
 import { formatBytes } from "@/client/lib/format";
 import { getSeverity } from "@/client/lib/severity";
+import { ISSUES_FOR, SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
 import type { FlaggedSeries } from "@/shared/types/models";
 
 interface Props {
@@ -13,9 +14,9 @@ interface Props {
 
 export function SeriesCard({ item, ctx }: Props) {
   const { scoringMode, t } = ctx;
-  const score = scoringMode === "profile" ? item.customFormatScore : item.cfScore;
+  const score = SCORE_FOR[scoringMode](item);
   const hasFile = item.episodeFiles.length > 0;
-  const issues = scoringMode === "profile" ? item.unwantedFormats : item.missingFormats;
+  const issues = ISSUES_FOR[scoringMode](item);
 
   return (
     <div className="space-y-1.5">
@@ -25,7 +26,7 @@ export function SeriesCard({ item, ctx }: Props) {
         <span className="text-muted-foreground text-xs shrink-0">{item.year}</span>
       </div>
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        {scoringMode === "profile" && !hasFile ? (
+        {isProfileMode(scoringMode) && !hasFile ? (
           <span>{t("noFile")}</span>
         ) : (
           <ScoreLabel score={score} minProfileScore={item.minProfileScore} />

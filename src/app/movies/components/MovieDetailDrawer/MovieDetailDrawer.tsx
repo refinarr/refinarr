@@ -12,6 +12,7 @@ import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { CfScoreList } from "@/client/components/common/CfScoreList";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
 import { getSeverity } from "@/client/lib/severity";
+import { SCORE_FOR } from "@/shared/scoring-mode";
 import type { FlaggedMovie, QualityProfile, ScoringMode } from "@/shared/types/models";
 
 interface Props {
@@ -37,7 +38,7 @@ export function MovieDetailDrawer({
 }: Props) {
   if (!movie) return null;
 
-  const score = scoringMode === "profile" ? movie.customFormatScore : movie.cfScore;
+  const score = SCORE_FOR[scoringMode](movie);
   const severity = getSeverity(score, movie.minProfileScore, scoringMode, movie.hasFile);
   const hasCfs = movie.customFormats.length > 0 || movie.missingFormats.length > 0;
   const profileName = profiles?.find((p) => p.id === movie.qualityProfileId)?.name;

@@ -10,6 +10,7 @@ import { Search, ChevronDown, Check } from "lucide-react";
 import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
 import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { cn } from "@/client/lib/utils";
+import { isManualMode } from "@/shared/scoring-mode";
 import type { ArrType, ScoringMode } from "@/shared/types/models";
 import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 
@@ -50,7 +51,7 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
   const profileName = profiles?.find((p) => p.id === filters.profileId)?.name;
 
   const profileActive = filters.profileId !== null;
-  const maxScoreActive = scoringMode === "manual" && filters.maxScore < 1;
+  const maxScoreActive = isManualMode(scoringMode) && filters.maxScore < 1;
   const onlyMissingActive = filters.onlyMissing;
   const anyActive =
     profileActive ||
@@ -102,7 +103,7 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
           </SelectContent>
         </Select>
 
-        {scoringMode === "manual" ? (
+        {isManualMode(scoringMode) ? (
           <MultiSelect
             options={wantedCfOptions}
             selected={filters.missingCfIds}
@@ -138,7 +139,7 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
           />
         )}
 
-        {scoringMode === "manual" && (
+        {isManualMode(scoringMode) && (
           <Popover>
             <PopoverTrigger className={cn(PILL, maxScoreActive && PILL_ACTIVE)}>
               {t("maxScore")}: {Math.round(filters.maxScore * 100)}%

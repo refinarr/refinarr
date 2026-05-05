@@ -1,3 +1,5 @@
+import type { ArrType } from "@/shared/types/models";
+
 export const queryKeys = {
   instances: () => ["instances"] as const,
   instance: (id: number) => ["instances", id] as const,
@@ -15,9 +17,9 @@ export const queryKeys = {
   history: (params?: object) => ["history", params] as const,
   historyAll: () => ["history"] as const,
   historyErrors: (instanceId: number) => ["history", "errors", instanceId] as const,
-  qualityProfiles: (type: "radarr" | "sonarr", instanceId: number) =>
+  qualityProfiles: (type: ArrType, instanceId: number) =>
     ["qualityProfiles", type, instanceId] as const,
-  customFormats: (type: "radarr" | "sonarr", instanceId: number) =>
+  customFormats: (type: ArrType, instanceId: number) =>
     ["customFormats", type, instanceId] as const,
   health: () => ["health"] as const,
   appLogs: (params?: object) => ["appLogs", params] as const,
