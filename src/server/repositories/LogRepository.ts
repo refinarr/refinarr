@@ -95,7 +95,9 @@ export class LogRepository extends BaseRepository<ActionLog> {
       const prev = seen.get(r.mediaId);
       if (!prev || at.getTime() > prev.getTime()) seen.set(r.mediaId, at);
     }
-    return [...seen.entries()].map(([mediaId, lastSearchedAt]) => ({ mediaId, lastSearchedAt }));
+    return [...seen.entries()]
+      .map(([mediaId, lastSearchedAt]) => ({ mediaId, lastSearchedAt }))
+      .sort((a, b) => b.lastSearchedAt.getTime() - a.lastSearchedAt.getTime());
   }
 
   async create(
