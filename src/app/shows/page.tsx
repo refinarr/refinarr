@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
@@ -9,17 +9,15 @@ import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton
 import { MediaPageHeader } from "@/client/components/media/MediaPageHeader";
 import { MediaSearchBar } from "@/client/components/media/MediaSearchBar";
 import { MediaTable, type ColumnDef } from "@/client/components/media/MediaTable";
-import { ActiveFilterChips, buildCfChips, type FilterChip } from "@/client/components/media/ActiveFilterChips";
+import { ActiveFilterChips } from "@/client/components/media/ActiveFilterChips";
 import { SeverityDot } from "@/client/components/media/SeverityDot";
 import { ScoreLabel } from "@/client/components/media/ScoreLabel";
 import { CfBadge } from "@/client/components/media/CfBadge";
 import { SearchStatusBadge } from "@/client/components/media/SearchStatusBadge";
 import { RowHoverActions } from "@/client/components/media/RowHoverActions";
-import { AllClearState } from "@/client/components/states/AllClearState";
-import { NoCfsPrompt } from "@/client/components/states/NoCfsPrompt";
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
-import { NoFilterMatchState } from "@/client/components/states/NoFilterMatchState";
+import { MediaPageEmptyState } from "@/client/components/states/MediaPageEmptyState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { SeriesDetailDrawer } from "@/client/components/shows/SeriesDetailDrawer";
 
@@ -30,6 +28,7 @@ import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import { useInfiniteScroll } from "@/client/hooks/ui/useInfiniteScroll";
 import { useInstanceSelection } from "@/client/hooks/media/useInstanceSelection";
 import { useMediaFilters } from "@/client/hooks/media/useMediaFilters";
+import { useFilterChips } from "@/client/hooks/media/useFilterChips";
 import { useMediaSelection } from "@/client/hooks/media/useMediaSelection";
 import { useDetailDrawer } from "@/client/hooks/media/useDetailDrawer";
 import { useFlaggedSeriesData } from "@/client/hooks/media/useFlaggedSeriesData";
@@ -83,7 +82,6 @@ export default function ShowsPage() {
 function ShowsPageContent() {
   const t = useTranslations("shows");
   const tCols = useTranslations("shows.columns");
-  const tFilters = useTranslations("filters");
   const tConfirmDeleteSeries = useTranslations("confirm.deleteSeries");
   const tTime = useTranslations("time");
   const router = useRouter();
@@ -122,23 +120,12 @@ function ShowsPageContent() {
     instanceId: inst.activeInstance,
     refetch: data.refetch,
   });
+  const { chips, clearActiveFilters } = useFilterChips({ filters, prefs, profiles });
 
   const runSearch = (s: FlaggedSeries) =>
     actions.searchMutation.mutateAsync({ items: [s], isBulk: false });
   const runIgnore = (s: FlaggedSeries) =>
     actions.ignoreWithToast({ items: [s], isBulk: false });
-
-  const wantedCfOptions = useMemo(
-    () => (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName })),
-    [prefs],
-  );
-  const negativeCfOptions = useMemo(() => {
-    const pairs = (profiles ?? [])
-      .flatMap((p) => p.formatItems ?? [])
-      .filter((item) => item.score < 0)
-      .map((item) => [item.format, item.name] as const);
-    return Array.from(new Map(pairs), ([id, name]) => ({ id, name }));
-  }, [profiles]);
 
   if (!inst.loadingInstances && !inst.instances?.length) {
     return (
@@ -243,67 +230,6 @@ function ShowsPageContent() {
     },
   ];
 
-  const profileName = profiles?.find((p) => p.id === filters.filters.profileId)?.name;
-
-  const removeMissingCf = (id: number) =>
-    filters.setFilters((f) => ({
-      ...f,
-      missingCfIds: f.missingCfIds.filter((x) => x !== id),
-    }));
-  const removePenaltyCf = (id: number) =>
-    filters.setFilters((f) => ({
-      ...f,
-      hasNegativeCfIds: f.hasNegativeCfIds.filter((x) => x !== id),
-    }));
-
-  const missingChips = buildCfChips({
-    ids: filters.filters.missingCfIds,
-    options: wantedCfOptions,
-    label: (name) => tFilters("missingLabel", { name }),
-    removeId: removeMissingCf,
-    keyPrefix: "cf",
-  });
-  const penaltyChips = buildCfChips({
-    ids: filters.filters.hasNegativeCfIds,
-    options: negativeCfOptions,
-    label: (name) => tFilters("penaltyLabel", { name }),
-    removeId: removePenaltyCf,
-    keyPrefix: "ncf",
-  });
-
-  const chips: FilterChip[] = [
-    filters.filters.q && {
-      key: "q",
-      label: tFilters("queryLabel", { q: filters.filters.q }),
-      onRemove: () => filters.setFilters((f) => ({ ...f, q: "" })),
-    },
-    filters.filters.profileId !== null && profileName && {
-      key: "profile",
-      label: tFilters("profileLabel", { name: profileName }),
-      onRemove: () => filters.setFilters((f) => ({ ...f, profileId: null })),
-    },
-    ...missingChips,
-    ...penaltyChips,
-    filters.filters.onlyMissing && {
-      key: "onlyMissing",
-      label: tFilters("onlyMissing"),
-      onRemove: () => filters.setFilters((f) => ({ ...f, onlyMissing: false })),
-    },
-  ].filter(Boolean) as FilterChip[];
-
-  const renderEmptyState = () => {
-    if (inst.activeInstance === 0 || noCfsConfigured) return <NoCfsPrompt />;
-    if (chips.length > 0) {
-      return (
-        <NoFilterMatchState
-          onClear={() =>
-            filters.setFilters((f) => ({ ...f, q: "", profileId: null, missingCfIds: [], hasNegativeCfIds: [], maxScore: 1, onlyMissing: false }))
-          }
-        />
-      );
-    }
-    return <AllClearState />;
-  };
 
   return (
     <AppShell>
@@ -353,7 +279,14 @@ function ShowsPageContent() {
 
           {(data.isLoading || inst.loadingInstances) && <MediaTableSkeleton rows={8} />}
           {data.isError && <MediaErrorCard onRetry={data.refetch} />}
-          {!inst.loadingInstances && !data.isLoading && !data.isError && data.allSeries.length === 0 && renderEmptyState()}
+          {!inst.loadingInstances && !data.isLoading && !data.isError && data.allSeries.length === 0 && (
+            <MediaPageEmptyState
+              hasInstance={inst.activeInstance > 0}
+              noCfsConfigured={noCfsConfigured}
+              hasActiveFilters={chips.length > 0}
+              onClear={clearActiveFilters}
+            />
+          )}
 
           {!data.isLoading && data.allSeries.length > 0 && (
             <div className={data.isFetching ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
