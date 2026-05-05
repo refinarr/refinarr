@@ -16,7 +16,7 @@ export function PasswordChangeCard() {
     next, setNext,
     confirm, setConfirm,
     submitting,
-    currentErr, nextErr, confirmErr, formErr,
+    errors,
     submit,
   } = usePasswordChangeForm();
 
@@ -30,7 +30,7 @@ export function PasswordChangeCard() {
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4 max-w-md">
-          <FormField id="current-password" label={t("currentPassword")} error={currentErr}>
+          <FormField id="current-password" label={t("currentPassword")} error={errors.current}>
             <Input
               type="password"
               value={current}
@@ -39,7 +39,7 @@ export function PasswordChangeCard() {
               required
             />
           </FormField>
-          <FormField id="new-password" label={t("newPassword")} description={t("newPasswordHint")} error={nextErr}>
+          <FormField id="new-password" label={t("newPassword")} description={t("newPasswordHint")} error={errors.next}>
             <Input
               type="password"
               value={next}
@@ -49,7 +49,7 @@ export function PasswordChangeCard() {
               minLength={12}
             />
           </FormField>
-          <FormField id="confirm-new-password" label={t("confirmNewPassword")} error={confirmErr}>
+          <FormField id="confirm-new-password" label={t("confirmNewPassword")} error={errors.confirm}>
             <Input
               type="password"
               value={confirm}
@@ -59,8 +59,8 @@ export function PasswordChangeCard() {
               minLength={12}
             />
           </FormField>
-          {formErr && (
-            <p role="alert" className="text-sm text-destructive">{formErr}</p>
+          {errors.form && (
+            <p role="alert" className="text-sm text-destructive">{errors.form}</p>
           )}
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
