@@ -2,9 +2,9 @@ export type Severity = "critical" | "low" | "warning" | "ok" | "missing";
 export type ArrType = "radarr" | "sonarr";
 export type ScoringMode = "manual" | "profile";
 export type ActionType =
-  | "search"          // movie or series-level search
-  | "search_season"   // sonarr season-scoped search
-  | "search_episode"  // sonarr episode-file-scoped search
+  | "search"
+  | "search_season"
+  | "search_episode"
   | "delete"
   | "ignore";
 export type ActionStatus = "success" | "failed" | "dry_run" | "pending";

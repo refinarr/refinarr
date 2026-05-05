@@ -238,8 +238,8 @@ export class SeriesService extends MediaService {
   // retries. The Record<ActionType,…> shape lets TypeScript flag a missing
   // handler at compile time.
   async retryFromPayload(payload: Record<string, unknown>, opts: RetryActionOptions = {}): Promise<ActionLog> {
-    const action = payload.action as ActionType;
-    const handler = SERIES_RETRY_HANDLERS[action];
+    const action = payload.action as string;
+    const handler = (SERIES_RETRY_HANDLERS as Record<string, RetryHandler | undefined>)[action];
     if (!handler) throw new Error(`Cannot retry action type: ${action}`);
     return handler(this, payload, opts);
   }
@@ -355,11 +355,12 @@ type RetryHandler = (
   opts: RetryActionOptions,
 ) => Promise<ActionLog>;
 
-// Partial<Record<…>> because not every ActionType is retryable from this
-// service — "ignore" has no Sonarr-side action to re-run, and movie-only
-// actions never land here via mediaServiceFor("sonarr"). Missing entries
-// fall through to the runtime guard in retryFromPayload.
-const SERIES_RETRY_HANDLERS: Partial<Record<ActionType, RetryHandler>> = {
+// Exclude non-retryable variants explicitly so adding a new ActionType
+// surfaces as a compile error here (either add a handler, or extend the
+// Exclude). Partial<Record<…>> would silently accept new keys.
+type RetryableSeriesAction = Exclude<ActionType, "ignore">;
+
+const SERIES_RETRY_HANDLERS: Record<RetryableSeriesAction, RetryHandler> = {
   search: (svc, p, opts) =>
     svc.triggerSearch(p.instanceId as number, p.mediaId as number, p.title as string, opts),
   search_season: (svc, p, opts) =>
