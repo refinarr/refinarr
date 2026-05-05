@@ -1,10 +1,17 @@
 // @vitest-environment happy-dom
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import { api } from "@/client/lib/api";
+
+vi.mock("@/client/lib/client-error-logger", () => ({
+  reportClientError: vi.fn(),
+}));
+
+import { api, ApiClientError } from "@/client/lib/api";
+import { reportClientError } from "@/client/lib/client-error-logger";
 
 const fetchMock = vi.fn();
 
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.stubGlobal("fetch", fetchMock);
 });
 
@@ -16,7 +23,7 @@ afterEach(() => {
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-Trace-Id": "trace-1" },
   });
 }
 
@@ -34,8 +41,20 @@ describe("api.get", () => {
   });
 
   test("throws with the server's error message on non-2xx", async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ error: "Boom" }, 500));
-    await expect(api.get("/x")).rejects.toThrow("Boom");
+    fetchMock.mockResolvedValue(jsonResponse({ error: "Boom", code: "NOPE", traceId: "trace-body" }, 500));
+    await expect(api.get("/x")).rejects.toMatchObject({
+      status: 500,
+      message: "Boom",
+      code: "NOPE",
+      traceId: "trace-body",
+      path: "/x",
+      method: "GET",
+    });
+    expect(reportClientError).toHaveBeenCalledWith(expect.objectContaining({
+      status: 500,
+      code: "NOPE",
+      traceId: "trace-body",
+    }));
   });
 
   test("throws a generic message when the body is not JSON", async () => {
@@ -45,7 +64,32 @@ describe("api.get", () => {
 
   test("throws with status code when body has no error field", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ something: "else" }, 418));
-    await expect(api.get("/x")).rejects.toThrow(/418/);
+    await expect(api.get("/x")).rejects.toMatchObject({
+      message: "API error 418",
+      traceId: "trace-1",
+    });
+    expect(reportClientError).not.toHaveBeenCalled();
+  });
+
+  test("throws ApiClientError with retry-after", async () => {
+    const res = jsonResponse({ error: "Slow", traceId: "trace-body" }, 429);
+    res.headers.set("Retry-After", "12");
+    fetchMock.mockResolvedValue(res);
+    await expect(api.get("/x")).rejects.toMatchObject({
+      status: 429,
+      retryAfter: 12,
+      traceId: "trace-body",
+    });
+  });
+
+  test("reports network errors", async () => {
+    fetchMock.mockRejectedValue(new Error("offline"));
+    await expect(api.get("/x")).rejects.toBeInstanceOf(ApiClientError);
+    expect(reportClientError).toHaveBeenCalledWith(expect.objectContaining({
+      message: "offline",
+      path: "/x",
+      method: "GET",
+    }));
   });
 });
 

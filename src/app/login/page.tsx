@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui
 import { Input } from "@/client/components/ui/input";
 import { Button } from "@/client/components/ui/button";
 import { FormField } from "@/client/components/ui/form-field";
+import { api, ApiClientError } from "@/client/lib/api";
 import { Loader2 } from "lucide-react";
 
 function LoginForm() {
@@ -27,16 +28,11 @@ function LoginForm() {
     setErr(null);
     setSubmitting(true);
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-      if (res.status === 429) { setErr(t("tooManyAttempts")); setSubmitting(false); return; }
-      if (!res.ok) { setErr(t("failed")); setSubmitting(false); return; }
+      await api.post("/auth/login", { username, password });
       router.push(safeNext);
-    } catch {
-      setErr(t("failed"));
+    } catch (caught) {
+      setErr(caught instanceof ApiClientError && caught.status === 429 ? t("tooManyAttempts") : t("failed"));
+    } finally {
       setSubmitting(false);
     }
   };

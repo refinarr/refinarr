@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
-import { ApiKeyError, useRevealApiKey, useRotateApiKey } from "@/client/hooks/data/useApiKey";
+import { useRevealApiKey, useRotateApiKey } from "@/client/hooks/data/useApiKey";
+import { ApiClientError } from "@/client/lib/api";
 import { withToast } from "@/client/lib/with-toast";
 
 type Action = "reveal" | "rotate";
@@ -32,7 +33,7 @@ export function useApiKeyActions() {
     setPwOpen(false);
   };
 
-  const inlineMessage = (e: ApiKeyError): string => {
+  const inlineMessage = (e: ApiClientError): string => {
     if (e.status === 429) return tk("tooManyAttempts");
     return tk("wrongPassword");
   };
@@ -54,7 +55,7 @@ export function useApiKeyActions() {
       setRevealed(data.apiKey);
       resetPrompt();
     } catch (caught) {
-      setPwErr(caught instanceof ApiKeyError ? inlineMessage(caught) : tk("wrongPassword"));
+      setPwErr(caught instanceof ApiClientError ? inlineMessage(caught) : tk("wrongPassword"));
     }
   };
 

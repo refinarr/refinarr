@@ -2,7 +2,8 @@
 import * as React from "react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useChangePassword, PasswordChangeError } from "@/client/hooks/data/useChangePassword";
+import { useChangePassword } from "@/client/hooks/data/useChangePassword";
+import { ApiClientError } from "@/client/lib/api";
 import { withToast } from "@/client/lib/with-toast";
 
 // At most one of these is set at a time. `form` is the bucket for errors
@@ -35,7 +36,7 @@ export function usePasswordChangeForm() {
       await changeWithToast({ currentPassword: current, newPassword: next });
       setCurrent(""); setNext(""); setConfirm("");
     } catch (caught) {
-      if (caught instanceof PasswordChangeError) {
+      if (caught instanceof ApiClientError) {
         if (caught.status === 401) return setErrors({ current: t("wrongCurrent") });
         if (caught.status === 429) return setErrors({ form: t("tooManyAttempts") });
         if (caught.code === "SAME_AS_CURRENT") return setErrors({ form: t("sameAsCurrent") });

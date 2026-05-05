@@ -5,7 +5,15 @@ import type { HttpHandler } from "msw";
 // Single MSW server shared across the test run. Starts in setup.ts, stops in
 // global-setup teardown. Tests append per-request handlers via `mswServer.use(...)`
 // and the array is reset between tests.
-export const mswServer = setupServer();
+//
+// Default: swallow POSTs to /api/logs/client so the client-error logger's
+// fire-and-forget reports during component tests don't trip the
+// `onUnhandledRequest: "error"` guard. The reporter itself is also a no-op
+// under Vitest, but this is defense-in-depth for tests that mock fetch
+// differently.
+export const mswServer = setupServer(
+  http.post("*/api/logs/client", () => HttpResponse.json({ ok: true })),
+);
 
 export { http, HttpResponse };
 export type { HttpHandler };

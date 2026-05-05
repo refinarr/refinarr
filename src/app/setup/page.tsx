@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui
 import { Input } from "@/client/components/ui/input";
 import { Button } from "@/client/components/ui/button";
 import { FormField } from "@/client/components/ui/form-field";
+import { api } from "@/client/lib/api";
 import { Loader2 } from "lucide-react";
 
 export default function SetupPage() {
@@ -25,19 +26,11 @@ export default function SetupPage() {
     setErr(null);
     setSubmitting(true);
     try {
-      const res = await fetch("/api/auth/setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-      if (!res.ok) {
-        setErr(t("failed"));
-        setSubmitting(false);
-        return;
-      }
+      await api.post("/auth/setup", { username, password });
       router.push("/dashboard");
     } catch {
       setErr(t("failed"));
+    } finally {
       setSubmitting(false);
     }
   };

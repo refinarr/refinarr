@@ -8,9 +8,27 @@ export interface PaginatedResponse<T> {
   hasMore: boolean;
 }
 
-export interface ApiError {
+// Canonical JSON error shape returned by createApiHandler. `traceId` is
+// always present (UUID per request) so a 500 reported by a user can be
+// correlated to the appLogger row that captured the stack.
+export interface ApiErrorResponse {
   error: string;
   code?: string;
+  traceId: string;
+}
+
+// Client-side error report payload for /api/logs/client. Shape mirrors
+// what reportClientError in src/client/lib/client-error-logger.ts beacons
+// when fetch fails or a 5xx comes back.
+export interface ClientErrorReportDto {
+  message: string;
+  path: string;
+  method?: string;
+  status?: number;
+  code?: string;
+  traceId?: string;
+  stack?: string;
+  component?: string;
 }
 
 export interface CreateInstanceDto {

@@ -5,27 +5,21 @@ import { credentialsSchema } from "@/shared/types/schemas";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
+import { HttpError, conflict, parseJson, tooManyRequests } from "@/server/lib/api-errors";
+import { createApiHandler } from "@/server/lib/handler";
 
-export async function POST(req: NextRequest) {
+export const POST = createApiHandler(async (req: NextRequest) => {
   const { allowed, retryAfterMs } = checkRateLimit(`setup:${clientIp(req)}`, { max: 10, windowMs: 15 * 60 * 1000 });
   if (!allowed) {
-    return NextResponse.json({ error: "Too many attempts" }, { status: 429, headers: { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) } });
+    throw tooManyRequests("Too many attempts", retryAfterMs);
   }
 
   // First-run only: refuse if any user exists.
   if ((await getUserCount()) > 0) {
-    return NextResponse.json({ error: "Setup already completed" }, { status: 409 });
+    throw conflict("Setup already completed");
   }
 
-  let body: unknown;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
-
-  const parsed = credentialsSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid credentials format" }, { status: 400 });
-  }
-
-  const { username, password } = parsed.data;
+  const { username, password } = await parseJson(req, credentialsSchema, "Invalid credentials format");
 
   try {
     const user = await prisma.user.create({
@@ -43,6 +37,12 @@ export async function POST(req: NextRequest) {
     });
     return res;
   } catch {
-    return NextResponse.json({ error: "Couldn't create user" }, { status: 500 });
+    throw new HttpError({
+      status: 500,
+      message: "Couldn't create user",
+      expose: true,
+      logLevel: "error",
+      context: { username },
+    });
   }
-}
+});
