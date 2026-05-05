@@ -16,6 +16,7 @@ import {
   isBelowProfileScore,
   scoreProfileCoverage,
 } from "@/shared/scoring";
+import type { RetryActionOptions } from "./media-services";
 
 
 export class SeriesService extends MediaService {
@@ -232,15 +233,26 @@ export class SeriesService extends MediaService {
   }
 
   // Re-runs a stored ActionLog payload. Series-specific fields:
-  //   - search: { instanceId, mediaId, title }
+  //   - search (series): { instanceId, mediaId, title }
+  //   - search (season): { …, seasonNumber }
+  //   - search (episode-file): { …, fileId }
   //   - delete: { instanceId, mediaId, fileIds, title, triggerSearch? }
-  async retryFromPayload(payload: Record<string, unknown>): Promise<ActionLog> {
+  async retryFromPayload(payload: Record<string, unknown>, opts: RetryActionOptions = {}): Promise<ActionLog> {
     const action = payload.action as string;
     const instanceId = payload.instanceId as number;
     const mediaId = payload.mediaId as number;
     const title = payload.title as string;
     if (action === "search") {
-      return this.triggerSearch(instanceId, mediaId, title);
+      // Three Sonarr search scopes share action="search"; dispatch on the
+      // discriminating payload field so a season or episode-file retry
+      // doesn't broaden into a full-series search.
+      if (typeof payload.seasonNumber === "number") {
+        return this.triggerSeasonSearch(instanceId, mediaId, payload.seasonNumber, title, opts);
+      }
+      if (typeof payload.fileId === "number") {
+        return this.triggerEpisodeFileSearch(instanceId, mediaId, payload.fileId, title, opts);
+      }
+      return this.triggerSearch(instanceId, mediaId, title, opts);
     }
     if (action === "delete" || action === "delete_blacklist") {
       return this.deleteFiles(
@@ -249,6 +261,7 @@ export class SeriesService extends MediaService {
         payload.fileIds as number[],
         title,
         !!payload.triggerSearch,
+        opts,
       );
     }
     throw new Error(`Cannot retry action type: ${action}`);
@@ -259,7 +272,8 @@ export class SeriesService extends MediaService {
     mediaId: number,
     fileIds: number[],
     title: string,
-    triggerSearch = false
+    triggerSearch = false,
+    opts: RetryActionOptions = {}
   ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -271,6 +285,7 @@ export class SeriesService extends MediaService {
       action: "delete",
       mediaId,
       title,
+      actionLogId: opts.actionLogId,
       payload: { instanceId, action: "delete", mediaId, fileIds, title, triggerSearch },
       run: async () => {
         for (const fileId of fileIds) {
@@ -281,7 +296,12 @@ export class SeriesService extends MediaService {
     });
   }
 
-  async triggerSearch(instanceId: number, mediaId: number, title: string): Promise<ActionLog> {
+  async triggerSearch(
+    instanceId: number,
+    mediaId: number,
+    title: string,
+    opts: RetryActionOptions = {}
+  ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
     const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
@@ -292,6 +312,7 @@ export class SeriesService extends MediaService {
       action: "search",
       mediaId,
       title,
+      actionLogId: opts.actionLogId,
       payload: { instanceId, action: "search", mediaId, title },
       run: () => client.triggerSearch(mediaId),
     });
@@ -301,7 +322,8 @@ export class SeriesService extends MediaService {
     instanceId: number,
     mediaId: number,
     seasonNumber: number,
-    title: string
+    title: string,
+    opts: RetryActionOptions = {}
   ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -313,6 +335,7 @@ export class SeriesService extends MediaService {
       action: "search",
       mediaId,
       title,
+      actionLogId: opts.actionLogId,
       payload: { instanceId, action: "search", mediaId, seasonNumber, title },
       run: () => client.triggerSeasonSearch(mediaId, seasonNumber),
     });
@@ -322,7 +345,8 @@ export class SeriesService extends MediaService {
     instanceId: number,
     mediaId: number,
     fileId: number,
-    title: string
+    title: string,
+    opts: RetryActionOptions = {}
   ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -334,6 +358,7 @@ export class SeriesService extends MediaService {
       action: "search",
       mediaId,
       title,
+      actionLogId: opts.actionLogId,
       payload: { instanceId, action: "search", mediaId, fileId, title },
       run: async () => {
         const episodes = await client.getEpisodes(mediaId);

@@ -16,6 +16,7 @@ import {
   isBelowProfileScore,
   scoreProfileCoverage,
 } from "@/shared/scoring";
+import type { RetryActionOptions } from "./media-services";
 
 
 export class MovieService extends MediaService {
@@ -181,13 +182,13 @@ export class MovieService extends MediaService {
   // Re-runs a stored ActionLog payload. Movies-specific fields:
   //   - search: { instanceId, mediaId, title }
   //   - delete: { instanceId, mediaId, fileId, title, triggerSearch? }
-  async retryFromPayload(payload: Record<string, unknown>): Promise<ActionLog> {
+  async retryFromPayload(payload: Record<string, unknown>, opts: RetryActionOptions = {}): Promise<ActionLog> {
     const action = payload.action as string;
     const instanceId = payload.instanceId as number;
     const mediaId = payload.mediaId as number;
     const title = payload.title as string;
     if (action === "search") {
-      return this.triggerSearch(instanceId, mediaId, title);
+      return this.triggerSearch(instanceId, mediaId, title, opts);
     }
     if (action === "delete" || action === "delete_blacklist") {
       return this.deleteFile(
@@ -196,12 +197,18 @@ export class MovieService extends MediaService {
         payload.fileId as number,
         title,
         payload.triggerSearch !== false,
+        opts,
       );
     }
     throw new Error(`Cannot retry action type: ${action}`);
   }
 
-  async triggerSearch(instanceId: number, mediaId: number, title: string): Promise<ActionLog> {
+  async triggerSearch(
+    instanceId: number,
+    mediaId: number,
+    title: string,
+    opts: RetryActionOptions = {}
+  ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
     const client = ArrClientFactory.createArrClient(instance) as RadarrClient;
@@ -212,6 +219,7 @@ export class MovieService extends MediaService {
       action: "search",
       mediaId,
       title,
+      actionLogId: opts.actionLogId,
       payload: { instanceId, action: "search", mediaId, title },
       run: () => client.triggerSearch(mediaId),
     });
@@ -222,7 +230,8 @@ export class MovieService extends MediaService {
     mediaId: number,
     fileId: number,
     title: string,
-    triggerSearch = true
+    triggerSearch = true,
+    opts: RetryActionOptions = {}
   ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -234,6 +243,7 @@ export class MovieService extends MediaService {
       action: "delete",
       mediaId,
       title,
+      actionLogId: opts.actionLogId,
       payload: { instanceId, action: "delete_blacklist", mediaId, fileId, title, triggerSearch },
       run: async () => {
         await client.deleteFile(fileId);

@@ -13,6 +13,7 @@ interface ExecuteActionOptions {
   action: ActionType;
   mediaId: number;
   title: string;
+  actionLogId?: number;
   payload?: Record<string, unknown>;
   run: () => Promise<void>;
 }
@@ -31,6 +32,7 @@ function logContext(opts: ExecuteActionOptions, isDryRun: boolean) {
     instanceId: opts.instanceId,
     instanceName: opts.instanceName,
     isDryRun,
+    ...(opts.actionLogId ? { actionLogId: opts.actionLogId } : {}),
   };
 }
 
@@ -123,7 +125,7 @@ export abstract class MediaService {
   protected async executeAction(opts: ExecuteActionOptions): Promise<ActionLog> {
     const isDryRun = await dryRunService.isDryRun();
 
-    const logEntry = await logRepository.create({
+    const logData = {
       instanceId: opts.instanceId,
       action: opts.action,
       mediaId: opts.mediaId,
@@ -132,7 +134,14 @@ export abstract class MediaService {
       status: isDryRun ? "dry_run" : "pending",
       error: null,
       payload: opts.payload ? JSON.stringify(opts.payload) : null,
-    });
+    } satisfies Omit<ActionLog, "id" | "createdAt">;
+
+    const logEntry = opts.actionLogId
+      ? await logRepository.update(opts.actionLogId, {
+          ...logData,
+          createdAt: new Date(),
+        })
+      : await logRepository.create(logData);
 
     if (isDryRun) {
       appLogger.info(`[DryRun] ${describe(opts)}`, {
