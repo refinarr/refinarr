@@ -1,7 +1,12 @@
 export type Severity = "critical" | "low" | "warning" | "ok" | "missing";
 export type ArrType = "radarr" | "sonarr";
 export type ScoringMode = "manual" | "profile";
-export type ActionType = "search" | "delete" | "ignore";
+export type ActionType =
+  | "search"
+  | "search_season"
+  | "search_episode"
+  | "delete"
+  | "ignore";
 export type ActionStatus = "success" | "failed" | "dry_run" | "pending";
 export type MediaType = "movie" | "series";
 

@@ -1,4 +1,5 @@
 import type { FlaggedMovie, ActionLog, MediaQuery, ScoringMode } from "@/shared/types/models";
+import { movieRetryPayloadSchema } from "@/shared/types/schemas";
 import { isProfileMode } from "@/shared/scoring-mode";
 import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
@@ -182,25 +183,30 @@ export class MovieService extends MediaService {
   // Re-runs a stored ActionLog payload. Movies-specific fields:
   //   - search: { instanceId, mediaId, title }
   //   - delete: { instanceId, mediaId, fileId, title, triggerSearch? }
+  //     (legacy rows stamped action="delete_blacklist" inside the payload;
+  //     the schema still accepts them, the migration backfills them to
+  //     "delete" so the action-parity guard passes)
   async retryFromPayload(payload: Record<string, unknown>, opts: RetryActionOptions = {}): Promise<ActionLog> {
-    const action = payload.action as string;
-    const instanceId = payload.instanceId as number;
-    const mediaId = payload.mediaId as number;
-    const title = payload.title as string;
-    if (action === "search") {
-      return this.triggerSearch(instanceId, mediaId, title, opts);
+    const result = movieRetryPayloadSchema.safeParse(payload);
+    if (!result.success) {
+      const action = typeof payload.action === "string" ? payload.action : "unknown";
+      throw new Error(`Cannot retry action type: ${action}`);
     }
-    if (action === "delete" || action === "delete_blacklist") {
-      return this.deleteFile(
-        instanceId,
-        mediaId,
-        payload.fileId as number,
-        title,
-        payload.triggerSearch !== false,
-        opts,
-      );
+    const data = result.data;
+    switch (data.action) {
+      case "search":
+        return this.triggerSearch(data.instanceId, data.mediaId, data.title, opts);
+      case "delete":
+      case "delete_blacklist":
+        return this.deleteFile(
+          data.instanceId, data.mediaId, data.fileId, data.title,
+          data.triggerSearch ?? true, opts,
+        );
+      default: {
+        const _exhaustive: never = data;
+        throw new Error(`Unhandled action: ${String(_exhaustive)}`);
+      }
     }
-    throw new Error(`Cannot retry action type: ${action}`);
   }
 
   async triggerSearch(
@@ -244,7 +250,7 @@ export class MovieService extends MediaService {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
-      payload: { instanceId, action: "delete_blacklist", mediaId, fileId, title, triggerSearch },
+      payload: { instanceId, action: "delete", mediaId, fileId, title, triggerSearch },
       run: async () => {
         await client.deleteFile(fileId);
         if (triggerSearch) await client.triggerSearch(mediaId);

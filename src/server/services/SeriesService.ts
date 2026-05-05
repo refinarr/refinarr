@@ -1,4 +1,5 @@
 import type { FlaggedSeries, EpisodeFileEntry, ActionLog, MediaQuery, ScoringMode } from "@/shared/types/models";
+import { seriesRetryPayloadSchema } from "@/shared/types/schemas";
 import { isProfileMode } from "@/shared/scoring-mode";
 import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
@@ -232,39 +233,34 @@ export class SeriesService extends MediaService {
     return this.getFlaggedSeries(instanceId, { page: 1, limit: 1, sortBy: "score", order: "asc" });
   }
 
-  // Re-runs a stored ActionLog payload. Series-specific fields:
-  //   - search (series): { instanceId, mediaId, title }
-  //   - search (season): { …, seasonNumber }
-  //   - search (episode-file): { …, fileId }
-  //   - delete: { instanceId, mediaId, fileIds, title, triggerSearch? }
+  // Re-runs a stored ActionLog payload. The discriminated-union parse
+  // narrows the payload to one of the four retryable shapes; the switch
+  // then dispatches without any `as` casts. TypeScript's exhaustiveness
+  // check on the never-typed default makes a missing case a compile error.
   async retryFromPayload(payload: Record<string, unknown>, opts: RetryActionOptions = {}): Promise<ActionLog> {
-    const action = payload.action as string;
-    const instanceId = payload.instanceId as number;
-    const mediaId = payload.mediaId as number;
-    const title = payload.title as string;
-    if (action === "search") {
-      // Three Sonarr search scopes share action="search"; dispatch on the
-      // discriminating payload field so a season or episode-file retry
-      // doesn't broaden into a full-series search.
-      if (typeof payload.seasonNumber === "number") {
-        return this.triggerSeasonSearch(instanceId, mediaId, payload.seasonNumber, title, opts);
-      }
-      if (typeof payload.fileId === "number") {
-        return this.triggerEpisodeFileSearch(instanceId, mediaId, payload.fileId, title, opts);
-      }
-      return this.triggerSearch(instanceId, mediaId, title, opts);
+    const result = seriesRetryPayloadSchema.safeParse(payload);
+    if (!result.success) {
+      const action = typeof payload.action === "string" ? payload.action : "unknown";
+      throw new Error(`Cannot retry action type: ${action}`);
     }
-    if (action === "delete" || action === "delete_blacklist") {
-      return this.deleteFiles(
-        instanceId,
-        mediaId,
-        payload.fileIds as number[],
-        title,
-        !!payload.triggerSearch,
-        opts,
-      );
+    const data = result.data;
+    switch (data.action) {
+      case "search":
+        return this.triggerSearch(data.instanceId, data.mediaId, data.title, opts);
+      case "search_season":
+        return this.triggerSeasonSearch(data.instanceId, data.mediaId, data.seasonNumber, data.title, opts);
+      case "search_episode":
+        return this.triggerEpisodeFileSearch(data.instanceId, data.mediaId, data.fileId, data.title, opts);
+      case "delete":
+        return this.deleteFiles(
+          data.instanceId, data.mediaId, data.fileIds, data.title,
+          data.triggerSearch ?? false, opts,
+        );
+      default: {
+        const _exhaustive: never = data;
+        throw new Error(`Unhandled action: ${String(_exhaustive)}`);
+      }
     }
-    throw new Error(`Cannot retry action type: ${action}`);
   }
 
   async deleteFiles(
@@ -332,11 +328,11 @@ export class SeriesService extends MediaService {
     return this.executeAction({
       instanceName: instance.name,
       instanceId,
-      action: "search",
+      action: "search_season",
       mediaId,
       title,
       actionLogId: opts.actionLogId,
-      payload: { instanceId, action: "search", mediaId, seasonNumber, title },
+      payload: { instanceId, action: "search_season", mediaId, seasonNumber, title },
       run: () => client.triggerSeasonSearch(mediaId, seasonNumber),
     });
   }
@@ -355,11 +351,11 @@ export class SeriesService extends MediaService {
     return this.executeAction({
       instanceName: instance.name,
       instanceId,
-      action: "search",
+      action: "search_episode",
       mediaId,
       title,
       actionLogId: opts.actionLogId,
-      payload: { instanceId, action: "search", mediaId, fileId, title },
+      payload: { instanceId, action: "search_episode", mediaId, fileId, title },
       run: async () => {
         const episodes = await client.getEpisodes(mediaId);
         const episodeIds = episodes.filter((e) => e.episodeFileId === fileId).map((e) => e.id);

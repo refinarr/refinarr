@@ -95,15 +95,64 @@ export const sonarrDeleteSchema = z.object({
 export const configUpdateSchema = z.record(z.string().max(128), z.string().max(2048));
 
 // Common shape required from any ActionLog.payload before retry. The retry
-// route validates this much; per-service retryFromPayload reads action-
-// specific fields (fileId vs fileIds, etc.). passthrough() keeps those
-// extras intact for the service to consume.
-export const retryPayloadSchema = z.object({
+// route validates this much; per-service retryFromPayload then runs its own
+// discriminated schema (movieRetryPayloadSchema / seriesRetryPayloadSchema)
+// to validate the action-specific fields. passthrough() keeps those extras
+// intact for the per-service parse to read.
+export const retryPayloadSchema = z.looseObject({
   instanceId: z.number().int().positive(),
   action: z.string().min(1).max(64),
   mediaId: z.number().int().positive(),
   title: z.string().min(1).max(512),
-}).passthrough();
+});
+
+const baseRetryFields = {
+  instanceId: z.number().int().positive(),
+  mediaId: z.number().int().positive(),
+  title: z.string().min(1).max(512),
+};
+
+// Movies: action="search" stores no extra fields; action="delete" carries
+// fileId + optional triggerSearch. The legacy "delete_blacklist" payload
+// label is preserved for old rows whose payload was stamped before the
+// action column became the canonical record.
+export const movieRetryPayloadSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("search"), ...baseRetryFields }),
+  z.object({
+    action: z.literal("delete"),
+    ...baseRetryFields,
+    fileId: z.number().int().positive(),
+    triggerSearch: z.boolean().optional(),
+  }),
+  z.object({
+    action: z.literal("delete_blacklist"),
+    ...baseRetryFields,
+    fileId: z.number().int().positive(),
+    triggerSearch: z.boolean().optional(),
+  }),
+]);
+
+// Series: action="search" is series-level; "search_season" carries
+// seasonNumber; "search_episode" carries fileId; "delete" carries fileIds.
+export const seriesRetryPayloadSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("search"), ...baseRetryFields }),
+  z.object({
+    action: z.literal("search_season"),
+    ...baseRetryFields,
+    seasonNumber: z.number().int().nonnegative(),
+  }),
+  z.object({
+    action: z.literal("search_episode"),
+    ...baseRetryFields,
+    fileId: z.number().int().positive(),
+  }),
+  z.object({
+    action: z.literal("delete"),
+    ...baseRetryFields,
+    fileIds: z.array(z.number().int().positive()).min(1).max(2000),
+    triggerSearch: z.boolean().optional(),
+  }),
+]);
 
 // Re-auth body for /api/config/api-key (read or rotate). Lives next to
 // the route's other schemas so the route doesn't define inline zod.

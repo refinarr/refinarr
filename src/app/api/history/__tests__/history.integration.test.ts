@@ -131,11 +131,12 @@ describe("POST /api/history/[id]/retry", () => {
       apiKey: "abcd1234abcd1234abcd1234abcd1234",
     });
     const payload = {
-      instanceId: instance.id, action: "search", mediaId: 7, seasonNumber: 3, title: "Show",
+      instanceId: instance.id, action: "search_season", mediaId: 7, seasonNumber: 3, title: "Show",
     };
     const original = await logRepository.create({
       ...baseLog,
       instanceId: instance.id,
+      action: "search_season",
       mediaId: 7,
       title: "Show",
       status: "failed",
@@ -149,9 +150,54 @@ describe("POST /api/history/[id]/retry", () => {
     const logs = await logRepository.findAll();
     expect(logs).toHaveLength(1);
     expect(logs[0].id).toBe(original.id);
-    // The row's payload must keep seasonNumber so future retries stay scoped.
+    // The action column and payload both stay scoped to the season variant
+    // so future retries dispatch via the same registry handler.
+    expect(logs[0].action).toBe("search_season");
     const rewritten = JSON.parse(logs[0].payload!);
+    expect(rewritten.action).toBe("search_season");
     expect(rewritten.seasonNumber).toBe(3);
+  });
+
+  test("episode-scoped retry preserves fileId instead of broadening to a series search", async () => {
+    const sonarrBase = "http://192.168.1.10:8989";
+    mswServer.use(
+      http.get(`${sonarrBase}/api/v3/episode`, () =>
+        HttpResponse.json([{ id: 1, episodeFileId: 42, seasonNumber: 1, episodeNumber: 2 }]),
+      ),
+      http.post(`${sonarrBase}/api/v3/command`, () =>
+        new HttpResponse(null, { status: 500 }),
+      ),
+    );
+    const instance = await instanceService.create({
+      type: "sonarr",
+      name: "Test Sonarr",
+      url: sonarrBase,
+      apiKey: "abcd1234abcd1234abcd1234abcd1234",
+    });
+    const payload = {
+      instanceId: instance.id, action: "search_episode", mediaId: 7, fileId: 42, title: "Show",
+    };
+    const original = await logRepository.create({
+      ...baseLog,
+      instanceId: instance.id,
+      action: "search_episode",
+      mediaId: 7,
+      title: "Show",
+      status: "failed",
+      error: "old failure",
+      payload: JSON.stringify(payload),
+    });
+
+    const res = await retry(retryReq(original.id), { params: Promise.resolve({ id: String(original.id) }) });
+    expect(res.status).toBe(200);
+
+    const logs = await logRepository.findAll();
+    expect(logs).toHaveLength(1);
+    expect(logs[0].id).toBe(original.id);
+    expect(logs[0].action).toBe("search_episode");
+    const rewritten = JSON.parse(logs[0].payload!);
+    expect(rewritten.action).toBe("search_episode");
+    expect(rewritten.fileId).toBe(42);
   });
 
   test("rejects retry when stored payload does not match the log row's instance/media", async () => {

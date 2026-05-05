@@ -67,10 +67,12 @@ function HistoryContent() {
 
   const actionLabel = (key: string) => {
     switch (key) {
-      case "search": return tAction("search");
-      case "delete": return tAction("delete");
-      case "ignore": return tAction("ignore");
-      default:       return tCommon("all");
+      case "search":         return tAction("search");
+      case "search_season":  return tAction("search_season");
+      case "search_episode": return tAction("search_episode");
+      case "delete":         return tAction("delete");
+      case "ignore":         return tAction("ignore");
+      default:               return tCommon("all");
     }
   };
 
@@ -118,6 +120,8 @@ function HistoryContent() {
             <SelectContent>
               <SelectItem value="">{tCommon("all")}</SelectItem>
               <SelectItem value="search">{tAction("search")}</SelectItem>
+              <SelectItem value="search_season">{tAction("search_season")}</SelectItem>
+              <SelectItem value="search_episode">{tAction("search_episode")}</SelectItem>
               <SelectItem value="delete">{tAction("delete")}</SelectItem>
               <SelectItem value="ignore">{tAction("ignore")}</SelectItem>
             </SelectContent>
