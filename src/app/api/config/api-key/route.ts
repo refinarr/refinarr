@@ -29,7 +29,7 @@ async function authenticatedUserPassword(req: NextRequest, pw: string): Promise<
 export const POST = createApiHandler(async (req: NextRequest) => {
   // Rate-limit re-auth attempts.
   const { allowed } = checkRateLimit(`apikey:${clientIp(req)}`, { max: 10, windowMs: 15 * 60 * 1000 });
-  if (!allowed) return NextResponse.json({ error: "Too many attempts" }, { status: 429 });
+  if (!allowed) return NextResponse.json({ error: "Too many attempts", code: "RATE_LIMITED" }, { status: 429 });
 
   let body: unknown;
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
@@ -42,7 +42,7 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     && req.headers.get(process.env.PROXY_USER_HEADER ?? "X-Remote-User");
   if (!proxyMode) {
     const ok = await authenticatedUserPassword(req, parsed.data.password);
-    if (!ok) return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+    if (!ok) return NextResponse.json({ error: "Invalid password", code: "WRONG_PASSWORD" }, { status: 401 });
   }
 
   const action = req.nextUrl.searchParams.get("action");

@@ -1,13 +1,15 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
+import { useMutation } from "@tanstack/react-query";
+import { ApiKeyError, useRevealApiKey, useRotateApiKey } from "@/client/hooks/data/useApiKey";
+import { withToast } from "@/client/lib/with-toast";
 
 type Action = "reveal" | "rotate";
 
 // Owns the reveal/rotate state machine for the API key card. Pulls the
-// password-prompt dialog state, the protected fetch, and the per-action
-// success-toast wiring out of the JSX file.
+// password-prompt dialog state, drives the protected API-key mutations, and
+// translates status-specific errors into inline messages.
 export function useApiKeyActions() {
   const tk = useTranslations("settings.apiKey");
 
@@ -16,7 +18,23 @@ export function useApiKeyActions() {
   const [pwOpen, setPwOpen] = useState(false);
   const [pw, setPw] = useState("");
   const [pwErr, setPwErr] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const reveal = useRevealApiKey();
+  const rotate = useRotateApiKey();
+  const copyClipboard = useMutation({
+    mutationFn: (text: string) => navigator.clipboard.writeText(text),
+  });
+  const rotateWithToast = withToast(rotate, { success: tk("rotated"), error: tk("rotateFailed") });
+  const copyWithToast = withToast(copyClipboard, { success: tk("copied"), error: tk("copyFailed") });
+
+  const resetPrompt = () => {
+    setPw("");
+    setPwOpen(false);
+  };
+
+  const inlineMessage = (e: ApiKeyError): string => {
+    if (e.status === 429) return tk("tooManyAttempts");
+    return tk("wrongPassword");
+  };
 
   const ask = (action: Action) => {
     setPending(action);
@@ -29,33 +47,21 @@ export function useApiKeyActions() {
     e.preventDefault();
     if (!pending) return;
     setPwErr(null);
-    setSubmitting(true);
+    const action = pending;
     try {
-      const url = pending === "rotate" ? "/api/config/api-key?action=rotate" : "/api/config/api-key";
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pw }),
-      });
-      if (res.status === 401) { setPwErr(tk("wrongPassword")); setSubmitting(false); return; }
-      if (res.status === 429) { setPwErr(tk("tooManyAttempts")); setSubmitting(false); return; }
-      if (!res.ok) { setPwErr(tk("wrongPassword")); setSubmitting(false); return; }
-      const data = (await res.json()) as { apiKey: string };
+      const data = action === "rotate"
+        ? await rotateWithToast({ password: pw })
+        : await reveal.mutateAsync({ password: pw });
       setRevealed(data.apiKey);
-      setPwOpen(false);
-      setPw("");
-      setSubmitting(false);
-      if (pending === "rotate") toast.success(tk("rotated"));
-    } catch {
-      setPwErr(tk("wrongPassword"));
-      setSubmitting(false);
+      resetPrompt();
+    } catch (caught) {
+      setPwErr(caught instanceof ApiKeyError ? inlineMessage(caught) : tk("wrongPassword"));
     }
   };
 
   const copy = () => {
     if (!revealed) return;
-    navigator.clipboard.writeText(revealed);
-    toast.success(tk("copied"));
+    copyWithToast(revealed);
   };
 
   const hide = () => setRevealed(null);
@@ -68,7 +74,7 @@ export function useApiKeyActions() {
     pw,
     setPw,
     pwErr,
-    submitting,
+    submitting: reveal.isPending || rotate.isPending,
     ask,
     submit,
     copy,

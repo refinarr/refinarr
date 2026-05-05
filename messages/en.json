@@ -333,7 +333,9 @@
       "wrongPassword": "Wrong password.",
       "tooManyAttempts": "Too many attempts. Try again later.",
       "copied": "API key copied",
-      "rotated": "API key rotated"
+      "copyFailed": "Couldn't copy to clipboard",
+      "rotated": "API key rotated",
+      "rotateFailed": "Couldn't rotate API key"
     },
     "instanceForm": {
       "addTitle": "Add Instance",
