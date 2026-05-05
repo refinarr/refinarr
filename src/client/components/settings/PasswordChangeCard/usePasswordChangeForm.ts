@@ -3,22 +3,30 @@ import * as React from "react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { useChangePassword, PasswordChangeError } from "@/client/hooks/data/useChangePassword";
 
 // Owns the password-change form state. Validates length / match /
-// difference-from-current locally, then POSTs to /api/auth/password and
-// translates server status codes into i18n'd error messages.
+// difference-from-current locally, then drives the useChangePassword
+// mutation and translates structured errors into i18n'd inline messages.
 export function usePasswordChangeForm() {
   const t = useTranslations("auth.password");
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const change = useChangePassword();
 
   const reset = () => {
     setCurrent("");
     setNext("");
     setConfirm("");
+  };
+
+  const inlineMessage = (e: PasswordChangeError): string => {
+    if (e.status === 401) return t("wrongCurrent");
+    if (e.status === 429) return t("tooManyAttempts");
+    if (e.code === "SAME_AS_CURRENT") return t("sameAsCurrent");
+    return t("failed");
   };
 
   const submit = async (e: React.SubmitEvent<HTMLFormElement>) => {
@@ -27,27 +35,12 @@ export function usePasswordChangeForm() {
     if (next !== confirm) { setErr(t("mismatch")); return; }
     if (next === current) { setErr(t("sameAsCurrent")); return; }
     setErr(null);
-    setSubmitting(true);
     try {
-      const res = await fetch("/api/auth/password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword: current, newPassword: next }),
-      });
-      if (res.status === 401) { setErr(t("wrongCurrent")); setSubmitting(false); return; }
-      if (res.status === 429) { setErr(t("tooManyAttempts")); setSubmitting(false); return; }
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        setErr(body?.code === "SAME_AS_CURRENT" ? t("sameAsCurrent") : t("failed"));
-        setSubmitting(false);
-        return;
-      }
+      await change.mutateAsync({ currentPassword: current, newPassword: next });
       reset();
-      setSubmitting(false);
       toast.success(t("changed"));
-    } catch {
-      setErr(t("failed"));
-      setSubmitting(false);
+    } catch (caught) {
+      setErr(caught instanceof PasswordChangeError ? inlineMessage(caught) : t("failed"));
     }
   };
 
@@ -55,7 +48,7 @@ export function usePasswordChangeForm() {
     current, setCurrent,
     next, setNext,
     confirm, setConfirm,
-    submitting,
+    submitting: change.isPending,
     err,
     submit,
   };
