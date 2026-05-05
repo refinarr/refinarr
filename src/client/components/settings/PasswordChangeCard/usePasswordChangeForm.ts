@@ -2,8 +2,8 @@
 import * as React from "react";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
 import { useChangePassword, PasswordChangeError } from "@/client/hooks/data/useChangePassword";
+import { withToast } from "@/client/lib/with-toast";
 
 // Owns the password-change form state. Validates length / match /
 // difference-from-current locally, then drives the useChangePassword
@@ -15,6 +15,7 @@ export function usePasswordChangeForm() {
   const [confirm, setConfirm] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const change = useChangePassword();
+  const changeWithToast = withToast(change, { success: t("changed"), error: t("failed") });
 
   const reset = () => {
     setCurrent("");
@@ -36,9 +37,8 @@ export function usePasswordChangeForm() {
     if (next === current) { setErr(t("sameAsCurrent")); return; }
     setErr(null);
     try {
-      await change.mutateAsync({ currentPassword: current, newPassword: next });
+      await changeWithToast({ currentPassword: current, newPassword: next });
       reset();
-      toast.success(t("changed"));
     } catch (caught) {
       setErr(caught instanceof PasswordChangeError ? inlineMessage(caught) : t("failed"));
     }
