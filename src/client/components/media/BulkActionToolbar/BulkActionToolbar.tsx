@@ -2,14 +2,7 @@
 import { useTranslations } from "next-intl";
 import { Button } from "@/client/components/ui/button";
 import { Search, Trash2, EyeOff, X } from "lucide-react";
-
-export type BulkAction = "search" | "ignore" | "delete";
-
-export interface BulkProgress {
-  current: number;
-  total: number;
-  action: BulkAction;
-}
+import type { BulkProgress } from "./types";
 
 interface Props {
   selectedCount: number;

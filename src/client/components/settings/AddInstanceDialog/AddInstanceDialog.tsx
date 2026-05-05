@@ -1,19 +1,14 @@
 "use client";
-import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/client/components/ui/dialog";
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
 import { Label } from "@/client/components/ui/label";
 import { FormField } from "@/client/components/ui/form-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
-import { useCreateInstance, useUpdateInstance, useTestCredentials } from "@/client/hooks/data/useInstances";
-import { withToast } from "@/client/lib/with-toast";
-import type { Instance } from "@/shared/types/models";
 import { Loader2, Plug } from "lucide-react";
+import type { Instance } from "@/shared/types/models";
+import { useAddInstanceForm } from "./useAddInstanceForm";
 
 interface Props {
   open: boolean;
@@ -23,66 +18,20 @@ interface Props {
 
 export function AddInstanceDialog({ open, onClose, editing }: Props) {
   const t = useTranslations("settings.instanceForm");
-  const tToast = useTranslations("toast.instance");
   const tCommon = useTranslations("common");
-  const isEdit = !!editing;
-  const create = useCreateInstance();
-  const update = useUpdateInstance();
-  const test = useTestCredentials();
-  const [selectedType, setSelectedType] = useState<"radarr" | "sonarr">(editing?.type ?? "radarr");
 
-  const schema = useMemo(
-    () =>
-      z.object({
-        type: z.enum(["radarr", "sonarr"]),
-        name: z.string().min(1),
-        url: z.string().min(1).transform((v) => /^https?:\/\//i.test(v) ? v : `http://${v}`).pipe(z.url()),
-        apiKey: isEdit ? z.string() : z.string().min(1),
-        searchesPerHour: z.number().int().min(1).max(1000),
-      }),
-    [isEdit]
-  );
-  type FormValues = z.infer<typeof schema>;
-
-  const { register, handleSubmit, setValue, reset, getValues, control, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: editing
-      ? { type: editing.type, name: editing.name, url: editing.url, apiKey: "", searchesPerHour: editing.searchesPerHour }
-      : { type: "radarr", name: "", url: "", apiKey: "", searchesPerHour: 20 },
-  });
-
-  const runUpdate = withToast(update, { success: tToast("updated"), error: tToast("updateFailed") });
-  const runCreate = withToast(create, { success: tToast("added"), error: tToast("addFailed") });
-  const runTest = withToast(test, {
-    success: tToast("testOk", { name: editing?.name ?? t("testFallbackName") }),
-    error: tToast("testFailed", { name: editing?.name ?? t("testFallbackName") }),
-  });
-
-  const watchedUrl = useWatch({ control, name: "url" });
-  const watchedApiKey = useWatch({ control, name: "apiKey" });
-  const canTest = !!watchedUrl?.trim() && !!watchedApiKey?.trim();
-
-  const normalizeUrl = (url: string) => /^https?:\/\//i.test(url) ? url : `http://${url}`;
-
-  const handleTest = () => {
-    const v = getValues();
-    return runTest({ type: v.type, url: normalizeUrl(v.url), apiKey: v.apiKey });
-  };
-
-  const onSubmit = async (data: FormValues) => {
-    if (editing) {
-      const payload = data.apiKey.trim()
-        ? data
-        : { type: data.type, name: data.name, url: data.url, searchesPerHour: data.searchesPerHour };
-      await runUpdate({ id: editing.id, data: payload });
-    } else {
-      await runCreate(data);
-    }
-    reset();
-    onClose();
-  };
-
-  const submitting = create.isPending || update.isPending;
+  const {
+    register,
+    errors,
+    selectedType,
+    onChangeType,
+    submit,
+    handleTest,
+    canTest,
+    isEdit,
+    submitting,
+    testing,
+  } = useAddInstanceForm({ editing, onSuccess: onClose });
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -90,18 +39,12 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
         <DialogHeader>
           <DialogTitle>{editing ? t("editTitle") : t("addTitle")}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <form onSubmit={submit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label>{t("type")}</Label>
             <Select
               value={selectedType}
-              onValueChange={(v) => {
-                if (v) {
-                  const next = v as "radarr" | "sonarr";
-                  setSelectedType(next);
-                  setValue("type", next);
-                }
-              }}
+              onValueChange={(v) => v && onChangeType(v as "radarr" | "sonarr")}
             >
               <SelectTrigger>
                 <SelectValue>{selectedType === "radarr" ? "Radarr" : "Sonarr"}</SelectValue>
@@ -145,11 +88,9 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
               type="button"
               variant="outline"
               onClick={handleTest}
-              disabled={!canTest || test.isPending}
+              disabled={!canTest || testing}
             >
-              {test.isPending
-                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                : <Plug className="mr-2 h-4 w-4" />}
+              {testing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plug className="mr-2 h-4 w-4" />}
               {t("testConnection")}
             </Button>
             <Button type="submit" disabled={submitting}>

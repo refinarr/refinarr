@@ -1,0 +1,1 @@
+export { PasswordChangeCard } from "./PasswordChangeCard";
