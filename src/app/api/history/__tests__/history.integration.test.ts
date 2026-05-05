@@ -1,12 +1,12 @@
-import { afterEach, describe, test, expect, vi } from "vitest";
+import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
+import { http, HttpResponse, mswServer } from "@/test/msw";
 import { GET, DELETE as clearAll } from "@/app/api/history/route";
 import { POST as retry } from "@/app/api/history/[id]/retry/route";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { instanceService } from "@/server/services/InstanceService";
 
 const ctxNone = { params: Promise.resolve({}) };
-const fetchMock = vi.fn();
 
 const baseLog = {
   instanceId: 1,
@@ -26,11 +26,6 @@ function getReq(qs: string) {
 function retryReq(id: number) {
   return new NextRequest(`http://localhost/api/history/${id}/retry`, { method: "POST" });
 }
-
-afterEach(() => {
-  fetchMock.mockReset();
-  vi.unstubAllGlobals();
-});
 
 describe("GET /api/history", () => {
   test("returns paginated wrapped shape", async () => {
@@ -87,12 +82,16 @@ describe("DELETE /api/history", () => {
 
 describe("POST /api/history/[id]/retry", () => {
   test("updates the selected failed log instead of creating a duplicate", async () => {
-    vi.stubGlobal("fetch", fetchMock);
-    fetchMock.mockResolvedValue(new Response("nope", { status: 500 }));
+    const radarrBase = "http://192.168.1.10:7878";
+    mswServer.use(
+      http.post(`${radarrBase}/api/v3/command`, () =>
+        new HttpResponse(null, { status: 500 }),
+      ),
+    );
     const instance = await instanceService.create({
       type: "radarr",
       name: "Test Radarr",
-      url: "http://192.168.1.10:7878",
+      url: radarrBase,
       apiKey: "abcd1234abcd1234abcd1234abcd1234",
     });
     const payload = { instanceId: instance.id, action: "search", mediaId: 100, title: "Movie" };
@@ -119,12 +118,16 @@ describe("POST /api/history/[id]/retry", () => {
   });
 
   test("season-scoped retry preserves seasonNumber instead of broadening to a series search", async () => {
-    vi.stubGlobal("fetch", fetchMock);
-    fetchMock.mockResolvedValue(new Response("nope", { status: 500 }));
+    const sonarrBase = "http://192.168.1.10:8989";
+    mswServer.use(
+      http.post(`${sonarrBase}/api/v3/command`, () =>
+        new HttpResponse(null, { status: 500 }),
+      ),
+    );
     const instance = await instanceService.create({
       type: "sonarr",
       name: "Test Sonarr",
-      url: "http://192.168.1.10:8989",
+      url: sonarrBase,
       apiKey: "abcd1234abcd1234abcd1234abcd1234",
     });
     const payload = {
@@ -149,5 +152,29 @@ describe("POST /api/history/[id]/retry", () => {
     // The row's payload must keep seasonNumber so future retries stay scoped.
     const rewritten = JSON.parse(logs[0].payload!);
     expect(rewritten.seasonNumber).toBe(3);
+  });
+
+  test("rejects retry when stored payload does not match the log row's instance/media", async () => {
+    const instance = await instanceService.create({
+      type: "radarr",
+      name: "Test Radarr",
+      url: "http://192.168.1.10:7878",
+      apiKey: "abcd1234abcd1234abcd1234abcd1234",
+    });
+    // Row says (instanceId, mediaId) = (instance.id, 100), payload disagrees.
+    const corrupt = await logRepository.create({
+      ...baseLog,
+      instanceId: instance.id,
+      mediaId: 100,
+      status: "failed",
+      payload: JSON.stringify({
+        instanceId: 9999, action: "search", mediaId: 8888, title: "Mismatch",
+      }),
+    });
+    const res = await retry(retryReq(corrupt.id), { params: Promise.resolve({ id: String(corrupt.id) }) });
+    expect(res.status).toBe(400);
+    // The original row is untouched.
+    const fresh = await logRepository.findById(corrupt.id);
+    expect(fresh?.status).toBe("failed");
   });
 });

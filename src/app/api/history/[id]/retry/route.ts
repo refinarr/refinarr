@@ -28,6 +28,15 @@ export const POST = createApiHandler(async (_req, ctx) => {
   if (!parsed.success) throw badRequest("Stored payload has unexpected shape");
   const payload = parsed.data;
 
+  // The log row's columns are the canonical record of what this entry
+  // targets. If the JSON payload disagrees (corrupted or hand-edited),
+  // refuse to retry — otherwise executeAction would run against a
+  // different target and overwrite this row's history in place via the
+  // actionLogId update path.
+  if (payload.instanceId !== log.instanceId || payload.mediaId !== log.mediaId) {
+    throw badRequest("Stored payload no longer matches this log entry");
+  }
+
   const inst = await instanceRepository.findById(payload.instanceId);
   if (!inst) throw notFound("Instance no longer exists");
 
