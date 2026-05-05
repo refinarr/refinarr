@@ -46,8 +46,12 @@ class TokenBucket {
  * Per-instance outbound rate limiter for *arr API calls.
  * Prevents bulk ops from bursting the upstream server.
  *
- * Default: ARR_RATE_LIMIT req/sec (env, default 5). Burst allowance = 2×.
+ * Default: ARR_RATE_LIMIT req/sec (env, default 50). Burst allowance = 2×.
  * Buckets start full so the first N requests fire without delay.
+ *
+ * 50/sec is comfortable for a self-hosted Sonarr/Radarr — they have no
+ * per-IP rate limits, the cap is just outbound politeness so a flagged-
+ * library rebuild for a 100+ series instance doesn't take 30s.
  */
 export class ArrRateLimiter {
   private readonly buckets = new Map<number, TokenBucket>();
@@ -56,7 +60,7 @@ export class ArrRateLimiter {
 
   constructor() {
     const parsed = Number(process.env.ARR_RATE_LIMIT);
-    const configuredRate = Number.isFinite(parsed) && parsed > 0 ? parsed : 5;
+    const configuredRate = Number.isFinite(parsed) && parsed > 0 ? parsed : 50;
     const ratePerSec = Math.max(1, configuredRate);
     this.refillPerMs = ratePerSec / 1000;
     this.capacity = ratePerSec * 2;
