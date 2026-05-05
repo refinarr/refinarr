@@ -117,4 +117,37 @@ describe("POST /api/history/[id]/retry", () => {
     expect(logs[0].error).toBe("Test Radarr API error: 500");
     expect(logs[0].createdAt.getTime()).toBeGreaterThan(previousCreatedAt.getTime());
   });
+
+  test("season-scoped retry preserves seasonNumber instead of broadening to a series search", async () => {
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockResolvedValue(new Response("nope", { status: 500 }));
+    const instance = await instanceService.create({
+      type: "sonarr",
+      name: "Test Sonarr",
+      url: "http://192.168.1.10:8989",
+      apiKey: "abcd1234abcd1234abcd1234abcd1234",
+    });
+    const payload = {
+      instanceId: instance.id, action: "search", mediaId: 7, seasonNumber: 3, title: "Show",
+    };
+    const original = await logRepository.create({
+      ...baseLog,
+      instanceId: instance.id,
+      mediaId: 7,
+      title: "Show",
+      status: "failed",
+      error: "old failure",
+      payload: JSON.stringify(payload),
+    });
+
+    const res = await retry(retryReq(original.id), { params: Promise.resolve({ id: String(original.id) }) });
+    expect(res.status).toBe(200);
+
+    const logs = await logRepository.findAll();
+    expect(logs).toHaveLength(1);
+    expect(logs[0].id).toBe(original.id);
+    // The row's payload must keep seasonNumber so future retries stay scoped.
+    const rewritten = JSON.parse(logs[0].payload!);
+    expect(rewritten.seasonNumber).toBe(3);
+  });
 });

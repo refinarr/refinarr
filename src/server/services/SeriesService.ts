@@ -233,7 +233,9 @@ export class SeriesService extends MediaService {
   }
 
   // Re-runs a stored ActionLog payload. Series-specific fields:
-  //   - search: { instanceId, mediaId, title }
+  //   - search (series): { instanceId, mediaId, title }
+  //   - search (season): { …, seasonNumber }
+  //   - search (episode-file): { …, fileId }
   //   - delete: { instanceId, mediaId, fileIds, title, triggerSearch? }
   async retryFromPayload(payload: Record<string, unknown>, opts: RetryActionOptions = {}): Promise<ActionLog> {
     const action = payload.action as string;
@@ -241,6 +243,16 @@ export class SeriesService extends MediaService {
     const mediaId = payload.mediaId as number;
     const title = payload.title as string;
     if (action === "search") {
+      // The action column is "search" for all three Sonarr search scopes; the
+      // payload's optional fields disambiguate. Without this dispatch a season
+      // or episode-file retry would broaden to a full-series search and
+      // overwrite the row's narrower payload on update — see PR #29 follow-up.
+      if (typeof payload.seasonNumber === "number") {
+        return this.triggerSeasonSearch(instanceId, mediaId, payload.seasonNumber, title, opts);
+      }
+      if (typeof payload.fileId === "number") {
+        return this.triggerEpisodeFileSearch(instanceId, mediaId, payload.fileId, title, opts);
+      }
       return this.triggerSearch(instanceId, mediaId, title, opts);
     }
     if (action === "delete" || action === "delete_blacklist") {
