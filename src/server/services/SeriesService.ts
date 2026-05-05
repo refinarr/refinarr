@@ -15,7 +15,7 @@ import {
   scoreCfCoverage,
   isBelowProfileScore,
   scoreProfileCoverage,
-} from "@/server/lib/scoring";
+} from "@/shared/scoring";
 
 
 export class SeriesService extends MediaService {

@@ -5,7 +5,7 @@ import {
   scoreCfCoverage,
   isBelowProfileScore,
   scoreProfileCoverage,
-} from "@/server/lib/scoring";
+} from "@/shared/scoring";
 import type { CustomFormat } from "@/shared/types/models";
 
 function cf(id: number, name = `CF${id}`): CustomFormat {
