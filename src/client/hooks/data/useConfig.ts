@@ -17,7 +17,8 @@ export function useConfig() {
 export function useUpdateConfig() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Record<string, unknown>) => api.put<{ ok: boolean }>("/config", data),
+    mutationFn: (data: Record<string, unknown>) =>
+      api.put<{ ok: boolean }>("/config", data),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.config() }),
   });
 }

@@ -29,22 +29,47 @@ async function makeInstance(): Promise<number> {
 }
 
 const profile = {
-  id: 1, name: "HD-1080p", minUpgradeFormatScore: 0, cutoffFormatScore: 100,
+  id: 1,
+  name: "HD-1080p",
+  minUpgradeFormatScore: 0,
+  cutoffFormatScore: 100,
   formatItems: [{ format: 10, name: "HDR", score: 50 }],
 };
 
 describe("GET /api/sonarr/series", () => {
   test("returns paginated FlaggedSeries wrapper", async () => {
     const instanceId = await makeInstance();
-    await preferenceRepository.setForInstance(instanceId, [{ cfId: 10, cfName: "HDR" }]);
-    mswServer.use(...sonarrHandlers({ baseUrl }, {
-      series: [{ id: 1, title: "Show", year: 2024, qualityProfileId: 1 }],
-      episodeFilesByseriesId: new Map([[1, [
-        { id: 100, seriesId: 1, seasonNumber: 1, relativePath: "S01E01.mkv", size: 1024, customFormats: [], customFormatScore: 0 },
-      ]]]),
-      qualityProfiles: [profile],
-    }));
-    const req = new NextRequest(`http://localhost/api/sonarr/series?instanceId=${instanceId}&page=1&limit=50`);
+    await preferenceRepository.setForInstance(instanceId, [
+      { cfId: 10, cfName: "HDR" },
+    ]);
+    mswServer.use(
+      ...sonarrHandlers(
+        { baseUrl },
+        {
+          series: [{ id: 1, title: "Show", year: 2024, qualityProfileId: 1 }],
+          episodeFilesByseriesId: new Map([
+            [
+              1,
+              [
+                {
+                  id: 100,
+                  seriesId: 1,
+                  seasonNumber: 1,
+                  relativePath: "S01E01.mkv",
+                  size: 1024,
+                  customFormats: [],
+                  customFormatScore: 0,
+                },
+              ],
+            ],
+          ]),
+          qualityProfiles: [profile],
+        },
+      ),
+    );
+    const req = new NextRequest(
+      `http://localhost/api/sonarr/series?instanceId=${instanceId}&page=1&limit=50`,
+    );
     const res = await listSeries(req, ctxNone);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -56,12 +81,17 @@ describe("GET /api/sonarr/series", () => {
 describe("POST /api/sonarr/series/search", () => {
   test("enqueues a series search and returns 202", async () => {
     const instanceId = await makeInstance();
-    mswServer.use(...sonarrHandlers({ baseUrl }, { series: [], qualityProfiles: [] }));
-    const res = await searchSeries(new NextRequest("http://localhost/api/sonarr/series/search", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ instanceId, mediaId: 1, title: "Show" }),
-    }), ctxNone);
+    mswServer.use(
+      ...sonarrHandlers({ baseUrl }, { series: [], qualityProfiles: [] }),
+    );
+    const res = await searchSeries(
+      new NextRequest("http://localhost/api/sonarr/series/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ instanceId, mediaId: 1, title: "Show" }),
+      }),
+      ctxNone,
+    );
     expect(res.status).toBe(202);
     const body = await res.json();
     expect(body.queued).toBe(true);
@@ -69,11 +99,14 @@ describe("POST /api/sonarr/series/search", () => {
   });
 
   test("schema-failing body returns 400", async () => {
-    const res = await searchSeries(new NextRequest("http://localhost/api/sonarr/series/search", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ instanceId: -1 }),
-    }), ctxNone);
+    const res = await searchSeries(
+      new NextRequest("http://localhost/api/sonarr/series/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ instanceId: -1 }),
+      }),
+      ctxNone,
+    );
     expect(res.status).toBe(400);
   });
 });
@@ -83,21 +116,38 @@ describe("POST /api/sonarr/series/delete", () => {
     const instanceId = await makeInstance();
     const deletedFiles: number[] = [];
     let commandHit = false;
-    mswServer.use(...sonarrHandlers({ baseUrl }, {
-      onDeleteEpisodeFile: (fileId) => deletedFiles.push(fileId),
-      onCommand: () => { commandHit = true; },
-    }));
-    const res = await deleteSeriesFiles(new NextRequest("http://localhost/api/sonarr/series/delete", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ instanceId, mediaId: 1, fileIds: [10, 11], title: "Show", search: true }),
-    }), ctxNone);
+    mswServer.use(
+      ...sonarrHandlers(
+        { baseUrl },
+        {
+          onDeleteEpisodeFile: (fileId) => deletedFiles.push(fileId),
+          onCommand: () => {
+            commandHit = true;
+          },
+        },
+      ),
+    );
+    const res = await deleteSeriesFiles(
+      new NextRequest("http://localhost/api/sonarr/series/delete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          instanceId,
+          mediaId: 1,
+          fileIds: [10, 11],
+          title: "Show",
+          search: true,
+        }),
+      }),
+      ctxNone,
+    );
     expect(res.status).toBe(200);
     expect((await res.json()).status).toBe("success");
     expect(deletedFiles.sort()).toEqual([10, 11]);
     // Search is queued for the worker — route does not dispatch it inline.
     expect(commandHit).toBe(false);
-    const queued = await searchQueueRepository.findPendingByInstance(instanceId);
+    const queued =
+      await searchQueueRepository.findPendingByInstance(instanceId);
     expect(queued).toHaveLength(1);
     expect(queued[0].mediaId).toBe(1);
     expect(queued[0].action).toBe("series");

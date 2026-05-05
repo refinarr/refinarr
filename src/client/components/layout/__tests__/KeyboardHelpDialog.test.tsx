@@ -15,7 +15,9 @@ function fireQuestion(target?: HTMLElement) {
 describe("KeyboardHelpDialog", () => {
   it("does not render the dialog before ? is pressed", () => {
     renderWithProviders(<KeyboardHelpDialog />);
-    expect(screen.queryByRole("heading", { name: /keyboard shortcuts/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /keyboard shortcuts/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens when ? is pressed outside an input", async () => {
@@ -24,8 +26,12 @@ describe("KeyboardHelpDialog", () => {
     expect(
       await screen.findByRole("heading", { name: /keyboard shortcuts/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Open command palette \(macOS\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/Open command palette \(Windows/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Open command palette \(macOS\)/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Open command palette \(Windows/i),
+    ).toBeInTheDocument();
   });
 
   it("ignores ? when the keydown originates from an input", () => {
@@ -35,9 +41,13 @@ describe("KeyboardHelpDialog", () => {
         <KeyboardHelpDialog />
       </>,
     );
-    const probe = container.querySelector('[data-testid="probe"]') as HTMLInputElement;
+    const probe = container.querySelector(
+      '[data-testid="probe"]',
+    ) as HTMLInputElement;
     probe.focus();
     fireQuestion(probe);
-    expect(screen.queryByRole("heading", { name: /keyboard shortcuts/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /keyboard shortcuts/i }),
+    ).not.toBeInTheDocument();
   });
 });

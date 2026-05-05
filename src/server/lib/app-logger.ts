@@ -9,7 +9,9 @@ interface LogFields {
   err?: unknown;
 }
 
-function normalizedContext(fields?: LogFields): Record<string, unknown> | undefined {
+function normalizedContext(
+  fields?: LogFields,
+): Record<string, unknown> | undefined {
   const rawCtx: Record<string, unknown> = { ...(fields?.context ?? {}) };
   if (fields?.err instanceof Error) {
     rawCtx.errorMessage = fields.err.message;
@@ -22,7 +24,12 @@ function normalizedContext(fields?: LogFields): Record<string, unknown> | undefi
   return context && Object.keys(context).length > 0 ? context : undefined;
 }
 
-function persist(level: LogLevel, message: string, fields: LogFields | undefined, context: Record<string, unknown> | undefined) {
+function persist(
+  level: LogLevel,
+  message: string,
+  fields: LogFields | undefined,
+  context: Record<string, unknown> | undefined,
+) {
   if (!logger.isLevelEnabled(level)) return;
 
   const ctx = context ?? {};
@@ -43,7 +50,7 @@ function persist(level: LogLevel, message: string, fields: LogFields | undefined
       appLogRepository.create(data).then(
         (entry) => eventBus.emit({ type: "applog", entry }),
         (e: unknown) => logger.error(e, "AppLog persist failed"),
-      )
+      ),
     )
     .catch((e: unknown) => logger.error(e, "AppLog repository import failed"));
 }

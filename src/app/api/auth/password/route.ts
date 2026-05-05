@@ -10,14 +10,22 @@ import { passwordChangeSchema } from "@/shared/types/schemas";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
-import { badRequest, parseJson, tooManyRequests, unauthorized } from "@/server/lib/api-errors";
+import {
+  badRequest,
+  parseJson,
+  tooManyRequests,
+  unauthorized,
+} from "@/server/lib/api-errors";
 import { createApiHandler } from "@/server/lib/handler";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
-  const { allowed, retryAfterMs } = checkRateLimit(`pwchange:${clientIp(req)}`, {
-    max: 10,
-    windowMs: 15 * 60 * 1000,
-  });
+  const { allowed, retryAfterMs } = checkRateLimit(
+    `pwchange:${clientIp(req)}`,
+    {
+      max: 10,
+      windowMs: 15 * 60 * 1000,
+    },
+  );
   if (!allowed) {
     throw tooManyRequests("Too many attempts", retryAfterMs);
   }
@@ -30,16 +38,26 @@ export const POST = createApiHandler(async (req: NextRequest) => {
   const session = await getSession(sessionId);
   if (!session) throw unauthorized();
 
-  const { currentPassword, newPassword } = await parseJson(req, passwordChangeSchema, "Invalid password");
+  const { currentPassword, newPassword } = await parseJson(
+    req,
+    passwordChangeSchema,
+    "Invalid password",
+  );
 
   if (currentPassword === newPassword) {
-    throw badRequest("New password must differ from current", "SAME_AS_CURRENT");
+    throw badRequest(
+      "New password must differ from current",
+      "SAME_AS_CURRENT",
+    );
   }
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   if (!user) throw unauthorized();
   if (!verifyPassword(currentPassword, user.passwordHash)) {
-    appLogger.warn("Failed password change attempt", { source: LogSource.Auth, context: { userId: user.id } });
+    appLogger.warn("Failed password change attempt", {
+      source: LogSource.Auth,
+      context: { userId: user.id },
+    });
     throw unauthorized("Wrong current password");
   }
 
@@ -53,6 +71,9 @@ export const POST = createApiHandler(async (req: NextRequest) => {
   await prisma.session.deleteMany({
     where: { userId: user.id, id: { not: sessionId } },
   });
-  appLogger.info("Password changed", { source: LogSource.Auth, context: { userId: user.id } });
+  appLogger.info("Password changed", {
+    source: LogSource.Auth,
+    context: { userId: user.id },
+  });
   return NextResponse.json({ ok: true });
 });

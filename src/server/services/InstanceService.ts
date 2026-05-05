@@ -29,7 +29,10 @@ export class InstanceService {
     searchesPerHour?: number;
   }): Promise<Instance> {
     assertSafeArrUrl(data.url);
-    const created = await instanceRepository.create({ ...data, enabled: data.enabled ?? true });
+    const created = await instanceRepository.create({
+      ...data,
+      enabled: data.enabled ?? true,
+    });
     // Start a worker tick for the new instance — bootstrap already ran with
     // the previous (smaller) set of enabled instances, so without this the
     // queue would never drain for instances added after first request.
@@ -87,7 +90,11 @@ export class InstanceService {
     return result.ok;
   }
 
-  async testCredentials(data: { type: ArrType; url: string; apiKey: string }): Promise<boolean> {
+  async testCredentials(data: {
+    type: ArrType;
+    url: string;
+    apiKey: string;
+  }): Promise<boolean> {
     assertSafeArrUrl(data.url);
     const transient: Instance = {
       id: 0,

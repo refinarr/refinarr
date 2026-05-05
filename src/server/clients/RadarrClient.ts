@@ -47,7 +47,7 @@ export class RadarrClient extends ArrClient {
       chunks.map((chunk) => {
         const qs = chunk.map((id) => `movieFileIds=${id}`).join("&");
         return this.fetch<RadarrMovieFile[]>(`/moviefile?${qs}`);
-      })
+      }),
     );
     return results.flat();
   }

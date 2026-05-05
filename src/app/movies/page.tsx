@@ -11,7 +11,13 @@ import { MovieDrawer } from "./components/MovieDrawer";
 
 export default function MoviesPage() {
   return (
-    <Suspense fallback={<AppShell><MediaTableSkeleton rows={8} /></AppShell>}>
+    <Suspense
+      fallback={
+        <AppShell>
+          <MediaTableSkeleton rows={8} />
+        </AppShell>
+      }
+    >
       <MediaListShell
         arrType="radarr"
         bulkConfig={MOVIE_BULK_CONFIG}

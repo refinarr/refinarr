@@ -83,7 +83,9 @@ describe("formatRelative", () => {
   });
 
   test("accepts an ISO string", () => {
-    expect(formatRelative(new Date(NOW - 30_000).toISOString())).toMatch(/second/);
+    expect(formatRelative(new Date(NOW - 30_000).toISOString())).toMatch(
+      /second/,
+    );
   });
 
   test("future timestamps render with positive direction", () => {

@@ -4,7 +4,10 @@ import { seriesService } from "@/server/services/SeriesService";
 
 function parseIdList(raw: string | null): number[] | undefined {
   if (!raw) return undefined;
-  const ids = raw.split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0);
+  const ids = raw
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
   return ids.length > 0 ? ids : undefined;
 }
 
@@ -17,7 +20,11 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const instanceId = Number(s.get("instanceId"));
   const page = Number(s.get("page") ?? "1");
   const limit = Number(s.get("limit") ?? "50");
-  const sortBy = (s.get("sortBy") ?? "score") as "score" | "title" | "added" | "size";
+  const sortBy = (s.get("sortBy") ?? "score") as
+    | "score"
+    | "title"
+    | "added"
+    | "size";
   const order = (s.get("order") ?? "asc") as "asc" | "desc";
   const maxScore = s.has("maxScore") ? Number(s.get("maxScore")) : undefined;
   const q = s.get("q") ?? undefined;

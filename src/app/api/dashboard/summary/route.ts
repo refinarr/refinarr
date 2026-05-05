@@ -4,7 +4,10 @@ import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { mediaServiceFor } from "@/server/services/media-services";
-import type { DashboardSummary, DashboardInstanceSummary } from "@/shared/types/api";
+import type {
+  DashboardSummary,
+  DashboardInstanceSummary,
+} from "@/shared/types/api";
 import type { ArrType } from "@/shared/types/models";
 
 // The summary endpoint reads flagged-counts from cache only. A cold cache

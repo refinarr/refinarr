@@ -7,7 +7,8 @@ import { join } from "path";
 // ENCRYPTION_KEY must be set before the crypto module is imported for the
 // first time in this worker. global-setup.ts already sets it, but we ensure
 // the key is set here too in case the test file is run in isolation.
-const TEST_KEY = process.env.ENCRYPTION_KEY ?? randomBytes(32).toString("base64");
+const TEST_KEY =
+  process.env.ENCRYPTION_KEY ?? randomBytes(32).toString("base64");
 process.env.ENCRYPTION_KEY = TEST_KEY;
 
 import { encryptSecret, decryptSecret, isEncrypted } from "@/server/lib/crypto";
@@ -67,7 +68,7 @@ describe("decryptSecret — backwards compatibility", () => {
 
   test("arbitrary non-v1: string returned unchanged", () => {
     expect(decryptSecret("deadbeef1234567890abcdef12345678")).toBe(
-      "deadbeef1234567890abcdef12345678"
+      "deadbeef1234567890abcdef12345678",
     );
   });
 });
@@ -83,7 +84,12 @@ describe("decryptSecret — malformed blobs", () => {
 
   test("correct structure but IV too short throws", () => {
     // iv = 1 byte, tag = 1 byte, ct = empty
-    const short = "v1:" + Buffer.from([0]).toString("base64") + ":" + Buffer.from([0]).toString("base64") + ":";
+    const short =
+      "v1:" +
+      Buffer.from([0]).toString("base64") +
+      ":" +
+      Buffer.from([0]).toString("base64") +
+      ":";
     expect(() => decryptSecret(short)).toThrow();
   });
 
@@ -99,7 +105,7 @@ describe("decryptSecret — malformed blobs", () => {
 describe("encryptSecret — input validation", () => {
   test("non-string input throws", () => {
     expect(() => encryptSecret(123 as unknown as string)).toThrow(
-      "encryptSecret requires a string"
+      "encryptSecret requires a string",
     );
   });
 });

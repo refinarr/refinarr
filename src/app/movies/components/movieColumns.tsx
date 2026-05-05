@@ -7,16 +7,31 @@ import type { MediaListShellRenderCtx } from "@/client/components/media/MediaLis
 import { formatBytes } from "@/client/lib/format";
 import { formatRelative } from "@/client/lib/format-relative";
 import { getSeverity } from "@/client/lib/severity";
-import { ISSUES_FOR, ISSUES_HEADER_KEY, SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
+import {
+  ISSUES_FOR,
+  ISSUES_HEADER_KEY,
+  SCORE_FOR,
+  isProfileMode,
+} from "@/shared/scoring-mode";
 import type { FlaggedMovie } from "@/shared/types/models";
 
 export function movieColumns(
   ctx: MediaListShellRenderCtx<FlaggedMovie>,
 ): ColumnDef<FlaggedMovie>[] {
-  const { scoringMode, profiles, queuedIds, recentMap, activeInstance, t, tCols, tTime } = ctx;
+  const {
+    scoringMode,
+    profiles,
+    queuedIds,
+    recentMap,
+    activeInstance,
+    t,
+    tCols,
+    tTime,
+  } = ctx;
 
   const renderSearchBadge = (id: number, title: string) => {
-    if (queuedIds.has(id)) return <SearchStatusBadge status="pending" instanceId={activeInstance} />;
+    if (queuedIds.has(id))
+      return <SearchStatusBadge status="pending" instanceId={activeInstance} />;
     const recent = recentMap.get(id);
     if (recent) {
       return (
@@ -38,7 +53,16 @@ export function movieColumns(
       className: "w-8",
       render: (m) => {
         const score = SCORE_FOR[scoringMode](m);
-        return <SeverityDot severity={getSeverity(score, m.minProfileScore, scoringMode, m.hasFile)} />;
+        return (
+          <SeverityDot
+            severity={getSeverity(
+              score,
+              m.minProfileScore,
+              scoringMode,
+              m.hasFile,
+            )}
+          />
+        );
       },
     },
     {
@@ -48,7 +72,9 @@ export function movieColumns(
       render: (m) => (
         <div className="flex items-baseline gap-2 min-w-0">
           <span className="font-medium truncate">{m.title}</span>
-          <span className="text-muted-foreground text-xs shrink-0">{m.year}</span>
+          <span className="text-muted-foreground text-xs shrink-0">
+            {m.year}
+          </span>
           {renderSearchBadge(m.id, m.title)}
         </div>
       ),
@@ -70,7 +96,9 @@ export function movieColumns(
       className: "w-36 whitespace-nowrap",
       render: (m) => {
         if (isProfileMode(scoringMode) && !m.hasFile) {
-          return <span className="text-xs text-muted-foreground">{t("noFile")}</span>;
+          return (
+            <span className="text-xs text-muted-foreground">{t("noFile")}</span>
+          );
         }
         return (
           <ScoreLabel
@@ -84,7 +112,8 @@ export function movieColumns(
       key: "size",
       header: tCols("size"),
       sortKey: "size",
-      className: "w-24 text-xs text-muted-foreground tabular-nums whitespace-nowrap",
+      className:
+        "w-24 text-xs text-muted-foreground tabular-nums whitespace-nowrap",
       render: (m) => formatBytes(m.sizeOnDisk),
     },
     {
@@ -99,7 +128,9 @@ export function movieColumns(
               <CfBadge key={cf.id} name={cf.name} missing />
             ))}
             {items.length > 3 && (
-              <span className="text-xs text-muted-foreground">+{items.length - 3}</span>
+              <span className="text-xs text-muted-foreground">
+                +{items.length - 3}
+              </span>
             )}
           </div>
         );

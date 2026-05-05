@@ -7,10 +7,10 @@
 // IPv6 link-local, and the special 0.0.0.0 host.
 
 const BLOCKED_HOSTS = new Set<string>([
-  "169.254.169.254",            // AWS, Azure, GCP, DigitalOcean metadata
+  "169.254.169.254", // AWS, Azure, GCP, DigitalOcean metadata
   "metadata.google.internal",
   "metadata.googleapis.com",
-  "100.100.100.200",            // Alibaba metadata
+  "100.100.100.200", // Alibaba metadata
   "0.0.0.0",
 ]);
 
@@ -30,13 +30,16 @@ export function assertSafeArrUrl(input: string): URL {
   }
 
   if (u.protocol !== "http:" && u.protocol !== "https:") {
-    throw new UnsafeUrlError(`Unsupported protocol "${u.protocol}". Only http(s) is allowed.`);
+    throw new UnsafeUrlError(
+      `Unsupported protocol "${u.protocol}". Only http(s) is allowed.`,
+    );
   }
 
   // Strip the IPv6 brackets that URL.hostname keeps for [::1] etc.
-  const host = u.hostname.startsWith("[") && u.hostname.endsWith("]")
-    ? u.hostname.slice(1, -1).toLowerCase()
-    : u.hostname.toLowerCase();
+  const host =
+    u.hostname.startsWith("[") && u.hostname.endsWith("]")
+      ? u.hostname.slice(1, -1).toLowerCase()
+      : u.hostname.toLowerCase();
 
   if (BLOCKED_HOSTS.has(host)) {
     throw new UnsafeUrlError("Blocked host");

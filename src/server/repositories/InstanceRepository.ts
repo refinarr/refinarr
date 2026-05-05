@@ -20,19 +20,26 @@ function toInstance(row: RawInstanceRow): Instance {
 
 // Both columns have DB-level defaults, so callers don't need to provide
 // them on create — the column will fill in.
-type CreateInstanceInput = Omit<Instance, "id" | "createdAt" | "scoringMode" | "searchesPerHour"> & {
+type CreateInstanceInput = Omit<
+  Instance,
+  "id" | "createdAt" | "scoringMode" | "searchesPerHour"
+> & {
   scoringMode?: ScoringMode;
   searchesPerHour?: number;
 };
 
 export class InstanceRepository extends BaseRepository<Instance> {
   async findById(id: number): Promise<Instance | null> {
-    const row = (await this.db.instance.findUnique({ where: { id } })) as RawInstanceRow | null;
+    const row = (await this.db.instance.findUnique({
+      where: { id },
+    })) as RawInstanceRow | null;
     return row ? toInstance(row) : null;
   }
 
   async findAll(): Promise<Instance[]> {
-    const rows = (await this.db.instance.findMany({ orderBy: { createdAt: "asc" } })) as RawInstanceRow[];
+    const rows = (await this.db.instance.findMany({
+      orderBy: { createdAt: "asc" },
+    })) as RawInstanceRow[];
     return rows.map(toInstance);
   }
 
@@ -56,7 +63,10 @@ export class InstanceRepository extends BaseRepository<Instance> {
     if (typeof data.apiKey === "string") {
       payload.apiKey = encryptSecret(data.apiKey);
     }
-    const updated = (await this.db.instance.update({ where: { id }, data: payload })) as RawInstanceRow;
+    const updated = (await this.db.instance.update({
+      where: { id },
+      data: payload,
+    })) as RawInstanceRow;
     return toInstance(updated);
   }
 

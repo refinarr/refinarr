@@ -14,9 +14,21 @@ export const POST = createApiHandler(async (req: NextRequest) => {
   );
 
   if (await dryRunService.isDryRun()) {
-    const result = await seriesService.triggerSearch(instanceId, mediaId, title);
+    const result = await seriesService.triggerSearch(
+      instanceId,
+      mediaId,
+      title,
+    );
     return NextResponse.json(result);
   }
-  const entry = await searchQueueService.enqueue({ instanceId, action: "series", mediaId, title });
-  return NextResponse.json({ queued: true, queueId: entry.id }, { status: 202 });
+  const entry = await searchQueueService.enqueue({
+    instanceId,
+    action: "series",
+    mediaId,
+    title,
+  });
+  return NextResponse.json(
+    { queued: true, queueId: entry.id },
+    { status: 202 },
+  );
 });

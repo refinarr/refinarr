@@ -18,7 +18,8 @@ interface AllPendingResponse {
 export function useSearchQueue(instanceId: number, enabled = true) {
   return useQuery({
     queryKey: queryKeys.searchQueue(instanceId),
-    queryFn: () => api.get<QueueStatus>(`/search-queue?instanceId=${instanceId}`),
+    queryFn: () =>
+      api.get<QueueStatus>(`/search-queue?instanceId=${instanceId}`),
     enabled: enabled && instanceId > 0,
     // Background poll so the badge ticks down as the worker drains.
     refetchInterval: 30_000,
@@ -56,6 +57,6 @@ export function useQueuedMediaIds(instanceId: number): Set<number> {
   const { data } = useSearchQueue(instanceId, instanceId > 0);
   return useMemo(
     () => new Set((data?.items ?? []).map((row) => row.mediaId)),
-    [data?.items]
+    [data?.items],
   );
 }

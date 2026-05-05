@@ -14,11 +14,23 @@ export const POST = createApiHandler(async (req: NextRequest) => {
   );
 
   if (await dryRunService.isDryRun()) {
-    const result = await seriesService.triggerSeasonSearch(instanceId, mediaId, seasonNumber, title);
+    const result = await seriesService.triggerSeasonSearch(
+      instanceId,
+      mediaId,
+      seasonNumber,
+      title,
+    );
     return NextResponse.json(result);
   }
   const entry = await searchQueueService.enqueue({
-    instanceId, action: "season", mediaId, title, payload: { seasonNumber },
+    instanceId,
+    action: "season",
+    mediaId,
+    title,
+    payload: { seasonNumber },
   });
-  return NextResponse.json({ queued: true, queueId: entry.id }, { status: 202 });
+  return NextResponse.json(
+    { queued: true, queueId: entry.id },
+    { status: 202 },
+  );
 });

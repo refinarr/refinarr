@@ -6,7 +6,10 @@ import { withToast } from "@/client/lib/with-toast";
 import { runSerial } from "@/client/lib/run-serial";
 import { isAbortError } from "./useBulkAbort";
 import type { ActionLog, MediaType } from "@/shared/types/models";
-import type { BulkAction, BulkProgress } from "@/client/components/media/BulkActionToolbar";
+import type {
+  BulkAction,
+  BulkProgress,
+} from "@/client/components/media/BulkActionToolbar";
 
 export interface BulkVars<T> {
   items: T[];
@@ -57,7 +60,8 @@ async function runBulk<T, R>(
     items,
     async (item, i) => {
       const r = await fn(item);
-      if (opts.isBulk) opts.setProgress({ current: i + 1, total, action: opts.action });
+      if (opts.isBulk)
+        opts.setProgress({ current: i + 1, total, action: opts.action });
       return r;
     },
     undefined,
@@ -72,15 +76,24 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
   const tIgnore = useTranslations("toast.ignore");
   const tBulk = useTranslations("bulk");
 
-  const deleteDone = mediaType === "movie" ? tDelete("fileDone") : tDelete("filesDone");
-  const deleteDoneAndSearch = mediaType === "movie" ? tDelete("fileDoneAndSearch") : tDelete("filesDoneAndSearch");
-  const deleteFailed = mediaType === "movie" ? tDelete("fileFailed") : tDelete("filesFailed");
+  const deleteDone =
+    mediaType === "movie" ? tDelete("fileDone") : tDelete("filesDone");
+  const deleteDoneAndSearch =
+    mediaType === "movie"
+      ? tDelete("fileDoneAndSearch")
+      : tDelete("filesDoneAndSearch");
+  const deleteFailed =
+    mediaType === "movie" ? tDelete("fileFailed") : tDelete("filesFailed");
 
   const searchMutation = useMutation({
     mutationFn: ({ items, isBulk, signal }: BulkVars<T>) =>
       runBulk(
         items,
-        (item) => api.post<ActionLog>(config.search.endpoint, config.search.body(item, instanceId)),
+        (item) =>
+          api.post<ActionLog>(
+            config.search.endpoint,
+            config.search.body(item, instanceId),
+          ),
         { isBulk, signal, action: "search", setProgress },
       ),
     onSuccess: (results) => {
@@ -98,7 +111,11 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
     mutationFn: ({ items, isBulk, signal }: BulkVars<T>) =>
       runBulk(
         items,
-        (item) => api.post(config.ignore.endpoint, config.ignore.body(item, instanceId)),
+        (item) =>
+          api.post(
+            config.ignore.endpoint,
+            config.ignore.body(item, instanceId),
+          ),
         { isBulk, signal, action: "ignore", setProgress },
       ),
     onSuccess: () => refetch(),
@@ -113,14 +130,20 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
       const deletable = items.filter(config.delete.isDeletable);
       const results = await runBulk(
         deletable,
-        (item) => api.post<ActionLog>(config.delete.endpoint, config.delete.body(item, instanceId, search)),
+        (item) =>
+          api.post<ActionLog>(
+            config.delete.endpoint,
+            config.delete.body(item, instanceId, search),
+          ),
         { isBulk, signal, action: "delete", setProgress },
       );
       return { results, search };
     },
     onSuccess: ({ results, search }) => {
       if (results.some((r) => r.isDryRun)) {
-        toast.info(search ? tDelete("queuedAndSearchDryRun") : tDelete("queuedDryRun"));
+        toast.info(
+          search ? tDelete("queuedAndSearchDryRun") : tDelete("queuedDryRun"),
+        );
       } else {
         toast.success(search ? deleteDoneAndSearch : deleteDone);
         void refetch();

@@ -1,6 +1,8 @@
 import type { EpisodeFileEntry } from "@/shared/types/models";
 
-export function groupBySeason(files: EpisodeFileEntry[]): Map<number, EpisodeFileEntry[]> {
+export function groupBySeason(
+  files: EpisodeFileEntry[],
+): Map<number, EpisodeFileEntry[]> {
   const map = new Map<number, EpisodeFileEntry[]>();
   for (const f of files) {
     const list = map.get(f.seasonNumber) ?? [];

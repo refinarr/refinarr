@@ -7,14 +7,9 @@ import { timingSafeEqual } from "crypto";
 
 // Next.js 16: Proxy always runs on Node.js — no `export const runtime` needed.
 
-const PUBLIC_API_PATHS = new Set<string>([
-  "/api/health",
-  "/api/auth/login",
-]);
+const PUBLIC_API_PATHS = new Set<string>(["/api/health", "/api/auth/login"]);
 
-const PUBLIC_PAGE_PATHS = new Set<string>([
-  "/login",
-]);
+const PUBLIC_PAGE_PATHS = new Set<string>(["/login"]);
 
 // Content-Security-Policy:
 //   - default-src 'self'           — only same-origin by default
@@ -86,20 +81,29 @@ function unauthorized(req: NextRequest, isApi: boolean): NextResponse {
 
 // Force /setup before first user is created; close /setup once a user exists.
 // Returns the response to send, or null if the request should continue.
-async function setupGate(req: NextRequest, path: string, isApi: boolean): Promise<NextResponse | null> {
+async function setupGate(
+  req: NextRequest,
+  path: string,
+  isApi: boolean,
+): Promise<NextResponse | null> {
   const isSetupPath = path === "/setup" || path === "/api/auth/setup";
   const hasUser = await userExists();
 
   if (!hasUser) {
     if (isSetupPath) return NextResponse.next();
-    if (isApi) return NextResponse.json({ error: "Setup required" }, { status: 401 });
+    if (isApi)
+      return NextResponse.json({ error: "Setup required" }, { status: 401 });
     const url = req.nextUrl.clone();
     url.pathname = "/setup";
     return NextResponse.redirect(url);
   }
 
   if (isSetupPath) {
-    if (isApi) return NextResponse.json({ error: "Setup already completed" }, { status: 409 });
+    if (isApi)
+      return NextResponse.json(
+        { error: "Setup already completed" },
+        { status: 409 },
+      );
     const url = req.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
@@ -145,7 +149,8 @@ export async function proxy(req: NextRequest) {
   const setupResp = await setupGate(req, path, isApi);
   if (setupResp) return withSecurityHeaders(setupResp);
 
-  if (isPublicPath(path, isApi)) return withSecurityHeaders(NextResponse.next());
+  if (isPublicPath(path, isApi))
+    return withSecurityHeaders(NextResponse.next());
 
   if (await hasValidAuth(req)) return withSecurityHeaders(NextResponse.next());
 

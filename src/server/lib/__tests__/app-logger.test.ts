@@ -63,7 +63,7 @@ describe("appLogger — pino delegation", () => {
         errorMessage: "boom",
         stack: expect.stringContaining("boom"),
       }),
-      "oops"
+      "oops",
     );
   });
 
@@ -79,7 +79,7 @@ describe("appLogger — pino delegation", () => {
         apiKey: "***",
         url: "http://localhost?apikey=***",
       },
-      "warn-msg"
+      "warn-msg",
     );
   });
 });
@@ -123,7 +123,9 @@ describe("appLogger — DB persistence", () => {
   });
 
   test("redacts sensitive keys before writing", async () => {
-    appLogger.info("redact-test", { context: { apiKey: "secret-value-here", ok: 1 } });
+    appLogger.info("redact-test", {
+      context: { apiKey: "secret-value-here", ok: 1 },
+    });
     await flushPersist();
     const row = await prisma.appLog.findFirst();
     const ctx = JSON.parse(row!.context!);

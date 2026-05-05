@@ -17,7 +17,10 @@ const items: Item[] = [
   { id: 3, hasFile: true },
 ];
 
-function makeSelection(state: { selectedItems: Item[]; deletableSelected: Item[] }): MediaSelection<Item> {
+function makeSelection(state: {
+  selectedItems: Item[];
+  deletableSelected: Item[];
+}): MediaSelection<Item> {
   return {
     selected: new Set(state.selectedItems.map((i) => i.id)),
     selectedItems: state.selectedItems,
@@ -28,15 +31,37 @@ function makeSelection(state: { selectedItems: Item[]; deletableSelected: Item[]
   };
 }
 
-function makeMutation<TVars>(impl: (vars: TVars) => Promise<unknown>): UseMutationResult<unknown, unknown, TVars, unknown> {
-  return { mutateAsync: vi.fn(impl) } as unknown as UseMutationResult<unknown, unknown, TVars, unknown>;
+function makeMutation<TVars>(
+  impl: (vars: TVars) => Promise<unknown>,
+): UseMutationResult<unknown, unknown, TVars, unknown> {
+  return { mutateAsync: vi.fn(impl) } as unknown as UseMutationResult<
+    unknown,
+    unknown,
+    TVars,
+    unknown
+  >;
 }
 
-function makeActions(impls?: Partial<{
-  search: (vars: { items: Item[]; isBulk: boolean; signal?: AbortSignal }) => Promise<unknown>;
-  ignore: (vars: { items: Item[]; isBulk: boolean; signal?: AbortSignal }) => Promise<unknown>;
-  deleteFn: (vars: { items: Item[]; isBulk: boolean; signal?: AbortSignal; search: boolean }) => Promise<unknown>;
-}>): BulkHandlerActions<Item> {
+function makeActions(
+  impls?: Partial<{
+    search: (vars: {
+      items: Item[];
+      isBulk: boolean;
+      signal?: AbortSignal;
+    }) => Promise<unknown>;
+    ignore: (vars: {
+      items: Item[];
+      isBulk: boolean;
+      signal?: AbortSignal;
+    }) => Promise<unknown>;
+    deleteFn: (vars: {
+      items: Item[];
+      isBulk: boolean;
+      signal?: AbortSignal;
+      search: boolean;
+    }) => Promise<unknown>;
+  }>,
+): BulkHandlerActions<Item> {
   return {
     searchMutation: makeMutation(impls?.search ?? (async () => undefined)),
     ignoreMutation: makeMutation(impls?.ignore ?? (async () => undefined)),
@@ -46,7 +71,10 @@ function makeActions(impls?: Partial<{
 
 describe("useBulkHandlers", () => {
   it("handleSearch dispatches selectedItems and clears the selection on success", async () => {
-    const selection = makeSelection({ selectedItems: items, deletableSelected: items.filter((i) => i.hasFile) });
+    const selection = makeSelection({
+      selectedItems: items,
+      deletableSelected: items.filter((i) => i.hasFile),
+    });
     const actions = makeActions();
     const { result } = renderHook(() => {
       const abort = useBulkAbort();
@@ -62,7 +90,10 @@ describe("useBulkHandlers", () => {
   });
 
   it("handleSearch is a no-op when selection is empty", async () => {
-    const selection = makeSelection({ selectedItems: [], deletableSelected: [] });
+    const selection = makeSelection({
+      selectedItems: [],
+      deletableSelected: [],
+    });
     const actions = makeActions();
     const { result } = renderHook(() => {
       const abort = useBulkAbort();
@@ -76,7 +107,10 @@ describe("useBulkHandlers", () => {
   });
 
   it("handleDelete uses deletableSelected (not selectedItems) and propagates the search flag", async () => {
-    const selection = makeSelection({ selectedItems: items, deletableSelected: [items[0], items[2]] });
+    const selection = makeSelection({
+      selectedItems: items,
+      deletableSelected: [items[0], items[2]],
+    });
     const actions = makeActions();
     const { result } = renderHook(() => {
       const abort = useBulkAbort();
@@ -86,13 +120,20 @@ describe("useBulkHandlers", () => {
       await result.current.handleDelete(true);
     });
     expect(actions.deleteMutation.mutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ items: [items[0], items[2]], isBulk: true, search: true }),
+      expect.objectContaining({
+        items: [items[0], items[2]],
+        isBulk: true,
+        search: true,
+      }),
     );
     expect(selection.clear).toHaveBeenCalledTimes(1);
   });
 
   it("preserves selection on AbortError (cancellation does not clear)", async () => {
-    const selection = makeSelection({ selectedItems: items, deletableSelected: items });
+    const selection = makeSelection({
+      selectedItems: items,
+      deletableSelected: items,
+    });
     const actions = makeActions({
       search: async () => {
         throw new DOMException("Aborted", "AbortError");
@@ -111,7 +152,10 @@ describe("useBulkHandlers", () => {
   });
 
   it("rethrows non-abort errors", async () => {
-    const selection = makeSelection({ selectedItems: items, deletableSelected: items });
+    const selection = makeSelection({
+      selectedItems: items,
+      deletableSelected: items,
+    });
     const actions = makeActions({
       search: async () => {
         throw new Error("server exploded");

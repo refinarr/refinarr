@@ -20,7 +20,11 @@ vi.mock("@/server/lib/app-logger", () => ({
 }));
 
 import { createApiHandler } from "@/server/lib/handler";
-import { badRequest, parseJson, tooManyRequests } from "@/server/lib/api-errors";
+import {
+  badRequest,
+  parseJson,
+  tooManyRequests,
+} from "@/server/lib/api-errors";
 import { UnsafeUrlError } from "@/server/lib/url-guard";
 
 function makeReq(path = "/api/test"): NextRequest {
@@ -34,7 +38,7 @@ function makeCtx(params: Record<string, string> = {}) {
 describe("createApiHandler", () => {
   test("passes through successful handler response", async () => {
     const handler = createApiHandler(async () =>
-      NextResponse.json({ ok: true }, { status: 200 })
+      NextResponse.json({ ok: true }, { status: 200 }),
     );
     const res = await handler(makeReq(), makeCtx());
     expect(res.status).toBe(200);
@@ -115,17 +119,25 @@ describe("createApiHandler", () => {
       method: "POST",
       body: "{",
     });
-    await expect(parseJson(invalidJsonReq, z.object({ name: z.string() }), "Invalid thing"))
-      .rejects
-      .toThrow("Invalid JSON");
+    await expect(
+      parseJson(
+        invalidJsonReq,
+        z.object({ name: z.string() }),
+        "Invalid thing",
+      ),
+    ).rejects.toThrow("Invalid JSON");
 
     const invalidPayloadReq = new NextRequest("http://localhost/api/test", {
       method: "POST",
       body: JSON.stringify({ name: 42 }),
     });
-    await expect(parseJson(invalidPayloadReq, z.object({ name: z.string() }), "Invalid thing"))
-      .rejects
-      .toThrow("Invalid thing");
+    await expect(
+      parseJson(
+        invalidPayloadReq,
+        z.object({ name: z.string() }),
+        "Invalid thing",
+      ),
+    ).rejects.toThrow("Invalid thing");
   });
 
   test("resolves params from ctx", async () => {

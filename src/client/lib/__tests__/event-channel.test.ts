@@ -42,7 +42,10 @@ beforeEach(() => {
   vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
   // Fall back to per-tab EventSource (no Web Locks) so the leader path
   // is deterministic in tests.
-  Object.defineProperty(navigator, "locks", { value: undefined, configurable: true });
+  Object.defineProperty(navigator, "locks", {
+    value: undefined,
+    configurable: true,
+  });
   vi.resetModules();
 });
 
@@ -105,7 +108,9 @@ describe("EventChannel", () => {
 
     FakeEventSource.instances[0].emit({ type: "queue-changed", instanceId: 1 });
 
-    expect(FakeBroadcastChannel.instances[0].postMessage).not.toHaveBeenCalled();
+    expect(
+      FakeBroadcastChannel.instances[0].postMessage,
+    ).not.toHaveBeenCalled();
   });
 
   test("reset() closes the EventSource and clears listeners", async () => {

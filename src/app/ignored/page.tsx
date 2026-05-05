@@ -6,7 +6,13 @@ import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary"
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { Button } from "@/client/components/ui/button";
 import { Badge } from "@/client/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/client/components/ui/select";
 import { useInstances } from "@/client/hooks/data/useInstances";
 import { useIgnored, useUnignore } from "@/client/hooks/data/useIgnored";
 import { withToast } from "@/client/lib/with-toast";
@@ -24,7 +30,10 @@ export default function IgnoredPage() {
 
   const { data: entries, isLoading } = useIgnored(activeInstance);
   const unignore = useUnignore(activeInstance);
-  const runUnignore = withToast(unignore, { success: tToast("removed"), error: tToast("removeFailed") });
+  const runUnignore = withToast(unignore, {
+    success: tToast("removed"),
+    error: tToast("removeFailed"),
+  });
 
   if (!loadingInstances && !instances?.length) {
     return (
@@ -48,15 +57,21 @@ export default function IgnoredPage() {
               </p>
             </div>
             {(instances?.length ?? 0) > 1 && (
-              <Select value={String(activeInstance)} onValueChange={(v) => setInstanceId(Number(v ?? 0))}>
+              <Select
+                value={String(activeInstance)}
+                onValueChange={(v) => setInstanceId(Number(v ?? 0))}
+              >
                 <SelectTrigger className="w-44">
                   <SelectValue>
-                    {instances?.find((i) => i.id === activeInstance)?.name ?? t("selectInstance")}
+                    {instances?.find((i) => i.id === activeInstance)?.name ??
+                      t("selectInstance")}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(instances ?? []).map((i) => (
-                    <SelectItem key={i.id} value={String(i.id)}>{i.name}</SelectItem>
+                    <SelectItem key={i.id} value={String(i.id)}>
+                      {i.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -80,9 +95,15 @@ export default function IgnoredPage() {
               <table className="w-full text-sm">
                 <thead className="bg-background border-b">
                   <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="w-20 px-3 py-2.5 font-medium">{t("columns.type")}</th>
-                    <th className="px-3 py-2.5 font-medium">{t("columns.title")}</th>
-                    <th className="w-40 px-3 py-2.5 font-medium">{t("columns.ignored")}</th>
+                    <th className="w-20 px-3 py-2.5 font-medium">
+                      {t("columns.type")}
+                    </th>
+                    <th className="px-3 py-2.5 font-medium">
+                      {t("columns.title")}
+                    </th>
+                    <th className="w-40 px-3 py-2.5 font-medium">
+                      {t("columns.ignored")}
+                    </th>
                     <th className="w-32 px-3 py-2.5" />
                   </tr>
                 </thead>
@@ -91,11 +112,17 @@ export default function IgnoredPage() {
                     <tr key={entry.id} className="border-t hover:bg-muted/40">
                       <td className="px-3 py-2 align-middle">
                         <Badge variant="outline" className="gap-1 capitalize">
-                          {entry.mediaType === "movie" ? <Film className="h-3 w-3" /> : <Tv2 className="h-3 w-3" />}
+                          {entry.mediaType === "movie" ? (
+                            <Film className="h-3 w-3" />
+                          ) : (
+                            <Tv2 className="h-3 w-3" />
+                          )}
                           {entry.mediaType}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2 align-middle font-medium">{entry.title}</td>
+                      <td className="px-3 py-2 align-middle font-medium">
+                        {entry.title}
+                      </td>
                       <td
                         className="px-3 py-2 align-middle text-muted-foreground text-xs"
                         title={new Date(entry.ignoredAt).toLocaleString()}

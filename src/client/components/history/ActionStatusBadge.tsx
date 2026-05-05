@@ -10,7 +10,10 @@ const classes: Record<ActionStatus, string> = {
   pending: "bg-slate-700/40 text-slate-300 border-slate-600",
 };
 
-const labelKeys: Record<ActionStatus, "success" | "dryRun" | "failed" | "pending"> = {
+const labelKeys: Record<
+  ActionStatus,
+  "success" | "dryRun" | "failed" | "pending"
+> = {
   success: "success",
   dry_run: "dryRun",
   failed: "failed",
@@ -23,5 +26,9 @@ interface Props {
 
 export function ActionStatusBadge({ status }: Props) {
   const t = useTranslations("history.statusLabels");
-  return <Badge variant="outline" className={classes[status]}>{t(labelKeys[status])}</Badge>;
+  return (
+    <Badge variant="outline" className={classes[status]}>
+      {t(labelKeys[status])}
+    </Badge>
+  );
 }

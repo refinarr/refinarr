@@ -23,9 +23,10 @@ interface RecentSearchesResponse {
 export function useRecentSearches(instanceId: number) {
   return useQuery({
     queryKey: queryKeys.recentSearches(instanceId),
-    queryFn: () => api.get<RecentSearchesResponse>(
-      `/recent-searches?instanceId=${instanceId}&windowHours=1`,
-    ),
+    queryFn: () =>
+      api.get<RecentSearchesResponse>(
+        `/recent-searches?instanceId=${instanceId}&windowHours=1`,
+      ),
     enabled: instanceId > 0,
     refetchInterval: 60_000,
   });
@@ -34,7 +35,10 @@ export function useRecentSearches(instanceId: number) {
 export function useRecentSearchMap(instanceId: number): Map<number, Date> {
   const { data } = useRecentSearches(instanceId);
   return useMemo(
-    () => new Map((data?.items ?? []).map((r) => [r.mediaId, new Date(r.lastSearchedAt)])),
-    [data?.items]
+    () =>
+      new Map(
+        (data?.items ?? []).map((r) => [r.mediaId, new Date(r.lastSearchedAt)]),
+      ),
+    [data?.items],
   );
 }

@@ -5,7 +5,13 @@ import { Switch } from "@/client/components/ui/switch";
 import { Label } from "@/client/components/ui/label";
 import { Badge } from "@/client/components/ui/badge";
 import { Card } from "@/client/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/client/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/client/components/ui/dialog";
 import { Button } from "@/client/components/ui/button";
 import { useConfig, useUpdateConfig } from "@/client/hooks/data/useConfig";
 import { cn } from "@/client/lib/utils";
@@ -64,13 +70,21 @@ export function DryRunToggle({ prominent = false }: Props) {
         >
           <div className="flex items-start gap-3">
             {isDryRun ? (
-              <ShieldCheck className="h-5 w-5 mt-0.5 shrink-0 text-emerald-400" aria-hidden />
+              <ShieldCheck
+                className="h-5 w-5 mt-0.5 shrink-0 text-emerald-400"
+                aria-hidden
+              />
             ) : (
-              <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0 text-destructive" aria-hidden />
+              <AlertTriangle
+                className="h-5 w-5 mt-0.5 shrink-0 text-destructive"
+                aria-hidden
+              />
             )}
             <div className="flex-1 space-y-2">
               <div>
-                <p className="font-medium">{isDryRun ? t("prominentTitleDry") : t("prominentTitleLive")}</p>
+                <p className="font-medium">
+                  {isDryRun ? t("prominentTitleDry") : t("prominentTitleLive")}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {isDryRun ? t("prominentBodyDry") : t("prominentBodyLive")}
                 </p>
@@ -89,8 +103,12 @@ export function DryRunToggle({ prominent = false }: Props) {
           </DialogHeader>
           <p className="text-sm text-muted-foreground">{t("switchBody")}</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>{tCommon("cancel")}</Button>
-            <Button variant="destructive" onClick={goLive}>{t("switchConfirm")}</Button>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button variant="destructive" onClick={goLive}>
+              {t("switchConfirm")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

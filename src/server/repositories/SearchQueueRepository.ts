@@ -1,10 +1,18 @@
-import type { SearchQueueAction, SearchQueueEntry, SearchQueueStatus } from "@/shared/types/models";
+import type {
+  SearchQueueAction,
+  SearchQueueEntry,
+  SearchQueueStatus,
+} from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 
-const _retentionEnv = parseInt(process.env.SEARCH_QUEUE_RETENTION_CAP ?? "", 10);
-const RETENTION_CAP = Number.isFinite(_retentionEnv) && _retentionEnv > 0 ? _retentionEnv : 5000;
+const _retentionEnv = parseInt(
+  process.env.SEARCH_QUEUE_RETENTION_CAP ?? "",
+  10,
+);
+const RETENTION_CAP =
+  Number.isFinite(_retentionEnv) && _retentionEnv > 0 ? _retentionEnv : 5000;
 
 function isUniqueConstraintError(err: unknown): boolean {
   return (
@@ -38,10 +46,14 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
   }
 
   async findAll(): Promise<SearchQueueEntry[]> {
-    return (await this.db.searchQueue.findMany({ orderBy: { createdAt: "asc" } })) as SearchQueueEntry[];
+    return (await this.db.searchQueue.findMany({
+      orderBy: { createdAt: "asc" },
+    })) as SearchQueueEntry[];
   }
 
-  async create(data: Omit<SearchQueueEntry, "id" | "createdAt">): Promise<SearchQueueEntry> {
+  async create(
+    data: Omit<SearchQueueEntry, "id" | "createdAt">,
+  ): Promise<SearchQueueEntry> {
     const entry = await this.db.searchQueue.create({ data });
     return entry as SearchQueueEntry;
   }
@@ -51,7 +63,12 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
   async createUnique(data: CreateInput): Promise<CreateResult> {
     try {
       const entry = await this.db.searchQueue.create({ data });
-      this.trim().catch((err) => appLogger.warn("SearchQueue trim failed", { source: LogSource.Db, err }));
+      this.trim().catch((err) =>
+        appLogger.warn("SearchQueue trim failed", {
+          source: LogSource.Db,
+          err,
+        }),
+      );
       return { entry: entry as SearchQueueEntry, created: true };
     } catch (err) {
       if (isUniqueConstraintError(err)) {
@@ -67,14 +84,21 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
             status: "pending",
           },
         });
-        if (existing) return { entry: existing as SearchQueueEntry, created: false };
+        if (existing)
+          return { entry: existing as SearchQueueEntry, created: false };
       }
       throw err;
     }
   }
 
-  async update(id: number, data: Partial<SearchQueueEntry>): Promise<SearchQueueEntry> {
-    return (await this.db.searchQueue.update({ where: { id }, data })) as SearchQueueEntry;
+  async update(
+    id: number,
+    data: Partial<SearchQueueEntry>,
+  ): Promise<SearchQueueEntry> {
+    return (await this.db.searchQueue.update({
+      where: { id },
+      data,
+    })) as SearchQueueEntry;
   }
 
   async delete(id: number): Promise<void> {
@@ -111,7 +135,9 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
   }
 
   async countPending(instanceId: number): Promise<number> {
-    return this.db.searchQueue.count({ where: { instanceId, status: "pending" } });
+    return this.db.searchQueue.count({
+      where: { instanceId, status: "pending" },
+    });
   }
 
   async findLastProcessedAt(instanceId: number): Promise<Date | null> {
@@ -126,7 +152,7 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
   async setStatus(
     id: number,
     status: SearchQueueStatus,
-    error?: string | null
+    error?: string | null,
   ): Promise<SearchQueueEntry> {
     return (await this.db.searchQueue.update({
       where: { id },
@@ -140,7 +166,9 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
    * user intent.
    */
   private async trim(): Promise<void> {
-    const total = await this.db.searchQueue.count({ where: { status: { not: "pending" } } });
+    const total = await this.db.searchQueue.count({
+      where: { status: { not: "pending" } },
+    });
     if (total <= RETENTION_CAP) return;
     const overflow = total - RETENTION_CAP;
     const oldest = await this.db.searchQueue.findMany({
@@ -150,7 +178,9 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
       select: { id: true },
     });
     if (oldest.length === 0) return;
-    await this.db.searchQueue.deleteMany({ where: { id: { in: oldest.map((r) => r.id) } } });
+    await this.db.searchQueue.deleteMany({
+      where: { id: { in: oldest.map((r) => r.id) } },
+    });
   }
 }
 

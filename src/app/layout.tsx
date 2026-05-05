@@ -8,13 +8,20 @@ import Providers from "./providers";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "Refinarr",
   description: "Custom Format upgrade dashboard for Radarr & Sonarr",
   applicationName: "Refinarr",
-  appleWebApp: { capable: true, title: "Refinarr", statusBarStyle: "black-translucent" },
+  appleWebApp: {
+    capable: true,
+    title: "Refinarr",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {
@@ -24,7 +31,11 @@ export const viewport: Viewport = {
   ],
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const locale = await getLocale();
   const messages = await getMessages();
   return (

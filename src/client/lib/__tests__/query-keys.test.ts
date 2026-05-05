@@ -27,7 +27,15 @@ describe("queryKeys", () => {
   });
 
   test("typed arr-keys include the type discriminator", () => {
-    expect(queryKeys.qualityProfiles("radarr", 1)).toEqual(["qualityProfiles", "radarr", 1]);
-    expect(queryKeys.customFormats("sonarr", 2)).toEqual(["customFormats", "sonarr", 2]);
+    expect(queryKeys.qualityProfiles("radarr", 1)).toEqual([
+      "qualityProfiles",
+      "radarr",
+      1,
+    ]);
+    expect(queryKeys.customFormats("sonarr", 2)).toEqual([
+      "customFormats",
+      "sonarr",
+      2,
+    ]);
   });
 });

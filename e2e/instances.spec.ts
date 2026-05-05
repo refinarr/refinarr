@@ -9,7 +9,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("settings page renders Add Instance button", async ({ page }) => {
-  await expect(page.getByRole("button", { name: "Add Instance" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Add Instance" }),
+  ).toBeVisible();
 });
 
 test("add a Radarr instance and verify card appears", async ({ page }) => {
@@ -22,16 +24,22 @@ test("add a Radarr instance and verify card appears", async ({ page }) => {
   await expect(dialog).toBeVisible();
 
   await dialog.getByLabel("Name", { exact: true }).fill("E2E Test Radarr");
-  await dialog.getByLabel("URL", { exact: true }).fill("http://192.168.1.100:7878");
+  await dialog
+    .getByLabel("URL", { exact: true })
+    .fill("http://192.168.1.100:7878");
   await dialog.getByLabel("API Key").fill("deadbeef1234567890abcdef12345678");
   await dialog.getByRole("button", { name: "Save" }).click();
 
   // First match is the card — a toast may also contain the name momentarily.
-  await expect(page.getByText("E2E Test Radarr").first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("E2E Test Radarr").first()).toBeVisible({
+    timeout: 10_000,
+  });
 });
 
 test("delete the E2E instance removes it from the list", async ({ page }) => {
-  const card = page.locator('[data-slot="card"]').filter({ hasText: "E2E Test Radarr" });
+  const card = page
+    .locator('[data-slot="card"]')
+    .filter({ hasText: "E2E Test Radarr" });
   await expect(card).toBeVisible({ timeout: 5_000 });
 
   await card.getByRole("button", { name: "Delete" }).click();

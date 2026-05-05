@@ -34,14 +34,18 @@ describe("api.get", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/health",
       expect.objectContaining({
-        headers: expect.objectContaining({ "Content-Type": "application/json" }),
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+        }),
       }),
     );
     expect(result).toEqual({ ok: true });
   });
 
   test("throws with the server's error message on non-2xx", async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ error: "Boom", code: "NOPE", traceId: "trace-body" }, 500));
+    fetchMock.mockResolvedValue(
+      jsonResponse({ error: "Boom", code: "NOPE", traceId: "trace-body" }, 500),
+    );
     await expect(api.get("/x")).rejects.toMatchObject({
       status: 500,
       message: "Boom",
@@ -50,11 +54,13 @@ describe("api.get", () => {
       path: "/x",
       method: "GET",
     });
-    expect(reportClientError).toHaveBeenCalledWith(expect.objectContaining({
-      status: 500,
-      code: "NOPE",
-      traceId: "trace-body",
-    }));
+    expect(reportClientError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 500,
+        code: "NOPE",
+        traceId: "trace-body",
+      }),
+    );
   });
 
   test("throws a generic message when the body is not JSON", async () => {
@@ -99,11 +105,13 @@ describe("api.get", () => {
   test("reports network errors", async () => {
     fetchMock.mockRejectedValue(new Error("offline"));
     await expect(api.get("/x")).rejects.toBeInstanceOf(ApiClientError);
-    expect(reportClientError).toHaveBeenCalledWith(expect.objectContaining({
-      message: "offline",
-      path: "/x",
-      method: "GET",
-    }));
+    expect(reportClientError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "offline",
+        path: "/x",
+        method: "GET",
+      }),
+    );
   });
 });
 

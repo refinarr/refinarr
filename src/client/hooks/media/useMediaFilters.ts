@@ -20,7 +20,9 @@ export interface MediaFilters {
 // Hook query input — every field optional, plus scoringMode. useMovies /
 // useSeries / useFlaggedMediaData accept this so they don't each redeclare
 // their own near-identical filter type.
-export type MediaQueryFilters = Partial<MediaFilters> & { scoringMode?: ScoringMode };
+export type MediaQueryFilters = Partial<MediaFilters> & {
+  scoringMode?: ScoringMode;
+};
 
 export const defaultMediaFilters: MediaFilters = {
   sortBy: "score",
@@ -41,7 +43,10 @@ export interface MediaFiltersResult {
   forQuery: MediaFilters & { scoringMode: ScoringMode };
 }
 
-export function useMediaFilters(scoringMode: ScoringMode, instanceId: number): MediaFiltersResult {
+export function useMediaFilters(
+  scoringMode: ScoringMode,
+  instanceId: number,
+): MediaFiltersResult {
   const [filters, setFilters] = useState<MediaFilters>(defaultMediaFilters);
   const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
   const debouncedQ = useDebouncedValue(filters.q, 300);
@@ -78,6 +83,11 @@ export function useMediaFilters(scoringMode: ScoringMode, instanceId: number): M
   return {
     filters,
     setFilters,
-    forQuery: { ...filters, maxScore: debouncedMaxScore, q: debouncedQ, scoringMode },
+    forQuery: {
+      ...filters,
+      maxScore: debouncedMaxScore,
+      q: debouncedQ,
+      scoringMode,
+    },
   };
 }

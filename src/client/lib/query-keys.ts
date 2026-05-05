@@ -16,7 +16,8 @@ export const queryKeys = {
   ignore: (instanceId: number) => ["ignore", instanceId] as const,
   history: (params?: object) => ["history", params] as const,
   historyAll: () => ["history"] as const,
-  historyErrors: (instanceId: number) => ["history", "errors", instanceId] as const,
+  historyErrors: (instanceId: number) =>
+    ["history", "errors", instanceId] as const,
   qualityProfiles: (type: ArrType, instanceId: number) =>
     ["qualityProfiles", type, instanceId] as const,
   customFormats: (type: ArrType, instanceId: number) =>
@@ -26,5 +27,6 @@ export const queryKeys = {
   dashboardSummary: () => ["dashboard-summary"] as const,
   searchQueue: (instanceId: number) => ["search-queue", instanceId] as const,
   searchQueueAll: () => ["search-queue", "all"] as const,
-  recentSearches: (instanceId: number) => ["recent-searches", instanceId] as const,
+  recentSearches: (instanceId: number) =>
+    ["recent-searches", instanceId] as const,
 };

@@ -7,7 +7,9 @@ describe("redactString — query param patterns", () => {
   });
 
   test("?api_key= is redacted", () => {
-    expect(redactString("?api_key=abc123secret&other=val")).toBe("?api_key=***&other=val");
+    expect(redactString("?api_key=abc123secret&other=val")).toBe(
+      "?api_key=***&other=val",
+    );
   });
 
   test("?api-key= is redacted", () => {
@@ -26,14 +28,14 @@ describe("redactString — query param patterns", () => {
 describe("redactString — header patterns", () => {
   test("X-Api-Key header value is redacted", () => {
     expect(redactString("X-Api-Key: deadbeef1234567890abcdef12345678")).toBe(
-      "X-Api-Key: ***"
+      "X-Api-Key: ***",
     );
   });
 
   test("Authorization header value is redacted", () => {
-    expect(redactString("Authorization: Bearer deadbeef1234567890abcdef12345678")).toBe(
-      "Authorization: ***"
-    );
+    expect(
+      redactString("Authorization: Bearer deadbeef1234567890abcdef12345678"),
+    ).toBe("Authorization: ***");
   });
 });
 
@@ -44,7 +46,7 @@ describe("redactString — 32-char hex token pattern", () => {
 
   test("32-char hex inline in text is redacted", () => {
     expect(redactString("key is deadbeef1234567890abcdef12345678 here")).toBe(
-      "key is *** here"
+      "key is *** here",
     );
   });
 
@@ -65,7 +67,9 @@ describe("redactString — 32-char hex token pattern", () => {
 
 describe("redactString — no-op cases", () => {
   test("string with no sensitive data is unchanged", () => {
-    expect(redactString("nothing sensitive here")).toBe("nothing sensitive here");
+    expect(redactString("nothing sensitive here")).toBe(
+      "nothing sensitive here",
+    );
   });
 
   test("empty string returns empty string", () => {
@@ -83,7 +87,9 @@ describe("redactContext — reserved keys", () => {
   });
 
   test("x-api-key key is scrubbed", () => {
-    expect(redactContext({ "x-api-key": "secret" })).toEqual({ "x-api-key": "***" });
+    expect(redactContext({ "x-api-key": "secret" })).toEqual({
+      "x-api-key": "***",
+    });
   });
 
   test("authorization key is scrubbed", () => {

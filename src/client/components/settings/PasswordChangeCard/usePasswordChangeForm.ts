@@ -24,7 +24,10 @@ export function usePasswordChangeForm() {
   const [confirm, setConfirm] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const change = useChangePassword();
-  const changeWithToast = withToast(change, { success: t("changed"), error: t("failed") });
+  const changeWithToast = withToast(change, {
+    success: t("changed"),
+    error: t("failed"),
+  });
 
   const submit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,21 +37,29 @@ export function usePasswordChangeForm() {
     setErrors({});
     try {
       await changeWithToast({ currentPassword: current, newPassword: next });
-      setCurrent(""); setNext(""); setConfirm("");
+      setCurrent("");
+      setNext("");
+      setConfirm("");
     } catch (caught) {
       if (caught instanceof ApiClientError) {
-        if (caught.status === 401) return setErrors({ current: t("wrongCurrent") });
-        if (caught.status === 429) return setErrors({ form: t("tooManyAttempts") });
-        if (caught.code === "SAME_AS_CURRENT") return setErrors({ form: t("sameAsCurrent") });
+        if (caught.status === 401)
+          return setErrors({ current: t("wrongCurrent") });
+        if (caught.status === 429)
+          return setErrors({ form: t("tooManyAttempts") });
+        if (caught.code === "SAME_AS_CURRENT")
+          return setErrors({ form: t("sameAsCurrent") });
       }
       setErrors({ form: t("failed") });
     }
   };
 
   return {
-    current, setCurrent,
-    next, setNext,
-    confirm, setConfirm,
+    current,
+    setCurrent,
+    next,
+    setNext,
+    confirm,
+    setConfirm,
     submitting: change.isPending,
     errors,
     submit,

@@ -22,7 +22,9 @@ describe("bootstrap.seedDefaults", () => {
   test("seeds dryRun with the spec default when not set", async () => {
     expect(await configRepository.get(ConfigKey.DryRun.key)).toBeNull();
     await seedDefaults();
-    expect(await configRepository.getTyped(ConfigKey.DryRun)).toBe(ConfigKey.DryRun.default);
+    expect(await configRepository.getTyped(ConfigKey.DryRun)).toBe(
+      ConfigKey.DryRun.default,
+    );
   });
 
   test("seeds a 32-hex apiKey when not set", async () => {

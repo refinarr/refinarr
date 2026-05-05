@@ -3,7 +3,9 @@ import { BaseRepository } from "./BaseRepository";
 
 export class PreferenceRepository extends BaseRepository<CfPreference> {
   async findById(id: number): Promise<CfPreference | null> {
-    return this.db.cfPreference.findUnique({ where: { id } }) as Promise<CfPreference | null>;
+    return this.db.cfPreference.findUnique({
+      where: { id },
+    }) as Promise<CfPreference | null>;
   }
 
   async findAll(): Promise<CfPreference[]> {
@@ -11,17 +13,23 @@ export class PreferenceRepository extends BaseRepository<CfPreference> {
   }
 
   async findByInstance(instanceId: number): Promise<CfPreference[]> {
-    return this.db.cfPreference.findMany({ where: { instanceId } }) as Promise<CfPreference[]>;
+    return this.db.cfPreference.findMany({ where: { instanceId } }) as Promise<
+      CfPreference[]
+    >;
   }
 
   async setForInstance(
     instanceId: number,
-    cfs: Array<{ cfId: number; cfName: string }>
+    cfs: Array<{ cfId: number; cfName: string }>,
   ): Promise<void> {
     await this.db.cfPreference.deleteMany({ where: { instanceId } });
     if (cfs.length > 0) {
       await this.db.cfPreference.createMany({
-        data: cfs.map((cf) => ({ instanceId, cfId: cf.cfId, cfName: cf.cfName })),
+        data: cfs.map((cf) => ({
+          instanceId,
+          cfId: cf.cfId,
+          cfName: cf.cfName,
+        })),
       });
     }
   }
@@ -30,7 +38,10 @@ export class PreferenceRepository extends BaseRepository<CfPreference> {
     return this.db.cfPreference.create({ data }) as Promise<CfPreference>;
   }
 
-  async update(_id: number, _data: Partial<CfPreference>): Promise<CfPreference> {
+  async update(
+    _id: number,
+    _data: Partial<CfPreference>,
+  ): Promise<CfPreference> {
     throw new Error("Use setForInstance instead");
   }
 

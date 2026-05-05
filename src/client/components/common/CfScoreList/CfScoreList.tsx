@@ -8,12 +8,20 @@ interface Props {
   collapseMissingAfter?: number;
 }
 
-export function CfScoreList({ formats, missingFormats, collapseMissingAfter = 8 }: Props) {
+export function CfScoreList({
+  formats,
+  missingFormats,
+  collapseMissingAfter = 8,
+}: Props) {
   const [showAllMissing, setShowAllMissing] = useState(false);
   if (formats.length === 0 && missingFormats.length === 0) return null;
 
-  const sortedFormats = [...formats].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-  const visibleMissing = showAllMissing ? missingFormats : missingFormats.slice(0, collapseMissingAfter);
+  const sortedFormats = [...formats].sort(
+    (a, b) => (b.score ?? 0) - (a.score ?? 0),
+  );
+  const visibleMissing = showAllMissing
+    ? missingFormats
+    : missingFormats.slice(0, collapseMissingAfter);
   const hiddenCount = missingFormats.length - visibleMissing.length;
 
   return (

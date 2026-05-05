@@ -15,7 +15,8 @@ export function useInstances() {
 export function useCreateInstance() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateInstanceDto) => api.post<Instance>("/instances", data),
+    mutationFn: (data: CreateInstanceDto) =>
+      api.post<Instance>("/instances", data),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.instances() }),
   });
 }
@@ -57,7 +58,11 @@ export function useTestConnection() {
 
 export function useTestCredentials() {
   return useMutation({
-    mutationFn: async (data: { type: ArrType; url: string; apiKey: string }) => {
+    mutationFn: async (data: {
+      type: ArrType;
+      url: string;
+      apiKey: string;
+    }) => {
       const result = await api.post<{ ok: boolean }>("/instances/test", data);
       if (!result.ok) throw new Error("Connection failed");
       return result;

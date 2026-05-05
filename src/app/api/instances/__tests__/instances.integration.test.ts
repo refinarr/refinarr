@@ -6,7 +6,9 @@ import { prisma } from "@/server/lib/db";
 import { isEncrypted } from "@/server/lib/crypto";
 import { dataCache } from "@/server/lib/DataCache";
 
-const ctxFor = (id: number) => ({ params: Promise.resolve({ id: String(id) }) });
+const ctxFor = (id: number) => ({
+  params: Promise.resolve({ id: String(id) }),
+});
 
 function postReq(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/instances", {
@@ -26,7 +28,9 @@ function getReq() {
   return new NextRequest("http://localhost/api/instances", { method: "GET" });
 }
 function delReq(id: number) {
-  return new NextRequest(`http://localhost/api/instances/${id}`, { method: "DELETE" });
+  return new NextRequest(`http://localhost/api/instances/${id}`, {
+    method: "DELETE",
+  });
 }
 
 const valid = {
@@ -66,22 +70,31 @@ describe("POST /api/instances", () => {
   });
 
   test("rejects AWS metadata URL (SSRF guard) with 400", async () => {
-    const res = await POST(postReq({ ...valid, url: "http://169.254.169.254/" }), { params: Promise.resolve({}) });
+    const res = await POST(
+      postReq({ ...valid, url: "http://169.254.169.254/" }),
+      { params: Promise.resolve({}) },
+    );
     expect(res.status).toBe(400);
   });
 
   test("rejects ftp:// scheme with 400", async () => {
-    const res = await POST(postReq({ ...valid, url: "ftp://example.com/" }), { params: Promise.resolve({}) });
+    const res = await POST(postReq({ ...valid, url: "ftp://example.com/" }), {
+      params: Promise.resolve({}),
+    });
     expect(res.status).toBe(400);
   });
 
   test("accepts an RFC1918 LAN URL", async () => {
-    const res = await POST(postReq({ ...valid, url: "http://10.0.0.5:7878" }), { params: Promise.resolve({}) });
+    const res = await POST(postReq({ ...valid, url: "http://10.0.0.5:7878" }), {
+      params: Promise.resolve({}),
+    });
     expect(res.status).toBe(201);
   });
 
   test("rejects schema-failing payload with 400", async () => {
-    const res = await POST(postReq({ type: "plex", name: "X" }), { params: Promise.resolve({}) });
+    const res = await POST(postReq({ type: "plex", name: "X" }), {
+      params: Promise.resolve({}),
+    });
     expect(res.status).toBe(400);
   });
 
@@ -100,21 +113,33 @@ describe("GET / PUT / DELETE /api/instances/[id]", () => {
   test("getOne returns the instance without apiKey", async () => {
     const created = await POST(postReq(valid), { params: Promise.resolve({}) });
     const { id } = await created.json();
-    const res = await getOne(new NextRequest(`http://localhost/api/instances/${id}`), ctxFor(id));
+    const res = await getOne(
+      new NextRequest(`http://localhost/api/instances/${id}`),
+      ctxFor(id),
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).not.toHaveProperty("apiKey");
   });
 
   test("getOne with unknown id returns 404", async () => {
-    const res = await getOne(new NextRequest("http://localhost/api/instances/99999"), ctxFor(99999));
+    const res = await getOne(
+      new NextRequest("http://localhost/api/instances/99999"),
+      ctxFor(99999),
+    );
     expect(res.status).toBe(404);
   });
 
   test("PUT updates fields and re-encrypts a new apiKey", async () => {
     const created = await POST(postReq(valid), { params: Promise.resolve({}) });
     const { id } = await created.json();
-    const res = await PUT(putReq(id, { name: "Renamed", apiKey: "newkeynewkeynewkeynewkeynewkey00" }), ctxFor(id));
+    const res = await PUT(
+      putReq(id, {
+        name: "Renamed",
+        apiKey: "newkeynewkeynewkeynewkeynewkey00",
+      }),
+      ctxFor(id),
+    );
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.name).toBe("Renamed");
@@ -125,7 +150,10 @@ describe("GET / PUT / DELETE /api/instances/[id]", () => {
   test("PUT rejects unsafe URL with 400", async () => {
     const created = await POST(postReq(valid), { params: Promise.resolve({}) });
     const { id } = await created.json();
-    const res = await PUT(putReq(id, { url: "http://169.254.169.254/" }), ctxFor(id));
+    const res = await PUT(
+      putReq(id, { url: "http://169.254.169.254/" }),
+      ctxFor(id),
+    );
     expect(res.status).toBe(400);
   });
 

@@ -41,7 +41,11 @@ export interface FilterChipsResult {
   clearActiveFilters: () => void;
 }
 
-export function useFilterChips({ filters, prefs, profiles }: Args): FilterChipsResult {
+export function useFilterChips({
+  filters,
+  prefs,
+  profiles,
+}: Args): FilterChipsResult {
   const t = useTranslations("filters");
 
   const wantedCfOptions = useMemo(
@@ -57,7 +61,9 @@ export function useFilterChips({ filters, prefs, profiles }: Args): FilterChipsR
     return Array.from(new Map(pairs), ([id, name]) => ({ id, name }));
   }, [profiles]);
 
-  const profileName = profiles?.find((p) => p.id === filters.filters.profileId)?.name;
+  const profileName = profiles?.find(
+    (p) => p.id === filters.filters.profileId,
+  )?.name;
 
   const removeMissingCf = (id: number) =>
     filters.setFilters((f) => ({
@@ -91,11 +97,12 @@ export function useFilterChips({ filters, prefs, profiles }: Args): FilterChipsR
       label: t("queryLabel", { q: filters.filters.q }),
       onRemove: () => filters.setFilters((f) => ({ ...f, q: "" })),
     },
-    filters.filters.profileId !== null && profileName && {
-      key: "profile",
-      label: t("profileLabel", { name: profileName }),
-      onRemove: () => filters.setFilters((f) => ({ ...f, profileId: null })),
-    },
+    filters.filters.profileId !== null &&
+      profileName && {
+        key: "profile",
+        label: t("profileLabel", { name: profileName }),
+        onRemove: () => filters.setFilters((f) => ({ ...f, profileId: null })),
+      },
     ...missingChips,
     ...penaltyChips,
     filters.filters.onlyMissing && {

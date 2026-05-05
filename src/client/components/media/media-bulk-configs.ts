@@ -1,5 +1,10 @@
 import type { BulkActionsConfig } from "@/client/hooks/media/useBulkMediaActions";
-import type { FlaggedMedia, FlaggedMovie, FlaggedSeries, MediaType } from "@/shared/types/models";
+import type {
+  FlaggedMedia,
+  FlaggedMovie,
+  FlaggedSeries,
+  MediaType,
+} from "@/shared/types/models";
 
 // 1. Define the standard "Base" that every action uses
 const createBaseBody = (item: FlaggedMedia, instId: number) => ({
@@ -15,10 +20,10 @@ const createBaseBody = (item: FlaggedMedia, instId: number) => ({
 function createBulkConfig<T extends FlaggedMedia>(
   mediaType: MediaType,
   endpoints: { search: string; delete: string },
-  logic: { 
-    isDeletable: (item: T) => boolean; 
+  logic: {
+    isDeletable: (item: T) => boolean;
     deleteExtras: (item: T) => Record<string, unknown>;
-  }
+  },
 ): Pick<BulkActionsConfig<T>, "mediaType" | "search" | "ignore" | "delete"> {
   return {
     mediaType,
@@ -52,17 +57,17 @@ function createBulkConfig<T extends FlaggedMedia>(
 export const MOVIE_BULK_CONFIG = createBulkConfig<FlaggedMovie>(
   "movie",
   { search: "/radarr/movies/search", delete: "/radarr/movies/delete" },
-  { 
-    isDeletable: (m) => m.hasFile && m.movieFileId > 0, 
-    deleteExtras: (m) => ({ fileId: m.movieFileId }) 
-  }
+  {
+    isDeletable: (m) => m.hasFile && m.movieFileId > 0,
+    deleteExtras: (m) => ({ fileId: m.movieFileId }),
+  },
 );
 
 export const SERIES_BULK_CONFIG = createBulkConfig<FlaggedSeries>(
   "series",
   { search: "/sonarr/series/search", delete: "/sonarr/series/delete" },
-  { 
-    isDeletable: (s) => s.episodeFiles.length > 0, 
-    deleteExtras: (s) => ({ fileIds: s.episodeFiles.map(f => f.id) }) 
-  }
+  {
+    isDeletable: (s) => s.episodeFiles.length > 0,
+    deleteExtras: (s) => ({ fileIds: s.episodeFiles.map((f) => f.id) }),
+  },
 );

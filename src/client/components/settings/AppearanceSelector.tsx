@@ -15,9 +15,21 @@ interface Swatch {
 // Tailwind utility classes resolve to the tokens defined in
 // `src/app/globals.css` `@theme { … }`. Edit colors there.
 const SWATCHES: Swatch[] = [
-  { theme: "dark-orange", surfaceClass: "bg-surface-dark",  brandClass: "bg-brand-amber" },
-  { theme: "dark-teal",   surfaceClass: "bg-surface-dark",  brandClass: "bg-brand-teal"  },
-  { theme: "light",       surfaceClass: "bg-surface-light", brandClass: "bg-brand-amber" },
+  {
+    theme: "dark-orange",
+    surfaceClass: "bg-surface-dark",
+    brandClass: "bg-brand-amber",
+  },
+  {
+    theme: "dark-teal",
+    surfaceClass: "bg-surface-dark",
+    brandClass: "bg-brand-teal",
+  },
+  {
+    theme: "light",
+    surfaceClass: "bg-surface-light",
+    brandClass: "bg-brand-amber",
+  },
 ];
 
 // next-themes resolves the active theme from localStorage on the client only;
@@ -30,10 +42,18 @@ const getServerSnapshot = () => false;
 export function AppearanceSelector() {
   const t = useTranslations("settings.appearance");
   const { theme, setTheme } = useTheme();
-  const mounted = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const mounted = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
 
   return (
-    <div role="radiogroup" aria-label={t("ariaLabel")} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div
+      role="radiogroup"
+      aria-label={t("ariaLabel")}
+      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+    >
       {SWATCHES.map(({ theme: name, surfaceClass, brandClass }) => {
         const selected = mounted && theme === name;
         return (
@@ -49,10 +69,24 @@ export function AppearanceSelector() {
               selected ? "border-brand ring-2 ring-brand/40" : "border-border",
             )}
           >
-            <div className={cn("relative h-16 w-full overflow-hidden rounded-md border border-border/60", surfaceClass)}>
+            <div
+              className={cn(
+                "relative h-16 w-full overflow-hidden rounded-md border border-border/60",
+                surfaceClass,
+              )}
+            >
               <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-                <span className={cn("h-3 w-3 rounded-full", brandClass)} aria-hidden />
-                <span className={cn("h-1.5 w-10 rounded-full opacity-40", brandClass)} aria-hidden />
+                <span
+                  className={cn("h-3 w-3 rounded-full", brandClass)}
+                  aria-hidden
+                />
+                <span
+                  className={cn(
+                    "h-1.5 w-10 rounded-full opacity-40",
+                    brandClass,
+                  )}
+                  aria-hidden
+                />
               </div>
               {selected && (
                 <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-brand text-foreground-on-brand">
@@ -60,7 +94,9 @@ export function AppearanceSelector() {
                 </span>
               )}
             </div>
-            <span className="text-sm font-medium">{t(`themes.${name}` as const)}</span>
+            <span className="text-sm font-medium">
+              {t(`themes.${name}` as const)}
+            </span>
           </button>
         );
       })}

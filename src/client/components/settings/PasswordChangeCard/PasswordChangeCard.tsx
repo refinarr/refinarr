@@ -1,6 +1,11 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/client/components/ui/card";
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
 import { FormField } from "@/client/components/ui/form-field";
@@ -12,9 +17,12 @@ export function PasswordChangeCard() {
   const t = useTranslations("auth.password");
   const { data: me } = useMe();
   const {
-    current, setCurrent,
-    next, setNext,
-    confirm, setConfirm,
+    current,
+    setCurrent,
+    next,
+    setNext,
+    confirm,
+    setConfirm,
     submitting,
     errors,
     submit,
@@ -30,7 +38,11 @@ export function PasswordChangeCard() {
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-4 max-w-md">
-          <FormField id="current-password" label={t("currentPassword")} error={errors.current}>
+          <FormField
+            id="current-password"
+            label={t("currentPassword")}
+            error={errors.current}
+          >
             <Input
               type="password"
               value={current}
@@ -39,7 +51,12 @@ export function PasswordChangeCard() {
               required
             />
           </FormField>
-          <FormField id="new-password" label={t("newPassword")} description={t("newPasswordHint")} error={errors.next}>
+          <FormField
+            id="new-password"
+            label={t("newPassword")}
+            description={t("newPasswordHint")}
+            error={errors.next}
+          >
             <Input
               type="password"
               value={next}
@@ -49,7 +66,11 @@ export function PasswordChangeCard() {
               minLength={12}
             />
           </FormField>
-          <FormField id="confirm-new-password" label={t("confirmNewPassword")} error={errors.confirm}>
+          <FormField
+            id="confirm-new-password"
+            label={t("confirmNewPassword")}
+            error={errors.confirm}
+          >
             <Input
               type="password"
               value={confirm}
@@ -60,7 +81,9 @@ export function PasswordChangeCard() {
             />
           </FormField>
           {errors.form && (
-            <p role="alert" className="text-sm text-destructive">{errors.form}</p>
+            <p role="alert" className="text-sm text-destructive">
+              {errors.form}
+            </p>
           )}
           <Button type="submit" disabled={submitting}>
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

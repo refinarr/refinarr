@@ -22,7 +22,13 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
   };
 
   const seasonSearch = useMutation({
-    mutationFn: ({ series, seasonNumber }: { series: FlaggedSeries; seasonNumber: number }) =>
+    mutationFn: ({
+      series,
+      seasonNumber,
+    }: {
+      series: FlaggedSeries;
+      seasonNumber: number;
+    }) =>
       api.post<ActionLog>(`/sonarr/series/season-search`, {
         instanceId,
         mediaId: series.id,
@@ -38,7 +44,15 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
   });
 
   const episodeSearch = useMutation({
-    mutationFn: ({ series, fileId, label }: { series: FlaggedSeries; fileId: number; label: string }) =>
+    mutationFn: ({
+      series,
+      fileId,
+      label,
+    }: {
+      series: FlaggedSeries;
+      fileId: number;
+      label: string;
+    }) =>
       api.post<ActionLog>(`/sonarr/series/episode-search`, {
         instanceId,
         mediaId: series.id,
@@ -54,8 +68,16 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
   });
 
   const seasonDelete = useMutation({
-    mutationFn: ({ series, seasonNumber, fileIds, search }: {
-      series: FlaggedSeries; seasonNumber: number; fileIds: number[]; search: boolean;
+    mutationFn: ({
+      series,
+      seasonNumber,
+      fileIds,
+      search,
+    }: {
+      series: FlaggedSeries;
+      seasonNumber: number;
+      fileIds: number[];
+      search: boolean;
     }) =>
       api.post<ActionLog>(`/sonarr/series/delete`, {
         instanceId,
@@ -66,9 +88,16 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       }),
     onSuccess: (r, vars) => {
       if (vars.search) invalidateQueue();
-      if (r.isDryRun) toast.info(vars.search ? tDelete("queuedAndSearchDryRun") : tDelete("queuedDryRun"));
+      if (r.isDryRun)
+        toast.info(
+          vars.search
+            ? tDelete("queuedAndSearchDryRun")
+            : tDelete("queuedDryRun"),
+        );
       else {
-        toast.success(vars.search ? tDelete("seasonDoneAndSearch") : tDelete("seasonDone"));
+        toast.success(
+          vars.search ? tDelete("seasonDoneAndSearch") : tDelete("seasonDone"),
+        );
         void refetch();
       }
     },
@@ -76,8 +105,16 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
   });
 
   const episodeDelete = useMutation({
-    mutationFn: ({ series, fileId, label, search }: {
-      series: FlaggedSeries; fileId: number; label: string; search: boolean;
+    mutationFn: ({
+      series,
+      fileId,
+      label,
+      search,
+    }: {
+      series: FlaggedSeries;
+      fileId: number;
+      label: string;
+      search: boolean;
     }) =>
       api.post<ActionLog>(`/sonarr/series/delete`, {
         instanceId,
@@ -88,9 +125,16 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       }),
     onSuccess: (r, vars) => {
       if (vars.search) invalidateQueue();
-      if (r.isDryRun) toast.info(vars.search ? tDelete("queuedAndSearchDryRun") : tDelete("queuedDryRun"));
+      if (r.isDryRun)
+        toast.info(
+          vars.search
+            ? tDelete("queuedAndSearchDryRun")
+            : tDelete("queuedDryRun"),
+        );
       else {
-        toast.success(vars.search ? tDelete("fileDoneAndSearch") : tDelete("fileDone"));
+        toast.success(
+          vars.search ? tDelete("fileDoneAndSearch") : tDelete("fileDone"),
+        );
         void refetch();
       }
     },
@@ -102,9 +146,17 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       seasonSearch.mutateAsync({ series, seasonNumber }),
     runSearchEpisode: (series: FlaggedSeries, fileId: number, label: string) =>
       episodeSearch.mutateAsync({ series, fileId, label }),
-    runDeleteSeason: (series: FlaggedSeries, seasonNumber: number, fileIds: number[], search: boolean) =>
-      seasonDelete.mutateAsync({ series, seasonNumber, fileIds, search }),
-    runDeleteEpisode: (series: FlaggedSeries, fileId: number, label: string, search: boolean) =>
-      episodeDelete.mutateAsync({ series, fileId, label, search }),
+    runDeleteSeason: (
+      series: FlaggedSeries,
+      seasonNumber: number,
+      fileIds: number[],
+      search: boolean,
+    ) => seasonDelete.mutateAsync({ series, seasonNumber, fileIds, search }),
+    runDeleteEpisode: (
+      series: FlaggedSeries,
+      fileId: number,
+      label: string,
+      search: boolean,
+    ) => episodeDelete.mutateAsync({ series, fileId, label, search }),
   };
 }

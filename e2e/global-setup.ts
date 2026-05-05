@@ -19,7 +19,13 @@ export default async function globalSetup() {
   // Wipe the E2E test DB + encryption key so every run starts fresh.
   await mkdir("local", { recursive: true });
 
-  for (const f of ["local/e2e-test.db", "local/e2e-test.db-journal", "local/e2e-test.db-wal", "local/e2e-test.db-shm", "local/.encryption-key.e2e"]) {
+  for (const f of [
+    "local/e2e-test.db",
+    "local/e2e-test.db-journal",
+    "local/e2e-test.db-wal",
+    "local/e2e-test.db-shm",
+    "local/.encryption-key.e2e",
+  ]) {
     await rm(f, { force: true });
   }
 
@@ -31,16 +37,23 @@ export default async function globalSetup() {
 
   // Seed the E2E admin account + an active session, then write the storageState
   // file so all spec files can start authenticated. Bypasses the /setup UI flow.
-  const prisma = new PrismaClient({ adapter: new PrismaLibSql({ url: "file:./local/e2e-test.db" }) });
+  const prisma = new PrismaClient({
+    adapter: new PrismaLibSql({ url: "file:./local/e2e-test.db" }),
+  });
   let sessionId: string;
   let expiresAt: Date;
   try {
     const user = await prisma.user.create({
-      data: { username: E2E_USERNAME, passwordHash: hashPassword(E2E_PASSWORD) },
+      data: {
+        username: E2E_USERNAME,
+        passwordHash: hashPassword(E2E_PASSWORD),
+      },
     });
     sessionId = randomBytes(32).toString("hex");
     expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
-    await prisma.session.create({ data: { id: sessionId, userId: user.id, expiresAt } });
+    await prisma.session.create({
+      data: { id: sessionId, userId: user.id, expiresAt },
+    });
   } finally {
     await prisma.$disconnect();
   }

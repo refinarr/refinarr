@@ -48,7 +48,10 @@ export function MediaTable<T extends { id: number }>({
   return (
     <>
       {renderCard && (
-        <ul data-testid="media-card-list" className="flex flex-col gap-2 lg:hidden">
+        <ul
+          data-testid="media-card-list"
+          className="flex flex-col gap-2 lg:hidden"
+        >
           {rows.map((row) => (
             <MediaCard
               key={row.id}
@@ -75,7 +78,9 @@ export function MediaTable<T extends { id: number }>({
                   <th
                     key={col.key}
                     className={`px-3 py-2.5 font-medium ${col.className ?? ""} ${col.sortKey ? "cursor-pointer select-none hover:text-foreground" : ""}`}
-                    onClick={col.sortKey ? () => onSortChange(col.sortKey!) : undefined}
+                    onClick={
+                      col.sortKey ? () => onSortChange(col.sortKey!) : undefined
+                    }
                   >
                     {col.header}
                     {arrow && <span className="text-foreground">{arrow}</span>}
@@ -93,12 +98,21 @@ export function MediaTable<T extends { id: number }>({
               >
                 <td
                   className="px-3 py-2 align-middle"
-                  onClick={(e) => { e.stopPropagation(); onToggleSelect(row.id); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleSelect(row.id);
+                  }}
                 >
-                  <Checkbox checked={selectedIds.has(row.id)} onCheckedChange={() => onToggleSelect(row.id)} />
+                  <Checkbox
+                    checked={selectedIds.has(row.id)}
+                    onCheckedChange={() => onToggleSelect(row.id)}
+                  />
                 </td>
                 {columns.map((col) => (
-                  <td key={col.key} className={`px-3 py-2 align-middle ${col.className ?? ""}`}>
+                  <td
+                    key={col.key}
+                    className={`px-3 py-2 align-middle ${col.className ?? ""}`}
+                  >
                     {col.render(row)}
                   </td>
                 ))}

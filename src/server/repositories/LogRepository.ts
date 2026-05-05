@@ -1,4 +1,8 @@
-import type { ActionLog, ActionStatus, ActionType } from "@/shared/types/models";
+import type {
+  ActionLog,
+  ActionStatus,
+  ActionType,
+} from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
 
 const RETENTION_CAP = Number(process.env.ACTION_LOG_RETENTION_CAP) || 5000;
@@ -11,17 +15,24 @@ interface LogFilter {
 
 export class LogRepository extends BaseRepository<ActionLog> {
   async findById(id: number): Promise<ActionLog | null> {
-    return this.db.actionLog.findUnique({ where: { id } }) as Promise<ActionLog | null>;
+    return this.db.actionLog.findUnique({
+      where: { id },
+    }) as Promise<ActionLog | null>;
   }
 
   async findAll(): Promise<ActionLog[]> {
-    return this.db.actionLog.findMany({ orderBy: [{ lastRetriedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }] }) as Promise<ActionLog[]>;
+    return this.db.actionLog.findMany({
+      orderBy: [
+        { lastRetriedAt: { sort: "desc", nulls: "last" } },
+        { createdAt: "desc" },
+      ],
+    }) as Promise<ActionLog[]>;
   }
 
   async findPaginated(
     filter: LogFilter,
     page: number,
-    limit: number
+    limit: number,
   ): Promise<{ items: ActionLog[]; total: number }> {
     const where = {
       ...(filter.instanceId ? { instanceId: filter.instanceId } : {}),
@@ -32,7 +43,10 @@ export class LogRepository extends BaseRepository<ActionLog> {
     const [items, total] = await Promise.all([
       this.db.actionLog.findMany({
         where,
-        orderBy: [{ lastRetriedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+        orderBy: [
+          { lastRetriedAt: { sort: "desc", nulls: "last" } },
+          { createdAt: "desc" },
+        ],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -45,7 +59,10 @@ export class LogRepository extends BaseRepository<ActionLog> {
   async findFailedByInstance(instanceId: number): Promise<ActionLog[]> {
     return this.db.actionLog.findMany({
       where: { instanceId, status: "failed" },
-      orderBy: [{ lastRetriedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+      orderBy: [
+        { lastRetriedAt: { sort: "desc", nulls: "last" } },
+        { createdAt: "desc" },
+      ],
     }) as Promise<ActionLog[]>;
   }
 
@@ -57,7 +74,10 @@ export class LogRepository extends BaseRepository<ActionLog> {
 
   async findRecent(limit: number): Promise<ActionLog[]> {
     return this.db.actionLog.findMany({
-      orderBy: [{ lastRetriedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+      orderBy: [
+        { lastRetriedAt: { sort: "desc", nulls: "last" } },
+        { createdAt: "desc" },
+      ],
       take: limit,
     }) as Promise<ActionLog[]>;
   }
@@ -70,7 +90,7 @@ export class LogRepository extends BaseRepository<ActionLog> {
    */
   async findRecentSearches(
     instanceId: number,
-    windowMs: number
+    windowMs: number,
   ): Promise<Array<{ mediaId: number; lastSearchedAt: Date }>> {
     const since = new Date(Date.now() - windowMs);
     const rows = await this.db.actionLog.findMany({
@@ -100,16 +120,17 @@ export class LogRepository extends BaseRepository<ActionLog> {
       .sort((a, b) => b.lastSearchedAt.getTime() - a.lastSearchedAt.getTime());
   }
 
-  async create(
-    data: Omit<ActionLog, "id" | "createdAt">
-  ): Promise<ActionLog> {
+  async create(data: Omit<ActionLog, "id" | "createdAt">): Promise<ActionLog> {
     const created = (await this.db.actionLog.create({ data })) as ActionLog;
     void this.trim();
     return created;
   }
 
   async update(id: number, data: Partial<ActionLog>): Promise<ActionLog> {
-    return this.db.actionLog.update({ where: { id }, data }) as Promise<ActionLog>;
+    return this.db.actionLog.update({
+      where: { id },
+      data,
+    }) as Promise<ActionLog>;
   }
 
   async delete(id: number): Promise<void> {
@@ -129,7 +150,9 @@ export class LogRepository extends BaseRepository<ActionLog> {
       take: overflow,
       select: { id: true },
     });
-    await this.db.actionLog.deleteMany({ where: { id: { in: oldest.map((e) => e.id) } } });
+    await this.db.actionLog.deleteMany({
+      where: { id: { in: oldest.map((e) => e.id) } },
+    });
   }
 }
 

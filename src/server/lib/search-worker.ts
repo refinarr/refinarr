@@ -16,7 +16,9 @@ function parsePayload(raw: string | null | undefined): unknown {
   return raw ? JSON.parse(raw) : {};
 }
 
-const seasonPayload = z.object({ seasonNumber: z.number().int().nonnegative() });
+const seasonPayload = z.object({
+  seasonNumber: z.number().int().nonnegative(),
+});
 const episodePayload = z.object({ fileId: z.number().int().positive() });
 
 type SearchHandler = (

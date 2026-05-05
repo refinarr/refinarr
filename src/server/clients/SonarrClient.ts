@@ -41,11 +41,15 @@ export class SonarrClient extends ArrClient {
     return this.fetch<SonarrEpisodeFile[]>(`/episodefile?seriesId=${seriesId}`);
   }
 
-  async getAllEpisodeFiles(seriesIds: number[]): Promise<Map<number, SonarrEpisodeFile[]>> {
+  async getAllEpisodeFiles(
+    seriesIds: number[],
+  ): Promise<Map<number, SonarrEpisodeFile[]>> {
     const map = new Map<number, SonarrEpisodeFile[]>();
     for (let i = 0; i < seriesIds.length; i += BATCH) {
       const batch = seriesIds.slice(i, i + BATCH);
-      const results = await Promise.all(batch.map((id) => this.getEpisodeFiles(id)));
+      const results = await Promise.all(
+        batch.map((id) => this.getEpisodeFiles(id)),
+      );
       batch.forEach((id, idx) => map.set(id, results[idx] ?? []));
     }
     return map;
@@ -58,7 +62,10 @@ export class SonarrClient extends ArrClient {
     });
   }
 
-  async triggerSeasonSearch(seriesId: number, seasonNumber: number): Promise<void> {
+  async triggerSeasonSearch(
+    seriesId: number,
+    seasonNumber: number,
+  ): Promise<void> {
     await this.fetch("/command", {
       method: "POST",
       body: JSON.stringify({ name: "SeasonSearch", seriesId, seasonNumber }),
@@ -72,7 +79,14 @@ export class SonarrClient extends ArrClient {
     });
   }
 
-  async getEpisodes(seriesId: number): Promise<Array<{ id: number; episodeFileId: number; seasonNumber: number; episodeNumber: number }>> {
+  async getEpisodes(seriesId: number): Promise<
+    Array<{
+      id: number;
+      episodeFileId: number;
+      seasonNumber: number;
+      episodeNumber: number;
+    }>
+  > {
     return this.fetch(`/episode?seriesId=${seriesId}`);
   }
 

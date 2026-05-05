@@ -21,8 +21,15 @@ export function CfScore({ name, score, variant = "present" }: Props) {
     <span className="inline-flex items-center gap-1 rounded bg-muted/40 px-1.5 py-0.5 text-xs">
       <span className="text-foreground/80">{name}</span>
       {hasScore && (
-        <span className={positive ? "text-green-400 tabular-nums" : "text-destructive tabular-nums"}>
-          {score! > 0 ? "+" : ""}{score}
+        <span
+          className={
+            positive
+              ? "text-green-400 tabular-nums"
+              : "text-destructive tabular-nums"
+          }
+        >
+          {score! > 0 ? "+" : ""}
+          {score}
         </span>
       )}
     </span>

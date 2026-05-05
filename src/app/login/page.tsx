@@ -4,7 +4,12 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useTranslations } from "next-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/client/components/ui/card";
 import { Input } from "@/client/components/ui/input";
 import { Button } from "@/client/components/ui/button";
 import { FormField } from "@/client/components/ui/form-field";
@@ -16,7 +21,8 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/dashboard";
-  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  const safeNext =
+    next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -31,7 +37,11 @@ function LoginForm() {
       await api.post("/auth/login", { username, password });
       router.push(safeNext);
     } catch (caught) {
-      setErr(caught instanceof ApiClientError && caught.status === 429 ? t("tooManyAttempts") : t("failed"));
+      setErr(
+        caught instanceof ApiClientError && caught.status === 429
+          ? t("tooManyAttempts")
+          : t("failed"),
+      );
     } finally {
       setSubmitting(false);
     }

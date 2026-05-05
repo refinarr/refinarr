@@ -13,9 +13,7 @@ const scriptSrc = isDev
   : "script-src 'self' 'unsafe-inline'";
 
 // In dev, the Next.js HMR websocket uses ws://; allow it but only in dev.
-const connectSrc = isDev
-  ? "connect-src 'self' ws: wss:"
-  : "connect-src 'self'";
+const connectSrc = isDev ? "connect-src 'self' ws: wss:" : "connect-src 'self'";
 
 const csp = [
   "default-src 'self'",
@@ -36,8 +34,14 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "no-referrer" },
-  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains",
+  },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+  },
   { key: "X-DNS-Prefetch-Control", value: "off" },
 ];
 
@@ -45,13 +49,12 @@ const securityHeaders = [
 // from a non-localhost origin. Needed when testing on a phone over LAN —
 // otherwise Next.js blocks the cross-origin request. Set via env only — the
 // repo doesn't ship machine-specific IPs.
-const envAllowedDevOrigins = process.env.NEXT_DEV_ALLOWED_ORIGINS
-  ?.split(",")
-  .map((s) => s.trim())
-  .filter(Boolean) ?? [];
-const allowedDevOrigins = isDev && envAllowedDevOrigins.length > 0
-  ? envAllowedDevOrigins
-  : undefined;
+const envAllowedDevOrigins =
+  process.env.NEXT_DEV_ALLOWED_ORIGINS?.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean) ?? [];
+const allowedDevOrigins =
+  isDev && envAllowedDevOrigins.length > 0 ? envAllowedDevOrigins : undefined;
 
 const nextConfig: NextConfig = {
   output: "standalone",

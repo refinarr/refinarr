@@ -48,9 +48,16 @@ function makeQueryHook(
 describe("useFlaggedMediaData", () => {
   function makeItem(id: number, title: string): Item {
     return {
-      id, title, year: 2024, qualityProfileId: 1,
-      customFormats: [], customFormatScore: 0,
-      cfScore: 0, missingFormats: [], unwantedFormats: [], sizeOnDisk: 0,
+      id,
+      title,
+      year: 2024,
+      qualityProfileId: 1,
+      customFormats: [],
+      customFormatScore: 0,
+      cfScore: 0,
+      missingFormats: [],
+      unwantedFormats: [],
+      sizeOnDisk: 0,
     };
   }
 
@@ -62,19 +69,25 @@ describe("useFlaggedMediaData", () => {
       { items: [a, b], total: 3 },
       { items: [c], total: 3 },
     ]);
-    const { result } = renderHook(() => useFlaggedMediaData(hook, 1, baseFilters));
+    const { result } = renderHook(() =>
+      useFlaggedMediaData(hook, 1, baseFilters),
+    );
     expect(result.current.items).toEqual([a, b, c]);
   });
 
   it("reads total from the first page", () => {
     const hook = makeQueryHook([{ items: [makeItem(1, "A")], total: 42 }]);
-    const { result } = renderHook(() => useFlaggedMediaData(hook, 1, baseFilters));
+    const { result } = renderHook(() =>
+      useFlaggedMediaData(hook, 1, baseFilters),
+    );
     expect(result.current.total).toBe(42);
   });
 
   it("returns empty items and zero total when data is undefined", () => {
     const hook = makeQueryHook(undefined, { isLoading: true });
-    const { result } = renderHook(() => useFlaggedMediaData(hook, 1, baseFilters));
+    const { result } = renderHook(() =>
+      useFlaggedMediaData(hook, 1, baseFilters),
+    );
     expect(result.current.items).toEqual([]);
     expect(result.current.total).toBe(0);
   });
@@ -86,7 +99,9 @@ describe("useFlaggedMediaData", () => {
       isFetchingNextPage: true,
       hasNextPage: true,
     });
-    const { result } = renderHook(() => useFlaggedMediaData(hook, 1, baseFilters));
+    const { result } = renderHook(() =>
+      useFlaggedMediaData(hook, 1, baseFilters),
+    );
     expect(result.current.isError).toBe(true);
     expect(result.current.isFetching).toBe(true);
     expect(result.current.isFetchingNextPage).toBe(true);

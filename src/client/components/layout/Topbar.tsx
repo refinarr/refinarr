@@ -35,7 +35,9 @@ export function Topbar() {
           <SheetTitle className="mb-6 px-3">
             <Logo size="lg" />
           </SheetTitle>
-          <SheetDescription className="sr-only">{tNav("menu")}</SheetDescription>
+          <SheetDescription className="sr-only">
+            {tNav("menu")}
+          </SheetDescription>
           <NavContent onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>

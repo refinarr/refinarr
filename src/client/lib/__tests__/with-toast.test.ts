@@ -16,13 +16,17 @@ interface MockMutation<TData = unknown, TVars = unknown> {
   mutateAsync: (vars: TVars) => Promise<TData>;
 }
 
-function makeMutation<TData, TVars>(impl: (vars: TVars) => Promise<TData>): MockMutation<TData, TVars> {
+function makeMutation<TData, TVars>(
+  impl: (vars: TVars) => Promise<TData>,
+): MockMutation<TData, TVars> {
   return { mutateAsync: vi.fn(impl) };
 }
 
 describe("withToast", () => {
   test("invokes mutateAsync with the variables and returns its promise", async () => {
-    const mutation = makeMutation<string, { id: number }>(async ({ id }) => `done-${id}`);
+    const mutation = makeMutation<string, { id: number }>(
+      async ({ id }) => `done-${id}`,
+    );
     // Cast: full UseMutationResult shape isn't needed for this helper.
     const run = withToast(mutation as never, { success: "ok" });
     await expect(run({ id: 42 })).resolves.toBe("done-42");
@@ -31,7 +35,10 @@ describe("withToast", () => {
 
   test("hands the promise to toast.promise with success/loading/error labels", async () => {
     const mutation = makeMutation(async () => "ok");
-    const run = withToast(mutation as never, { loading: "Saving…", success: "Saved" });
+    const run = withToast(mutation as never, {
+      loading: "Saving…",
+      success: "Saved",
+    });
     await run(undefined);
     expect(promiseSpy).toHaveBeenCalledTimes(1);
     const [, opts] = promiseSpy.mock.calls[0];
@@ -50,7 +57,10 @@ describe("withToast", () => {
 
   test("error formatter prefers the explicit error message when provided", async () => {
     const mutation = makeMutation(async () => "ok");
-    const run = withToast(mutation as never, { success: "ok", error: "Custom failure" });
+    const run = withToast(mutation as never, {
+      success: "ok",
+      error: "Custom failure",
+    });
     await run(undefined);
     const [, opts] = promiseSpy.mock.calls[0];
     expect(opts.error(new Error("ignored"))).toBe("Custom failure");

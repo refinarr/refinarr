@@ -53,19 +53,36 @@ describe("verifyPassword — malformed stored hash", () => {
   });
 
   test("N === 0 returns false", () => {
-    expect(verifyPassword("pw", "scrypt$0$" + "aa".repeat(16) + "$" + "bb".repeat(64))).toBe(false);
+    expect(
+      verifyPassword(
+        "pw",
+        "scrypt$0$" + "aa".repeat(16) + "$" + "bb".repeat(64),
+      ),
+    ).toBe(false);
   });
 
   test("N < 0 returns false", () => {
-    expect(verifyPassword("pw", "scrypt$-1$" + "aa".repeat(16) + "$" + "bb".repeat(64))).toBe(false);
+    expect(
+      verifyPassword(
+        "pw",
+        "scrypt$-1$" + "aa".repeat(16) + "$" + "bb".repeat(64),
+      ),
+    ).toBe(false);
   });
 
   test("hash part wrong length returns false", () => {
-    expect(verifyPassword("pw", "scrypt$16384$" + "aa".repeat(16) + "$" + "bb".repeat(32))).toBe(false);
+    expect(
+      verifyPassword(
+        "pw",
+        "scrypt$16384$" + "aa".repeat(16) + "$" + "bb".repeat(32),
+      ),
+    ).toBe(false);
   });
 
   test("empty hash part returns false", () => {
-    expect(verifyPassword("pw", "scrypt$16384$" + "aa".repeat(16) + "$")).toBe(false);
+    expect(verifyPassword("pw", "scrypt$16384$" + "aa".repeat(16) + "$")).toBe(
+      false,
+    );
   });
 });
 
@@ -113,7 +130,9 @@ describe("getUserCount", () => {
 
 describe("session lifecycle", () => {
   async function makeUser() {
-    return prisma.user.create({ data: { username: "sess-user", passwordHash: "x" } });
+    return prisma.user.create({
+      data: { username: "sess-user", passwordHash: "x" },
+    });
   }
 
   test("createSession persists a 32-byte hex token with future expiresAt", async () => {
@@ -138,10 +157,16 @@ describe("session lifecycle", () => {
   test("getSession deletes and returns null for an expired session", async () => {
     const user = await makeUser();
     await prisma.session.create({
-      data: { id: "expired-id", userId: user.id, expiresAt: new Date(Date.now() - 1000) },
+      data: {
+        id: "expired-id",
+        userId: user.id,
+        expiresAt: new Date(Date.now() - 1000),
+      },
     });
     expect(await getSession("expired-id")).toBeNull();
-    expect(await prisma.session.findUnique({ where: { id: "expired-id" } })).toBeNull();
+    expect(
+      await prisma.session.findUnique({ where: { id: "expired-id" } }),
+    ).toBeNull();
   });
 
   test("isValidSession is true for active and false for missing", async () => {
@@ -165,18 +190,28 @@ describe("session lifecycle", () => {
     await prisma.session.createMany({
       data: [
         { id: "ok", userId: user.id, expiresAt: new Date(Date.now() + 60_000) },
-        { id: "old", userId: user.id, expiresAt: new Date(Date.now() - 60_000) },
+        {
+          id: "old",
+          userId: user.id,
+          expiresAt: new Date(Date.now() - 60_000),
+        },
       ],
     });
     await pruneExpiredSessions();
-    expect(await prisma.session.findUnique({ where: { id: "ok" } })).not.toBeNull();
-    expect(await prisma.session.findUnique({ where: { id: "old" } })).toBeNull();
+    expect(
+      await prisma.session.findUnique({ where: { id: "ok" } }),
+    ).not.toBeNull();
+    expect(
+      await prisma.session.findUnique({ where: { id: "old" } }),
+    ).toBeNull();
   });
 });
 
 describe("verifySessionPassword", () => {
   test("returns session_required when sid is undefined", async () => {
-    expect(await verifySessionPassword(undefined, "any-password")).toBe("session_required");
+    expect(await verifySessionPassword(undefined, "any-password")).toBe(
+      "session_required",
+    );
   });
 
   test("returns session_required for an unknown sid", async () => {
@@ -191,20 +226,30 @@ describe("verifySessionPassword", () => {
     });
     const { id } = await createSession(user.id);
     await prisma.user.delete({ where: { id: user.id } });
-    expect(await verifySessionPassword(id, "password-1234")).toBe("session_required");
+    expect(await verifySessionPassword(id, "password-1234")).toBe(
+      "session_required",
+    );
   });
 
   test("returns invalid_password when the session is valid but the password is wrong", async () => {
     const user = await prisma.user.create({
-      data: { username: "auth-user", passwordHash: hashPassword("right-password-1") },
+      data: {
+        username: "auth-user",
+        passwordHash: hashPassword("right-password-1"),
+      },
     });
     const { id } = await createSession(user.id);
-    expect(await verifySessionPassword(id, "wrong-password-1")).toBe("invalid_password");
+    expect(await verifySessionPassword(id, "wrong-password-1")).toBe(
+      "invalid_password",
+    );
   });
 
   test("returns ok when the session and password both match", async () => {
     const user = await prisma.user.create({
-      data: { username: "ok-user", passwordHash: hashPassword("right-password-2") },
+      data: {
+        username: "ok-user",
+        passwordHash: hashPassword("right-password-2"),
+      },
     });
     const { id } = await createSession(user.id);
     expect(await verifySessionPassword(id, "right-password-2")).toBe("ok");

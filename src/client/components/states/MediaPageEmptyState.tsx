@@ -16,6 +16,7 @@ interface Props {
 
 export function MediaPageEmptyState({ state, onClear }: Props) {
   if (state === "no-cfs") return <NoCfsPrompt />;
-  if (state === "filtered-empty") return <NoFilterMatchState onClear={onClear} />;
+  if (state === "filtered-empty")
+    return <NoFilterMatchState onClear={onClear} />;
   return <AllClearState />;
 }

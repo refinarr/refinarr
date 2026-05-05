@@ -6,7 +6,13 @@ import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary"
 import { AppLogRow } from "@/client/components/logs/AppLogRow";
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/client/components/ui/select";
 import { useAppLogs, useClearAppLogs } from "@/client/hooks/data/useAppLogs";
 import { useDebouncedValue } from "@/client/hooks/ui/useDebouncedValue";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
@@ -33,7 +39,10 @@ export default function LogsPage() {
 
   const clear = useClearAppLogs();
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
-  const runClear = withToast(clear, { success: tToast("cleared"), error: tToast("clearFailed") });
+  const runClear = withToast(clear, {
+    success: tToast("cleared"),
+    error: tToast("clearFailed"),
+  });
 
   const handleClear = async () => {
     const ok = await askConfirm({
@@ -63,7 +72,11 @@ export default function LogsPage() {
                   <WifiOff className="h-3 w-3 text-destructive" />
                 )}
                 {isConnected ? t("live") : t("reconnecting")}
-                {total > 0 && <span className="ml-1">· {t("entries", { count: total })}</span>}
+                {total > 0 && (
+                  <span className="ml-1">
+                    · {t("entries", { count: total })}
+                  </span>
+                )}
               </p>
             </div>
             <div className="flex gap-2">
@@ -91,7 +104,9 @@ export default function LogsPage() {
             </div>
             <Select
               value={level ?? ALL}
-              onValueChange={(v) => setLevel(v === ALL ? null : (v as LogLevel))}
+              onValueChange={(v) =>
+                setLevel(v === ALL ? null : (v as LogLevel))
+              }
             >
               <SelectTrigger className="w-32">
                 <SelectValue>{levelLabel}</SelectValue>
@@ -124,10 +139,18 @@ export default function LogsPage() {
                 <thead className="bg-background border-b">
                   <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="w-6 px-3 py-2.5" />
-                    <th className="w-44 px-3 py-2.5 font-medium">{tCols("time")}</th>
-                    <th className="w-20 px-3 py-2.5 font-medium">{tCols("level")}</th>
-                    <th className="w-32 px-3 py-2.5 font-medium">{tCols("source")}</th>
-                    <th className="px-3 py-2.5 font-medium">{tCols("message")}</th>
+                    <th className="w-44 px-3 py-2.5 font-medium">
+                      {tCols("time")}
+                    </th>
+                    <th className="w-20 px-3 py-2.5 font-medium">
+                      {tCols("level")}
+                    </th>
+                    <th className="w-32 px-3 py-2.5 font-medium">
+                      {tCols("source")}
+                    </th>
+                    <th className="px-3 py-2.5 font-medium">
+                      {tCols("message")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>

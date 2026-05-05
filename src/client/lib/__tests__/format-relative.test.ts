@@ -8,17 +8,28 @@ function t(key: string, values?: Record<string, string | number>): string {
   const n = values?.n;
   const m = values?.m;
   switch (key) {
-    case "unknown": return "unknown";
-    case "secondsAgo": return `${n}s ago`;
-    case "minutesAgo": return `${n}m ago`;
-    case "hoursAgo": return `${n}h ago`;
-    case "daysAgo": return `${n}d ago`;
-    case "etaNow": return "now";
-    case "etaLessThanMinute": return "<1m";
-    case "etaMinutes": return `${n}m`;
-    case "etaHours": return `${n}h`;
-    case "etaHoursMinutes": return `${n}h ${m}m`;
-    default: return key;
+    case "unknown":
+      return "unknown";
+    case "secondsAgo":
+      return `${n}s ago`;
+    case "minutesAgo":
+      return `${n}m ago`;
+    case "hoursAgo":
+      return `${n}h ago`;
+    case "daysAgo":
+      return `${n}d ago`;
+    case "etaNow":
+      return "now";
+    case "etaLessThanMinute":
+      return "<1m";
+    case "etaMinutes":
+      return `${n}m`;
+    case "etaHours":
+      return `${n}h`;
+    case "etaHoursMinutes":
+      return `${n}h ${m}m`;
+    default:
+      return key;
   }
 }
 

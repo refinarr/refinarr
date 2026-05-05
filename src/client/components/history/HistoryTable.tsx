@@ -1,6 +1,13 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/client/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/client/components/ui/table";
 import { ActionStatusBadge } from "./ActionStatusBadge";
 import { ActionTypeBadge } from "./ActionTypeBadge";
 import { RetryButton } from "./RetryButton";
@@ -38,7 +45,10 @@ export function HistoryTable({ logs }: Props) {
                   className="ml-1 text-muted-foreground/70"
                   title={new Date(log.lastRetriedAt).toLocaleString()}
                 >
-                  · {tRetry("retried", { time: formatRelative(log.lastRetriedAt) })}
+                  ·{" "}
+                  {tRetry("retried", {
+                    time: formatRelative(log.lastRetriedAt),
+                  })}
                 </span>
               )}
             </TableCell>

@@ -42,7 +42,11 @@ describe("InstanceRepository.findById / findAll / findAllEnabled", () => {
 
   test("findAllEnabled excludes disabled instances", async () => {
     await instanceRepository.create({ ...baseData, name: "ON", enabled: true });
-    await instanceRepository.create({ ...baseData, name: "OFF", enabled: false });
+    await instanceRepository.create({
+      ...baseData,
+      name: "OFF",
+      enabled: false,
+    });
     const enabled = await instanceRepository.findAllEnabled();
     expect(enabled.map((i) => i.name)).toEqual(["ON"]);
   });
@@ -51,7 +55,9 @@ describe("InstanceRepository.findById / findAll / findAllEnabled", () => {
 describe("InstanceRepository.update", () => {
   test("re-encrypts apiKey when changed", async () => {
     const created = await instanceRepository.create(baseData);
-    const updated = await instanceRepository.update(created.id, { apiKey: "newkeynewkeynewkeynewkeynewkey00" });
+    const updated = await instanceRepository.update(created.id, {
+      apiKey: "newkeynewkeynewkeynewkeynewkey00",
+    });
     expect(updated.apiKey).toBe("newkeynewkeynewkeynewkeynewkey00");
     const raw = await prisma.instance.findUnique({ where: { id: created.id } });
     expect(isEncrypted(raw!.apiKey)).toBe(true);
@@ -59,9 +65,13 @@ describe("InstanceRepository.update", () => {
 
   test("leaves apiKey untouched when not in the update payload", async () => {
     const created = await instanceRepository.create(baseData);
-    const before = (await prisma.instance.findUnique({ where: { id: created.id } }))!.apiKey;
+    const before = (await prisma.instance.findUnique({
+      where: { id: created.id },
+    }))!.apiKey;
     await instanceRepository.update(created.id, { name: "Renamed" });
-    const after = (await prisma.instance.findUnique({ where: { id: created.id } }))!.apiKey;
+    const after = (await prisma.instance.findUnique({
+      where: { id: created.id },
+    }))!.apiKey;
     expect(after).toBe(before);
   });
 });
@@ -77,8 +87,16 @@ describe("InstanceRepository.delete", () => {
 describe("InstanceRepository.migrateUnencrypted", () => {
   test("encrypts plaintext rows in place and returns the count", async () => {
     // Insert a plaintext row directly (simulating pre-encryption-at-rest data).
-    await prisma.instance.create({ data: { ...baseData, apiKey: "plaintext-key-here" } });
-    await prisma.instance.create({ data: { ...baseData, name: "Already encrypted", apiKey: "v1:not-real-but-prefixed" } });
+    await prisma.instance.create({
+      data: { ...baseData, apiKey: "plaintext-key-here" },
+    });
+    await prisma.instance.create({
+      data: {
+        ...baseData,
+        name: "Already encrypted",
+        apiKey: "v1:not-real-but-prefixed",
+      },
+    });
 
     const migrated = await instanceRepository.migrateUnencrypted();
     expect(migrated).toBe(1);

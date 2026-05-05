@@ -1,11 +1,16 @@
-import type { ActionLog, ActionType, FlaggedMedia, MediaQuery, ScoringMode } from "@/shared/types/models";
+import type {
+  ActionLog,
+  ActionType,
+  FlaggedMedia,
+  MediaQuery,
+  ScoringMode,
+} from "@/shared/types/models";
 import { SCORE_FOR } from "@/shared/scoring-mode";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { dryRunService } from "./DryRunService";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import { dataCache } from "@/server/lib/DataCache";
-
 
 interface ExecuteActionOptions {
   instanceId: number;
@@ -99,7 +104,9 @@ export abstract class MediaService {
       const matchAll = (query.missingCfMatch ?? "all") === "all";
       flagged = flagged.filter((m) => {
         const have = new Set(m.missingFormats.map((cf) => cf.id));
-        return matchAll ? wanted.every((id) => have.has(id)) : wanted.some((id) => have.has(id));
+        return matchAll
+          ? wanted.every((id) => have.has(id))
+          : wanted.some((id) => have.has(id));
       });
     }
 
@@ -108,7 +115,9 @@ export abstract class MediaService {
       const matchAll = (query.hasNegativeCfMatch ?? "all") === "all";
       flagged = flagged.filter((m) => {
         const have = new Set(m.unwantedFormats.map((cf) => cf.id));
-        return matchAll ? wanted.every((id) => have.has(id)) : wanted.some((id) => have.has(id));
+        return matchAll
+          ? wanted.every((id) => have.has(id))
+          : wanted.some((id) => have.has(id));
       });
     }
 
@@ -122,7 +131,9 @@ export abstract class MediaService {
     return { items: sorted.slice(start, start + query.limit), total };
   }
 
-  protected async executeAction(opts: ExecuteActionOptions): Promise<ActionLog> {
+  protected async executeAction(
+    opts: ExecuteActionOptions,
+  ): Promise<ActionLog> {
     const isDryRun = await dryRunService.isDryRun();
 
     const logData = {

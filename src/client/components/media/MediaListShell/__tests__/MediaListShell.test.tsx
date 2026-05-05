@@ -17,7 +17,9 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/client/hooks/media/useInstanceSelection", () => ({
   useInstanceSelection: () => ({
     instances: [{ id: 1, name: "My Radarr" }],
-    typedInstances: [{ id: 1, name: "My Radarr", scoringMode: "manual", type: "radarr" }],
+    typedInstances: [
+      { id: 1, name: "My Radarr", scoringMode: "manual", type: "radarr" },
+    ],
     activeInstance: 1,
     setInstanceId: vi.fn(),
     loadingInstances: false,
@@ -85,9 +87,14 @@ const baseMovie: FlaggedMovie = {
   sizeOnDisk: 0,
 };
 
-function makeUseQuery(items: FlaggedMovie[] = []): FlaggedMediaQueryHook<FlaggedMovie> {
+function makeUseQuery(
+  items: FlaggedMovie[] = [],
+): FlaggedMediaQueryHook<FlaggedMovie> {
   return () => ({
-    data: items.length > 0 ? { pages: [{ items, total: items.length }] } : undefined,
+    data:
+      items.length > 0
+        ? { pages: [{ items, total: items.length }] }
+        : undefined,
     isLoading: false,
     isError: false,
     isFetching: false,
@@ -108,7 +115,10 @@ describe("MediaListShell", () => {
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
       >
-        <MediaListShell.Body<FlaggedMovie> columns={() => []} Card={() => null} />
+        <MediaListShell.Body<FlaggedMovie>
+          columns={() => []}
+          Card={() => null}
+        />
         <MediaListShell.Drawer<FlaggedMovie> as={() => null} />
       </MediaListShell>,
     );

@@ -3,7 +3,9 @@ import { BaseRepository } from "./BaseRepository";
 
 export class IgnoreRepository extends BaseRepository<IgnoreEntry> {
   async findById(id: number): Promise<IgnoreEntry | null> {
-    return this.db.ignoreEntry.findUnique({ where: { id } }) as Promise<IgnoreEntry | null>;
+    return this.db.ignoreEntry.findUnique({
+      where: { id },
+    }) as Promise<IgnoreEntry | null>;
   }
 
   async findAll(): Promise<IgnoreEntry[]> {
@@ -17,14 +19,22 @@ export class IgnoreRepository extends BaseRepository<IgnoreEntry> {
     }) as Promise<IgnoreEntry[]>;
   }
 
-  async isIgnored(instanceId: number, mediaId: number, mediaType: MediaType): Promise<boolean> {
+  async isIgnored(
+    instanceId: number,
+    mediaId: number,
+    mediaType: MediaType,
+  ): Promise<boolean> {
     const entry = await this.db.ignoreEntry.findUnique({
-      where: { instanceId_mediaId_mediaType: { instanceId, mediaId, mediaType } },
+      where: {
+        instanceId_mediaId_mediaType: { instanceId, mediaId, mediaType },
+      },
     });
     return entry !== null;
   }
 
-  async create(data: Omit<IgnoreEntry, "id" | "ignoredAt">): Promise<IgnoreEntry> {
+  async create(
+    data: Omit<IgnoreEntry, "id" | "ignoredAt">,
+  ): Promise<IgnoreEntry> {
     return this.db.ignoreEntry.upsert({
       where: {
         instanceId_mediaId_mediaType: {

@@ -60,7 +60,8 @@ export function MultiSelect({
   className,
   triggerClassName,
 }: Props) {
-  const showMatchToggle = matchMode !== undefined && onMatchModeChange !== undefined;
+  const showMatchToggle =
+    matchMode !== undefined && onMatchModeChange !== undefined;
 
   const triggerText = (() => {
     if (selected.length === 0) return placeholder;
@@ -89,7 +90,9 @@ export function MultiSelect({
           className,
         )}
       >
-        <span className="line-clamp-1 flex flex-1 items-center gap-1.5 text-left">{triggerText}</span>
+        <span className="line-clamp-1 flex flex-1 items-center gap-1.5 text-left">
+          {triggerText}
+        </span>
         <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56 max-h-80">
@@ -103,12 +106,20 @@ export function MultiSelect({
           <>
             <DropdownMenuRadioGroup
               value={matchMode}
-              onValueChange={(v) => onMatchModeChange?.(v as MultiSelectMatchMode)}
+              onValueChange={(v) =>
+                onMatchModeChange?.(v as MultiSelectMatchMode)
+              }
             >
-              <DropdownMenuRadioItem value="all" onSelect={(e) => e.preventDefault()}>
+              <DropdownMenuRadioItem
+                value="all"
+                onSelect={(e) => e.preventDefault()}
+              >
                 {matchAllLabel}
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="any" onSelect={(e) => e.preventDefault()}>
+              <DropdownMenuRadioItem
+                value="any"
+                onSelect={(e) => e.preventDefault()}
+              >
                 {matchAnyLabel}
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
@@ -116,7 +127,9 @@ export function MultiSelect({
           </>
         )}
         {options.length === 0 ? (
-          <div className="px-2 py-1.5 text-sm text-muted-foreground">No options</div>
+          <div className="px-2 py-1.5 text-sm text-muted-foreground">
+            No options
+          </div>
         ) : (
           options.map((opt) => (
             <DropdownMenuCheckboxItem

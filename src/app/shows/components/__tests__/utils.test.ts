@@ -2,7 +2,11 @@ import { describe, test, expect } from "vitest";
 import { groupBySeason, filename } from "@/app/shows/components/utils";
 import type { EpisodeFileEntry } from "@/shared/types/models";
 
-function ep(id: number, season: number, path = `S${season}E${id}.mkv`): EpisodeFileEntry {
+function ep(
+  id: number,
+  season: number,
+  path = `S${season}E${id}.mkv`,
+): EpisodeFileEntry {
   return {
     id,
     seasonNumber: season,

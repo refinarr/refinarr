@@ -48,7 +48,9 @@ export async function GET(req: NextRequest) {
       const send = (data: ServerEvent | { type: "ready" }) => {
         if (closed) return;
         try {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(data)}\n\n`),
+          );
         } catch {
           // Controller may already be closed (race with abort) — ignore.
         }
@@ -75,7 +77,11 @@ export async function GET(req: NextRequest) {
 
       const close = () => {
         cleanup();
-        try { controller.close(); } catch { /* already closed */ }
+        try {
+          controller.close();
+        } catch {
+          /* already closed */
+        }
       };
 
       req.signal.addEventListener("abort", close);

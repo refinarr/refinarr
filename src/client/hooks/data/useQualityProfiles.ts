@@ -8,7 +8,9 @@ export function useQualityProfiles(type: ArrType, instanceId: number) {
   return useQuery({
     queryKey: queryKeys.qualityProfiles(type, instanceId),
     queryFn: () =>
-      api.get<QualityProfile[]>(`/${type}/qualityprofiles?instanceId=${instanceId}`),
+      api.get<QualityProfile[]>(
+        `/${type}/qualityprofiles?instanceId=${instanceId}`,
+      ),
     enabled: instanceId > 0,
   });
 }

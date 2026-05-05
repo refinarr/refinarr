@@ -1,4 +1,10 @@
-import type { FlaggedSeries, EpisodeFileEntry, ActionLog, MediaQuery, ScoringMode } from "@/shared/types/models";
+import type {
+  FlaggedSeries,
+  EpisodeFileEntry,
+  ActionLog,
+  MediaQuery,
+  ScoringMode,
+} from "@/shared/types/models";
 import { seriesRetryPayloadSchema } from "@/shared/types/schemas";
 import { isProfileMode } from "@/shared/scoring-mode";
 import { MediaService } from "./MediaService";
@@ -20,21 +26,26 @@ import {
 import { badRequest } from "@/server/lib/api-errors";
 import type { RetryActionOptions } from "./media-services";
 
-
 export class SeriesService extends MediaService {
   async getFlaggedSeries(
     instanceId: number,
-    query: MediaQuery
+    query: MediaQuery,
   ): Promise<{ items: FlaggedSeries[]; total: number }> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
     const mode = instance.scoringMode;
     const cacheKey = `series:${instanceId}:${mode}`;
-    let cached = dataCache.get<{ flagged: FlaggedSeries[] }>(cacheKey, CACHE_TTL_MS);
+    let cached = dataCache.get<{ flagged: FlaggedSeries[] }>(
+      cacheKey,
+      CACHE_TTL_MS,
+    );
 
     if (cached) {
-      appLogger.debug("Cache hit", { source: LogSource.SeriesService, context: { cacheKey } });
+      appLogger.debug("Cache hit", {
+        source: LogSource.SeriesService,
+        context: { cacheKey },
+      });
     } else {
       const startedAt = Date.now();
       const flagged = await this.buildFlaggedSeries(instanceId, instance, mode);
@@ -52,13 +63,18 @@ export class SeriesService extends MediaService {
       });
     }
 
-    return this.applyQuery(cached.flagged, query, mode, (s) => s.episodeFiles.length > 0);
+    return this.applyQuery(
+      cached.flagged,
+      query,
+      mode,
+      (s) => s.episodeFiles.length > 0,
+    );
   }
 
   private async buildFlaggedSeries(
     instanceId: number,
     instance: Awaited<ReturnType<typeof instanceRepository.findById>>,
-    mode: ScoringMode
+    mode: ScoringMode,
   ): Promise<FlaggedSeries[]> {
     const client = ArrClientFactory.createArrClient(instance!) as SonarrClient;
     const [series, profiles] = await Promise.all([
@@ -68,24 +84,31 @@ export class SeriesService extends MediaService {
 
     const profileMap = new Map(profiles.map((p) => [p.id, p]));
     const profileScoreMap = new Map<number, Map<number, number>>();
-    const profileFormatMap = new Map<number, Array<{ id: number; name: string }>>();
+    const profileFormatMap = new Map<
+      number,
+      Array<{ id: number; name: string }>
+    >();
     for (const p of profiles) {
       const cfMap = new Map<number, number>();
       for (const item of p.formatItems) cfMap.set(item.format, item.score);
       profileScoreMap.set(p.id, cfMap);
       profileFormatMap.set(
         p.id,
-        p.formatItems.filter((item) => item.score > 0).map((item) => ({ id: item.format, name: item.name }))
+        p.formatItems
+          .filter((item) => item.score > 0)
+          .map((item) => ({ id: item.format, name: item.name })),
       );
     }
 
     const ignoredSet = new Set(
       (await ignoreRepository.findByInstance(instanceId))
         .filter((e) => e.mediaType === "series")
-        .map((e) => e.mediaId)
+        .map((e) => e.mediaId),
     );
 
-    const seriesIds = series.filter((s) => !ignoredSet.has(s.id)).map((s) => s.id);
+    const seriesIds = series
+      .filter((s) => !ignoredSet.has(s.id))
+      .map((s) => s.id);
     const episodeFilesMap = await client.getAllEpisodeFiles(seriesIds);
 
     if (isProfileMode(mode)) {
@@ -96,7 +119,12 @@ export class SeriesService extends MediaService {
           if (!profile) return false;
           const files = episodeFilesMap.get(s.id) ?? [];
           if (files.length === 0) return profile.cutoffFormatScore > 0;
-          return files.some((f) => isBelowProfileScore(f.customFormatScore ?? 0, profile.cutoffFormatScore));
+          return files.some((f) =>
+            isBelowProfileScore(
+              f.customFormatScore ?? 0,
+              profile.cutoffFormatScore,
+            ),
+          );
         })
         .map((s) => {
           const profile = profileMap.get(s.qualityProfileId)!;
@@ -104,40 +132,65 @@ export class SeriesService extends MediaService {
           const worstScore = files.length
             ? Math.min(...files.map((f) => f.customFormatScore ?? 0))
             : 0;
-          const affectedEpisodeCount = files.filter(
-            (f) => isBelowProfileScore(f.customFormatScore ?? 0, profile.cutoffFormatScore)
+          const affectedEpisodeCount = files.filter((f) =>
+            isBelowProfileScore(
+              f.customFormatScore ?? 0,
+              profile.cutoffFormatScore,
+            ),
           ).length;
-          const cfScores = profileScoreMap.get(s.qualityProfileId) ?? new Map<number, number>();
-          const positiveProfileCfs = profileFormatMap.get(s.qualityProfileId) ?? [];
+          const cfScores =
+            profileScoreMap.get(s.qualityProfileId) ??
+            new Map<number, number>();
+          const positiveProfileCfs =
+            profileFormatMap.get(s.qualityProfileId) ?? [];
           const episodeFiles: EpisodeFileEntry[] = files.map((f) => {
             const fileCfs = f.customFormats ?? [];
             const fileCfIds = new Set(fileCfs.map((cf) => cf.id));
             const unwantedFormats = fileCfs
               .filter((cf) => (cfScores.get(cf.id) ?? 0) < 0)
-              .map((cf) => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) }));
+              .map((cf) => ({
+                id: cf.id,
+                name: cf.name,
+                score: cfScores.get(cf.id),
+              }));
             return {
               id: f.id,
               seasonNumber: f.seasonNumber,
               relativePath: f.relativePath,
-              customFormats: fileCfs.map((cf) => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) })),
+              customFormats: fileCfs.map((cf) => ({
+                id: cf.id,
+                name: cf.name,
+                score: cfScores.get(cf.id),
+              })),
               customFormatScore: f.customFormatScore ?? 0,
-              missingFormats: positiveProfileCfs.filter((cf) => !fileCfIds.has(cf.id)),
+              missingFormats: positiveProfileCfs.filter(
+                (cf) => !fileCfIds.has(cf.id),
+              ),
               unwantedFormats,
               minProfileScore: profile.cutoffFormatScore,
               size: f.size ?? 0,
             };
           });
           const missingCfIds = new Set<number>();
-          const unwantedCfIds = new Map<number, { id: number; name: string; score?: number }>();
+          const unwantedCfIds = new Map<
+            number,
+            { id: number; name: string; score?: number }
+          >();
           for (const ef of episodeFiles) {
-            if (isBelowProfileScore(ef.customFormatScore, profile.cutoffFormatScore)) {
+            if (
+              isBelowProfileScore(
+                ef.customFormatScore,
+                profile.cutoffFormatScore,
+              )
+            ) {
               ef.missingFormats.forEach((cf) => missingCfIds.add(cf.id));
             }
             ef.unwantedFormats.forEach((cf) => unwantedCfIds.set(cf.id, cf));
           }
-          const missingFormats = files.length === 0
-            ? positiveProfileCfs
-            : positiveProfileCfs.filter((cf) => missingCfIds.has(cf.id));
+          const missingFormats =
+            files.length === 0
+              ? positiveProfileCfs
+              : positiveProfileCfs.filter((cf) => missingCfIds.has(cf.id));
           return {
             id: s.id,
             title: s.title,
@@ -145,7 +198,10 @@ export class SeriesService extends MediaService {
             qualityProfileId: s.qualityProfileId,
             customFormats: [],
             customFormatScore: worstScore,
-            cfScore: scoreProfileCoverage(worstScore, profile.cutoffFormatScore),
+            cfScore: scoreProfileCoverage(
+              worstScore,
+              profile.cutoffFormatScore,
+            ),
             missingFormats,
             unwantedFormats: Array.from(unwantedCfIds.values()),
             minProfileScore: profile.cutoffFormatScore,
@@ -168,7 +224,9 @@ export class SeriesService extends MediaService {
       .filter((s) => {
         const files = episodeFilesMap.get(s.id) ?? [];
         if (files.length === 0) return true;
-        return files.some((f) => isMissingWantedFormats(f.customFormats ?? [], wantedIds));
+        return files.some((f) =>
+          isMissingWantedFormats(f.customFormats ?? [], wantedIds),
+        );
       })
       .map((s) => {
         const files = episodeFilesMap.get(s.id) ?? [];
@@ -181,16 +239,29 @@ export class SeriesService extends MediaService {
             missing.forEach((cf) => allMissingIds.add(cf.id));
           }
         }
-        const missingFormats = wantedCfs.filter((cf) => allMissingIds.has(cf.id));
-        const worstCoverage = files.length === 0
-          ? 0
-          : Math.min(...files.map((f) => scoreCfCoverage(f.customFormats ?? [], wantedIds)));
-        const cfScores = profileScoreMap.get(s.qualityProfileId) ?? new Map<number, number>();
+        const missingFormats = wantedCfs.filter((cf) =>
+          allMissingIds.has(cf.id),
+        );
+        const worstCoverage =
+          files.length === 0
+            ? 0
+            : Math.min(
+                ...files.map((f) =>
+                  scoreCfCoverage(f.customFormats ?? [], wantedIds),
+                ),
+              );
+        const cfScores =
+          profileScoreMap.get(s.qualityProfileId) ?? new Map<number, number>();
         const episodeFiles: EpisodeFileEntry[] = files.map((f) => ({
           id: f.id,
           seasonNumber: f.seasonNumber,
           relativePath: f.relativePath,
-          customFormats: f.customFormats?.map(cf => ({ id: cf.id, name: cf.name, score: cfScores.get(cf.id) })) ?? [],
+          customFormats:
+            f.customFormats?.map((cf) => ({
+              id: cf.id,
+              name: cf.name,
+              score: cfScores.get(cf.id),
+            })) ?? [],
           customFormatScore: f.customFormatScore ?? 0,
           missingFormats: getMissingFormats(f.customFormats ?? [], wantedCfs),
           unwantedFormats: [],
@@ -214,7 +285,6 @@ export class SeriesService extends MediaService {
       });
   }
 
-
   // Returns the flagged-count from cache if warm, or null if cold. Used by
   // the dashboard summary route to avoid triggering a multi-second upstream
   // build inline. Caller is responsible for kicking off a background warm
@@ -231,31 +301,61 @@ export class SeriesService extends MediaService {
   // mediaServiceFor(arrType). Warms the flagged-media cache by issuing a
   // minimal getFlaggedSeries call.
   warmFlaggedCache(instanceId: number): Promise<unknown> {
-    return this.getFlaggedSeries(instanceId, { page: 1, limit: 1, sortBy: "score", order: "asc" });
+    return this.getFlaggedSeries(instanceId, {
+      page: 1,
+      limit: 1,
+      sortBy: "score",
+      order: "asc",
+    });
   }
 
   // Re-runs a stored ActionLog payload. The discriminated-union parse
   // narrows the payload to one of the four retryable shapes; the switch
   // then dispatches without any `as` casts. TypeScript's exhaustiveness
   // check on the never-typed default makes a missing case a compile error.
-  async retryFromPayload(payload: Record<string, unknown>, opts: RetryActionOptions = {}): Promise<ActionLog> {
+  async retryFromPayload(
+    payload: Record<string, unknown>,
+    opts: RetryActionOptions = {},
+  ): Promise<ActionLog> {
     const result = seriesRetryPayloadSchema.safeParse(payload);
     if (!result.success) {
-      const action = typeof payload.action === "string" ? payload.action : "unknown";
+      const action =
+        typeof payload.action === "string" ? payload.action : "unknown";
       throw badRequest(`Cannot retry action type: ${action}`);
     }
     const data = result.data;
     switch (data.action) {
       case "search":
-        return this.triggerSearch(data.instanceId, data.mediaId, data.title, opts);
+        return this.triggerSearch(
+          data.instanceId,
+          data.mediaId,
+          data.title,
+          opts,
+        );
       case "search_season":
-        return this.triggerSeasonSearch(data.instanceId, data.mediaId, data.seasonNumber, data.title, opts);
+        return this.triggerSeasonSearch(
+          data.instanceId,
+          data.mediaId,
+          data.seasonNumber,
+          data.title,
+          opts,
+        );
       case "search_episode":
-        return this.triggerEpisodeFileSearch(data.instanceId, data.mediaId, data.fileId, data.title, opts);
+        return this.triggerEpisodeFileSearch(
+          data.instanceId,
+          data.mediaId,
+          data.fileId,
+          data.title,
+          opts,
+        );
       case "delete":
         return this.deleteFiles(
-          data.instanceId, data.mediaId, data.fileIds, data.title,
-          data.triggerSearch ?? false, opts,
+          data.instanceId,
+          data.mediaId,
+          data.fileIds,
+          data.title,
+          data.triggerSearch ?? false,
+          opts,
         );
       default: {
         const _exhaustive: never = data;
@@ -270,7 +370,7 @@ export class SeriesService extends MediaService {
     fileIds: number[],
     title: string,
     triggerSearch = false,
-    opts: RetryActionOptions = {}
+    opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -283,7 +383,14 @@ export class SeriesService extends MediaService {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
-      payload: { instanceId, action: "delete", mediaId, fileIds, title, triggerSearch },
+      payload: {
+        instanceId,
+        action: "delete",
+        mediaId,
+        fileIds,
+        title,
+        triggerSearch,
+      },
       run: async () => {
         for (const fileId of fileIds) {
           await client.deleteEpisodeFile(fileId);
@@ -297,7 +404,7 @@ export class SeriesService extends MediaService {
     instanceId: number,
     mediaId: number,
     title: string,
-    opts: RetryActionOptions = {}
+    opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -320,7 +427,7 @@ export class SeriesService extends MediaService {
     mediaId: number,
     seasonNumber: number,
     title: string,
-    opts: RetryActionOptions = {}
+    opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -333,7 +440,13 @@ export class SeriesService extends MediaService {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
-      payload: { instanceId, action: "search_season", mediaId, seasonNumber, title },
+      payload: {
+        instanceId,
+        action: "search_season",
+        mediaId,
+        seasonNumber,
+        title,
+      },
       run: () => client.triggerSeasonSearch(mediaId, seasonNumber),
     });
   }
@@ -343,7 +456,7 @@ export class SeriesService extends MediaService {
     mediaId: number,
     fileId: number,
     title: string,
-    opts: RetryActionOptions = {}
+    opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
@@ -359,8 +472,11 @@ export class SeriesService extends MediaService {
       payload: { instanceId, action: "search_episode", mediaId, fileId, title },
       run: async () => {
         const episodes = await client.getEpisodes(mediaId);
-        const episodeIds = episodes.filter((e) => e.episodeFileId === fileId).map((e) => e.id);
-        if (episodeIds.length === 0) throw new Error("Episode not found for file");
+        const episodeIds = episodes
+          .filter((e) => e.episodeFileId === fileId)
+          .map((e) => e.id);
+        if (episodeIds.length === 0)
+          throw new Error("Episode not found for file");
         await client.triggerEpisodeSearch(episodeIds);
       },
     });

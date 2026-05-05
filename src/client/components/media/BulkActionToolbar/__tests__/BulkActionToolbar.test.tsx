@@ -7,24 +7,47 @@ import { BulkActionToolbar } from "../BulkActionToolbar";
 describe("BulkActionToolbar", () => {
   it("renders nothing when nothing is selected", () => {
     const { container } = renderWithProviders(
-      <BulkActionToolbar selectedCount={0} onSearch={vi.fn()} onDelete={vi.fn()} onIgnore={vi.fn()} />
+      <BulkActionToolbar
+        selectedCount={0}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+      />,
     );
     expect(container.firstChild).toBeNull();
   });
 
   it("renders all four actions when count > 0", () => {
     renderWithProviders(
-      <BulkActionToolbar selectedCount={3} onSearch={vi.fn()} onDelete={vi.fn()} onIgnore={vi.fn()} />
+      <BulkActionToolbar
+        selectedCount={3}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+      />,
     );
-    expect(screen.getByRole("button", { name: /^search$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^ignore$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /delete and search/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^search$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^ignore$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^delete$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /delete and search/i }),
+    ).toBeInTheDocument();
   });
 
   it("uses fixed-bottom positioning on mobile and sticks to the top on md+", () => {
     renderWithProviders(
-      <BulkActionToolbar selectedCount={1} onSearch={vi.fn()} onDelete={vi.fn()} onIgnore={vi.fn()} />
+      <BulkActionToolbar
+        selectedCount={1}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+      />,
     );
     const toolbar = screen.getByText(/1 selected/i).parentElement!;
     expect(toolbar.className).toContain("fixed");
@@ -41,12 +64,14 @@ describe("BulkActionToolbar", () => {
         onSearch={vi.fn()}
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
-      />
+      />,
     );
     const status = screen.getByRole("status");
     expect(status).toHaveAttribute("aria-live", "polite");
     expect(status).toHaveTextContent(/searching 3\/5/i);
-    expect(screen.queryByRole("button", { name: /^search$/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^search$/i }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/5 selected/i)).not.toBeInTheDocument();
   });
 
@@ -58,7 +83,7 @@ describe("BulkActionToolbar", () => {
         onSearch={vi.fn()}
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
-      />
+      />,
     );
     expect(screen.getByRole("status")).toHaveTextContent(/deleting 5\/5/i);
   });
@@ -73,7 +98,7 @@ describe("BulkActionToolbar", () => {
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
         onCancel={onCancel}
-      />
+      />,
     );
     const cancelBtn = screen.getByRole("button", { name: /^cancel$/i });
     expect(cancelBtn).toBeInTheDocument();
@@ -89,8 +114,10 @@ describe("BulkActionToolbar", () => {
         onSearch={vi.fn()}
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
-      />
+      />,
     );
-    expect(screen.queryByRole("button", { name: /^cancel$/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^cancel$/i }),
+    ).not.toBeInTheDocument();
   });
 });

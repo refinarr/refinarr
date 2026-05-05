@@ -12,7 +12,7 @@ export function useInfiniteScroll(onLoadMore: () => void, hasMore: boolean) {
       (entries) => {
         if (entries[0].isIntersecting) onLoadMore();
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     observer.observe(el);

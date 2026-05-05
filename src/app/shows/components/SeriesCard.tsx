@@ -21,9 +21,18 @@ export function SeriesCard({ item, ctx }: Props) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2 min-w-0">
-        <SeverityDot severity={getSeverity(score, item.minProfileScore, scoringMode, hasFile)} />
+        <SeverityDot
+          severity={getSeverity(
+            score,
+            item.minProfileScore,
+            scoringMode,
+            hasFile,
+          )}
+        />
         <span className="font-medium truncate">{item.title}</span>
-        <span className="text-muted-foreground text-xs shrink-0">{item.year}</span>
+        <span className="text-muted-foreground text-xs shrink-0">
+          {item.year}
+        </span>
       </div>
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         {isProfileMode(scoringMode) && !hasFile ? (
@@ -32,13 +41,22 @@ export function SeriesCard({ item, ctx }: Props) {
           <ScoreLabel score={score} minProfileScore={item.minProfileScore} />
         )}
         <span className="tabular-nums">{formatBytes(item.sizeOnDisk)}</span>
-        <span className="tabular-nums">{t("episodeCountShort", { affected: item.affectedEpisodeCount, total: item.totalEpisodeCount })}</span>
+        <span className="tabular-nums">
+          {t("episodeCountShort", {
+            affected: item.affectedEpisodeCount,
+            total: item.totalEpisodeCount,
+          })}
+        </span>
       </div>
       {issues.length > 0 && (
         <div className="flex flex-wrap gap-1 pt-0.5">
-          {issues.slice(0, 3).map((cf) => <CfBadge key={cf.id} name={cf.name} missing />)}
+          {issues.slice(0, 3).map((cf) => (
+            <CfBadge key={cf.id} name={cf.name} missing />
+          ))}
           {issues.length > 3 && (
-            <span className="text-xs text-muted-foreground">+{issues.length - 3}</span>
+            <span className="text-xs text-muted-foreground">
+              +{issues.length - 3}
+            </span>
           )}
         </div>
       )}

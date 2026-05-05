@@ -9,7 +9,7 @@ interface ToastMessages {
 
 export function withToast<TData, TError, TVariables>(
   mutation: UseMutationResult<TData, TError, TVariables>,
-  messages: ToastMessages
+  messages: ToastMessages,
 ) {
   return (variables: TVariables) => {
     const promise = mutation.mutateAsync(variables);
@@ -18,7 +18,9 @@ export function withToast<TData, TError, TVariables>(
       success: messages.success,
       error: (err) =>
         messages.error ??
-        (err instanceof Error ? err.message : "Something went wrong. See logs."),
+        (err instanceof Error
+          ? err.message
+          : "Something went wrong. See logs."),
     });
     return promise;
   };

@@ -14,13 +14,37 @@ vi.mock("@/client/lib/api", () => ({
 }));
 
 import { api } from "@/client/lib/api";
-import { useInstanceSelection, parseUrlInstance } from "../useInstanceSelection";
+import {
+  useInstanceSelection,
+  parseUrlInstance,
+} from "../useInstanceSelection";
 
 const mockApi = vi.mocked(api);
 
-const radarr1 = { id: 1, type: "radarr", name: "Radarr-1", url: "http://x", enabled: true, createdAt: "" };
-const radarr2 = { id: 2, type: "radarr", name: "Radarr-2", url: "http://y", enabled: true, createdAt: "" };
-const sonarr1 = { id: 3, type: "sonarr", name: "Sonarr-1", url: "http://z", enabled: true, createdAt: "" };
+const radarr1 = {
+  id: 1,
+  type: "radarr",
+  name: "Radarr-1",
+  url: "http://x",
+  enabled: true,
+  createdAt: "",
+};
+const radarr2 = {
+  id: 2,
+  type: "radarr",
+  name: "Radarr-2",
+  url: "http://y",
+  enabled: true,
+  createdAt: "",
+};
+const sonarr1 = {
+  id: 3,
+  type: "sonarr",
+  name: "Sonarr-1",
+  url: "http://z",
+  enabled: true,
+  createdAt: "",
+};
 
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -50,7 +74,9 @@ describe("useInstanceSelection", () => {
 
   it("filters instances by arrType and exposes typed ids", async () => {
     mockApi.get.mockResolvedValue([radarr1, radarr2, sonarr1]);
-    const { result } = renderHook(() => useInstanceSelection("radarr"), { wrapper });
+    const { result } = renderHook(() => useInstanceSelection("radarr"), {
+      wrapper,
+    });
     await vi.waitFor(() => {
       expect(result.current.typedInstances).toHaveLength(2);
     });
@@ -59,7 +85,9 @@ describe("useInstanceSelection", () => {
 
   it("defaults activeInstance to the first matching instance when nothing is in the URL", async () => {
     mockApi.get.mockResolvedValue([radarr1, radarr2, sonarr1]);
-    const { result } = renderHook(() => useInstanceSelection("radarr"), { wrapper });
+    const { result } = renderHook(() => useInstanceSelection("radarr"), {
+      wrapper,
+    });
     await vi.waitFor(() => {
       expect(result.current.activeInstance).toBe(1);
     });
@@ -68,7 +96,9 @@ describe("useInstanceSelection", () => {
   it("falls back to first instance when URL carries the legacy ?instanceId=all", async () => {
     mockSearch.set("instanceId", "all");
     mockApi.get.mockResolvedValue([radarr1, radarr2]);
-    const { result } = renderHook(() => useInstanceSelection("radarr"), { wrapper });
+    const { result } = renderHook(() => useInstanceSelection("radarr"), {
+      wrapper,
+    });
     await vi.waitFor(() => {
       expect(result.current.activeInstance).toBe(1);
     });
@@ -76,8 +106,12 @@ describe("useInstanceSelection", () => {
 
   it("setInstanceId switches between instances", async () => {
     mockApi.get.mockResolvedValue([radarr1, radarr2]);
-    const { result } = renderHook(() => useInstanceSelection("radarr"), { wrapper });
-    await vi.waitFor(() => expect(result.current.typedInstances).toHaveLength(2));
+    const { result } = renderHook(() => useInstanceSelection("radarr"), {
+      wrapper,
+    });
+    await vi.waitFor(() =>
+      expect(result.current.typedInstances).toHaveLength(2),
+    );
 
     act(() => result.current.setInstanceId(2));
     expect(result.current.activeInstance).toBe(2);

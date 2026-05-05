@@ -20,7 +20,9 @@ beforeEach(() => {
       revoked.push(u);
     },
   });
-  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+    this: HTMLAnchorElement,
+  ) {
     clicks.push(this);
   });
 });
@@ -44,7 +46,10 @@ const movie: FlaggedMovie = {
   customFormatScore: 0,
   hasFile: true,
   cfScore: 0.5,
-  missingFormats: [{ id: 1, name: "HDR" }, { id: 2, name: "DV" }],
+  missingFormats: [
+    { id: 1, name: "HDR" },
+    { id: 2, name: "DV" },
+  ],
   unwantedFormats: [],
   sizeOnDisk: 1024,
 };
@@ -72,7 +77,7 @@ describe("exportMoviesCsv", () => {
     expect(blobs).toHaveLength(1);
     const text = await blobToText(blobs[0]);
     expect(text).toContain("Title,Year,Score,MissingFormats,HasFile");
-    expect(text).toContain("Movie A,2024,50%,\"HDR, DV\",Yes");
+    expect(text).toContain('Movie A,2024,50%,"HDR, DV",Yes');
   });
 
   test("uses the default filename when none is provided", () => {

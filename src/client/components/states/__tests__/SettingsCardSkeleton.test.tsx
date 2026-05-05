@@ -6,7 +6,9 @@ import { SettingsCardSkeleton } from "../SettingsCardSkeleton";
 describe("SettingsCardSkeleton", () => {
   it("renders the default of 2 placeholder cards", () => {
     const { container } = render(<SettingsCardSkeleton />);
-    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+    expect(
+      container.querySelectorAll('[data-slot="skeleton"]').length,
+    ).toBeGreaterThan(0);
     expect(container.querySelectorAll('[data-slot="card"]').length).toBe(2);
   });
 

@@ -20,8 +20,20 @@ const movie: FlaggedMovie = {
 };
 
 const profiles: QualityProfile[] = [
-  { id: 100, name: "HD-1080p", minUpgradeFormatScore: 0, cutoffFormatScore: 100, formatItems: [] },
-  { id: 200, name: "Ultra-HD", minUpgradeFormatScore: 0, cutoffFormatScore: 100, formatItems: [] },
+  {
+    id: 100,
+    name: "HD-1080p",
+    minUpgradeFormatScore: 0,
+    cutoffFormatScore: 100,
+    formatItems: [],
+  },
+  {
+    id: 200,
+    name: "Ultra-HD",
+    minUpgradeFormatScore: 0,
+    cutoffFormatScore: 100,
+    formatItems: [],
+  },
 ];
 
 describe("MovieDetailDrawer", () => {

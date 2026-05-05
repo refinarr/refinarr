@@ -23,7 +23,9 @@ describe("isMissingWantedFormats", () => {
   });
 
   test("all wanted IDs present returns false", () => {
-    expect(isMissingWantedFormats([cf(1), cf(2), cf(3)], [1, 2, 3])).toBe(false);
+    expect(isMissingWantedFormats([cf(1), cf(2), cf(3)], [1, 2, 3])).toBe(
+      false,
+    );
   });
 
   test("one wanted ID missing returns true", () => {

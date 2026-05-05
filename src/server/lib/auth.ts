@@ -12,7 +12,11 @@ export const SESSION_COOKIE = "rfn_session";
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16);
-  const hash = scryptSync(password, salt, HASH_LEN, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P });
+  const hash = scryptSync(password, salt, HASH_LEN, {
+    N: SCRYPT_N,
+    r: SCRYPT_R,
+    p: SCRYPT_P,
+  });
   return `scrypt$${SCRYPT_N}$${salt.toString("hex")}$${hash.toString("hex")}`;
 }
 
@@ -22,10 +26,15 @@ export function verifyPassword(password: string, stored: string): boolean {
   const N = Number(parts[1]);
   const salt = Buffer.from(parts[2], "hex");
   const expected = Buffer.from(parts[3], "hex");
-  if (!Number.isInteger(N) || N <= 0 || expected.length !== HASH_LEN) return false;
+  if (!Number.isInteger(N) || N <= 0 || expected.length !== HASH_LEN)
+    return false;
   let actual: Buffer;
   try {
-    actual = scryptSync(password, salt, HASH_LEN, { N, r: SCRYPT_R, p: SCRYPT_P });
+    actual = scryptSync(password, salt, HASH_LEN, {
+      N,
+      r: SCRYPT_R,
+      p: SCRYPT_P,
+    });
   } catch {
     return false;
   }
@@ -43,14 +52,18 @@ export async function getUserCount(): Promise<number> {
   return prisma.user.count();
 }
 
-export async function createSession(userId: number): Promise<{ id: string; expiresAt: Date }> {
+export async function createSession(
+  userId: number,
+): Promise<{ id: string; expiresAt: Date }> {
   const id = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_MS);
   await prisma.session.create({ data: { id, userId, expiresAt } });
   return { id, expiresAt };
 }
 
-export async function getSession(id: string): Promise<{ userId: number; expiresAt: Date } | null> {
+export async function getSession(
+  id: string,
+): Promise<{ userId: number; expiresAt: Date } | null> {
   const s = await prisma.session.findUnique({ where: { id } });
   if (!s) return null;
   if (s.expiresAt.getTime() < Date.now()) {
@@ -72,7 +85,10 @@ export async function pruneExpiredSessions(): Promise<void> {
   await prisma.session.deleteMany({ where: { expiresAt: { lt: new Date() } } });
 }
 
-export type SessionPasswordResult = "ok" | "session_required" | "invalid_password";
+export type SessionPasswordResult =
+  | "ok"
+  | "session_required"
+  | "invalid_password";
 
 // Verifies the caller holds an active session AND knows the account password.
 // Used by /api/config/api-key to gate reveal/rotate behind re-auth.
@@ -85,5 +101,7 @@ export async function verifySessionPassword(
   if (!session) return "session_required";
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   if (!user) return "session_required";
-  return verifyPassword(password, user.passwordHash) ? "ok" : "invalid_password";
+  return verifyPassword(password, user.passwordHash)
+    ? "ok"
+    : "invalid_password";
 }

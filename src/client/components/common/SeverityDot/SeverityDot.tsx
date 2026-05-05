@@ -1,4 +1,8 @@
-import { severityClass, severityLabel, type Severity } from "@/client/lib/severity";
+import {
+  severityClass,
+  severityLabel,
+  type Severity,
+} from "@/client/lib/severity";
 
 interface Props {
   severity: Severity;

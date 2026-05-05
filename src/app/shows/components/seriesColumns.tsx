@@ -7,13 +7,27 @@ import type { MediaListShellRenderCtx } from "@/client/components/media/MediaLis
 import { formatBytes } from "@/client/lib/format";
 import { formatRelative } from "@/client/lib/format-relative";
 import { getSeverity } from "@/client/lib/severity";
-import { ISSUES_FOR, ISSUES_HEADER_KEY, SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
+import {
+  ISSUES_FOR,
+  ISSUES_HEADER_KEY,
+  SCORE_FOR,
+  isProfileMode,
+} from "@/shared/scoring-mode";
 import type { FlaggedSeries } from "@/shared/types/models";
 
 export function seriesColumns(
   ctx: MediaListShellRenderCtx<FlaggedSeries>,
 ): ColumnDef<FlaggedSeries>[] {
-  const { scoringMode, profiles, queuedIds, recentMap, activeInstance, t, tCols, tTime } = ctx;
+  const {
+    scoringMode,
+    profiles,
+    queuedIds,
+    recentMap,
+    activeInstance,
+    t,
+    tCols,
+    tTime,
+  } = ctx;
 
   return [
     {
@@ -23,7 +37,16 @@ export function seriesColumns(
       render: (s) => {
         const score = SCORE_FOR[scoringMode](s);
         const hasFile = s.episodeFiles.length > 0;
-        return <SeverityDot severity={getSeverity(score, s.minProfileScore, scoringMode, hasFile)} />;
+        return (
+          <SeverityDot
+            severity={getSeverity(
+              score,
+              s.minProfileScore,
+              scoringMode,
+              hasFile,
+            )}
+          />
+        );
       },
     },
     {
@@ -35,7 +58,9 @@ export function seriesColumns(
         return (
           <div className="flex items-baseline gap-2 min-w-0">
             <span className="font-medium truncate">{s.title}</span>
-            <span className="text-muted-foreground text-xs shrink-0">{s.year}</span>
+            <span className="text-muted-foreground text-xs shrink-0">
+              {s.year}
+            </span>
             {queuedIds.has(s.id) && (
               <SearchStatusBadge status="pending" instanceId={activeInstance} />
             )}
@@ -68,7 +93,9 @@ export function seriesColumns(
       className: "w-36 whitespace-nowrap",
       render: (s) => {
         if (isProfileMode(scoringMode) && s.episodeFiles.length === 0) {
-          return <span className="text-xs text-muted-foreground">{t("noFile")}</span>;
+          return (
+            <span className="text-xs text-muted-foreground">{t("noFile")}</span>
+          );
         }
         return (
           <ScoreLabel
@@ -82,7 +109,8 @@ export function seriesColumns(
       key: "size",
       header: tCols("size"),
       sortKey: "size",
-      className: "w-24 text-xs text-muted-foreground tabular-nums whitespace-nowrap",
+      className:
+        "w-24 text-xs text-muted-foreground tabular-nums whitespace-nowrap",
       render: (s) => formatBytes(s.sizeOnDisk),
     },
     {
@@ -103,7 +131,9 @@ export function seriesColumns(
               <CfBadge key={cf.id} name={cf.name} missing />
             ))}
             {items.length > 3 && (
-              <span className="text-xs text-muted-foreground">+{items.length - 3}</span>
+              <span className="text-xs text-muted-foreground">
+                +{items.length - 3}
+              </span>
             )}
           </div>
         );

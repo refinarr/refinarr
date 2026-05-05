@@ -10,7 +10,12 @@ interface Props {
   ignorePending?: boolean;
 }
 
-export function RowHoverActions({ onSearch, onIgnore, searchPending, ignorePending }: Props) {
+export function RowHoverActions({
+  onSearch,
+  onIgnore,
+  searchPending,
+  ignorePending,
+}: Props) {
   const t = useTranslations("common");
   return (
     <div className="inline-flex items-center gap-1">

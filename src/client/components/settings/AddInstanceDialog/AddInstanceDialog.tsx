@@ -1,11 +1,23 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/client/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/client/components/ui/dialog";
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
 import { Label } from "@/client/components/ui/label";
 import { FormField } from "@/client/components/ui/form-field";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/client/components/ui/select";
 import { Loader2, Plug } from "lucide-react";
 import type { ArrType, Instance } from "@/shared/types/models";
 import { ALL_ARR_TYPES, isArrType } from "@/shared/arr-type";
@@ -54,7 +66,9 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
             <Label>{t("type")}</Label>
             <Select
               value={selectedType}
-              onValueChange={(v) => { if (v && isArrType(v)) onChangeType(v); }}
+              onValueChange={(v) => {
+                if (v && isArrType(v)) onChangeType(v);
+              }}
             >
               <SelectTrigger>
                 <SelectValue>{tTypes(selectedType)}</SelectValue>
@@ -68,17 +82,37 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
               </SelectContent>
             </Select>
           </div>
-          <FormField id="instance-name" label={t("name")} error={errors.name?.message}>
-            <Input {...register("name")} placeholder={t(PLACEHOLDER_KEYS[selectedType].name)} />
+          <FormField
+            id="instance-name"
+            label={t("name")}
+            error={errors.name?.message}
+          >
+            <Input
+              {...register("name")}
+              placeholder={t(PLACEHOLDER_KEYS[selectedType].name)}
+            />
           </FormField>
-          <FormField id="instance-url" label={t("url")} error={errors.url?.message}>
-            <Input {...register("url")} placeholder={t(PLACEHOLDER_KEYS[selectedType].url)} />
+          <FormField
+            id="instance-url"
+            label={t("url")}
+            error={errors.url?.message}
+          >
+            <Input
+              {...register("url")}
+              placeholder={t(PLACEHOLDER_KEYS[selectedType].url)}
+            />
           </FormField>
-          <FormField id="instance-apikey" label={t("apiKey")} error={errors.apiKey?.message}>
+          <FormField
+            id="instance-apikey"
+            label={t("apiKey")}
+            error={errors.apiKey?.message}
+          >
             <Input
               {...register("apiKey")}
               type="password"
-              placeholder={isEdit ? t("apiKeyPlaceholderEdit") : t("apiKeyPlaceholderNew")}
+              placeholder={
+                isEdit ? t("apiKeyPlaceholderEdit") : t("apiKeyPlaceholderNew")
+              }
             />
           </FormField>
           <FormField
@@ -96,14 +130,20 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
             />
           </FormField>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>{tCommon("cancel")}</Button>
+            <Button type="button" variant="outline" onClick={onClose}>
+              {tCommon("cancel")}
+            </Button>
             <Button
               type="button"
               variant="outline"
               onClick={handleTest}
               disabled={!canTest || testing}
             >
-              {testing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plug className="mr-2 h-4 w-4" />}
+              {testing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Plug className="mr-2 h-4 w-4" />
+              )}
               {t("testConnection")}
             </Button>
             <Button type="submit" disabled={submitting}>

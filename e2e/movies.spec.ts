@@ -49,15 +49,15 @@ test.beforeEach(async ({ page }) => {
   });
 
   await page.route("**/api/radarr/movies**", (route) =>
-    route.fulfill({ status: 200, json: FAKE_RESPONSE })
+    route.fulfill({ status: 200, json: FAKE_RESPONSE }),
   );
 
   await page.route("**/api/radarr/qualityprofiles**", (route) =>
-    route.fulfill({ status: 200, json: [] })
+    route.fulfill({ status: 200, json: [] }),
   );
 
   await page.route("**/api/preferences**", (route) =>
-    route.fulfill({ status: 200, json: [] })
+    route.fulfill({ status: 200, json: [] }),
   );
 });
 
@@ -81,10 +81,15 @@ test("search by title filters results", async ({ page }) => {
   const searchInput = page.getByPlaceholder(/search/i);
   if (await searchInput.isVisible()) {
     await page.route("**/api/radarr/movies**", (route) =>
-      route.fulfill({ status: 200, json: { ...FAKE_RESPONSE, items: [], total: 0 } })
+      route.fulfill({
+        status: 200,
+        json: { ...FAKE_RESPONSE, items: [], total: 0 },
+      }),
     );
     await searchInput.fill("xyzzy nonexistent");
-    await expect(page.getByText("The Missing Format")).toHaveCount(0, { timeout: 5_000 });
+    await expect(page.getByText("The Missing Format")).toHaveCount(0, {
+      timeout: 5_000,
+    });
   }
 });
 
@@ -104,7 +109,7 @@ test("search action in dry-run mode shows queued toast", async ({ page }) => {
         status: "dry_run",
         createdAt: new Date().toISOString(),
       },
-    })
+    }),
   );
 
   await page.goto("/movies");
@@ -113,9 +118,14 @@ test("search action in dry-run mode shows queued toast", async ({ page }) => {
     .getByText("The Missing Format")
     .waitFor({ timeout: 10_000 });
 
-  const movieRow = page.getByTestId("media-table-body").locator("tr").filter({ hasText: "The Missing Format" });
+  const movieRow = page
+    .getByTestId("media-table-body")
+    .locator("tr")
+    .filter({ hasText: "The Missing Format" });
   const searchBtn = movieRow.getByRole("button", { name: /search/i }).first();
 
   await searchBtn.click();
-  await expect(page.getByText(/dry run|queued/i)).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText(/dry run|queued/i)).toBeVisible({
+    timeout: 5_000,
+  });
 });

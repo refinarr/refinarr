@@ -39,7 +39,9 @@ export default function DashboardPage() {
   // its real count could be non-zero.
   const totalsKnown = flaggedMovies !== null && flaggedSeries !== null;
   const totalFlagged = (flaggedMovies ?? 0) + (flaggedSeries ?? 0);
-  const enabledInstances = (summary?.perInstance ?? []).filter((i) => i.enabled);
+  const enabledInstances = (summary?.perInstance ?? []).filter(
+    (i) => i.enabled,
+  );
 
   return (
     <AppShell>
@@ -48,7 +50,9 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">{t("title")}</h1>
-              <p className="text-muted-foreground text-sm mt-1">{t("subtitle")}</p>
+              <p className="text-muted-foreground text-sm mt-1">
+                {t("subtitle")}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               {config && (
@@ -56,7 +60,11 @@ export default function DashboardPage() {
                   {config.dryRun ? tDryRun("badgeOn") : tDryRun("badgeOff")}
                 </Badge>
               )}
-              <Button size="sm" variant="outline" onClick={() => router.push("/settings")}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => router.push("/settings")}
+              >
                 <Plus className="h-4 w-4 mr-1" /> {t("addInstance")}
               </Button>
             </div>
@@ -86,14 +94,17 @@ export default function DashboardPage() {
               label={t("kpi.failed24h")}
               value={totals?.failedActions24h ?? 0}
               href="/history?status=failed"
-              tone={(totals?.failedActions24h ?? 0) > 0 ? "destructive" : "default"}
+              tone={
+                (totals?.failedActions24h ?? 0) > 0 ? "destructive" : "default"
+              }
               loading={loadingSummary}
             />
           </div>
 
-          {!loadingSummary && totalsKnown && totalFlagged === 0 && enabledInstances.length > 0 && (
-            <AllClearState />
-          )}
+          {!loadingSummary &&
+            totalsKnown &&
+            totalFlagged === 0 &&
+            enabledInstances.length > 0 && <AllClearState />}
 
           <div>
             <h2 className="text-lg font-semibold mb-3">{t("instances")}</h2>

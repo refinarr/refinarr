@@ -41,7 +41,13 @@ test("ignoring a movie removes it from the flagged list", async ({ page }) => {
     limit: 50,
     hasMore: false,
   };
-  const emptyResponse: PaginatedResponse<FlaggedMovie> = { items: [], total: 0, page: 1, limit: 50, hasMore: false };
+  const emptyResponse: PaginatedResponse<FlaggedMovie> = {
+    items: [],
+    total: 0,
+    page: 1,
+    limit: 50,
+    hasMore: false,
+  };
 
   // After the ignore POST, return empty list so the movie disappears on refetch.
   let ignored = false;
@@ -53,17 +59,23 @@ test("ignoring a movie removes it from the flagged list", async ({ page }) => {
     return route.continue();
   });
   await page.route("**/api/radarr/movies**", (route) =>
-    route.fulfill({ status: 200, json: ignored ? emptyResponse : moviesResponse })
+    route.fulfill({
+      status: 200,
+      json: ignored ? emptyResponse : moviesResponse,
+    }),
   );
   await page.route("**/api/radarr/qualityprofiles**", (route) =>
-    route.fulfill({ status: 200, json: [] })
+    route.fulfill({ status: 200, json: [] }),
   );
   await page.route("**/api/preferences**", (route) =>
-    route.fulfill({ status: 200, json: [] })
+    route.fulfill({ status: 200, json: [] }),
   );
   await page.route("**/api/ignore**", (route) => {
     ignored = true;
-    return route.fulfill({ status: 201, json: { id: 1, mediaId: 2, mediaType: "movie", title: "Ignorable Film" } });
+    return route.fulfill({
+      status: 201,
+      json: { id: 1, mediaId: 2, mediaType: "movie", title: "Ignorable Film" },
+    });
   });
 
   await page.goto("/movies");
@@ -85,7 +97,9 @@ test("ignoring a movie removes it from the flagged list", async ({ page }) => {
     }
 
     // After ignore, the item should be fully removed from the DOM (both card and table).
-    await expect(page.getByText("Ignorable Film")).toHaveCount(0, { timeout: 5_000 });
+    await expect(page.getByText("Ignorable Film")).toHaveCount(0, {
+      timeout: 5_000,
+    });
   }
 });
 

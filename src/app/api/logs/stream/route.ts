@@ -11,15 +11,22 @@ const HEARTBEAT_MS = 25_000;
 const MAX_CLIENTS = 8;
 let activeClients = 0;
 
-function matches(entry: AppLogEntry, filter: { level?: LogLevel; q?: string }): boolean {
+function matches(
+  entry: AppLogEntry,
+  filter: { level?: LogLevel; q?: string },
+): boolean {
   if (filter.level && entry.level !== filter.level) return false;
-  if (filter.q && !entry.message.toLowerCase().includes(filter.q.toLowerCase())) return false;
+  if (filter.q && !entry.message.toLowerCase().includes(filter.q.toLowerCase()))
+    return false;
   return true;
 }
 
 export const GET = createApiHandler(async (req: NextRequest) => {
   if (activeClients >= MAX_CLIENTS) {
-    return NextResponse.json({ error: "Too many SSE connections" }, { status: 503 });
+    return NextResponse.json(
+      { error: "Too many SSE connections" },
+      { status: 503 },
+    );
   }
 
   const resumeId = req.headers.get("last-event-id");
@@ -72,7 +79,11 @@ export const GET = createApiHandler(async (req: NextRequest) => {
 
       const close = () => {
         cleanup();
-        try { controller.close(); } catch { /* already closed */ }
+        try {
+          controller.close();
+        } catch {
+          /* already closed */
+        }
       };
 
       try {
@@ -83,7 +94,11 @@ export const GET = createApiHandler(async (req: NextRequest) => {
         let buffering = true;
         unsubscribe = eventBus.subscribe((e: ServerEvent) => {
           if (e.type !== "applog") return;
-          if (buffering) { buffer.push(e.entry); } else { sendEntry(e.entry); }
+          if (buffering) {
+            buffer.push(e.entry);
+          } else {
+            sendEntry(e.entry);
+          }
         });
 
         // Initial backfill on fresh connect (skipped on EventSource auto-reconnect

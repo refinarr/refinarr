@@ -19,7 +19,10 @@ beforeEach(async () => {
   // Each test starts with a single admin user.
   const setupReq = new NextRequest("http://localhost/api/auth/setup", {
     method: "POST",
-    headers: { "content-type": "application/json", "x-forwarded-for": "0.0.0.1" },
+    headers: {
+      "content-type": "application/json",
+      "x-forwarded-for": "0.0.0.1",
+    },
     body: JSON.stringify(creds),
   });
   await setup(setupReq);
@@ -31,18 +34,24 @@ describe("POST /api/auth/login", () => {
     expect(res.status).toBe(200);
     const cookie = res.cookies.get(SESSION_COOKIE);
     expect(cookie?.value).toMatch(/^[a-f0-9]{64}$/);
-    const session = await prisma.session.findUnique({ where: { id: cookie!.value } });
+    const session = await prisma.session.findUnique({
+      where: { id: cookie!.value },
+    });
     expect(session).not.toBeNull();
   });
 
   test("wrong password → 401, no cookie", async () => {
-    const res = await login(loginReq({ username: creds.username, password: "WrongPassword123!" }));
+    const res = await login(
+      loginReq({ username: creds.username, password: "WrongPassword123!" }),
+    );
     expect(res.status).toBe(401);
     expect(res.cookies.get(SESSION_COOKIE)).toBeUndefined();
   });
 
   test("non-existent username → 401 with same shape (no enumeration)", async () => {
-    const res = await login(loginReq({ username: "nobody", password: "TestPassword123!" }));
+    const res = await login(
+      loginReq({ username: "nobody", password: "TestPassword123!" }),
+    );
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.error).toBe("Invalid credentials");
@@ -51,7 +60,10 @@ describe("POST /api/auth/login", () => {
   test("malformed JSON → 400", async () => {
     const req = new NextRequest("http://localhost/api/auth/login", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-forwarded-for": "1.2.3.4" },
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-for": "1.2.3.4",
+      },
       body: "not-json{",
     });
     const res = await login(req);
@@ -66,7 +78,12 @@ describe("POST /api/auth/login", () => {
   test("11th attempt from same IP → 429", async () => {
     const ip = "9.9.9.9";
     for (let i = 0; i < 10; i += 1) {
-      await login(loginReq({ username: creds.username, password: "WrongPassword123!" }, ip));
+      await login(
+        loginReq(
+          { username: creds.username, password: "WrongPassword123!" },
+          ip,
+        ),
+      );
     }
     const res = await login(loginReq(creds, ip));
     expect(res.status).toBe(429);
