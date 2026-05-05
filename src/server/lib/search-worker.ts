@@ -187,9 +187,11 @@ class SearchWorker {
     // Route through the service layer so executeAction writes the ActionLog
     // row + invalidates the data cache. Calling client.triggerSearch directly
     // would skip both and the user would see nothing in History.
-    const payload = entry.payload
-      ? (JSON.parse(entry.payload) as Record<string, unknown>)
-      : {};
+    const parsed: unknown = entry.payload ? JSON.parse(entry.payload) : {};
+    const payload: Record<string, unknown> =
+      parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
     let log: ActionLog;
     if (entry.action === "movie") {
       log = await movieService.triggerSearch(

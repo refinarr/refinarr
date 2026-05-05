@@ -46,8 +46,7 @@ export function useApiKeyActions() {
   };
 
   const inlineMessage = (e: ApiClientError): string | null => {
-    if (e.status === 401 || e.code === "WRONG_PASSWORD")
-      return tk("wrongPassword");
+    if (e.code === "WRONG_PASSWORD") return tk("wrongPassword");
     if (e.status === 429) return tk("tooManyAttempts");
     return null;
   };

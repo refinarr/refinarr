@@ -16,9 +16,14 @@ async function seedUser(): Promise<void> {
   );
 }
 
+const originalTrustProxyAuth = process.env.TRUST_PROXY_AUTH;
+const originalProxyUserHeader = process.env.PROXY_USER_HEADER;
+
 afterEach(() => {
-  delete process.env.TRUST_PROXY_AUTH;
-  delete process.env.PROXY_USER_HEADER;
+  if (originalTrustProxyAuth === undefined) delete process.env.TRUST_PROXY_AUTH;
+  else process.env.TRUST_PROXY_AUTH = originalTrustProxyAuth;
+  if (originalProxyUserHeader === undefined) delete process.env.PROXY_USER_HEADER;
+  else process.env.PROXY_USER_HEADER = originalProxyUserHeader;
 });
 
 describe("POST /api/config/api-key", () => {
@@ -38,8 +43,7 @@ describe("POST /api/config/api-key", () => {
     );
     expect(res.status).toBe(401);
     await expect(res.json()).resolves.toMatchObject({
-      error: "Invalid password",
-      code: "WRONG_PASSWORD",
+      code: "SESSION_REQUIRED",
     });
   });
 });
