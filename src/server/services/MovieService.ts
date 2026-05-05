@@ -12,11 +12,6 @@ import { preferenceRepository } from "@/server/repositories/PreferenceRepository
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { RadarrClient } from "@/server/clients/RadarrClient";
-import {
-  dataCache,
-  CACHE_TTL_MS,
-  CACHE_STALE_MS,
-} from "@/server/lib/DataCache";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import {
@@ -39,57 +34,14 @@ export class MovieService extends MediaService {
 
     const mode = instance.scoringMode;
     const cacheKey = `movies:${instanceId}:${mode}`;
-    const cached = await this.readWithSwr(instance, mode, cacheKey);
-    return this.applyQuery(cached.flagged, query, mode, (m) => m.hasFile);
-  }
-
-  private async readWithSwr(
-    instance: NonNullable<
-      Awaited<ReturnType<typeof instanceRepository.findById>>
-    >,
-    mode: ScoringMode,
-    cacheKey: string,
-  ): Promise<{ flagged: FlaggedMovie[] }> {
-    type Cached = { flagged: FlaggedMovie[] };
-    const result = dataCache.getWithStaleness<Cached>(
+    const cached = await this.readWithSwr<{ flagged: FlaggedMovie[] }>({
       cacheKey,
-      CACHE_TTL_MS,
-      CACHE_STALE_MS,
-    );
-
-    if (result.kind === "fresh") {
-      appLogger.debug("Cache hit", {
-        source: LogSource.MovieService,
-        context: { cacheKey },
-      });
-      return result.value;
-    }
-
-    if (result.kind === "stale") {
-      // Serve cached data immediately and refresh in the background. The
-      // dataCache.rebuild guard ensures concurrent stale reads share one
-      // rebuild rather than firing parallel upstream calls.
-      if (!dataCache.isRebuilding(cacheKey)) {
-        void dataCache
-          .rebuild(cacheKey, () =>
-            this.buildFlaggedAndLog(instance.id, instance, mode),
-          )
-          .catch((err) => {
-            appLogger.error("Background flagged-movies rebuild failed", {
-              source: LogSource.MovieService,
-              err,
-              context: { instanceId: instance.id, cacheKey },
-            });
-          });
-      }
-      return result.value;
-    }
-
-    // Miss — block on rebuild. Concurrent miss callers share the same
-    // promise via dataCache.rebuild.
-    return dataCache.rebuild(cacheKey, () =>
-      this.buildFlaggedAndLog(instance.id, instance, mode),
-    );
+      instanceId: instance.id,
+      logSource: LogSource.MovieService,
+      backgroundErrorMessage: "Background flagged-movies rebuild failed",
+      build: () => this.buildFlaggedAndLog(instance.id, instance, mode),
+    });
+    return this.applyQuery(cached.flagged, query, mode, (m) => m.hasFile);
   }
 
   private async buildFlaggedAndLog(
@@ -253,11 +205,7 @@ export class MovieService extends MediaService {
   // build inline. Caller is responsible for kicking off a background warm
   // when null is returned.
   getCachedFlaggedTotal(instanceId: number, mode: ScoringMode): number | null {
-    const cached = dataCache.get<{ flagged: FlaggedMovie[] }>(
-      `movies:${instanceId}:${mode}`,
-      CACHE_TTL_MS,
-    );
-    return cached?.flagged.length ?? null;
+    return this.readCachedFlaggedTotal(`movies:${instanceId}:${mode}`);
   }
 
   // Uniform name across MovieService / SeriesService for use via

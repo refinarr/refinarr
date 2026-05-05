@@ -10,7 +10,11 @@ import { logRepository } from "@/server/repositories/LogRepository";
 import { dryRunService } from "./DryRunService";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
-import { dataCache } from "@/server/lib/DataCache";
+import {
+  dataCache,
+  CACHE_STALE_MS,
+  CACHE_TTL_MS,
+} from "@/server/lib/DataCache";
 
 interface ExecuteActionOptions {
   instanceId: number;
@@ -21,6 +25,14 @@ interface ExecuteActionOptions {
   actionLogId?: number;
   payload?: Record<string, unknown>;
   run: () => Promise<void>;
+}
+
+interface ReadWithSwrOptions<TCached> {
+  cacheKey: string;
+  instanceId: number;
+  logSource: LogSource;
+  backgroundErrorMessage: string;
+  build: () => Promise<TCached>;
 }
 
 // Single source for the human-readable log subject — keeps [DryRun],
@@ -66,6 +78,56 @@ function compareMedia<T extends FlaggedMedia>(
 }
 
 export abstract class MediaService {
+  protected async readWithSwr<TCached>({
+    cacheKey,
+    instanceId,
+    logSource,
+    backgroundErrorMessage,
+    build,
+  }: ReadWithSwrOptions<TCached>): Promise<TCached> {
+    const result = dataCache.getWithStaleness<TCached>(
+      cacheKey,
+      CACHE_TTL_MS,
+      CACHE_STALE_MS,
+    );
+
+    if (result.kind === "fresh") {
+      appLogger.debug("Cache hit", {
+        source: logSource,
+        context: { cacheKey },
+      });
+      return result.value;
+    }
+
+    if (result.kind === "stale") {
+      // Serve cached data immediately and refresh in the background. The
+      // dataCache.rebuild guard ensures concurrent stale reads share one
+      // rebuild rather than firing parallel upstream calls.
+      if (!dataCache.isRebuilding(cacheKey)) {
+        void dataCache.rebuild(cacheKey, build).catch((err) => {
+          appLogger.error(backgroundErrorMessage, {
+            source: logSource,
+            err,
+            context: { instanceId, cacheKey },
+          });
+        });
+      }
+      return result.value;
+    }
+
+    // Miss — block on rebuild. Concurrent miss callers share the same
+    // promise via dataCache.rebuild.
+    return dataCache.rebuild(cacheKey, build);
+  }
+
+  protected readCachedFlaggedTotal(cacheKey: string): number | null {
+    const cached = dataCache.get<{ flagged: unknown[] }>(
+      cacheKey,
+      CACHE_TTL_MS,
+    );
+    return cached?.flagged.length ?? null;
+  }
+
   protected applyQuery<T extends FlaggedMedia>(
     source: T[],
     query: MediaQuery,

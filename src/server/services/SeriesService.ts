@@ -13,11 +13,6 @@ import { preferenceRepository } from "@/server/repositories/PreferenceRepository
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { SonarrClient } from "@/server/clients/SonarrClient";
-import {
-  dataCache,
-  CACHE_TTL_MS,
-  CACHE_STALE_MS,
-} from "@/server/lib/DataCache";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import {
@@ -40,59 +35,18 @@ export class SeriesService extends MediaService {
 
     const mode = instance.scoringMode;
     const cacheKey = `series:${instanceId}:${mode}`;
-    const cached = await this.readWithSwr(instance, mode, cacheKey);
+    const cached = await this.readWithSwr<{ flagged: FlaggedSeries[] }>({
+      cacheKey,
+      instanceId: instance.id,
+      logSource: LogSource.SeriesService,
+      backgroundErrorMessage: "Background flagged-series rebuild failed",
+      build: () => this.buildFlaggedAndLog(instance.id, instance, mode),
+    });
     return this.applyQuery(
       cached.flagged,
       query,
       mode,
       (s) => s.episodeFiles.length > 0,
-    );
-  }
-
-  private async readWithSwr(
-    instance: NonNullable<
-      Awaited<ReturnType<typeof instanceRepository.findById>>
-    >,
-    mode: ScoringMode,
-    cacheKey: string,
-  ): Promise<{ flagged: FlaggedSeries[] }> {
-    type Cached = { flagged: FlaggedSeries[] };
-    const result = dataCache.getWithStaleness<Cached>(
-      cacheKey,
-      CACHE_TTL_MS,
-      CACHE_STALE_MS,
-    );
-
-    if (result.kind === "fresh") {
-      appLogger.debug("Cache hit", {
-        source: LogSource.SeriesService,
-        context: { cacheKey },
-      });
-      return result.value;
-    }
-
-    if (result.kind === "stale") {
-      // Serve cached data immediately and refresh in the background. The
-      // dataCache.rebuild guard ensures concurrent stale reads share one
-      // rebuild rather than firing parallel upstream calls.
-      if (!dataCache.isRebuilding(cacheKey)) {
-        void dataCache
-          .rebuild(cacheKey, () =>
-            this.buildFlaggedAndLog(instance.id, instance, mode),
-          )
-          .catch((err) => {
-            appLogger.error("Background flagged-series rebuild failed", {
-              source: LogSource.SeriesService,
-              err,
-              context: { instanceId: instance.id, cacheKey },
-            });
-          });
-      }
-      return result.value;
-    }
-
-    return dataCache.rebuild(cacheKey, () =>
-      this.buildFlaggedAndLog(instance.id, instance, mode),
     );
   }
 
@@ -337,11 +291,7 @@ export class SeriesService extends MediaService {
   // build inline. Caller is responsible for kicking off a background warm
   // when null is returned.
   getCachedFlaggedTotal(instanceId: number, mode: ScoringMode): number | null {
-    const cached = dataCache.get<{ flagged: FlaggedSeries[] }>(
-      `series:${instanceId}:${mode}`,
-      CACHE_TTL_MS,
-    );
-    return cached?.flagged.length ?? null;
+    return this.readCachedFlaggedTotal(`series:${instanceId}:${mode}`);
   }
 
   // Uniform name across MovieService / SeriesService for use via
