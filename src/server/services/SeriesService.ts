@@ -1,4 +1,5 @@
-import type { FlaggedSeries, EpisodeFileEntry, ActionLog, ActionType, MediaQuery, ScoringMode } from "@/shared/types/models";
+import type { FlaggedSeries, EpisodeFileEntry, ActionLog, MediaQuery, ScoringMode } from "@/shared/types/models";
+import { seriesRetryPayloadSchema } from "@/shared/types/schemas";
 import { isProfileMode } from "@/shared/scoring-mode";
 import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
@@ -232,16 +233,34 @@ export class SeriesService extends MediaService {
     return this.getFlaggedSeries(instanceId, { page: 1, limit: 1, sortBy: "score", order: "asc" });
   }
 
-  // Re-runs a stored ActionLog payload. Dispatches on the action column —
-  // each value maps to exactly one trigger method, and the trigger writes
-  // back the matching narrower payload so the row stays consistent across
-  // retries. The Record<ActionType,…> shape lets TypeScript flag a missing
-  // handler at compile time.
+  // Re-runs a stored ActionLog payload. The discriminated-union parse
+  // narrows the payload to one of the four retryable shapes; the switch
+  // then dispatches without any `as` casts. TypeScript's exhaustiveness
+  // check on the never-typed default makes a missing case a compile error.
   async retryFromPayload(payload: Record<string, unknown>, opts: RetryActionOptions = {}): Promise<ActionLog> {
-    const action = payload.action as string;
-    const handler = (SERIES_RETRY_HANDLERS as Record<string, RetryHandler | undefined>)[action];
-    if (!handler) throw new Error(`Cannot retry action type: ${action}`);
-    return handler(this, payload, opts);
+    const result = seriesRetryPayloadSchema.safeParse(payload);
+    if (!result.success) {
+      const action = typeof payload.action === "string" ? payload.action : "unknown";
+      throw new Error(`Cannot retry action type: ${action}`);
+    }
+    const data = result.data;
+    switch (data.action) {
+      case "search":
+        return this.triggerSearch(data.instanceId, data.mediaId, data.title, opts);
+      case "search_season":
+        return this.triggerSeasonSearch(data.instanceId, data.mediaId, data.seasonNumber, data.title, opts);
+      case "search_episode":
+        return this.triggerEpisodeFileSearch(data.instanceId, data.mediaId, data.fileId, data.title, opts);
+      case "delete":
+        return this.deleteFiles(
+          data.instanceId, data.mediaId, data.fileIds, data.title,
+          data.triggerSearch ?? false, opts,
+        );
+      default: {
+        const _exhaustive: never = data;
+        throw new Error(`Unhandled action: ${String(_exhaustive)}`);
+      }
+    }
   }
 
   async deleteFiles(
@@ -348,44 +367,3 @@ export class SeriesService extends MediaService {
 }
 
 export const seriesService = new SeriesService();
-
-type RetryHandler = (
-  svc: SeriesService,
-  payload: Record<string, unknown>,
-  opts: RetryActionOptions,
-) => Promise<ActionLog>;
-
-// Exclude non-retryable variants explicitly so adding a new ActionType
-// surfaces as a compile error here (either add a handler, or extend the
-// Exclude). Partial<Record<…>> would silently accept new keys.
-type RetryableSeriesAction = Exclude<ActionType, "ignore">;
-
-const SERIES_RETRY_HANDLERS: Record<RetryableSeriesAction, RetryHandler> = {
-  search: (svc, p, opts) =>
-    svc.triggerSearch(p.instanceId as number, p.mediaId as number, p.title as string, opts),
-  search_season: (svc, p, opts) =>
-    svc.triggerSeasonSearch(
-      p.instanceId as number,
-      p.mediaId as number,
-      p.seasonNumber as number,
-      p.title as string,
-      opts,
-    ),
-  search_episode: (svc, p, opts) =>
-    svc.triggerEpisodeFileSearch(
-      p.instanceId as number,
-      p.mediaId as number,
-      p.fileId as number,
-      p.title as string,
-      opts,
-    ),
-  delete: (svc, p, opts) =>
-    svc.deleteFiles(
-      p.instanceId as number,
-      p.mediaId as number,
-      p.fileIds as number[],
-      p.title as string,
-      !!p.triggerSearch,
-      opts,
-    ),
-};
