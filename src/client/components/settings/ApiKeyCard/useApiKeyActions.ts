@@ -2,7 +2,11 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
-import { ApiKeyError, useRevealApiKey, useRotateApiKey } from "@/client/hooks/data/useApiKey";
+import {
+  useRevealApiKey,
+  useRotateApiKey,
+} from "@/client/hooks/data/useApiKey";
+import { ApiClientError } from "@/client/lib/api";
 import { withToast } from "@/client/lib/with-toast";
 
 type Action = "reveal" | "rotate";
@@ -23,18 +27,28 @@ export function useApiKeyActions() {
   const copyClipboard = useMutation({
     mutationFn: (text: string) => navigator.clipboard.writeText(text),
   });
-  const revealWithToast = withToast(reveal, { success: tk("revealed"), error: tk("revealFailed") });
-  const rotateWithToast = withToast(rotate, { success: tk("rotated"), error: tk("rotateFailed") });
-  const copyWithToast = withToast(copyClipboard, { success: tk("copied"), error: tk("copyFailed") });
+  const revealWithToast = withToast(reveal, {
+    success: tk("revealed"),
+    error: tk("revealFailed"),
+  });
+  const rotateWithToast = withToast(rotate, {
+    success: tk("rotated"),
+    error: tk("rotateFailed"),
+  });
+  const copyWithToast = withToast(copyClipboard, {
+    success: tk("copied"),
+    error: tk("copyFailed"),
+  });
 
   const resetPrompt = () => {
     setPw("");
     setPwOpen(false);
   };
 
-  const inlineMessage = (e: ApiKeyError): string => {
+  const inlineMessage = (e: ApiClientError): string | null => {
+    if (e.code === "WRONG_PASSWORD") return tk("wrongPassword");
     if (e.status === 429) return tk("tooManyAttempts");
-    return tk("wrongPassword");
+    return null;
   };
 
   const ask = (action: Action) => {
@@ -50,11 +64,13 @@ export function useApiKeyActions() {
     setPwErr(null);
     const action = pending;
     try {
-      const data = await (action === "rotate" ? rotateWithToast : revealWithToast)({ password: pw });
+      const data = await (
+        action === "rotate" ? rotateWithToast : revealWithToast
+      )({ password: pw });
       setRevealed(data.apiKey);
       resetPrompt();
     } catch (caught) {
-      setPwErr(caught instanceof ApiKeyError ? inlineMessage(caught) : tk("wrongPassword"));
+      setPwErr(caught instanceof ApiClientError ? inlineMessage(caught) : null);
     }
   };
 

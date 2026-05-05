@@ -3,6 +3,7 @@
 // literals at call sites. Keep this list small and discoverable.
 export const LogSource = {
   Api: "api",
+  Client: "client",
   Auth: "auth",
   Db: "db",
   ArrClient: "arr-client",

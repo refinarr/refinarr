@@ -10,6 +10,8 @@
       "submit": "Create account",
       "mismatch": "Passwords do not match.",
       "tooShort": "Password must be at least 12 characters.",
+      "tooManyAttempts": "Too many attempts. Wait a few minutes.",
+      "alreadyCompleted": "Setup is already complete. Sign in instead.",
       "failed": "Couldn't create account. Try again."
     },
     "login": {
@@ -248,7 +250,7 @@
     "actionMovie": "Movie search",
     "actionSeries": "Series search",
     "actionSeason": "Season search",
-    "actionEpisodeFile": "Episode file search",
+    "actionEpisode": "Episode search",
     "queuedAt": "Queued {time}"
   },
   "history": {

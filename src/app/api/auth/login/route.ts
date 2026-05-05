@@ -6,27 +6,21 @@ import { credentialsSchema } from "@/shared/types/schemas";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
+import { createApiHandler } from "@/server/lib/handler";
+import { parseJson, tooManyRequests, unauthorized } from "@/server/lib/api-errors";
 
-export async function POST(req: NextRequest) {
+export const POST = createApiHandler(async (req: NextRequest) => {
   const { allowed, retryAfterMs } = checkRateLimit(`login:${clientIp(req)}`, { max: 10, windowMs: 15 * 60 * 1000 });
   if (!allowed) {
-    return NextResponse.json({ error: "Too many attempts" }, { status: 429, headers: { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) } });
+    throw tooManyRequests("Too many attempts", retryAfterMs);
   }
 
-  let body: unknown;
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
-
-  const parsed = credentialsSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid credentials" }, { status: 400 });
-  }
-
-  const { username, password } = parsed.data;
+  const { username, password } = await parseJson(req, credentialsSchema, "Invalid credentials");
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user || !verifyPassword(password, user.passwordHash)) {
     const usernameHash = createHash("sha256").update(username).digest("hex").slice(0, 8);
     appLogger.warn("Failed login attempt", { source: LogSource.Auth, context: { usernameHash } });
-    return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    throw unauthorized("Invalid credentials");
   }
 
   const session = await createSession(user.id);
@@ -39,4 +33,4 @@ export async function POST(req: NextRequest) {
     expires: session.expiresAt,
   });
   return res;
-}
+});

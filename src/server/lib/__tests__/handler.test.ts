@@ -20,6 +20,7 @@ vi.mock("@/server/lib/app-logger", () => ({
 }));
 
 import { createApiHandler } from "@/server/lib/handler";
+import { badRequest, parseJson, tooManyRequests } from "@/server/lib/api-errors";
 import { UnsafeUrlError } from "@/server/lib/url-guard";
 
 function makeReq(path = "/api/test"): NextRequest {
@@ -37,6 +38,7 @@ describe("createApiHandler", () => {
     );
     const res = await handler(makeReq(), makeCtx());
     expect(res.status).toBe(200);
+    expect(res.headers.get("X-Trace-Id")).toBeTruthy();
     const body = await res.json();
     expect(body).toEqual({ ok: true });
   });
@@ -47,8 +49,10 @@ describe("createApiHandler", () => {
     });
     const res = await handler(makeReq(), makeCtx());
     expect(res.status).toBe(400);
+    expect(res.headers.get("X-Trace-Id")).toBeTruthy();
     const body = await res.json();
     expect(body.error).toBe("Blocked host");
+    expect(body.traceId).toBe(res.headers.get("X-Trace-Id"));
   });
 
   test("ZodError from handler returns 400 with generic message", async () => {
@@ -68,6 +72,7 @@ describe("createApiHandler", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Invalid request");
+    expect(body.traceId).toBe(res.headers.get("X-Trace-Id"));
   });
 
   test("generic Error from handler returns 500", async () => {
@@ -78,6 +83,49 @@ describe("createApiHandler", () => {
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBe("Internal server error");
+    expect(body.traceId).toBe(res.headers.get("X-Trace-Id"));
+  });
+
+  test("HttpError from handler returns canonical error response", async () => {
+    const handler = createApiHandler(async () => {
+      throw badRequest("Nope", "NOPE");
+    });
+    const res = await handler(makeReq(), makeCtx());
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body).toEqual({
+      error: "Nope",
+      code: "NOPE",
+      traceId: res.headers.get("X-Trace-Id"),
+    });
+  });
+
+  test("HttpError preserves retry-after header", async () => {
+    const handler = createApiHandler(async () => {
+      throw tooManyRequests("Slow down", 2500);
+    });
+    const res = await handler(makeReq(), makeCtx());
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("3");
+  });
+
+  test("parseJson maps invalid JSON and invalid schema payloads", async () => {
+    const { z } = await import("zod");
+    const invalidJsonReq = new NextRequest("http://localhost/api/test", {
+      method: "POST",
+      body: "{",
+    });
+    await expect(parseJson(invalidJsonReq, z.object({ name: z.string() }), "Invalid thing"))
+      .rejects
+      .toThrow("Invalid JSON");
+
+    const invalidPayloadReq = new NextRequest("http://localhost/api/test", {
+      method: "POST",
+      body: JSON.stringify({ name: 42 }),
+    });
+    await expect(parseJson(invalidPayloadReq, z.object({ name: z.string() }), "Invalid thing"))
+      .rejects
+      .toThrow("Invalid thing");
   });
 
   test("resolves params from ctx", async () => {

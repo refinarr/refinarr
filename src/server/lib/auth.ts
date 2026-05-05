@@ -71,3 +71,19 @@ export async function deleteSession(id: string): Promise<void> {
 export async function pruneExpiredSessions(): Promise<void> {
   await prisma.session.deleteMany({ where: { expiresAt: { lt: new Date() } } });
 }
+
+export type SessionPasswordResult = "ok" | "session_required" | "invalid_password";
+
+// Verifies the caller holds an active session AND knows the account password.
+// Used by /api/config/api-key to gate reveal/rotate behind re-auth.
+export async function verifySessionPassword(
+  sid: string | undefined,
+  password: string,
+): Promise<SessionPasswordResult> {
+  if (!sid) return "session_required";
+  const session = await getSession(sid);
+  if (!session) return "session_required";
+  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  if (!user) return "session_required";
+  return verifyPassword(password, user.passwordHash) ? "ok" : "invalid_password";
+}

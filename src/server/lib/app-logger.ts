@@ -9,9 +9,7 @@ interface LogFields {
   err?: unknown;
 }
 
-function persist(level: LogLevel, message: string, fields?: LogFields) {
-  if (!logger.isLevelEnabled(level)) return;
-
+function normalizedContext(fields?: LogFields): Record<string, unknown> | undefined {
   const rawCtx: Record<string, unknown> = { ...(fields?.context ?? {}) };
   if (fields?.err instanceof Error) {
     rawCtx.errorMessage = fields.err.message;
@@ -20,7 +18,14 @@ function persist(level: LogLevel, message: string, fields?: LogFields) {
     rawCtx.errorMessage = String(fields.err);
   }
 
-  const ctx = redactContext(rawCtx) ?? {};
+  const context = redactContext(rawCtx);
+  return context && Object.keys(context).length > 0 ? context : undefined;
+}
+
+function persist(level: LogLevel, message: string, fields: LogFields | undefined, context: Record<string, unknown> | undefined) {
+  if (!logger.isLevelEnabled(level)) return;
+
+  const ctx = context ?? {};
 
   const data = {
     level,
@@ -45,19 +50,23 @@ function persist(level: LogLevel, message: string, fields?: LogFields) {
 
 export const appLogger = {
   debug(msg: string, fields?: LogFields) {
-    logger.debug(fields?.context, msg);
-    persist("debug", msg, fields);
+    const context = normalizedContext(fields);
+    logger.debug(context, msg);
+    persist("debug", msg, fields, context);
   },
   info(msg: string, fields?: LogFields) {
-    logger.info(fields?.context, msg);
-    persist("info", msg, fields);
+    const context = normalizedContext(fields);
+    logger.info(context, msg);
+    persist("info", msg, fields, context);
   },
   warn(msg: string, fields?: LogFields) {
-    logger.warn(fields?.context, msg);
-    persist("warn", msg, fields);
+    const context = normalizedContext(fields);
+    logger.warn(context, msg);
+    persist("warn", msg, fields, context);
   },
   error(msg: string, fields?: LogFields) {
-    logger.error({ ...(fields?.context ?? {}), err: fields?.err }, msg);
-    persist("error", msg, fields);
+    const context = normalizedContext(fields);
+    logger.error(context, msg);
+    persist("error", msg, fields, context);
   },
 };

@@ -42,10 +42,16 @@ describe("SearchQueueService", () => {
   test("enqueue dedupes against an existing pending movie row", async () => {
     const inst = await makeInstance();
     const first = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "movie", mediaId: 42, title: "X",
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 42,
+      title: "X",
     });
     const second = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "movie", mediaId: 42, title: "X",
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 42,
+      title: "X",
     });
     expect(second.id).toBe(first.id);
     expect(await searchQueueService.listPending(inst.id)).toHaveLength(1);
@@ -54,11 +60,17 @@ describe("SearchQueueService", () => {
   test("enqueue does NOT dedupe after the previous row reached a terminal state", async () => {
     const inst = await makeInstance();
     const first = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "movie", mediaId: 42, title: "X",
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 42,
+      title: "X",
     });
     await searchQueueService.markDone(first.id);
     const second = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "movie", mediaId: 42, title: "X",
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 42,
+      title: "X",
     });
     expect(second.id).not.toBe(first.id);
     expect(second.status).toBe("pending");
@@ -67,10 +79,18 @@ describe("SearchQueueService", () => {
   test("enqueue does NOT dedupe across distinct seasons of the same series", async () => {
     const inst = await makeInstance();
     const s1 = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "season", mediaId: 7, title: "S", payload: { seasonNumber: 1 },
+      instanceId: inst.id,
+      action: "season",
+      mediaId: 7,
+      title: "S",
+      payload: { seasonNumber: 1 },
     });
     const s2 = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "season", mediaId: 7, title: "S", payload: { seasonNumber: 2 },
+      instanceId: inst.id,
+      action: "season",
+      mediaId: 7,
+      title: "S",
+      payload: { seasonNumber: 2 },
     });
     expect(s2.id).not.toBe(s1.id);
     expect(await searchQueueService.listPending(inst.id)).toHaveLength(2);
@@ -79,27 +99,47 @@ describe("SearchQueueService", () => {
   test("enqueue dedupes the same season of the same series", async () => {
     const inst = await makeInstance();
     const a = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "season", mediaId: 7, title: "S", payload: { seasonNumber: 1 },
+      instanceId: inst.id,
+      action: "season",
+      mediaId: 7,
+      title: "S",
+      payload: { seasonNumber: 1 },
     });
     const b = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "season", mediaId: 7, title: "S", payload: { seasonNumber: 1 },
+      instanceId: inst.id,
+      action: "season",
+      mediaId: 7,
+      title: "S",
+      payload: { seasonNumber: 1 },
     });
     expect(b.id).toBe(a.id);
     expect(await searchQueueService.listPending(inst.id)).toHaveLength(1);
   });
 
-  test("enqueue dedupes the same episode-file but allows distinct fileIds", async () => {
+  test("enqueue dedupes the same episode but allows distinct fileIds", async () => {
     const inst = await makeInstance();
     const a = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "episode-file", mediaId: 7, title: "E", payload: { fileId: 100 },
+      instanceId: inst.id,
+      action: "episode",
+      mediaId: 7,
+      title: "E",
+      payload: { fileId: 100 },
     });
     const dup = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "episode-file", mediaId: 7, title: "E", payload: { fileId: 100 },
+      instanceId: inst.id,
+      action: "episode",
+      mediaId: 7,
+      title: "E",
+      payload: { fileId: 100 },
     });
     expect(dup.id).toBe(a.id);
 
     const other = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "episode-file", mediaId: 7, title: "E", payload: { fileId: 101 },
+      instanceId: inst.id,
+      action: "episode",
+      mediaId: 7,
+      title: "E",
+      payload: { fileId: 101 },
     });
     expect(other.id).not.toBe(a.id);
     expect(await searchQueueService.listPending(inst.id)).toHaveLength(2);
@@ -113,9 +153,24 @@ describe("SearchQueueService", () => {
 
   test("getStatus computes eta from searchesPerHour and pending count", async () => {
     const inst = await makeInstance(20);
-    await searchQueueService.enqueue({ instanceId: inst.id, action: "movie", mediaId: 1, title: "a" });
-    await searchQueueService.enqueue({ instanceId: inst.id, action: "movie", mediaId: 2, title: "b" });
-    await searchQueueService.enqueue({ instanceId: inst.id, action: "movie", mediaId: 3, title: "c" });
+    await searchQueueService.enqueue({
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 1,
+      title: "a",
+    });
+    await searchQueueService.enqueue({
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 2,
+      title: "b",
+    });
+    await searchQueueService.enqueue({
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 3,
+      title: "c",
+    });
     const status = await searchQueueService.getStatus(inst.id);
     expect(status.pendingCount).toBe(3);
     // 20/hour → 180_000ms per slot. 3 pending → first now, then 180s, then 360s.
@@ -126,13 +181,19 @@ describe("SearchQueueService", () => {
   test("markDone and markFailed update the row terminal status", async () => {
     const inst = await makeInstance();
     const row = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "movie", mediaId: 1, title: "a",
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 1,
+      title: "a",
     });
     await searchQueueService.markDone(row.id);
-    expect((await searchQueueService.findNextPending(inst.id))).toBeNull();
+    expect(await searchQueueService.findNextPending(inst.id)).toBeNull();
 
     const row2 = await searchQueueService.enqueue({
-      instanceId: inst.id, action: "movie", mediaId: 2, title: "b",
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 2,
+      title: "b",
     });
     await searchQueueService.markFailed(row2.id, "upstream-503");
     expect(await searchQueueService.findNextPending(inst.id)).toBeNull();
@@ -140,8 +201,18 @@ describe("SearchQueueService", () => {
 
   test("listPending returns all pending rows for an instance", async () => {
     const inst = await makeInstance();
-    await searchQueueService.enqueue({ instanceId: inst.id, action: "movie", mediaId: 1, title: "a" });
-    await searchQueueService.enqueue({ instanceId: inst.id, action: "movie", mediaId: 2, title: "b" });
+    await searchQueueService.enqueue({
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 1,
+      title: "a",
+    });
+    await searchQueueService.enqueue({
+      instanceId: inst.id,
+      action: "movie",
+      mediaId: 2,
+      title: "b",
+    });
     const list = await searchQueueService.listPending(inst.id);
     expect(list).toHaveLength(2);
     expect(list.map((r) => r.title)).toEqual(["a", "b"]);
@@ -150,8 +221,18 @@ describe("SearchQueueService", () => {
   test("listAllPending returns rows across all instances", async () => {
     const a = await makeInstance();
     const b = await makeInstance();
-    await searchQueueService.enqueue({ instanceId: a.id, action: "movie", mediaId: 1, title: "a1" });
-    await searchQueueService.enqueue({ instanceId: b.id, action: "series", mediaId: 1, title: "b1" });
+    await searchQueueService.enqueue({
+      instanceId: a.id,
+      action: "movie",
+      mediaId: 1,
+      title: "a1",
+    });
+    await searchQueueService.enqueue({
+      instanceId: b.id,
+      action: "series",
+      mediaId: 1,
+      title: "b1",
+    });
     const list = await searchQueueService.listAllPending();
     expect(list).toHaveLength(2);
   });
@@ -159,9 +240,24 @@ describe("SearchQueueService", () => {
   test("clearPending removes only pending rows for the given instance", async () => {
     const a = await makeInstance();
     const b = await makeInstance();
-    await searchQueueService.enqueue({ instanceId: a.id, action: "movie", mediaId: 1, title: "a1" });
-    await searchQueueService.enqueue({ instanceId: a.id, action: "movie", mediaId: 2, title: "a2" });
-    const otherRow = await searchQueueService.enqueue({ instanceId: b.id, action: "movie", mediaId: 1, title: "b1" });
+    await searchQueueService.enqueue({
+      instanceId: a.id,
+      action: "movie",
+      mediaId: 1,
+      title: "a1",
+    });
+    await searchQueueService.enqueue({
+      instanceId: a.id,
+      action: "movie",
+      mediaId: 2,
+      title: "a2",
+    });
+    const otherRow = await searchQueueService.enqueue({
+      instanceId: b.id,
+      action: "movie",
+      mediaId: 1,
+      title: "b1",
+    });
     await searchQueueService.markDone(otherRow.id); // terminal — should be untouched
 
     const removed = await searchQueueService.clearPending(a.id);

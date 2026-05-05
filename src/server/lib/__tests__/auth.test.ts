@@ -2,6 +2,7 @@ import { describe, test, expect } from "vitest";
 import {
   hashPassword,
   verifyPassword,
+  verifySessionPassword,
   constantTimeEquals,
   getUserCount,
   createSession,
@@ -170,5 +171,42 @@ describe("session lifecycle", () => {
     await pruneExpiredSessions();
     expect(await prisma.session.findUnique({ where: { id: "ok" } })).not.toBeNull();
     expect(await prisma.session.findUnique({ where: { id: "old" } })).toBeNull();
+  });
+});
+
+describe("verifySessionPassword", () => {
+  test("returns session_required when sid is undefined", async () => {
+    expect(await verifySessionPassword(undefined, "any-password")).toBe("session_required");
+  });
+
+  test("returns session_required for an unknown sid", async () => {
+    expect(await verifySessionPassword("does-not-exist", "any-password")).toBe(
+      "session_required",
+    );
+  });
+
+  test("returns session_required when the session points at a deleted user", async () => {
+    const user = await prisma.user.create({
+      data: { username: "orphan", passwordHash: hashPassword("password-1234") },
+    });
+    const { id } = await createSession(user.id);
+    await prisma.user.delete({ where: { id: user.id } });
+    expect(await verifySessionPassword(id, "password-1234")).toBe("session_required");
+  });
+
+  test("returns invalid_password when the session is valid but the password is wrong", async () => {
+    const user = await prisma.user.create({
+      data: { username: "auth-user", passwordHash: hashPassword("right-password-1") },
+    });
+    const { id } = await createSession(user.id);
+    expect(await verifySessionPassword(id, "wrong-password-1")).toBe("invalid_password");
+  });
+
+  test("returns ok when the session and password both match", async () => {
+    const user = await prisma.user.create({
+      data: { username: "ok-user", passwordHash: hashPassword("right-password-2") },
+    });
+    const { id } = await createSession(user.id);
+    expect(await verifySessionPassword(id, "right-password-2")).toBe("ok");
   });
 });

@@ -54,10 +54,33 @@ describe("appLogger — pino delegation", () => {
     expect(loggerMethods.warn).toHaveBeenCalledWith({ x: "y" }, "warn-msg");
   });
 
-  test("error attaches err alongside context", () => {
+  test("error attaches redacted error details alongside context", () => {
     const err = new Error("boom");
     appLogger.error("oops", { context: { foo: "bar" }, err });
-    expect(loggerMethods.error).toHaveBeenCalledWith({ foo: "bar", err }, "oops");
+    expect(loggerMethods.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        foo: "bar",
+        errorMessage: "boom",
+        stack: expect.stringContaining("boom"),
+      }),
+      "oops"
+    );
+  });
+
+  test("redacts context before writing to pino", () => {
+    appLogger.warn("warn-msg", {
+      context: {
+        apiKey: "secret-value-here",
+        url: "http://localhost?apikey=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      },
+    });
+    expect(loggerMethods.warn).toHaveBeenCalledWith(
+      {
+        apiKey: "***",
+        url: "http://localhost?apikey=***",
+      },
+      "warn-msg"
+    );
   });
 });
 

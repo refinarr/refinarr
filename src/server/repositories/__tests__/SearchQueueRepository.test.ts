@@ -1,7 +1,7 @@
 import { describe, test, expect, vi } from "vitest";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 
-async function enqueue(instanceId: number, mediaId: number, action: "movie" | "series" | "season" | "episode-file" = "movie") {
+async function enqueue(instanceId: number, mediaId: number, action: "movie" | "series" | "season" | "episode" = "movie") {
   const { entry } = await searchQueueRepository.createUnique({
     instanceId,
     action,

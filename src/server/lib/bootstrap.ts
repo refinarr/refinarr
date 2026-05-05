@@ -7,6 +7,7 @@ import { ConfigKey } from "@/server/config/keys";
 import { searchWorker } from "./search-worker";
 
 let seeded = false;
+let seedPromise: Promise<void> | null = null;
 
 export async function seedDefaults(): Promise<void> {
   if ((await configRepository.get(ConfigKey.DryRun.key)) === null) {
@@ -31,6 +32,14 @@ export async function seedDefaults(): Promise<void> {
 
 export async function ensureSeeded(): Promise<void> {
   if (seeded) return;
-  await seedDefaults();
-  seeded = true;
+  if (!seedPromise) {
+    seedPromise = seedDefaults()
+      .then(() => {
+        seeded = true;
+      })
+      .finally(() => {
+        seedPromise = null;
+      });
+  }
+  await seedPromise;
 }

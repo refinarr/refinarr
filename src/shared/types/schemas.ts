@@ -105,4 +105,24 @@ export const retryPayloadSchema = z.object({
   title: z.string().min(1).max(512),
 }).passthrough();
 
+// Re-auth body for /api/config/api-key (read or rotate). Lives next to
+// the route's other schemas so the route doesn't define inline zod.
+export const apiKeyReauthSchema = z.object({
+  password: z.string().min(1).max(256),
+});
+
+// Body shape POSTed to /api/logs/client by reportClientError. Caps every
+// string field so a misbehaving client can't fill the AppLog table with
+// 1MB stack traces.
+export const clientErrorReportSchema = z.object({
+  message: z.string().min(1).max(2048),
+  path: z.string().min(1).max(2048),
+  method: z.string().min(1).max(16).optional(),
+  status: z.number().int().min(0).max(599).optional(),
+  code: z.string().min(1).max(128).optional(),
+  traceId: z.string().min(1).max(128).optional(),
+  stack: z.string().max(8192).optional(),
+  component: z.string().min(1).max(256).optional(),
+});
+
 export type CredentialsInput = z.infer<typeof credentialsSchema>;
