@@ -64,18 +64,6 @@ export interface HistoryQuery {
   limit?: number;
 }
 
-export interface MediaQuery {
-  instanceId: number;
-  page?: number;
-  limit?: number;
-  sortBy?: "score" | "title" | "added";
-  order?: "asc" | "desc";
-  maxScore?: number;
-  q?: string;
-  profileId?: number;
-  missingCfId?: number;
-}
-
 export interface DashboardInstanceSummary {
   id: number;
   type: "radarr" | "sonarr";

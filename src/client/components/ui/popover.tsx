@@ -13,6 +13,10 @@ function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
+interface PopoverContentProps
+  extends PopoverPrimitive.Popup.Props,
+    Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset"> {}
+
 function PopoverContent({
   align = "start",
   alignOffset = 0,
@@ -20,11 +24,7 @@ function PopoverContent({
   sideOffset = 4,
   className,
   ...props
-}: PopoverPrimitive.Popup.Props &
-  Pick<
-    PopoverPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+}: PopoverContentProps) {
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner

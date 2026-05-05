@@ -2,35 +2,17 @@
 import { useInfiniteQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
-import type { FlaggedMovie, ScoringMode } from "@/shared/types/models";
+import { appendFilterParams } from "@/client/lib/build-query-params";
+import type { FlaggedMovie } from "@/shared/types/models";
 import type { PaginatedResponse } from "@/shared/types/api";
+import type { MediaQueryFilters } from "./useMediaFilters";
 
-interface MovieFilters {
-  sortBy?: "score" | "title" | "added" | "size";
-  order?: "asc" | "desc";
-  maxScore?: number;
-  q?: string;
-  profileId?: number | null;
-  missingCfIds?: number[];
-  missingCfMatch?: "any" | "all";
-  hasNegativeCfIds?: number[];
-  hasNegativeCfMatch?: "any" | "all";
-  scoringMode?: ScoringMode;
-}
-
-export function useMovies(instanceId: number, filters: MovieFilters = {}) {
+export function useMovies(instanceId: number, filters: MediaQueryFilters = {}) {
   const params = new URLSearchParams({
     instanceId: String(instanceId),
     limit: "50",
   });
-  for (const [k, v] of Object.entries(filters)) {
-    if (v === undefined || v === null || v === "" || v === false) continue;
-    if (Array.isArray(v)) {
-      if (v.length > 0) params.set(k, v.join(","));
-    } else {
-      params.set(k, String(v));
-    }
-  }
+  appendFilterParams(params, filters);
 
   return useInfiniteQuery({
     queryKey: queryKeys.movies(instanceId, filters),

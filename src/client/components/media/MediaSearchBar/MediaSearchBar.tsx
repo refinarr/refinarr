@@ -148,7 +148,10 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
               <div className="flex items-center gap-3">
                 <Slider
                   value={filters.maxScore}
-                  onValueChange={(v) => onChange({ maxScore: v as number })}
+                  onValueChange={(v) => {
+                    const next = typeof v === "number" ? v : v[0];
+                    if (typeof next === "number") onChange({ maxScore: next });
+                  }}
                   min={0}
                   max={1}
                   step={0.05}
@@ -164,6 +167,7 @@ export function MediaSearchBar({ arrType, instanceId, scoringMode, filters, onCh
 
         <button
           type="button"
+          aria-pressed={onlyMissingActive}
           onClick={() => onChange({ onlyMissing: !filters.onlyMissing })}
           className={cn(PILL, onlyMissingActive && PILL_ACTIVE)}
         >

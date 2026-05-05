@@ -17,6 +17,11 @@ export interface MediaFilters {
   onlyMissing: boolean;
 }
 
+// Hook query input — every field optional, plus scoringMode. useMovies /
+// useSeries / useFlaggedMediaData accept this so they don't each redeclare
+// their own near-identical filter type.
+export type MediaQueryFilters = Partial<MediaFilters> & { scoringMode?: ScoringMode };
+
 export const defaultMediaFilters: MediaFilters = {
   sortBy: "score",
   order: "asc",

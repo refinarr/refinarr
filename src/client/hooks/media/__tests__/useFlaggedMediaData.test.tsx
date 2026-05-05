@@ -94,17 +94,21 @@ describe("useFlaggedMediaData", () => {
   });
 
   it("passes instanceId and filters through to the query hook", () => {
-    const spy = vi.fn().mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      isError: false,
-      isFetching: false,
-      isFetchingNextPage: false,
-      fetchNextPage: vi.fn(),
-      hasNextPage: false,
-      refetch: vi.fn(),
-    });
-    renderHook(() => useFlaggedMediaData(spy as FlaggedMediaQueryHook<Item>, 7, baseFilters));
+    const spy = vi.fn();
+    const hook: FlaggedMediaQueryHook<Item> = (...args) => {
+      spy(...args);
+      return {
+        data: undefined,
+        isLoading: false,
+        isError: false,
+        isFetching: false,
+        isFetchingNextPage: false,
+        fetchNextPage: vi.fn(),
+        hasNextPage: false,
+        refetch: vi.fn(),
+      };
+    };
+    renderHook(() => useFlaggedMediaData(hook, 7, baseFilters));
     expect(spy).toHaveBeenCalledWith(7, baseFilters);
   });
 });
