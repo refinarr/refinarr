@@ -32,7 +32,7 @@ export function SeriesCard({ item, ctx }: Props) {
           <ScoreLabel score={score} minProfileScore={item.minProfileScore} />
         )}
         <span className="tabular-nums">{formatBytes(item.sizeOnDisk)}</span>
-        <span className="tabular-nums">{item.affectedEpisodeCount}/{item.totalEpisodeCount} ep</span>
+        <span className="tabular-nums">{t("episodeCountShort", { affected: item.affectedEpisodeCount, total: item.totalEpisodeCount })}</span>
       </div>
       {issues.length > 0 && (
         <div className="flex flex-wrap gap-1 pt-0.5">

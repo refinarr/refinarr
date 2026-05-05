@@ -1,22 +1,10 @@
 // @vitest-environment happy-dom
-import type { ReactNode } from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import messages from "../../../../../../messages/en.json";
+import { screen } from "@testing-library/react";
+import { renderWithProviders } from "@/test/render";
 import type { FlaggedMovie } from "@/shared/types/models";
 import type { FlaggedMediaQueryHook } from "@/client/hooks/media/useFlaggedMediaData";
 import { MOVIE_BULK_CONFIG } from "../../media-bulk-configs";
-
-function renderWithShellProviders(ui: ReactNode) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <NextIntlClientProvider locale="en" messages={messages}>
-      <QueryClientProvider client={qc}>{ui}</QueryClientProvider>
-    </NextIntlClientProvider>,
-  );
-}
 
 // Mock heavy data/state hooks used inside the shell so the component is
 // rendered in isolation without spinning up a TanStack QueryClient or DB.
@@ -112,7 +100,7 @@ function makeUseQuery(items: FlaggedMovie[] = []): FlaggedMediaQueryHook<Flagged
 
 describe("MediaListShell", () => {
   it("renders the empty state when no items match", () => {
-    renderWithShellProviders(
+    renderWithProviders(
       <MediaListShell
         arrType="radarr"
         bulkConfig={MOVIE_BULK_CONFIG}
@@ -131,7 +119,7 @@ describe("MediaListShell", () => {
     const columns = vi.fn().mockReturnValue([]);
     const Card = vi.fn().mockReturnValue(null);
 
-    renderWithShellProviders(
+    renderWithProviders(
       <MediaListShell
         arrType="radarr"
         bulkConfig={MOVIE_BULK_CONFIG}
@@ -157,7 +145,7 @@ describe("MediaListShell", () => {
   it("renders the Drawer with the current selection (initially null)", () => {
     const Drawer = vi.fn().mockReturnValue(null);
 
-    renderWithShellProviders(
+    renderWithProviders(
       <MediaListShell
         arrType="radarr"
         bulkConfig={MOVIE_BULK_CONFIG}

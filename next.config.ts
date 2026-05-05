@@ -43,13 +43,14 @@ const securityHeaders = [
 
 // Hosts allowed to hit the Next.js dev server (HMR websocket, _next/* assets)
 // from a non-localhost origin. Needed when testing on a phone over LAN —
-// otherwise Next.js blocks the cross-origin request. Extend via the env var
-// if your machine's LAN IP differs from the bundled defaults.
-const allowedDevOrigins = isDev
-  ? [
-      ...(process.env.NEXT_DEV_ALLOWED_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean) ?? []),
-      "10.10.1.28",
-    ]
+// otherwise Next.js blocks the cross-origin request. Set via env only — the
+// repo doesn't ship machine-specific IPs.
+const envAllowedDevOrigins = process.env.NEXT_DEV_ALLOWED_ORIGINS
+  ?.split(",")
+  .map((s) => s.trim())
+  .filter(Boolean) ?? [];
+const allowedDevOrigins = isDev && envAllowedDevOrigins.length > 0
+  ? envAllowedDevOrigins
   : undefined;
 
 const nextConfig: NextConfig = {

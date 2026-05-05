@@ -52,11 +52,16 @@ export function SeriesDetailDrawer({
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
   if (!series) return null;
 
+  const hasFiles = series.episodeFiles.length > 0;
   const score = SCORE_FOR[scoringMode](series);
-  const severity = getSeverity(score, series.minProfileScore, scoringMode, series.episodeFiles.length > 0);
+  const severity = getSeverity(score, series.minProfileScore, scoringMode, hasFiles);
   const seasonMap = groupBySeason(series.episodeFiles);
   const seasons = Array.from(seasonMap.keys()).sort((a, b) => a - b);
   const profileName = profiles?.find((p) => p.id === series.qualityProfileId)?.name;
+  // In profile mode the score is meaningless without a file (no
+  // customFormatScore to compare to the cutoff). Card and table show
+  // "No file"; the drawer matches.
+  const showNoFile = isProfileMode(scoringMode) && !hasFiles;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -72,7 +77,11 @@ export function SeriesDetailDrawer({
         <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
             <span className="text-muted-foreground">{tDrawer("score")}</span>
-            <span><ScoreLabel score={score} minProfileScore={series.minProfileScore} /></span>
+            <span>
+              {showNoFile
+                ? <span className="text-xs text-muted-foreground">{tShows("noFile")}</span>
+                : <ScoreLabel score={score} minProfileScore={series.minProfileScore} />}
+            </span>
             <span className="text-muted-foreground">{tDrawer("profile")}</span>
             <span>{profileName ?? "—"}</span>
             <span className="text-muted-foreground">{tDrawer("episodes")}</span>

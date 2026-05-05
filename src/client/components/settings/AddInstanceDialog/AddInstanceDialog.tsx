@@ -8,14 +8,15 @@ import { FormField } from "@/client/components/ui/form-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/client/components/ui/select";
 import { Loader2, Plug } from "lucide-react";
 import type { ArrType, Instance } from "@/shared/types/models";
+import { ALL_ARR_TYPES, isArrType } from "@/shared/arr-type";
 import { useAddInstanceForm } from "./useAddInstanceForm";
 
-// Per-arr-type UI bits the dialog needs: display label and i18n keys for
-// the type-specific placeholders. Adding Lidarr / Whisparr is a third
-// entry; the JSX below stays untouched.
-const TYPE_LABELS: Record<ArrType, { display: string; namePlaceholderKey: string; urlPlaceholderKey: string }> = {
-  radarr: { display: "Radarr", namePlaceholderKey: "namePlaceholder", urlPlaceholderKey: "urlPlaceholder" },
-  sonarr: { display: "Sonarr", namePlaceholderKey: "namePlaceholderSonarr", urlPlaceholderKey: "urlPlaceholderSonarr" },
+// Per-arr-type i18n keys for the type-specific placeholders. Display
+// labels live in messages/en.json under settings.instanceForm.types.*
+// so non-English locales render correctly.
+const PLACEHOLDER_KEYS: Record<ArrType, { name: string; url: string }> = {
+  radarr: { name: "namePlaceholder", url: "urlPlaceholder" },
+  sonarr: { name: "namePlaceholderSonarr", url: "urlPlaceholderSonarr" },
 };
 
 interface Props {
@@ -26,6 +27,7 @@ interface Props {
 
 export function AddInstanceDialog({ open, onClose, editing }: Props) {
   const t = useTranslations("settings.instanceForm");
+  const tTypes = useTranslations("settings.instanceForm.types");
   const tCommon = useTranslations("common");
 
   const {
@@ -52,25 +54,25 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
             <Label>{t("type")}</Label>
             <Select
               value={selectedType}
-              onValueChange={(v) => v && onChangeType(v as ArrType)}
+              onValueChange={(v) => { if (v && isArrType(v)) onChangeType(v); }}
             >
               <SelectTrigger>
-                <SelectValue>{TYPE_LABELS[selectedType].display}</SelectValue>
+                <SelectValue>{tTypes(selectedType)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(TYPE_LABELS) as ArrType[]).map((type) => (
+                {ALL_ARR_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>
-                    {TYPE_LABELS[type].display}
+                    {tTypes(type)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <FormField id="instance-name" label={t("name")} error={errors.name?.message}>
-            <Input {...register("name")} placeholder={t(TYPE_LABELS[selectedType].namePlaceholderKey)} />
+            <Input {...register("name")} placeholder={t(PLACEHOLDER_KEYS[selectedType].name)} />
           </FormField>
           <FormField id="instance-url" label={t("url")} error={errors.url?.message}>
-            <Input {...register("url")} placeholder={t(TYPE_LABELS[selectedType].urlPlaceholderKey)} />
+            <Input {...register("url")} placeholder={t(PLACEHOLDER_KEYS[selectedType].url)} />
           </FormField>
           <FormField id="instance-apikey" label={t("apiKey")} error={errors.apiKey?.message}>
             <Input

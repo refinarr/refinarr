@@ -176,6 +176,7 @@
     "season": "Season {season}",
     "seasonProgress": "{affected} / {total} episodes",
     "noEpisodeFiles": "No episode files found.",
+    "episodeCountShort": "{affected}/{total} ep",
     "searchSeasonAria": "Search Season {season}",
     "deleteSeasonAria": "Delete affected files in Season {season}",
     "drawer": {
@@ -343,6 +344,10 @@
       "addTitle": "Add Instance",
       "editTitle": "Edit Instance",
       "type": "Type",
+      "types": {
+        "radarr": "Radarr",
+        "sonarr": "Sonarr"
+      },
       "name": "Name",
       "namePlaceholder": "My Radarr",
       "namePlaceholderSonarr": "My Sonarr",

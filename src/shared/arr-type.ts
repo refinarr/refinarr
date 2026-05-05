@@ -15,3 +15,13 @@ export const ARR_LIBRARY_ROUTE: Record<ArrType, string> = {
   radarr: "/movies",
   sonarr: "/shows",
 };
+
+// Stable iteration order over every supported arr type. Derived from the
+// route registry so adding Lidarr/Whisparr there is enough — no separate
+// list to keep in sync.
+export const ALL_ARR_TYPES = Object.keys(ARR_LIBRARY_ROUTE) as ArrType[];
+
+// Type-guard for narrowing string inputs (Select onValueChange, URL params,
+// etc.) to ArrType without an unchecked `as ArrType` cast.
+export const isArrType = (v: string): v is ArrType =>
+  (ALL_ARR_TYPES as readonly string[]).includes(v);

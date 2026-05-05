@@ -3,6 +3,7 @@ import { createApiHandler } from "@/server/lib/handler";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { mediaServiceFor } from "@/server/services/media-services";
+import { retryPayloadSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (_req, ctx) => {
   const id = Number(ctx.params.id);
@@ -15,9 +16,23 @@ export const POST = createApiHandler(async (_req, ctx) => {
     return NextResponse.json({ error: "Log entry not found or has no payload" }, { status: 404 });
   }
 
-  const payload = JSON.parse(log.payload) as Record<string, unknown>;
-  const instanceId = payload.instanceId as number;
-  const inst = await instanceRepository.findById(instanceId);
+  // The stored payload is JSON written by our own services, but it's still
+  // user-influenceable (action title, media id) and survives across schema
+  // changes. Validate the shape before reading instanceId so a corrupt or
+  // older row can't redirect the retry to a bogus instance lookup.
+  let raw: unknown;
+  try {
+    raw = JSON.parse(log.payload);
+  } catch {
+    return NextResponse.json({ error: "Stored payload is not valid JSON" }, { status: 400 });
+  }
+  const parsed = retryPayloadSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Stored payload has unexpected shape" }, { status: 400 });
+  }
+  const payload = parsed.data;
+
+  const inst = await instanceRepository.findById(payload.instanceId);
   if (!inst) {
     return NextResponse.json({ error: "Instance no longer exists" }, { status: 404 });
   }

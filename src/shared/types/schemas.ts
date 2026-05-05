@@ -94,4 +94,15 @@ export const sonarrDeleteSchema = z.object({
 
 export const configUpdateSchema = z.record(z.string().max(128), z.string().max(2048));
 
+// Common shape required from any ActionLog.payload before retry. The retry
+// route validates this much; per-service retryFromPayload reads action-
+// specific fields (fileId vs fileIds, etc.). passthrough() keeps those
+// extras intact for the service to consume.
+export const retryPayloadSchema = z.object({
+  instanceId: z.number().int().positive(),
+  action: z.string().min(1).max(64),
+  mediaId: z.number().int().positive(),
+  title: z.string().min(1).max(512),
+}).passthrough();
+
 export type CredentialsInput = z.infer<typeof credentialsSchema>;
