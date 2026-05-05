@@ -177,4 +177,30 @@ describe("POST /api/history/[id]/retry", () => {
     const fresh = await logRepository.findById(corrupt.id);
     expect(fresh?.status).toBe("failed");
   });
+
+  test("rejects retry when payload action differs from the log row's action", async () => {
+    const instance = await instanceService.create({
+      type: "radarr",
+      name: "Test Radarr",
+      url: "http://192.168.1.10:7878",
+      apiKey: "abcd1234abcd1234abcd1234abcd1234",
+    });
+    // IDs match but the actions disagree — without this guard the row would
+    // be updated in-place against the wrong operation type.
+    const corrupt = await logRepository.create({
+      ...baseLog,
+      instanceId: instance.id,
+      mediaId: 100,
+      action: "search",
+      status: "failed",
+      payload: JSON.stringify({
+        instanceId: instance.id, action: "delete", mediaId: 100, fileId: 5, title: "Movie",
+      }),
+    });
+    const res = await retry(retryReq(corrupt.id), { params: Promise.resolve({ id: String(corrupt.id) }) });
+    expect(res.status).toBe(400);
+    const fresh = await logRepository.findById(corrupt.id);
+    expect(fresh?.status).toBe("failed");
+    expect(fresh?.action).toBe("search");
+  });
 });

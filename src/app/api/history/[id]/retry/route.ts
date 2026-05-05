@@ -33,7 +33,11 @@ export const POST = createApiHandler(async (_req, ctx) => {
   // refuse to retry — otherwise executeAction would run against a
   // different target and overwrite this row's history in place via the
   // actionLogId update path.
-  if (payload.instanceId !== log.instanceId || payload.mediaId !== log.mediaId) {
+  if (
+    payload.instanceId !== log.instanceId ||
+    payload.mediaId !== log.mediaId ||
+    payload.action !== log.action
+  ) {
     throw badRequest("Stored payload no longer matches this log entry");
   }
 

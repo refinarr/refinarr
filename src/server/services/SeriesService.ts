@@ -243,10 +243,9 @@ export class SeriesService extends MediaService {
     const mediaId = payload.mediaId as number;
     const title = payload.title as string;
     if (action === "search") {
-      // The action column is "search" for all three Sonarr search scopes; the
-      // payload's optional fields disambiguate. Without this dispatch a season
-      // or episode-file retry would broaden to a full-series search and
-      // overwrite the row's narrower payload on update — see PR #29 follow-up.
+      // Three Sonarr search scopes share action="search"; dispatch on the
+      // discriminating payload field so a season or episode-file retry
+      // doesn't broaden into a full-series search.
       if (typeof payload.seasonNumber === "number") {
         return this.triggerSeasonSearch(instanceId, mediaId, payload.seasonNumber, title, opts);
       }
