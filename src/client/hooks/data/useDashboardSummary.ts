@@ -15,8 +15,12 @@ export function useDashboardSummary() {
     queryKey: queryKeys.dashboardSummary(),
     queryFn: () => api.get<DashboardSummary>("/dashboard/summary"),
     refetchInterval: (query) => {
-      const data = query.state.data as DashboardSummary | undefined;
-      if (!data) return FAST_INTERVAL;
+      // Only fast-poll on a successful response with cold instances.
+      // Errors / loading / refetching states stay on the slow cadence so a
+      // failing /dashboard/summary doesn't get hammered every 5s on every
+      // open dashboard tab.
+      const data = query.state.data;
+      if (query.state.status !== "success" || !data) return SLOW_INTERVAL;
       const hasCold = data.perInstance.some((p) => p.enabled && p.flaggedCount === null);
       return hasCold ? FAST_INTERVAL : SLOW_INTERVAL;
     },

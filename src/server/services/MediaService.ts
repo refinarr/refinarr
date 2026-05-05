@@ -73,7 +73,10 @@ export abstract class MediaService {
 
     const maxScore = query.maxScore;
     if (maxScore !== undefined) {
-      flagged = flagged.filter((m) => m.cfScore <= maxScore);
+      // Filter against the same accessor the score sort uses, so the
+      // "max score" slider behaves consistently across modes.
+      const scoreOf = SCORE_FOR[mode];
+      flagged = flagged.filter((m) => scoreOf(m) <= maxScore);
     }
 
     if (query.q) {

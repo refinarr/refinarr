@@ -19,7 +19,7 @@ import { ActiveFilterChips } from "@/client/components/common/ActiveFilterChips"
 import { RowHoverActions } from "@/client/components/common/RowHoverActions";
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
-import { MediaPageEmptyState } from "@/client/components/states/MediaPageEmptyState";
+import { MediaPageEmptyState, type EmptyStateKind } from "@/client/components/states/MediaPageEmptyState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
@@ -310,14 +310,13 @@ function Body<T extends FlaggedMedia>({ columns, Card }: BodyProps<T>) {
     <>
       {(data.isLoading || inst.loadingInstances) && <MediaTableSkeleton />}
       {data.isError && <MediaErrorCard onRetry={data.refetch} />}
-      {!inst.loadingInstances && !data.isLoading && !data.isError && data.items.length === 0 && (
-        <MediaPageEmptyState
-          hasInstance={inst.activeInstance > 0}
-          noCfsConfigured={noCfsConfigured}
-          hasActiveFilters={chips.length > 0}
-          onClear={clearActiveFilters}
-        />
-      )}
+      {!inst.loadingInstances && !data.isLoading && !data.isError && data.items.length === 0 && (() => {
+        let emptyState: EmptyStateKind;
+        if (inst.activeInstance <= 0 || noCfsConfigured) emptyState = "no-cfs";
+        else if (chips.length > 0) emptyState = "filtered-empty";
+        else emptyState = "all-clear";
+        return <MediaPageEmptyState state={emptyState} onClear={clearActiveFilters} />;
+      })()}
 
       {!data.isLoading && data.items.length > 0 && (
         <div className={data.isFetching ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
