@@ -47,14 +47,25 @@ export const GET = createApiHandler(async () => {
     }),
   );
 
-  // Totals only sum non-null counts. Cold instances drop out — better than
-  // showing 0 (which implies "all clear") or blocking on a build.
+  // A type's total is null until every enabled instance of that type is
+  // warm. Disabled instances drop out (no data to contribute). Zero enabled
+  // instances → total is 0 (legit "nothing to flag"). This stops a cold
+  // cache from rendering as "all clear" on the dashboard.
   const totalsByType: Record<ArrType, number> = { radarr: 0, sonarr: 0 };
+  const enabledByType: Record<ArrType, number> = { radarr: 0, sonarr: 0 };
+  const warmByType: Record<ArrType, number> = { radarr: 0, sonarr: 0 };
   for (const p of perInstance) {
-    if (p.flaggedCount !== null) totalsByType[p.type] += p.flaggedCount;
+    if (!p.enabled) continue;
+    enabledByType[p.type] += 1;
+    if (p.flaggedCount !== null) {
+      warmByType[p.type] += 1;
+      totalsByType[p.type] += p.flaggedCount;
+    }
   }
-  const flaggedMovies = totalsByType.radarr;
-  const flaggedSeries = totalsByType.sonarr;
+  const totalFor = (t: ArrType): number | null =>
+    enabledByType[t] === warmByType[t] ? totalsByType[t] : null;
+  const flaggedMovies = totalFor("radarr");
+  const flaggedSeries = totalFor("sonarr");
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const [failedActions24h, recentActivity] = await Promise.all([

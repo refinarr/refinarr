@@ -80,8 +80,11 @@ export interface DashboardInstanceSummary {
 export interface DashboardSummary {
   perInstance: DashboardInstanceSummary[];
   totals: {
-    flaggedMovies: number;
-    flaggedSeries: number;
+    // null when at least one enabled instance of that type is still cold —
+    // the dashboard renders "—" instead of "0" so the cold state doesn't
+    // masquerade as "all clear". Resolves once every enabled instance warms.
+    flaggedMovies: number | null;
+    flaggedSeries: number | null;
     failedActions24h: number;
   };
   recentActivity: ActionLog[];
