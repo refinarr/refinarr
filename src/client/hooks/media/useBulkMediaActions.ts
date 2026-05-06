@@ -1,15 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
 import { api } from "@/client/lib/api";
 import { withToast } from "@/client/lib/with-toast";
 import { runSerial } from "@/client/lib/run-serial";
-import { isAbortError } from "./useBulkAbort";
-import type { ActionLog, MediaType } from "@/shared/types/models";
 import type {
   BulkAction,
   BulkProgress,
 } from "@/client/components/media/BulkActionToolbar";
+import type { ActionLog, MediaType } from "@/shared/types/models";
+import { isAbortError } from "./useBulkAbort";
 
 export interface BulkVars<T> {
   items: T[];
@@ -96,14 +95,6 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
           ),
         { isBulk, signal, action: "search", setProgress },
       ),
-    onSuccess: (results) => {
-      if (results.some((r) => r.isDryRun)) toast.info(tSearch("queuedDryRun"));
-      else toast.success(tSearch("started"));
-    },
-    onError: (e) => {
-      if (isAbortError(e)) toast.info(tBulk("cancelled"));
-      else toast.error(tSearch("failed"));
-    },
     onSettled: () => setProgress(null),
   });
 
@@ -119,9 +110,6 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
         { isBulk, signal, action: "ignore", setProgress },
       ),
     onSuccess: () => refetch(),
-    onError: (e) => {
-      if (isAbortError(e)) toast.info(tBulk("cancelled"));
-    },
     onSettled: () => setProgress(null),
   });
 
@@ -139,27 +127,46 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
       );
       return { results, search };
     },
-    onSuccess: ({ results, search }) => {
-      if (results.some((r) => r.isDryRun)) {
-        toast.info(
-          search ? tDelete("queuedAndSearchDryRun") : tDelete("queuedDryRun"),
-        );
-      } else {
-        toast.success(search ? deleteDoneAndSearch : deleteDone);
-        void refetch();
-      }
-    },
-    onError: (e) => {
-      if (isAbortError(e)) toast.info(tBulk("cancelled"));
-      else toast.error(deleteFailed);
+    onSuccess: ({ results }) => {
+      if (!results.some((r) => r.isDryRun)) void refetch();
     },
     onSettled: () => setProgress(null),
   });
 
+  const searchWithToast = withToast(searchMutation, {
+    success: (results) =>
+      results.some((r) => r.isDryRun)
+        ? tSearch("queuedDryRun")
+        : tSearch("started"),
+    error: (e) => (isAbortError(e) ? tBulk("cancelled") : tSearch("failed")),
+  });
   const ignoreWithToast = withToast(ignoreMutation, {
     success: tIgnore("done"),
-    error: tIgnore("failed"),
+    error: (e) => (isAbortError(e) ? tBulk("cancelled") : tIgnore("failed")),
+  });
+  const getDeleteSuccessMessage = ({
+    results,
+    search,
+  }: {
+    results: ActionLog[];
+    search: boolean;
+  }) => {
+    if (results.some((r) => r.isDryRun)) {
+      if (search) return tDelete("queuedAndSearchDryRun");
+      return tDelete("queuedDryRun");
+    }
+    if (search) return deleteDoneAndSearch;
+    return deleteDone;
+  };
+  const deleteWithToast = withToast(deleteMutation, {
+    success: getDeleteSuccessMessage,
+    error: (e) => (isAbortError(e) ? tBulk("cancelled") : deleteFailed),
   });
 
-  return { searchMutation, ignoreMutation, ignoreWithToast, deleteMutation };
+  return {
+    searchMutation: { ...searchMutation, mutateAsync: searchWithToast },
+    ignoreMutation: { ...ignoreMutation, mutateAsync: ignoreWithToast },
+    ignoreWithToast,
+    deleteMutation: { ...deleteMutation, mutateAsync: deleteWithToast },
+  };
 }

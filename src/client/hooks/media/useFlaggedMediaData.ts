@@ -1,7 +1,7 @@
 "use client";
 
-import type { MediaFilters } from "./useMediaFilters";
 import type { FlaggedMedia, ScoringMode } from "@/shared/types/models";
+import type { MediaFilters } from "./useMediaFilters";
 
 type MediaQueryResult<T> = {
   data?: { pages: Array<{ items: T[]; total: number }> };

@@ -1,5 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { Loader2, Plug } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/client/components/ui/select";
-import { Loader2, Plug } from "lucide-react";
 import type { ArrType, Instance } from "@/shared/types/models";
 import { ALL_ARR_TYPES, isArrType } from "@/shared/arr-type";
 import { useAddInstanceForm } from "./useAddInstanceForm";

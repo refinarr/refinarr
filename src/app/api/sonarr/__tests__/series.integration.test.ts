@@ -1,12 +1,12 @@
 import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
+import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
+import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { GET as listSeries } from "@/app/api/sonarr/series/route";
 import { POST as searchSeries } from "@/app/api/sonarr/series/search/route";
 import { POST as deleteSeriesFiles } from "@/app/api/sonarr/series/delete/route";
 import { POST as createInstance } from "@/app/api/instances/route";
 import { mswServer, sonarrHandlers } from "@/test/msw";
-import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
-import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 
 const ctxNone = { params: Promise.resolve({}) };
 const baseUrl = "http://192.168.1.10:8989";

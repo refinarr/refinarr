@@ -1,7 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Button } from "@/client/components/ui/button";
 import { Search, EyeOff } from "lucide-react";
+import { Button } from "@/client/components/ui/button";
 
 interface Props {
   onSearch: () => void;

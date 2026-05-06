@@ -1,5 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { Copy, Eye, EyeOff, Loader2, RefreshCw } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -16,7 +17,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/client/components/ui/dialog";
-import { Copy, Eye, EyeOff, Loader2, RefreshCw } from "lucide-react";
 import { useApiKeyActions } from "./useApiKeyActions";
 
 export function ApiKeyCard() {

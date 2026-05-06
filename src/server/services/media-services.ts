@@ -1,6 +1,6 @@
+import type { ActionLog, ArrType, ScoringMode } from "@/shared/types/models";
 import { movieService } from "./MovieService";
 import { seriesService } from "./SeriesService";
-import type { ActionLog, ArrType, ScoringMode } from "@/shared/types/models";
 
 export interface FlaggedCacheService {
   /**

@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { Loader2, RotateCcw, Film, Tv2 } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
@@ -17,8 +19,6 @@ import { useInstances } from "@/client/hooks/data/useInstances";
 import { useIgnored, useUnignore } from "@/client/hooks/data/useIgnored";
 import { withToast } from "@/client/lib/with-toast";
 import { formatRelative } from "@/client/lib/format";
-import { useRouter } from "next/navigation";
-import { Loader2, RotateCcw, Film, Tv2 } from "lucide-react";
 
 export default function IgnoredPage() {
   const t = useTranslations("ignored");

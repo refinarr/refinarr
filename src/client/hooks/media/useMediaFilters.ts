@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useDebouncedValue } from "../ui/useDebouncedValue";
 import { isManualMode } from "@/shared/scoring-mode";
 import type { ScoringMode } from "@/shared/types/models";
+import { useDebouncedValue } from "../ui/useDebouncedValue";
 
 export type MatchMode = "any" | "all";
 

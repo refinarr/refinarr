@@ -1,6 +1,6 @@
+import { encryptSecret, decryptSecret, isEncrypted } from "@/server/lib/crypto";
 import type { Instance, ScoringMode } from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
-import { encryptSecret, decryptSecret, isEncrypted } from "@/server/lib/crypto";
 
 interface RawInstanceRow {
   id: number;

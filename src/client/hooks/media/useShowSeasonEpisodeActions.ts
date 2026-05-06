@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
+import { withToast } from "@/client/lib/with-toast";
 import type { ActionLog, FlaggedSeries } from "@/shared/types/models";
 
 export interface SeasonEpisodeConfig {
@@ -35,12 +35,9 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
         seasonNumber,
         title: `${series.title} — Season ${seasonNumber}`,
       }),
-    onSuccess: (r) => {
+    onSuccess: () => {
       invalidateQueue();
-      if (r.isDryRun) toast.info(tSearch("seasonQueuedDryRun"));
-      else toast.success(tSearch("seasonStarted"));
     },
-    onError: () => toast.error(tSearch("seasonFailed")),
   });
 
   const episodeSearch = useMutation({
@@ -59,12 +56,9 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
         fileId,
         title: `${series.title} — ${label}`,
       }),
-    onSuccess: (r) => {
+    onSuccess: () => {
       invalidateQueue();
-      if (r.isDryRun) toast.info(tSearch("episodeQueuedDryRun"));
-      else toast.success(tSearch("episodeStarted"));
     },
-    onError: (e: Error) => toast.error(e.message || tSearch("episodeFailed")),
   });
 
   const seasonDelete = useMutation({
@@ -88,20 +82,8 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       }),
     onSuccess: (r, vars) => {
       if (vars.search) invalidateQueue();
-      if (r.isDryRun)
-        toast.info(
-          vars.search
-            ? tDelete("queuedAndSearchDryRun")
-            : tDelete("queuedDryRun"),
-        );
-      else {
-        toast.success(
-          vars.search ? tDelete("seasonDoneAndSearch") : tDelete("seasonDone"),
-        );
-        void refetch();
-      }
+      if (!r.isDryRun) void refetch();
     },
-    onError: () => toast.error(tDelete("seasonFailed")),
   });
 
   const episodeDelete = useMutation({
@@ -125,38 +107,59 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       }),
     onSuccess: (r, vars) => {
       if (vars.search) invalidateQueue();
-      if (r.isDryRun)
-        toast.info(
-          vars.search
-            ? tDelete("queuedAndSearchDryRun")
-            : tDelete("queuedDryRun"),
-        );
-      else {
-        toast.success(
-          vars.search ? tDelete("fileDoneAndSearch") : tDelete("fileDone"),
-        );
-        void refetch();
-      }
+      if (!r.isDryRun) void refetch();
     },
-    onError: () => toast.error(tDelete("fileFailed")),
+  });
+
+  const searchSeasonWithToast = withToast(seasonSearch, {
+    success: (r) =>
+      r.isDryRun ? tSearch("seasonQueuedDryRun") : tSearch("seasonStarted"),
+    error: tSearch("seasonFailed"),
+  });
+  const searchEpisodeWithToast = withToast(episodeSearch, {
+    success: (r) =>
+      r.isDryRun ? tSearch("episodeQueuedDryRun") : tSearch("episodeStarted"),
+    error: (e) => (e instanceof Error ? e.message : tSearch("episodeFailed")),
+  });
+  const getDryRunDeleteMessage = (search: boolean) => {
+    if (search) return tDelete("queuedAndSearchDryRun");
+    return tDelete("queuedDryRun");
+  };
+  const getSeasonDeleteMessage = (r: ActionLog, vars: { search: boolean }) => {
+    if (r.isDryRun) return getDryRunDeleteMessage(vars.search);
+    if (vars.search) return tDelete("seasonDoneAndSearch");
+    return tDelete("seasonDone");
+  };
+  const getEpisodeDeleteMessage = (r: ActionLog, vars: { search: boolean }) => {
+    if (r.isDryRun) return getDryRunDeleteMessage(vars.search);
+    if (vars.search) return tDelete("fileDoneAndSearch");
+    return tDelete("fileDone");
+  };
+  const deleteSeasonWithToast = withToast(seasonDelete, {
+    success: getSeasonDeleteMessage,
+    error: tDelete("seasonFailed"),
+  });
+  const deleteEpisodeWithToast = withToast(episodeDelete, {
+    success: getEpisodeDeleteMessage,
+    error: tDelete("fileFailed"),
   });
 
   return {
     runSearchSeason: (series: FlaggedSeries, seasonNumber: number) =>
-      seasonSearch.mutateAsync({ series, seasonNumber }),
+      searchSeasonWithToast({ series, seasonNumber }),
     runSearchEpisode: (series: FlaggedSeries, fileId: number, label: string) =>
-      episodeSearch.mutateAsync({ series, fileId, label }),
+      searchEpisodeWithToast({ series, fileId, label }),
     runDeleteSeason: (
       series: FlaggedSeries,
       seasonNumber: number,
       fileIds: number[],
       search: boolean,
-    ) => seasonDelete.mutateAsync({ series, seasonNumber, fileIds, search }),
+    ) => deleteSeasonWithToast({ series, seasonNumber, fileIds, search }),
     runDeleteEpisode: (
       series: FlaggedSeries,
       fileId: number,
       label: string,
       search: boolean,
-    ) => episodeDelete.mutateAsync({ series, fileId, label, search }),
+    ) => deleteEpisodeWithToast({ series, fileId, label, search }),
   };
 }

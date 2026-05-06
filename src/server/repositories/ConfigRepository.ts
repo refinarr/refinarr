@@ -1,5 +1,5 @@
-import { BaseRepository } from "./BaseRepository";
 import type { ConfigSpec } from "@/server/config/keys";
+import { BaseRepository } from "./BaseRepository";
 
 interface AppConfig {
   key: string;

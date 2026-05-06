@@ -1,11 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { configRepository } from "@/server/repositories/ConfigRepository";
 import { ConfigKey } from "@/server/config/keys";
 import { verifySessionPassword, SESSION_COOKIE } from "@/server/lib/auth";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
-import { apiKeyReauthSchema } from "@/shared/types/schemas";
 import {
   badRequest,
   internal,
@@ -13,6 +12,7 @@ import {
   tooManyRequests,
   unauthorized,
 } from "@/server/lib/api-errors";
+import { apiKeyReauthSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
   // Rate-limit re-auth attempts.

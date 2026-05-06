@@ -42,6 +42,14 @@ export const isProfileMode = (m: ScoringMode): m is "profile" =>
   m === "profile";
 export const isManualMode = (m: ScoringMode): m is "manual" => m === "manual";
 
+// Narrowing guard for unknown strings (e.g. raw `<Select>` values, query
+// params). Keeps the `as ScoringMode` cast out of consumer code so an
+// unsupported value can't silently flow into i18n keys or repository
+// updates.
+const SCORING_MODES_SET = new Set<string>(Object.keys(SCORE_FOR));
+export const isScoringMode = (value: string): value is ScoringMode =>
+  SCORING_MODES_SET.has(value);
+
 // Default scoring mode used when an instance lookup misses or when the
 // server creates an instance row without an explicit override. Profile is
 // the safer default — it derives the target from the *arr's quality

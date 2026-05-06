@@ -1,7 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Badge } from "@/client/components/ui/badge";
 import { X } from "lucide-react";
+import { Badge } from "@/client/components/ui/badge";
 
 export interface FilterChip {
   key: string;

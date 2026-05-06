@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
-import { renderWithProviders, screen } from "@/test/render";
 import type { FlaggedMovie, QualityProfile } from "@/shared/types/models";
+import { renderWithProviders, screen } from "@/test/render";
 import { MovieDetailDrawer } from "../MovieDetailDrawer";
 
 const movie: FlaggedMovie = {

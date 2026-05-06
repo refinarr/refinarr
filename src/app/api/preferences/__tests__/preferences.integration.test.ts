@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
-import { GET, PUT } from "@/app/api/preferences/route";
 import { prisma } from "@/server/lib/db";
+import { GET, PUT } from "@/app/api/preferences/route";
 
 const ctxNone = { params: Promise.resolve({}) };
 

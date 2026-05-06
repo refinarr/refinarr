@@ -1,13 +1,4 @@
-import type {
-  ActionLog,
-  ActionType,
-  FlaggedMedia,
-  MediaQuery,
-  ScoringMode,
-} from "@/shared/types/models";
-import { SCORE_FOR } from "@/shared/scoring-mode";
 import { logRepository } from "@/server/repositories/LogRepository";
-import { dryRunService } from "./DryRunService";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import {
@@ -15,6 +6,15 @@ import {
   CACHE_STALE_MS,
   CACHE_TTL_MS,
 } from "@/server/lib/DataCache";
+import { SCORE_FOR } from "@/shared/scoring-mode";
+import type {
+  ActionLog,
+  ActionType,
+  FlaggedMedia,
+  MediaQuery,
+  ScoringMode,
+} from "@/shared/types/models";
+import { dryRunService } from "./DryRunService";
 
 interface ExecuteActionOptions {
   instanceId: number;

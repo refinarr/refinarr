@@ -1,8 +1,8 @@
 import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
-import { POST } from "@/app/api/auth/setup/route";
 import { prisma } from "@/server/lib/db";
 import { SESSION_COOKIE, verifyPassword } from "@/server/lib/auth";
+import { POST } from "@/app/api/auth/setup/route";
 
 function makeReq(body: unknown, ip = "1.1.1.1"): NextRequest {
   return new NextRequest("http://localhost/api/auth/setup", {

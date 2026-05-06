@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
-import { GET, _activeClientCount } from "@/app/api/events/route";
 import { eventBus } from "@/server/lib/event-bus";
+import { GET, _activeClientCount } from "@/app/api/events/route";
 
 /**
  * Reads stream chunks until either `count` SSE `data:` events have been

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -16,9 +17,8 @@ import {
   usePreferences,
   useSetPreferences,
 } from "@/client/hooks/data/usePreferences";
-import type { Instance } from "@/shared/types/models";
 import { withToast } from "@/client/lib/with-toast";
-import { Loader2 } from "lucide-react";
+import type { Instance } from "@/shared/types/models";
 
 interface Props {
   instance: Instance;

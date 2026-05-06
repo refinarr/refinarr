@@ -1,11 +1,11 @@
 import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
+import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { GET as listMovies } from "@/app/api/radarr/movies/route";
 import { POST as searchMovie } from "@/app/api/radarr/movies/search/route";
 import { GET as listProfiles } from "@/app/api/radarr/qualityprofiles/route";
 import { POST as createInstance } from "@/app/api/instances/route";
 import { mswServer, radarrHandlers } from "@/test/msw";
-import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 
 const ctxNone = { params: Promise.resolve({}) };
 const baseUrl = "http://192.168.1.10:7878";

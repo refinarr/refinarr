@@ -1,9 +1,9 @@
-import type { Instance } from "@/shared/types/models";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { redactString } from "@/server/lib/redact";
 import { arrRateLimiter } from "@/server/lib/ArrRateLimiter";
+import type { Instance } from "@/shared/types/models";
 
 // Node's fetch wraps the underlying network error and surfaces a generic
 // "fetch failed" message. The real diagnostic (ECONNREFUSED / ENOTFOUND /

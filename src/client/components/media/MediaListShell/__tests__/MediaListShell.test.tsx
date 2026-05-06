@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
 import { screen } from "@testing-library/react";
-import { renderWithProviders } from "@/test/render";
 import type { ReactNode } from "react";
-import type { FlaggedMovie } from "@/shared/types/models";
 import type { FlaggedMediaQueryHook } from "@/client/hooks/media/useFlaggedMediaData";
+import type { FlaggedMovie } from "@/shared/types/models";
+import { renderWithProviders } from "@/test/render";
 import { MOVIE_BULK_CONFIG } from "../../media-bulk-configs";
 
 // Mock heavy data/state hooks used inside the shell so the component is

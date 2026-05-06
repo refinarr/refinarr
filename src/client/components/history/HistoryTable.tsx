@@ -8,11 +8,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/client/components/ui/table";
+import { formatRelative } from "@/client/lib/format";
+import type { ActionLog, ActionStatus } from "@/shared/types/models";
 import { ActionStatusBadge } from "./ActionStatusBadge";
 import { ActionTypeBadge } from "./ActionTypeBadge";
 import { RetryButton } from "./RetryButton";
-import { formatRelative } from "@/client/lib/format";
-import type { ActionLog, ActionStatus } from "@/shared/types/models";
 
 interface Props {
   logs: ActionLog[];

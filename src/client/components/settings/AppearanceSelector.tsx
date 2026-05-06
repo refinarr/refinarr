@@ -3,8 +3,8 @@ import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
-import { APP_THEMES, type AppTheme } from "@/app/providers";
 import { cn } from "@/client/lib/utils";
+import { APP_THEMES, type AppTheme } from "@/app/providers";
 
 interface Swatch {
   theme: AppTheme;

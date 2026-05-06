@@ -1,5 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { Trash2, Hourglass } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import {
@@ -10,7 +11,6 @@ import {
 } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
-import { Trash2, Hourglass } from "lucide-react";
 import {
   useAllPendingQueue,
   useClearQueue,

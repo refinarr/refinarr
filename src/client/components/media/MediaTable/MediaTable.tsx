@@ -1,5 +1,5 @@
-import { Checkbox } from "@/client/components/ui/checkbox";
 import type { ReactNode } from "react";
+import { Checkbox } from "@/client/components/ui/checkbox";
 import { MediaCard } from "./MediaCard";
 
 export type SortDirection = "asc" | "desc";

@@ -1,11 +1,11 @@
 "use client";
 import { useTranslations } from "next-intl";
-import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
-import { isProfileMode } from "@/shared/scoring-mode";
-import { Button } from "@/client/components/ui/button";
 import { Search, Trash2 } from "lucide-react";
+import { Button } from "@/client/components/ui/button";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { CfScoreList } from "@/client/components/common/CfScoreList";
+import { isProfileMode } from "@/shared/scoring-mode";
+import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
 import { filename } from "../utils";
 
 interface Props {

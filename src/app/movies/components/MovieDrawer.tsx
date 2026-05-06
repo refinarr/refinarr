@@ -1,9 +1,9 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { MovieDetailDrawer } from "./MovieDetailDrawer";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
 import type { FlaggedMovie } from "@/shared/types/models";
+import { MovieDetailDrawer } from "./MovieDetailDrawer";
 
 interface Props {
   item: FlaggedMovie | null;
