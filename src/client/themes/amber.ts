@@ -6,8 +6,8 @@ const AMBER_FOREGROUND = "oklch(0.145 0 0)";
 
 export const amber: Brand = {
   id: "amber",
-  name: "Amber",
-  description: "Warm amber accent — the default Refinarr identity",
+  name: "settings.appearance.brands.amber.label",
+  description: "settings.appearance.brands.amber.description",
   swatch: {
     brand: AMBER_BRAND,
     surfaceLight: "oklch(1 0 0)",

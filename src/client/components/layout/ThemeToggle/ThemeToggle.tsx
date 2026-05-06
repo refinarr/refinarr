@@ -11,6 +11,7 @@ import {
 import { useTheme } from "@/client/hooks/ui/useTheme";
 import { cn } from "@/client/lib/utils";
 import type { Mode } from "@/client/lib/theme";
+import type { BrandId } from "@/client/themes";
 
 interface Props {
   className?: string;
@@ -28,6 +29,14 @@ const MODES: Array<{
   { id: "dark", labelKey: "modeDark", icon: Moon },
   { id: "system", labelKey: "modeSystem", icon: Monitor },
 ];
+
+const BRAND_LABEL_KEYS: Record<
+  BrandId,
+  "brands.amber.label" | "brands.teal.label"
+> = {
+  amber: "brands.amber.label",
+  teal: "brands.teal.label",
+};
 
 export function ThemeToggle({ className }: Props) {
   const t = useTranslations("settings.appearance");
@@ -67,9 +76,7 @@ export function ThemeToggle({ className }: Props) {
               style={{ backgroundColor: b.swatch.brand }}
               aria-hidden
             />
-            <span className="flex-1">
-              {t(`brands.${b.id}` as `brands.${string}`)}
-            </span>
+            <span className="flex-1">{t(BRAND_LABEL_KEYS[b.id])}</span>
             {brand.id === b.id && <Check className="size-4" />}
           </DropdownMenuItem>
         ))}

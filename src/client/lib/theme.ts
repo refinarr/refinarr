@@ -1,10 +1,12 @@
 import {
   BRANDS,
+  DEFAULT_BRAND,
   DEFAULT_BRAND_ID,
   DEFAULT_MODE,
   getBrandById,
   getDefaultBrand,
   type Brand,
+  type BrandId,
   type Mode,
   type Surface,
 } from "@/client/themes";
@@ -167,5 +169,5 @@ export const THEME_EVENT = THEME_CHANGE_EVENT;
 export const THEME_BRAND_KEY = BRAND_KEY;
 export const THEME_MODE_KEY = MODE_KEY;
 export const THEME_LEGACY_KEY = LEGACY_THEME_KEY;
-export { BRANDS, DEFAULT_BRAND_ID, DEFAULT_MODE };
-export type { Brand, Mode, Surface };
+export { BRANDS, DEFAULT_BRAND, DEFAULT_BRAND_ID, DEFAULT_MODE };
+export type { Brand, BrandId, Mode, Surface };

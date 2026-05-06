@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import type { KeyboardEvent } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/client/components/ui/badge";
 import { LogLevelBadge } from "@/client/components/logs/LogLevelBadge";
@@ -23,12 +24,25 @@ export function AppLogRow({ entry }: Props) {
   const [expanded, setExpanded] = useState(false);
   const formatted = formatContext(entry.context);
   const hasContext = formatted !== null;
+  const toggleExpanded = () => {
+    if (hasContext) setExpanded((v) => !v);
+  };
+  const handleKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
+    if (!hasContext) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    toggleExpanded();
+  };
 
   return (
     <>
       <tr
-        className={`hover:bg-muted/30 border-t transition-colors ${hasContext ? "cursor-pointer" : ""}`}
-        onClick={() => hasContext && setExpanded((v) => !v)}
+        className={`hover:bg-muted/30 focus-visible:ring-ring/50 border-t transition-colors focus-visible:ring-2 focus-visible:outline-none ${hasContext ? "cursor-pointer" : ""}`}
+        onClick={toggleExpanded}
+        onKeyDown={handleKeyDown}
+        tabIndex={hasContext ? 0 : -1}
+        role={hasContext ? "button" : undefined}
+        aria-expanded={hasContext ? expanded : undefined}
       >
         <td className="w-6 px-3 py-2 align-middle">
           {hasContext &&

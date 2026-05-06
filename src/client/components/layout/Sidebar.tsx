@@ -15,7 +15,7 @@ export function Sidebar({ open }: Props) {
         open ? "w-56 px-3 py-4" : "w-0 p-0",
       )}
     >
-      <NavContent />
+      {open && <NavContent />}
     </aside>
   );
 }

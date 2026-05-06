@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { CfScore } from "@/client/components/common/CfScore";
 import type { CustomFormat } from "@/shared/types/models";
 
@@ -13,6 +14,7 @@ export function CfScoreList({
   missingFormats,
   collapseMissingAfter = 8,
 }: Props) {
+  const tCommon = useTranslations("common");
   const [showAllMissing, setShowAllMissing] = useState(false);
   if (formats.length === 0 && missingFormats.length === 0) return null;
 
@@ -38,7 +40,7 @@ export function CfScoreList({
           className="text-muted-foreground hover:text-foreground px-1.5 text-xs underline-offset-2 hover:underline"
           onClick={() => setShowAllMissing(true)}
         >
-          +{hiddenCount} more
+          {tCommon("moreCount", { count: hiddenCount })}
         </button>
       )}
     </div>

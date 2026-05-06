@@ -1,5 +1,6 @@
 export type Surface = "light" | "dark";
 export type Mode = "light" | "dark" | "system";
+export type BrandId = "amber" | "teal";
 
 export interface BrandSwatch {
   brand: string;
@@ -8,7 +9,7 @@ export interface BrandSwatch {
 }
 
 export interface Brand {
-  id: string;
+  id: BrandId;
   name: string;
   description: string;
   swatch: BrandSwatch;

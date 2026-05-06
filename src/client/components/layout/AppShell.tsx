@@ -1,5 +1,5 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   Sheet,
@@ -27,6 +27,16 @@ export function AppShell({ children }: Props) {
   // Mobile drawer is ephemeral — opens via the same hamburger when the
   // viewport is below md, never persisted.
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 768px)");
+    const closeMobileOnDesktop = () => {
+      if (mql.matches) setMobileOpen(false);
+    };
+    closeMobileOnDesktop();
+    mql.addEventListener("change", closeMobileOnDesktop);
+    return () => mql.removeEventListener("change", closeMobileOnDesktop);
+  }, []);
 
   const handleToggle = () => {
     if (window.matchMedia("(min-width: 768px)").matches) {

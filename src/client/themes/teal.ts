@@ -6,8 +6,8 @@ const TEAL_FOREGROUND = "oklch(0.145 0 0)";
 
 export const teal: Brand = {
   id: "teal",
-  name: "Teal",
-  description: "Cool teal accent for a calmer surface",
+  name: "settings.appearance.brands.teal.label",
+  description: "settings.appearance.brands.teal.description",
   swatch: {
     brand: TEAL_BRAND,
     surfaceLight: "oklch(1 0 0)",

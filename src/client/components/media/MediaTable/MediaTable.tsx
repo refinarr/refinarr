@@ -72,18 +72,32 @@ export function MediaTable<T extends { id: number }>({
               <th className="w-10 px-3 py-2.5" />
               {columns.map((col) => {
                 const isActiveSort = col.sortKey === sortBy;
+                let ariaSort: "ascending" | "descending" | "none" | undefined;
+                if (col.sortKey && !isActiveSort) ariaSort = "none";
+                else if (isActiveSort)
+                  ariaSort = order === "asc" ? "ascending" : "descending";
                 let arrow = "";
                 if (isActiveSort) arrow = order === "asc" ? " ↑" : " ↓";
                 return (
                   <th
                     key={col.key}
-                    className={`px-3 py-2.5 font-medium ${col.className ?? ""} ${col.sortKey ? "hover:text-foreground cursor-pointer select-none" : ""}`}
-                    onClick={
-                      col.sortKey ? () => onSortChange(col.sortKey!) : undefined
-                    }
+                    className={`px-3 py-2.5 font-medium ${col.className ?? ""}`}
+                    aria-sort={ariaSort}
                   >
-                    {col.header}
-                    {arrow && <span className="text-foreground">{arrow}</span>}
+                    {col.sortKey ? (
+                      <button
+                        type="button"
+                        className="hover:text-foreground cursor-pointer select-none"
+                        onClick={() => onSortChange(col.sortKey!)}
+                      >
+                        {col.header}
+                        {arrow && (
+                          <span className="text-foreground">{arrow}</span>
+                        )}
+                      </button>
+                    ) : (
+                      col.header
+                    )}
                   </th>
                 );
               })}

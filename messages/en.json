@@ -54,7 +54,11 @@
     "test": "Test",
     "yes": "Yes",
     "no": "No",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "moreCount": "+{count} more"
+  },
+  "dialog": {
+    "close": "Close"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -81,6 +85,10 @@
     "connected": "Connected",
     "disconnected": "Disconnected",
     "checking": "Checking…"
+  },
+  "health": {
+    "connected": "Connected",
+    "disconnected": "Disconnected"
   },
   "commandPalette": {
     "title": "Command palette",
@@ -328,8 +336,14 @@
       "modeDark": "Dark",
       "modeSystem": "System",
       "brands": {
-        "amber": "Amber",
-        "teal": "Teal"
+        "amber": {
+          "label": "Amber",
+          "description": "Warm amber accent — the default Refinarr identity"
+        },
+        "teal": {
+          "label": "Teal",
+          "description": "Cool teal accent for a calmer surface"
+        }
       }
     },
     "apiAccess": "API Access",
@@ -372,6 +386,7 @@
       "searchesPerHourHelp": "Caps how often refinarr triggers searches on this instance. Searches fan out to your indexers and trackers — too many in a short window can cause them to rate-limit or ban you. 20/hour is safe for most private trackers.",
       "queuedBadge": "{count, plural, one {# queued} other {# queued}}",
       "queuedBadgeTooltip": "{count, plural, one {# search pending. ETA ~{eta}.} other {# searches pending. ETA ~{eta}.}}",
+      "failedBadge": "failed",
       "testConnection": "Test connection",
       "testFallbackName": "Instance"
     },

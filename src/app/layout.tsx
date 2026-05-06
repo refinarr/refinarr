@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Toaster } from "@/client/components/ui/sonner";
-import { DEFAULT_BRAND_ID, DEFAULT_MODE } from "@/client/themes";
+import { BRANDS, DEFAULT_BRAND_ID, DEFAULT_MODE } from "@/client/themes";
 import { SURFACE_DARK, SURFACE_LIGHT } from "@/shared/theme";
 import Providers from "./providers";
 import "./globals.css";
@@ -12,8 +12,13 @@ import "./globals.css";
 // the right background/foreground. The full CSS-var payload is applied
 // at hydration by initializeTheme() inside Providers. Also performs a
 // one-time migration from the old flat `rfn-theme` key.
+const PREPAINT_BRANDS = Object.fromEntries(
+  BRANDS.map((brand) => [brand.id, brand.cssVars]),
+);
+
 const FOUC_SCRIPT = `(function () {
   try {
+    var themes = ${JSON.stringify(PREPAINT_BRANDS)};
     var legacy = localStorage.getItem("rfn-theme");
     var brand = localStorage.getItem("rfn-brand");
     var mode = localStorage.getItem("rfn-mode");
@@ -28,6 +33,8 @@ const FOUC_SCRIPT = `(function () {
     brand = brand || "${DEFAULT_BRAND_ID}";
     mode = mode || "${DEFAULT_MODE}";
     var dark = mode === "dark" || (mode === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var vars = (themes[brand] || themes["${DEFAULT_BRAND_ID}"])[dark ? "dark" : "light"];
+    for (var key in vars) document.documentElement.style.setProperty(key, vars[key]);
     document.documentElement.setAttribute("data-theme", brand);
     if (dark) document.documentElement.classList.add("dark");
   } catch (e) {}

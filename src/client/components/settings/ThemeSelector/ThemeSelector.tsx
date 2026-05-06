@@ -4,6 +4,7 @@ import { Check, Sun, Moon, Monitor } from "lucide-react";
 import { useTheme } from "@/client/hooks/ui/useTheme";
 import { cn } from "@/client/lib/utils";
 import type { Mode } from "@/client/lib/theme";
+import type { BrandId } from "@/client/themes";
 
 const MODES: Array<{
   id: Mode;
@@ -14,6 +15,22 @@ const MODES: Array<{
   { id: "dark", labelKey: "modeDark", icon: Moon },
   { id: "system", labelKey: "modeSystem", icon: Monitor },
 ];
+
+const BRAND_LABEL_KEYS: Record<
+  BrandId,
+  "brands.amber.label" | "brands.teal.label"
+> = {
+  amber: "brands.amber.label",
+  teal: "brands.teal.label",
+};
+
+const BRAND_DESCRIPTION_KEYS: Record<
+  BrandId,
+  "brands.amber.description" | "brands.teal.description"
+> = {
+  amber: "brands.amber.description",
+  teal: "brands.teal.description",
+};
 
 export function ThemeSelector() {
   const t = useTranslations("settings.appearance");
@@ -100,10 +117,10 @@ export function ThemeSelector() {
               </div>
               <div>
                 <div className="text-sm font-medium">
-                  {t(`brands.${b.id}` as `brands.${string}`)}
+                  {t(BRAND_LABEL_KEYS[b.id])}
                 </div>
                 <div className="text-muted-foreground text-xs">
-                  {b.description}
+                  {t(BRAND_DESCRIPTION_KEYS[b.id])}
                 </div>
               </div>
             </button>

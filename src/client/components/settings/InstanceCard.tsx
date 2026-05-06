@@ -51,9 +51,11 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
         <Badge variant="outline" className="capitalize">
           {instance.type}
         </Badge>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <p className="font-medium">{instance.name}</p>
-          <p className="text-muted-foreground text-xs">{instance.url}</p>
+          <p className="text-muted-foreground truncate text-xs">
+            {instance.url}
+          </p>
           {noCfs && (
             <p className="text-warning mt-0.5 text-xs">
               {t("noCfsConfigured")}
@@ -74,7 +76,9 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
           </Badge>
         )}
         {failedCount > 0 && (
-          <Badge variant="destructive">{failedCount} failed</Badge>
+          <Badge variant="destructive">
+            {failedCount} {tForm("failedBadge")}
+          </Badge>
         )}
         <div className="flex gap-2">
           <Button

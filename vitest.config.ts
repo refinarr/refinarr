@@ -1,9 +1,8 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [react()],
   test: {
     environment: "node",
     globals: false,
@@ -30,5 +29,5 @@ export default defineConfig({
       thresholds: { lines: 85, functions: 85, branches: 85, statements: 85 },
     },
   },
-  resolve: { conditions: ["node"] },
+  resolve: { conditions: ["node"], tsconfigPaths: true },
 });

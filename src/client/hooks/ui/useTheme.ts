@@ -2,6 +2,7 @@
 import { useSyncExternalStore } from "react";
 import {
   BRANDS,
+  DEFAULT_BRAND,
   DEFAULT_MODE,
   THEME_EVENT,
   getCurrentBrand,
@@ -10,16 +11,17 @@ import {
   setBrand,
   setMode,
   type Brand,
+  type BrandId,
   type Mode,
   type Surface,
 } from "@/client/lib/theme";
 
 interface UseThemeResult {
   brand: Brand;
-  brands: Brand[];
+  brands: readonly Brand[];
   mode: Mode;
   surface: Surface;
-  setBrand: (id: string) => void;
+  setBrand: (id: BrandId) => void;
   setMode: (mode: Mode) => void;
 }
 
@@ -28,7 +30,7 @@ function subscribe(onChange: () => void): () => void {
   return () => window.removeEventListener(THEME_EVENT, onChange);
 }
 
-const SSR_BRAND = (): Brand => BRANDS[0];
+const SSR_BRAND = (): Brand => DEFAULT_BRAND;
 const SSR_MODE = (): Mode => DEFAULT_MODE;
 const SSR_SURFACE = (): Surface => "dark";
 

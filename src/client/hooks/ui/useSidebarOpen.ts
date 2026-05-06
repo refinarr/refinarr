@@ -35,8 +35,20 @@ function dispatchChange(): void {
 }
 
 function subscribe(onChange: () => void): () => void {
+  const storageHandler = (event: StorageEvent) => {
+    if (event.key === null || event.key === STORAGE_KEY) onChange();
+  };
+  const mql = window.matchMedia(DESKTOP_QUERY);
+
   window.addEventListener(CHANGE_EVENT, onChange);
-  return () => window.removeEventListener(CHANGE_EVENT, onChange);
+  window.addEventListener("storage", storageHandler);
+  mql.addEventListener("change", onChange);
+
+  return () => {
+    window.removeEventListener(CHANGE_EVENT, onChange);
+    window.removeEventListener("storage", storageHandler);
+    mql.removeEventListener("change", onChange);
+  };
 }
 
 function getSnapshot(): boolean {
