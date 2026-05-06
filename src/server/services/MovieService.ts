@@ -12,7 +12,6 @@ import { preferenceRepository } from "@/server/repositories/PreferenceRepository
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { RadarrClient } from "@/server/clients/RadarrClient";
-import { dataCache, CACHE_TTL_MS } from "@/server/lib/DataCache";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import {
@@ -35,34 +34,36 @@ export class MovieService extends MediaService {
 
     const mode = instance.scoringMode;
     const cacheKey = `movies:${instanceId}:${mode}`;
-    let cached = dataCache.get<{ flagged: FlaggedMovie[] }>(
+    const cached = await this.readWithSwr<{ flagged: FlaggedMovie[] }>({
       cacheKey,
-      CACHE_TTL_MS,
-    );
-
-    if (cached) {
-      appLogger.debug("Cache hit", {
-        source: LogSource.MovieService,
-        context: { cacheKey },
-      });
-    } else {
-      const startedAt = Date.now();
-      const flagged = await this.buildFlaggedMovies(instanceId, instance, mode);
-      cached = { flagged };
-      dataCache.set(cacheKey, cached);
-      appLogger.debug("Built flagged movies cache", {
-        source: LogSource.MovieService,
-        context: {
-          instanceId,
-          instanceName: instance.name,
-          mode,
-          flagged: flagged.length,
-          durationMs: Date.now() - startedAt,
-        },
-      });
-    }
-
+      instanceId: instance.id,
+      logSource: LogSource.MovieService,
+      backgroundErrorMessage: "Background flagged-movies rebuild failed",
+      build: () => this.buildFlaggedAndLog(instance.id, instance, mode),
+    });
     return this.applyQuery(cached.flagged, query, mode, (m) => m.hasFile);
+  }
+
+  private async buildFlaggedAndLog(
+    instanceId: number,
+    instance: NonNullable<
+      Awaited<ReturnType<typeof instanceRepository.findById>>
+    >,
+    mode: ScoringMode,
+  ): Promise<{ flagged: FlaggedMovie[] }> {
+    const startedAt = Date.now();
+    const flagged = await this.buildFlaggedMovies(instanceId, instance, mode);
+    appLogger.debug("Built flagged movies cache", {
+      source: LogSource.MovieService,
+      context: {
+        instanceId,
+        instanceName: instance.name,
+        mode,
+        flagged: flagged.length,
+        durationMs: Date.now() - startedAt,
+      },
+    });
+    return { flagged };
   }
 
   private async buildFlaggedMovies(
@@ -204,11 +205,7 @@ export class MovieService extends MediaService {
   // build inline. Caller is responsible for kicking off a background warm
   // when null is returned.
   getCachedFlaggedTotal(instanceId: number, mode: ScoringMode): number | null {
-    const cached = dataCache.get<{ flagged: FlaggedMovie[] }>(
-      `movies:${instanceId}:${mode}`,
-      CACHE_TTL_MS,
-    );
-    return cached?.flagged.length ?? null;
+    return this.readCachedFlaggedTotal(`movies:${instanceId}:${mode}`);
   }
 
   // Uniform name across MovieService / SeriesService for use via

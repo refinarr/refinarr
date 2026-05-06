@@ -13,7 +13,6 @@ import { preferenceRepository } from "@/server/repositories/PreferenceRepository
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { SonarrClient } from "@/server/clients/SonarrClient";
-import { dataCache, CACHE_TTL_MS } from "@/server/lib/DataCache";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import {
@@ -36,39 +35,41 @@ export class SeriesService extends MediaService {
 
     const mode = instance.scoringMode;
     const cacheKey = `series:${instanceId}:${mode}`;
-    let cached = dataCache.get<{ flagged: FlaggedSeries[] }>(
+    const cached = await this.readWithSwr<{ flagged: FlaggedSeries[] }>({
       cacheKey,
-      CACHE_TTL_MS,
-    );
-
-    if (cached) {
-      appLogger.debug("Cache hit", {
-        source: LogSource.SeriesService,
-        context: { cacheKey },
-      });
-    } else {
-      const startedAt = Date.now();
-      const flagged = await this.buildFlaggedSeries(instanceId, instance, mode);
-      cached = { flagged };
-      dataCache.set(cacheKey, cached);
-      appLogger.debug("Built flagged series cache", {
-        source: LogSource.SeriesService,
-        context: {
-          instanceId,
-          instanceName: instance.name,
-          mode,
-          flagged: flagged.length,
-          durationMs: Date.now() - startedAt,
-        },
-      });
-    }
-
+      instanceId: instance.id,
+      logSource: LogSource.SeriesService,
+      backgroundErrorMessage: "Background flagged-series rebuild failed",
+      build: () => this.buildFlaggedAndLog(instance.id, instance, mode),
+    });
     return this.applyQuery(
       cached.flagged,
       query,
       mode,
       (s) => s.episodeFiles.length > 0,
     );
+  }
+
+  private async buildFlaggedAndLog(
+    instanceId: number,
+    instance: NonNullable<
+      Awaited<ReturnType<typeof instanceRepository.findById>>
+    >,
+    mode: ScoringMode,
+  ): Promise<{ flagged: FlaggedSeries[] }> {
+    const startedAt = Date.now();
+    const flagged = await this.buildFlaggedSeries(instanceId, instance, mode);
+    appLogger.debug("Built flagged series cache", {
+      source: LogSource.SeriesService,
+      context: {
+        instanceId,
+        instanceName: instance.name,
+        mode,
+        flagged: flagged.length,
+        durationMs: Date.now() - startedAt,
+      },
+    });
+    return { flagged };
   }
 
   private async buildFlaggedSeries(
@@ -290,11 +291,7 @@ export class SeriesService extends MediaService {
   // build inline. Caller is responsible for kicking off a background warm
   // when null is returned.
   getCachedFlaggedTotal(instanceId: number, mode: ScoringMode): number | null {
-    const cached = dataCache.get<{ flagged: FlaggedSeries[] }>(
-      `series:${instanceId}:${mode}`,
-      CACHE_TTL_MS,
-    );
-    return cached?.flagged.length ?? null;
+    return this.readCachedFlaggedTotal(`series:${instanceId}:${mode}`);
   }
 
   // Uniform name across MovieService / SeriesService for use via
