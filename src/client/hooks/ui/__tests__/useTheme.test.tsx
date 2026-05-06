@@ -1,13 +1,13 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach } from "vitest";
 import { act, render, screen } from "@testing-library/react";
-import { useTheme } from "../useTheme";
 import {
   THEME_BRAND_KEY,
   THEME_MODE_KEY,
   setBrand as setBrandRuntime,
   setMode as setModeRuntime,
 } from "@/client/lib/theme";
+import { useTheme } from "../useTheme";
 
 function Probe() {
   const { brand, brands, mode, surface, setBrand, setMode } = useTheme();

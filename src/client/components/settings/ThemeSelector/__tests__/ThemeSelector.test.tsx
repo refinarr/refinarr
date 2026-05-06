@@ -2,12 +2,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { renderWithProviders, screen } from "@/test/render";
 import {
   THEME_BRAND_KEY,
   THEME_MODE_KEY,
   setBrand as setRuntimeBrand,
 } from "@/client/lib/theme";
+import { renderWithProviders, screen } from "@/test/render";
 import { ThemeSelector } from "../ThemeSelector";
 
 describe("ThemeSelector", () => {

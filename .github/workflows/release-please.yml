@@ -1,0 +1,34 @@
+name: release-please
+
+# Watches `main` (where releases land via develop → main merges).
+# When conventional-commit messages accumulate on main, opens a
+# "release-please: Release vX.Y.Z" PR that bumps package.json + writes
+# CHANGELOG.md. Merging that PR creates a vX.Y.Z tag + GitHub Release,
+# which then triggers release-image.yml.
+#
+# Versioning is driven by commit prefixes:
+#   feat:           → MINOR bump
+#   fix:            → PATCH bump
+#   feat!: / BREAKING CHANGE: in body → MAJOR bump
+#   chore:/refactor:/docs:/test: → no bump (skipped)
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          release-type: node
+          target-branch: main
