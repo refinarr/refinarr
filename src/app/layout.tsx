@@ -32,8 +32,16 @@ const FOUC_SCRIPT = `(function () {
     }
     brand = brand || "${DEFAULT_BRAND_ID}";
     mode = mode || "${DEFAULT_MODE}";
+    if (!themes[brand]) {
+      brand = "${DEFAULT_BRAND_ID}";
+      localStorage.setItem("rfn-brand", brand);
+    }
+    if (mode !== "light" && mode !== "dark" && mode !== "system") {
+      mode = "${DEFAULT_MODE}";
+      localStorage.setItem("rfn-mode", mode);
+    }
     var dark = mode === "dark" || (mode === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    var vars = (themes[brand] || themes["${DEFAULT_BRAND_ID}"])[dark ? "dark" : "light"];
+    var vars = themes[brand][dark ? "dark" : "light"];
     for (var key in vars) document.documentElement.style.setProperty(key, vars[key]);
     document.documentElement.setAttribute("data-theme", brand);
     if (dark) document.documentElement.classList.add("dark");

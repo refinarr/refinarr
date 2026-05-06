@@ -288,6 +288,7 @@
       "status": "Status"
     },
     "retry": {
+      "retry": "Retry",
       "retried": "Retried {time}"
     },
     "clear": "Clear history"

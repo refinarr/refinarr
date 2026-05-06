@@ -151,6 +151,7 @@ const eslintConfig = defineConfig([
   // tailwindcss owns sorting and would conflict.
   {
     files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/client/components/ui/**"],
     plugins: { "better-tailwindcss": betterTailwind },
     settings: {
       "better-tailwindcss": {

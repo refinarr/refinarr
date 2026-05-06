@@ -12,6 +12,11 @@ export default defineConfig({
     exclude: ["e2e/**", "node_modules/**", ".next/**"],
     // No file parallelism so DB-backed tests share the same migrated SQLite file.
     fileParallelism: false,
+    // DATABASE_URL must be in env (not just set in globalSetup) so worker
+    // processes that import the Prisma singleton at module-load time read
+    // the test DB, not the dev fallback. globalSetup also sets it, but
+    // that mutation doesn't always propagate to worker children.
+    env: { DATABASE_URL: "file:./local/vitest-test.db" },
     coverage: {
       provider: "v8",
       include: [

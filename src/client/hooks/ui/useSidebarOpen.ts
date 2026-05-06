@@ -39,15 +39,23 @@ function subscribe(onChange: () => void): () => void {
     if (event.key === null || event.key === STORAGE_KEY) onChange();
   };
   const mql = window.matchMedia(DESKTOP_QUERY);
+  const addMediaListener =
+    typeof mql.addEventListener === "function"
+      ? () => mql.addEventListener("change", onChange)
+      : () => mql.addListener(onChange);
+  const removeMediaListener =
+    typeof mql.removeEventListener === "function"
+      ? () => mql.removeEventListener("change", onChange)
+      : () => mql.removeListener(onChange);
 
   window.addEventListener(CHANGE_EVENT, onChange);
   window.addEventListener("storage", storageHandler);
-  mql.addEventListener("change", onChange);
+  addMediaListener();
 
   return () => {
     window.removeEventListener(CHANGE_EVENT, onChange);
     window.removeEventListener("storage", storageHandler);
-    mql.removeEventListener("change", onChange);
+    removeMediaListener();
   };
 }
 
