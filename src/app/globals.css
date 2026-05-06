@@ -239,3 +239,18 @@
     @apply font-sans;
   }
 }
+
+/* Hide scrollbars on mobile — content still scrolls, just no chrome.
+ * Outside @layer base so the wildcard rule is not shadowed by base
+ * resets that follow. */
+@media (max-width: 767px) {
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+}

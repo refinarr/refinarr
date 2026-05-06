@@ -37,9 +37,15 @@ class StubObserver {
 
 vi.stubGlobal("IntersectionObserver", StubObserver);
 
-function Probe({ ids }: { ids: string[] }) {
-  const active = useActiveSection({ ids });
-  return <span data-testid="active">{active}</span>;
+function Probe({
+  ids,
+  onChange,
+}: {
+  ids: string[];
+  onChange: (id: string) => void;
+}) {
+  useActiveSection({ ids, onChange });
+  return null;
 }
 
 function setupSections(ids: string[]) {
@@ -58,15 +64,9 @@ describe("useActiveSection", () => {
     disconnected = false;
   });
 
-  it("seeds the first id as active before any intersection fires", () => {
-    setupSections(["a", "b", "c"]);
-    const { getByTestId } = render(<Probe ids={["a", "b", "c"]} />);
-    expect(getByTestId("active").textContent).toBe("a");
-  });
-
   it("observes every existing section element", () => {
     setupSections(["a", "b", "c"]);
-    render(<Probe ids={["a", "b", "c"]} />);
+    render(<Probe ids={["a", "b", "c"]} onChange={() => {}} />);
     expect(observed).toHaveLength(3);
     expect(observed.map((el) => (el as HTMLElement).id)).toEqual([
       "a",
@@ -75,9 +75,10 @@ describe("useActiveSection", () => {
     ]);
   });
 
-  it("returns the topmost intersecting id when multiple are visible", () => {
+  it("calls onChange with the topmost intersecting id when multiple are visible", () => {
     setupSections(["a", "b", "c"]);
-    const { getByTestId } = render(<Probe ids={["a", "b", "c"]} />);
+    const onChange = vi.fn();
+    render(<Probe ids={["a", "b", "c"]} onChange={onChange} />);
 
     act(() => {
       lastCallback!([
@@ -94,12 +95,13 @@ describe("useActiveSection", () => {
       ]);
     });
 
-    expect(getByTestId("active").textContent).toBe("b");
+    expect(onChange).toHaveBeenCalledWith("b");
   });
 
   it("ignores non-intersecting entries", () => {
     setupSections(["a", "b"]);
-    const { getByTestId } = render(<Probe ids={["a", "b"]} />);
+    const onChange = vi.fn();
+    render(<Probe ids={["a", "b"]} onChange={onChange} />);
 
     act(() => {
       lastCallback!([
@@ -111,13 +113,37 @@ describe("useActiveSection", () => {
       ]);
     });
 
-    expect(getByTestId("active").textContent).toBe("a");
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("disconnects the observer on unmount", () => {
     setupSections(["a"]);
-    const { unmount } = render(<Probe ids={["a"]} />);
+    const { unmount } = render(<Probe ids={["a"]} onChange={() => {}} />);
     unmount();
     expect(disconnected).toBe(true);
+  });
+
+  it("walks through every section as the user scrolls top to bottom", () => {
+    const ids = ["a", "b", "c", "d", "e"];
+    setupSections(ids);
+    const onChange = vi.fn();
+    render(<Probe ids={ids} onChange={onChange} />);
+
+    // Simulate scroll: at each step the named section is the topmost
+    // intersecting one in the band. The test mimics the user scrolling
+    // through the page section-by-section.
+    for (const id of ids) {
+      act(() => {
+        lastCallback!(
+          ids.map((sectionId, i) => ({
+            isIntersecting: sectionId === id,
+            target: document.getElementById(sectionId)!,
+            boundingClientRect: { top: i * 100 },
+          })),
+        );
+      });
+    }
+
+    expect(onChange.mock.calls.map((c) => c[0])).toEqual(ids);
   });
 });

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { KeyRound, Palette, Plus, Server, Settings, User } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
@@ -62,27 +62,25 @@ export default function SettingsPage() {
 
   const ids = useMemo(() => items.map((i) => i.id) as SectionId[], [items]);
 
-  // Mobile renders a single section at a time (swap UX). `pickedId` is
-  // what the dropdown shows + what mobile renders; on desktop it falls
-  // through to the IntersectionObserver-driven `observed` for rail
-  // highlight. Initialized from URL hash so deep-links land on the
-  // right section.
+  // `pickedId` is the single source of truth for the active section.
+  // Drives the rail highlight, the dropdown value, and (on mobile) which
+  // section renders (swap UX). Initialized from the URL hash so deep-
+  // links land on the right section.
   const [pickedId, setPickedId] = useState<SectionId>(
     () => readHash(ids) ?? ids[0],
   );
-  const observed = useActiveSection({ ids });
-  // Active id: rail uses observed (scroll-spy); picker + mobile content
-  // use pickedId (explicit choice). They re-converge on click via the
-  // `navigate` handler which sets pickedId AND scrolls.
-  const desktopActive = observed || pickedId;
 
-  // Scroll-spy → URL hash (desktop only — mobile updates hash via navigate).
-  useEffect(() => {
-    if (!observed) return;
-    if (window.location.hash === `#${observed}`) return;
-    if (!window.matchMedia("(min-width: 768px)").matches) return;
-    window.history.replaceState(null, "", `#${observed}`);
-  }, [observed]);
+  // Scroll-spy feeds back into pickedId so the rail tracks manual
+  // scrolling. `lockUntilRef` suppresses the feedback during
+  // programmatic scrolls (clicks → smooth-scroll), where the in-flight
+  // scroll would otherwise yank the highlight to whatever section is in
+  // the band mid-animation.
+  const lockUntilRef = useRef(0);
+  const handleSpy = useCallback((id: string) => {
+    if (Date.now() < lockUntilRef.current) return;
+    setPickedId(id as SectionId);
+  }, []);
+  useActiveSection({ ids, onChange: handleSpy });
 
   // Hash → state, on mount and on popstate. On desktop also smooth-scrolls.
   useEffect(() => {
@@ -107,6 +105,10 @@ export default function SettingsPage() {
   const navigate = (id: string) => {
     const sectionId = id as SectionId;
     setPickedId(sectionId);
+    // Suppress scroll-spy → pickedId sync during the smooth scroll, so
+    // intermediate sections passing through the band don't override the
+    // user's explicit choice.
+    lockUntilRef.current = Date.now() + 800;
     if (window.location.hash !== `#${sectionId}`) {
       window.history.replaceState(null, "", `#${sectionId}`);
     }
@@ -131,34 +133,29 @@ export default function SettingsPage() {
       pickedId !== id && "hidden md:block",
     );
 
-  // Mobile header lives at AppShell's flex level (between TopHeader and
-  // <main>) instead of as a sticky child of <main>. This keeps it pinned
-  // by flex layout — immune to iOS rubber-band overscroll inside <main>,
-  // which previously dragged the bar down and revealed empty space.
-  const mobileHeader = (
-    <div className="space-y-3 px-4 pt-4">
+  // pageHeader lives at AppShell's flex level (between TopHeader and
+  // <main>), so it stays pinned on every viewport and iOS rubber-band
+  // overscroll inside <main> can't drag it. The picker is mobile-only;
+  // desktop uses the SettingsRail beside the content.
+  const pageHeader = (
+    <div className="space-y-3 px-4 pt-4 pb-3 md:px-6 md:pt-6 md:pb-4">
       <header>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground mt-1 text-sm">{t("subtitle")}</p>
       </header>
-      <SettingsPicker items={items} active={pickedId} onSelect={navigate} />
+      <div className="md:hidden">
+        <SettingsPicker items={items} active={pickedId} onSelect={navigate} />
+      </div>
     </div>
   );
 
   return (
-    <AppShell mobileHeader={mobileHeader}>
+    <AppShell pageHeader={pageHeader}>
       <div className="space-y-page">
-        {/* Desktop-only title + subtitle. Mobile renders these inside
-            mobileHeader at the AppShell level. */}
-        <header className="hidden md:block">
-          <h1 className="text-2xl font-bold">{t("title")}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">{t("subtitle")}</p>
-        </header>
-
         <div className="gap-page flex">
           <SettingsRail
             items={items}
-            active={desktopActive}
+            active={pickedId}
             onSelect={navigate}
             className="sticky top-0 hidden md:flex"
           />
