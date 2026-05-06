@@ -157,4 +157,75 @@ describe("DataCache.rebuild", () => {
       "ok",
     );
   });
+
+  test("does not cache an in-flight rebuild after invalidate", async () => {
+    const key = "movies:1:manual";
+    let resolveBuild: ((v: string) => void) | undefined;
+    const promise = dataCache.rebuild(
+      key,
+      () =>
+        new Promise<string>((res) => {
+          resolveBuild = res;
+        }),
+    );
+
+    expect(dataCache.isRebuilding(key)).toBe(true);
+    dataCache.invalidate(1);
+    resolveBuild!("old");
+
+    await expect(promise).resolves.toBe("old");
+    expect(dataCache.isRebuilding(key)).toBe(false);
+    expect(dataCache.get(key, 60_000)).toBeNull();
+    await expect(dataCache.rebuild(key, async () => "fresh")).resolves.toBe(
+      "fresh",
+    );
+    expect(dataCache.get(key, 60_000)).toBe("fresh");
+  });
+
+  test("does not let an invalidated rebuild clear a newer rebuild", async () => {
+    let resolveOld: ((v: string) => void) | undefined;
+    const old = dataCache.rebuild(
+      "movies:1:manual",
+      () =>
+        new Promise<string>((res) => {
+          resolveOld = res;
+        }),
+    );
+
+    dataCache.invalidate(1);
+
+    let resolveFresh: ((v: string) => void) | undefined;
+    const fresh = dataCache.rebuild(
+      "movies:1:manual",
+      () =>
+        new Promise<string>((res) => {
+          resolveFresh = res;
+        }),
+    );
+
+    resolveOld!("old");
+    await old;
+    expect(dataCache.isRebuilding("movies:1:manual")).toBe(true);
+
+    resolveFresh!("fresh");
+    await expect(fresh).resolves.toBe("fresh");
+    expect(dataCache.get("movies:1:manual", 60_000)).toBe("fresh");
+  });
+
+  test("does not cache an in-flight rebuild after clear", async () => {
+    let resolveBuild: ((v: string) => void) | undefined;
+    const promise = dataCache.rebuild(
+      "movies:1:manual",
+      () =>
+        new Promise<string>((res) => {
+          resolveBuild = res;
+        }),
+    );
+
+    dataCache.clear();
+    resolveBuild!("old");
+
+    await expect(promise).resolves.toBe("old");
+    expect(dataCache.get("movies:1:manual", 60_000)).toBeNull();
+  });
 });

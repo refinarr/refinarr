@@ -77,7 +77,35 @@ function compareMedia<T extends FlaggedMedia>(
   return (a.sizeOnDisk - b.sizeOnDisk) * dir;
 }
 
-export abstract class MediaService {
+export abstract class MediaService<TFlagged extends FlaggedMedia> {
+  protected abstract readonly cacheNamespace: string;
+
+  protected abstract getFlaggedForWarm(
+    instanceId: number,
+    query: MediaQuery,
+  ): Promise<{ items: TFlagged[]; total: number }>;
+
+  protected flaggedCacheKey(instanceId: number, mode: ScoringMode): string {
+    return `${this.cacheNamespace}:${instanceId}:${mode}`;
+  }
+
+  getCachedFlaggedTotal(instanceId: number, mode: ScoringMode): number | null {
+    const cached = dataCache.get<{ flagged: TFlagged[] }>(
+      this.flaggedCacheKey(instanceId, mode),
+      CACHE_TTL_MS,
+    );
+    return cached?.flagged.length ?? null;
+  }
+
+  warmFlaggedCache(instanceId: number): Promise<unknown> {
+    return this.getFlaggedForWarm(instanceId, {
+      page: 1,
+      limit: 1,
+      sortBy: "score",
+      order: "asc",
+    });
+  }
+
   protected async readWithSwr<TCached>({
     cacheKey,
     instanceId,
@@ -118,14 +146,6 @@ export abstract class MediaService {
     // Miss — block on rebuild. Concurrent miss callers share the same
     // promise via dataCache.rebuild.
     return dataCache.rebuild(cacheKey, build);
-  }
-
-  protected readCachedFlaggedTotal(cacheKey: string): number | null {
-    const cached = dataCache.get<{ flagged: unknown[] }>(
-      cacheKey,
-      CACHE_TTL_MS,
-    );
-    return cached?.flagged.length ?? null;
   }
 
   protected applyQuery<T extends FlaggedMedia>(

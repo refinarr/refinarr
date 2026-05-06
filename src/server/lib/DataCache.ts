@@ -13,6 +13,8 @@ class DataCache {
   // promise; subsequent callers either get the stale value (SWR) or await
   // the same promise (cold).
   private inflight = new Map<string, Promise<unknown>>();
+  private versions = new Map<string, number>();
+  private generation = 0;
 
   get<T>(key: string, ttlMs: number): T | null {
     const entry = this.store.get(key);
@@ -47,6 +49,10 @@ class DataCache {
     this.store.set(key, { data, ts: Date.now() });
   }
 
+  private bumpVersion(key: string): void {
+    this.versions.set(key, (this.versions.get(key) ?? 0) + 1);
+  }
+
   // Returns true if a rebuild for `key` is already running. Used by SWR
   // callers to skip kicking off a duplicate refresh.
   isRebuilding(key: string): boolean {
@@ -60,13 +66,22 @@ class DataCache {
   async rebuild<T>(key: string, build: () => Promise<T>): Promise<T> {
     const existing = this.inflight.get(key) as Promise<T> | undefined;
     if (existing) return existing;
+    const generation = this.generation;
+    const version = this.versions.get(key) ?? 0;
     const promise = build()
       .then((value) => {
-        this.set(key, value);
+        if (
+          generation === this.generation &&
+          version === (this.versions.get(key) ?? 0)
+        ) {
+          this.set(key, value);
+        }
         return value;
       })
       .finally(() => {
-        this.inflight.delete(key);
+        if (this.inflight.get(key) === promise) {
+          this.inflight.delete(key);
+        }
       });
     this.inflight.set(key, promise);
     return promise;
@@ -74,14 +89,20 @@ class DataCache {
 
   invalidate(instanceId: number): void {
     const prefix = `:${instanceId}:`;
-    for (const key of this.store.keys()) {
-      if (key.includes(prefix)) this.store.delete(key);
+    const keys = new Set([...this.store.keys(), ...this.inflight.keys()]);
+    for (const key of keys) {
+      if (!key.includes(prefix)) continue;
+      this.store.delete(key);
+      this.inflight.delete(key);
+      this.bumpVersion(key);
     }
   }
 
   clear(): void {
+    this.generation += 1;
     this.store.clear();
     this.inflight.clear();
+    this.versions.clear();
   }
 }
 
