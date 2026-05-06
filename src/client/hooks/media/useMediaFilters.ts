@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useDebouncedValue } from "../ui/useDebouncedValue";
+import { isManualMode } from "@/shared/scoring-mode";
 import type { ScoringMode } from "@/shared/types/models";
 
 export type MatchMode = "any" | "all";
@@ -40,7 +41,14 @@ export const defaultMediaFilters: MediaFilters = {
 export interface MediaFiltersResult {
   filters: MediaFilters;
   setFilters: React.Dispatch<React.SetStateAction<MediaFilters>>;
-  forQuery: MediaFilters & { scoringMode: ScoringMode };
+  // maxScore is only meaningful in manual mode (a 0–1 coverage fraction).
+  // In profile mode the score is a raw integer (-1000…cutoff) and the
+  // slider isn't rendered, so omit the field so we don't accidentally
+  // filter the page down to "score ≤ 1" on the API side.
+  forQuery: Omit<MediaFilters, "maxScore"> & {
+    maxScore?: number;
+    scoringMode: ScoringMode;
+  };
 }
 
 export function useMediaFilters(
@@ -85,7 +93,7 @@ export function useMediaFilters(
     setFilters,
     forQuery: {
       ...filters,
-      maxScore: debouncedMaxScore,
+      maxScore: isManualMode(scoringMode) ? debouncedMaxScore : undefined,
       q: debouncedQ,
       scoringMode,
     },

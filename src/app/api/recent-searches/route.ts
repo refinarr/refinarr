@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
+import { positiveInt } from "@/server/lib/api-errors";
 import { logRepository } from "@/server/repositories/LogRepository";
 
 const MAX_WINDOW_HOURS = 24;
 
 export const GET = createApiHandler(async (req: NextRequest) => {
-  const instanceIdRaw = req.nextUrl.searchParams.get("instanceId");
-  const instanceId = Number(instanceIdRaw);
-  if (!Number.isInteger(instanceId) || instanceId <= 0) {
-    return NextResponse.json({ error: "instanceId required" }, { status: 400 });
-  }
+  const instanceId = positiveInt(
+    req.nextUrl.searchParams.get("instanceId") ?? undefined,
+    "instanceId",
+  );
   const windowHoursRaw = Number(
     req.nextUrl.searchParams.get("windowHours") ?? "1",
   );
