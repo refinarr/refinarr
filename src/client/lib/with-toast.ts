@@ -18,30 +18,54 @@ interface ToastMessagesFor<TData, TError, TVariables> extends ToastMessages {
   error?: ToastErrorMessage<TError, TVariables>;
 }
 
+// Wraps a TanStack mutation so callers get success / loading / error toasts
+// with a single call. All user-visible copy is the caller's responsibility —
+// pass values from `useTranslations()` so the resulting toasts go through
+// next-intl. The wrapper itself never injects English fallbacks.
+//
+// Loading toast is shown only when `loading` is provided, and morphs into
+// the success or error toast via a shared id so the user sees a single
+// transitioning toast rather than two flashes.
+//
+// Error fallback chain (when `messages.error` is omitted):
+//   1. If the caught value is an Error, show `err.message`
+//   2. Otherwise show no toast — the mutation still rejects, so callers
+//      that need a generic toast can pass `error: t("toast.genericError")`
+//      explicitly.
 export function withToast<TData, TError, TVariables>(
   mutation: Pick<UseMutationResult<TData, TError, TVariables>, "mutateAsync">,
   messages: ToastMessagesFor<TData, TError, TVariables>,
 ) {
-  return (variables: TVariables) => {
-    const promise = mutation.mutateAsync(variables);
-    const formatSuccess = (data: TData) => {
-      if (typeof messages.success === "function")
-        return messages.success(data, variables);
-      return messages.success;
-    };
-    const formatError = (err: unknown) => {
-      if (typeof messages.error === "function")
-        return messages.error(err as TError, variables);
-      if (messages.error) return messages.error;
-      if (err instanceof Error) return err.message;
-      return "Something went wrong. See logs.";
+  return async (variables: TVariables): Promise<TData> => {
+    const formatSuccess = (data: TData) =>
+      typeof messages.success === "function"
+        ? messages.success(data, variables)
+        : messages.success;
+
+    const formatError = (err: unknown): string | null => {
+      if (messages.error !== undefined) {
+        return typeof messages.error === "function"
+          ? messages.error(err as TError, variables)
+          : messages.error;
+      }
+      return err instanceof Error ? err.message : null;
     };
 
-    toast.promise(promise, {
-      loading: messages.loading ?? "Loading…",
-      success: formatSuccess,
-      error: formatError,
-    });
-    return promise;
+    const id = messages.loading ? toast.loading(messages.loading) : undefined;
+    const sharedOpts = id !== undefined ? { id } : undefined;
+
+    try {
+      const data = await mutation.mutateAsync(variables);
+      toast.success(formatSuccess(data), sharedOpts);
+      return data;
+    } catch (err) {
+      const errorMsg = formatError(err);
+      if (errorMsg !== null) {
+        toast.error(errorMsg, sharedOpts);
+      } else if (id !== undefined) {
+        toast.dismiss(id);
+      }
+      throw err;
+    }
   };
 }

@@ -13,8 +13,11 @@ import {
   useUpdateInstance,
 } from "@/client/hooks/data/useInstances";
 import { withToast } from "@/client/lib/with-toast";
-import { ALL_SCORING_MODES, DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
-import type { ScoringMode } from "@/shared/types/models";
+import {
+  ALL_SCORING_MODES,
+  DEFAULT_SCORING_MODE,
+  isScoringMode,
+} from "@/shared/scoring-mode";
 
 interface Props {
   instanceId: number;
@@ -28,11 +31,13 @@ export function ScoringModeSelector({ instanceId, compact = false }: Props) {
   const tToast = useTranslations("toast");
   const { data: instances } = useInstances();
   const updateInstance = useUpdateInstance();
-  const mode = (instances?.find((i) => i.id === instanceId)?.scoringMode ??
-    DEFAULT_SCORING_MODE) as ScoringMode;
+  const mode =
+    instances?.find((i) => i.id === instanceId)?.scoringMode ??
+    DEFAULT_SCORING_MODE;
 
   const handleChange = async (value: string) => {
-    const scoringMode = value as ScoringMode;
+    if (!isScoringMode(value)) return;
+    const scoringMode = value;
     const updateScoringMode = withToast(updateInstance, {
       success: tToast("scoringMode", {
         mode: t(`scoringModeOptions.${scoringMode}`),
