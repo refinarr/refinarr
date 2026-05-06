@@ -102,7 +102,7 @@ function HistoryContent() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 flex-wrap">
+      <div className="flex flex-wrap items-center gap-4">
         <div className="flex flex-col gap-1">
           <Label>{t("filters.instance")}</Label>
           <Select
@@ -168,7 +168,7 @@ function HistoryContent() {
             onClick={handleClear}
             disabled={clear.isPending || allLogs.length === 0}
           >
-            <Trash2 className="h-4 w-4 mr-1 text-destructive" /> {t("clear")}
+            <Trash2 className="text-destructive mr-1 size-4" /> {t("clear")}
           </Button>
         </div>
       </div>

@@ -84,7 +84,7 @@ export function MultiSelect({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "flex h-8 w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30 dark:hover:bg-input/50",
+          "border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50 flex h-8 w-fit items-center justify-between gap-1.5 rounded-lg border bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50",
           selected.length === 0 && "text-muted-foreground",
           triggerClassName,
           className,
@@ -93,9 +93,9 @@ export function MultiSelect({
         <span className="line-clamp-1 flex flex-1 items-center gap-1.5 text-left">
           {triggerText}
         </span>
-        <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+        <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="min-w-56 max-h-80">
+      <DropdownMenuContent className="max-h-80 min-w-56">
         {label && (
           <DropdownMenuGroup>
             <DropdownMenuLabel>{label}</DropdownMenuLabel>
@@ -127,7 +127,7 @@ export function MultiSelect({
           </>
         )}
         {options.length === 0 ? (
-          <div className="px-2 py-1.5 text-sm text-muted-foreground">
+          <div className="text-muted-foreground px-2 py-1.5 text-sm">
             No options
           </div>
         ) : (

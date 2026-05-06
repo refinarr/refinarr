@@ -11,9 +11,9 @@ import type { ActionType } from "@/shared/types/models";
 // a compile error so adding to ActionType forces a badge update here.
 type BadgeKey = ActionType | "delete_blacklist";
 
-const SEARCH_CLASSES = "bg-sky-950 text-sky-300 border-sky-800";
-const DELETE_CLASSES = "bg-orange-950 text-orange-300 border-orange-800";
-const NEUTRAL_CLASSES = "bg-slate-700/40 text-slate-300 border-slate-600";
+const SEARCH_CLASSES = "bg-info-soft text-info border-info/30";
+const DELETE_CLASSES = "bg-warning-soft text-warning border-warning/30";
+const NEUTRAL_CLASSES = "bg-neutral-soft text-neutral-foreground border-border";
 
 const meta: Record<
   BadgeKey,
@@ -41,7 +41,7 @@ const meta: Record<
 
 const fallback = {
   icon: Activity,
-  classes: "bg-slate-700/40 text-slate-300 border-slate-600",
+  classes: NEUTRAL_CLASSES,
 };
 
 interface Props {
@@ -58,7 +58,7 @@ export function ActionTypeBadge({ action }: Props) {
   const classes = entry?.classes ?? fallback.classes;
   return (
     <Badge variant="outline" className={`gap-1 capitalize ${classes}`}>
-      <Icon className="h-3 w-3" /> {label}
+      <Icon className="size-3" /> {label}
     </Badge>
   );
 }

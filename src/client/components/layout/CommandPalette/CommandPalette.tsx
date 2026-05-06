@@ -91,31 +91,31 @@ export function CommandPalette() {
 
             <CommandGroup heading={t("groups.navigate")}>
               <CommandItem onSelect={() => go("/dashboard")}>
-                <LayoutDashboard className="h-4 w-4" />
+                <LayoutDashboard className="size-4" />
                 {tNav("dashboard")}
               </CommandItem>
               <CommandItem onSelect={() => go(ARR_LIBRARY_ROUTE.radarr)}>
-                <Film className="h-4 w-4" />
+                <Film className="size-4" />
                 {tNav("movies")}
               </CommandItem>
               <CommandItem onSelect={() => go(ARR_LIBRARY_ROUTE.sonarr)}>
-                <Tv2 className="h-4 w-4" />
+                <Tv2 className="size-4" />
                 {tNav("shows")}
               </CommandItem>
               <CommandItem onSelect={() => go("/ignored")}>
-                <EyeOff className="h-4 w-4" />
+                <EyeOff className="size-4" />
                 {tNav("ignored")}
               </CommandItem>
               <CommandItem onSelect={() => go("/history")}>
-                <History className="h-4 w-4" />
+                <History className="size-4" />
                 {tNav("history")}
               </CommandItem>
               <CommandItem onSelect={() => go("/logs")}>
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircle className="size-4" />
                 {tNav("logs")}
               </CommandItem>
               <CommandItem onSelect={() => go("/settings")}>
-                <Settings className="h-4 w-4" />
+                <Settings className="size-4" />
                 {tNav("settings")}
               </CommandItem>
             </CommandGroup>
@@ -134,7 +134,7 @@ export function CommandPalette() {
                         go(`${ARR_LIBRARY_ROUTE[type]}?instanceId=${i.id}`)
                       }
                     >
-                      <Icon className="h-4 w-4" />
+                      <Icon className="size-4" />
                       {i.name}
                     </CommandItem>
                   ))}
@@ -147,16 +147,16 @@ export function CommandPalette() {
                 keywords={["add", "instance", "new"]}
                 onSelect={() => go("/settings?action=add")}
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
                 {t("actions.addInstance")}
               </CommandItem>
               <CommandItem
                 keywords={["dry", "run", "live", "mode"]}
                 onSelect={() => go("/settings#dry-run")}
               >
-                <ToggleLeft className="h-4 w-4" />
+                <ToggleLeft className="size-4" />
                 {t("actions.toggleDryRun")}
-                <span className="ml-auto text-xs text-muted-foreground">
+                <span className="text-muted-foreground ml-auto text-xs">
                   {config?.dryRun ? t("status.on") : t("status.off")}
                 </span>
               </CommandItem>

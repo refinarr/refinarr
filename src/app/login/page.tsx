@@ -48,7 +48,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>{t("title")}</CardTitle>
@@ -73,7 +73,7 @@ function LoginForm() {
               />
             </FormField>
             <Button type="submit" disabled={submitting} className="w-full">
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
               {t("submit")}
             </Button>
           </form>

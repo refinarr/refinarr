@@ -53,11 +53,11 @@ export default function SetupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>{t("title")}</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">{t("subtitle")}</p>
+          <p className="text-muted-foreground mt-1 text-sm">{t("subtitle")}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
@@ -97,7 +97,7 @@ export default function SetupPage() {
               />
             </FormField>
             <Button type="submit" disabled={submitting} className="w-full">
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
               {t("submit")}
             </Button>
           </form>

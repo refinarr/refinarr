@@ -73,12 +73,12 @@ export function DryRunToggle({ prominent = false }: Props) {
           <div className="flex items-start gap-3">
             {isDryRun ? (
               <ShieldCheck
-                className="h-5 w-5 mt-0.5 shrink-0 text-emerald-400"
+                className="text-ok mt-0.5 size-5 shrink-0"
                 aria-hidden
               />
             ) : (
               <AlertTriangle
-                className="h-5 w-5 mt-0.5 shrink-0 text-destructive"
+                className="text-destructive mt-0.5 size-5 shrink-0"
                 aria-hidden
               />
             )}
@@ -87,7 +87,7 @@ export function DryRunToggle({ prominent = false }: Props) {
                 <p className="font-medium">
                   {isDryRun ? t("prominentTitleDry") : t("prominentTitleLive")}
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   {isDryRun ? t("prominentBodyDry") : t("prominentBodyLive")}
                 </p>
               </div>
@@ -103,7 +103,7 @@ export function DryRunToggle({ prominent = false }: Props) {
           <DialogHeader>
             <DialogTitle>{t("switchTitle")}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">{t("switchBody")}</p>
+          <p className="text-muted-foreground text-sm">{t("switchBody")}</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>
               {tCommon("cancel")}

@@ -48,11 +48,11 @@ export default function IgnoredPage() {
   return (
     <AppShell>
       <PageErrorBoundary>
-        <div className="space-y-4 max-w-4xl">
+        <div className="max-w-4xl space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">{t("title")}</h1>
-              <p className="text-muted-foreground text-sm mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 {t("summary", { count: list.length })}
               </p>
             </div>
@@ -80,21 +80,21 @@ export default function IgnoredPage() {
 
           {isLoading && (
             <div className="flex justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <Loader2 className="text-muted-foreground size-5 animate-spin" />
             </div>
           )}
 
           {!isLoading && list.length === 0 && (
-            <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
+            <div className="text-muted-foreground rounded-lg border p-8 text-center text-sm">
               {t("empty")}
             </div>
           )}
 
           {!isLoading && list.length > 0 && (
-            <div className="rounded-lg border overflow-hidden">
+            <div className="overflow-hidden rounded-lg border">
               <table className="w-full text-sm">
                 <thead className="bg-background border-b">
-                  <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr className="text-muted-foreground text-left text-xs tracking-wide uppercase">
                     <th className="w-20 px-3 py-2.5 font-medium">
                       {t("columns.type")}
                     </th>
@@ -109,13 +109,13 @@ export default function IgnoredPage() {
                 </thead>
                 <tbody>
                   {list.map((entry) => (
-                    <tr key={entry.id} className="border-t hover:bg-muted/40">
+                    <tr key={entry.id} className="hover:bg-muted/40 border-t">
                       <td className="px-3 py-2 align-middle">
                         <Badge variant="outline" className="gap-1 capitalize">
                           {entry.mediaType === "movie" ? (
-                            <Film className="h-3 w-3" />
+                            <Film className="size-3" />
                           ) : (
-                            <Tv2 className="h-3 w-3" />
+                            <Tv2 className="size-3" />
                           )}
                           {entry.mediaType}
                         </Badge>
@@ -124,19 +124,19 @@ export default function IgnoredPage() {
                         {entry.title}
                       </td>
                       <td
-                        className="px-3 py-2 align-middle text-muted-foreground text-xs"
+                        className="text-muted-foreground px-3 py-2 align-middle text-xs"
                         title={new Date(entry.ignoredAt).toLocaleString()}
                       >
                         {formatRelative(entry.ignoredAt)}
                       </td>
-                      <td className="px-3 py-2 align-middle text-right">
+                      <td className="px-3 py-2 text-right align-middle">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => runUnignore(entry.id)}
                           disabled={unignore.isPending}
                         >
-                          <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                          <RotateCcw className="mr-1 size-3.5" />
                           {t("unignore")}
                         </Button>
                       </td>

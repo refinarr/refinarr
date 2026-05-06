@@ -80,13 +80,13 @@ function InstanceQueueSection({
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <CardTitle className="flex items-center gap-2">
-            <Hourglass className="h-4 w-4" />
+            <Hourglass className="size-4" />
             {instanceName}
             <Badge variant="outline">
               {t("pendingCount", { count: rows.length })}
             </Badge>
           </CardTitle>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {status && status.etaMs > 0
               ? t("etaLabel", { eta: formatEta(status.etaMs, tTime) })
               : t("etaNone")}
@@ -99,22 +99,22 @@ function InstanceQueueSection({
           disabled={clear.isPending || rows.length === 0}
           aria-label={t("clear")}
         >
-          <Trash2 className="h-4 w-4 mr-1 text-destructive" />
+          <Trash2 className="text-destructive mr-1 size-4" />
           {t("clear")}
         </Button>
       </CardHeader>
       <CardContent className="pt-0">
-        <ul className="divide-y divide-border">
+        <ul className="divide-border divide-y">
           {rows.map((row, idx) => (
             <li
               key={row.id}
               className="flex items-center justify-between gap-4 py-2 text-sm"
             >
               <div className="min-w-0 flex-1">
-                <p className="font-medium truncate" title={row.title}>
+                <p className="truncate font-medium" title={row.title}>
                   {row.title}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {actionLabel(row.action)} ·{" "}
                   {t("queuedAt", {
                     time: formatRelative(row.createdAt, tTime),
@@ -140,12 +140,12 @@ function QueueContent() {
   const rows = queue?.items ?? [];
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">…</p>;
+    return <p className="text-muted-foreground text-sm">…</p>;
   }
   if (rows.length === 0) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-sm text-muted-foreground">
+        <CardContent className="text-muted-foreground py-8 text-center text-sm">
           {t("empty")}
         </CardContent>
       </Card>
@@ -185,7 +185,7 @@ export default function QueuePage() {
         <div className="space-y-4">
           <div>
             <h1 className="text-2xl font-bold">{t("title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+            <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
           </div>
           <QueueContent />
         </div>

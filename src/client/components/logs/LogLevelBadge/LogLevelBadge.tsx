@@ -13,17 +13,17 @@ const labels: Record<LogLevel, string> = {
 };
 
 const classes: Record<LogLevel, string> = {
-  debug: "bg-slate-700/40 text-slate-300 border-slate-600",
-  info: "bg-sky-950 text-sky-300 border-sky-800",
-  warn: "bg-yellow-950 text-yellow-300 border-yellow-800",
-  error: "bg-red-950 text-red-300 border-red-800",
+  debug: "bg-neutral-soft text-neutral-foreground border-border",
+  info: "bg-info-soft text-info border-info/30",
+  warn: "bg-warning-soft text-warning border-warning/30",
+  error: "bg-critical-soft text-critical border-critical/30",
 };
 
 export function LogLevelBadge({ level }: Props) {
   return (
     <Badge
       variant="outline"
-      className={`uppercase tracking-wide text-[10px] ${classes[level]}`}
+      className={`text-[10px] tracking-wide uppercase ${classes[level]}`}
     >
       {labels[level]}
     </Badge>

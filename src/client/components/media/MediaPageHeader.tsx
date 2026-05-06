@@ -57,10 +57,10 @@ export function MediaPageHeader({
   return (
     <div className="space-y-3">
       {showInstanceContext && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/30 bg-primary/10 px-4 py-2">
+        <div className="border-primary/30 bg-primary/10 flex flex-wrap items-center justify-between gap-3 rounded-md border px-4 py-2">
           <div className="flex items-center gap-2 text-sm">
             <InstanceConnectionDot instanceId={activeInstance} />
-            <span className="font-semibold text-primary">
+            <span className="text-primary font-semibold">
               {activeInstanceName}
             </span>
             <span className="text-muted-foreground/60" aria-hidden>
@@ -78,7 +78,7 @@ export function MediaPageHeader({
             className="border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
           >
             <RefreshCw
-              className={cn("h-4 w-4", refreshPending && "animate-spin")}
+              className={cn("size-4", refreshPending && "animate-spin")}
             />
             {tCommon("refresh")}
           </Button>
@@ -89,14 +89,14 @@ export function MediaPageHeader({
         <div className="space-y-1">
           <h1 className="text-2xl font-bold">{title}</h1>
           {!isLoading && (
-            <p className="text-muted-foreground text-sm flex items-center gap-1.5">
+            <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
               {tInstSel("flaggedSummary", { total, selected })}
-              {isFetching && <Loader2 className="h-3 w-3 animate-spin" />}
+              {isFetching && <Loader2 className="size-3 animate-spin" />}
             </p>
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           {showSwitcher && (
             <div className="flex items-center gap-2">
               <Label>{tInstSel("instanceLabel")}</Label>

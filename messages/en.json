@@ -321,11 +321,15 @@
     "dryRunMode": "Dry Run Mode",
     "appearance": {
       "title": "Appearance",
-      "ariaLabel": "Theme",
-      "themes": {
-        "dark-orange": "Dark — Orange",
-        "dark-teal": "Dark — Teal",
-        "light": "Light"
+      "ariaLabel": "Brand",
+      "modeAriaLabel": "Mode",
+      "toggleAriaLabel": "Change theme",
+      "modeLight": "Light",
+      "modeDark": "Dark",
+      "modeSystem": "System",
+      "brands": {
+        "amber": "Amber",
+        "teal": "Teal"
       }
     },
     "apiAccess": "API Access",

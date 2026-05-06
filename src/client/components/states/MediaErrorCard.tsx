@@ -14,10 +14,10 @@ export function MediaErrorCard({ message, onRetry }: Props) {
   return (
     <Card className="border-destructive">
       <CardContent className="flex items-center gap-4 py-6">
-        <AlertCircle className="h-8 w-8 text-destructive shrink-0" />
+        <AlertCircle className="text-destructive size-8 shrink-0" />
         <div className="flex-1">
           <p className="font-medium">{t("title")}</p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             {message ?? t("body")}
           </p>
         </div>

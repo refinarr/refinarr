@@ -6,10 +6,10 @@ export function NoCfsPrompt() {
   const t = useTranslations("states.noCfs");
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-      <ListX className="h-12 w-12 text-muted-foreground" />
+      <ListX className="text-muted-foreground size-12" />
       <div>
         <p className="text-lg font-semibold">{t("title")}</p>
-        <p className="text-sm text-muted-foreground mt-1">{t("body")}</p>
+        <p className="text-muted-foreground mt-1 text-sm">{t("body")}</p>
       </div>
     </div>
   );

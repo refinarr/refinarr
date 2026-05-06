@@ -6,7 +6,7 @@ export function HealthDot() {
   const ok = !isError && data?.status === "ok";
   return (
     <span
-      className={`h-2 w-2 rounded-full ${ok ? "bg-green-500" : "bg-red-500"}`}
+      className={`size-2 rounded-full ${ok ? "bg-ok" : "bg-critical"}`}
       title={ok ? "Connected" : "Disconnected"}
     />
   );

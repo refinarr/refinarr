@@ -18,7 +18,7 @@ export function InstanceErrorSummary({ instanceId }: Props) {
       className="flex items-center gap-1"
     >
       <Badge variant="destructive">{count}</Badge>
-      <span className="text-xs text-muted-foreground">failed</span>
+      <span className="text-muted-foreground text-xs">failed</span>
     </Link>
   );
 }

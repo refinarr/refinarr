@@ -18,21 +18,21 @@ export function ActiveFilterChips({ chips }: Props) {
   if (chips.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-xs text-muted-foreground">{t("active")}</span>
+      <span className="text-muted-foreground text-xs">{t("active")}</span>
       {chips.map((chip) => (
         <Badge
           key={chip.key}
           variant="secondary"
-          className="gap-1 pl-2 pr-1 py-0.5"
+          className="gap-1 py-0.5 pr-1 pl-2"
         >
           <span className="text-xs">{chip.label}</span>
           <button
             type="button"
             onClick={chip.onRemove}
-            className="rounded hover:bg-background/40 p-0.5"
+            className="hover:bg-background/40 rounded-sm p-0.5"
             aria-label={t("removeChip", { label: chip.label })}
           >
-            <X className="h-3 w-3" />
+            <X className="size-3" />
           </button>
         </Badge>
       ))}

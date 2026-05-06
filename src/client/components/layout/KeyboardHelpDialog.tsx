@@ -58,7 +58,7 @@ export function KeyboardHelpDialog() {
                 {s.keys.map((k) => (
                   <kbd
                     key={k}
-                    className="rounded border bg-muted px-1.5 py-0.5 font-mono text-xs"
+                    className="bg-muted rounded-sm border px-1.5 py-0.5 font-mono text-xs"
                   >
                     {k}
                   </kbd>

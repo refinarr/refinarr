@@ -9,7 +9,7 @@ import { DryRunToggle } from "@/client/components/settings/DryRunToggle";
 import { ApiKeyCard } from "@/client/components/settings/ApiKeyCard";
 import { PasswordChangeCard } from "@/client/components/settings/PasswordChangeCard";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
-import { AppearanceSelector } from "@/client/components/settings/AppearanceSelector";
+import { ThemeSelector } from "@/client/components/settings/ThemeSelector";
 import { CfPreferencePicker } from "@/client/components/settings/CfPreferencePicker";
 import { SettingsCardSkeleton } from "@/client/components/states/SettingsCardSkeleton";
 import { Button } from "@/client/components/ui/button";
@@ -50,7 +50,7 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold">{t("title")}</h1>
 
         {/* Dry Run — first so live-mode warning catches the eye */}
-        <section id="dry-run" className="space-y-4 scroll-mt-20">
+        <section id="dry-run" className="scroll-mt-20 space-y-4">
           <h2 className="text-lg font-semibold">{t("dryRunMode")}</h2>
           <DryRunToggle prominent />
         </section>
@@ -58,9 +58,9 @@ export default function SettingsPage() {
         <Separator />
 
         {/* Appearance */}
-        <section id="appearance" className="space-y-4 scroll-mt-20">
+        <section id="appearance" className="scroll-mt-20 space-y-4">
           <h2 className="text-lg font-semibold">{t("appearance.title")}</h2>
-          <AppearanceSelector />
+          <ThemeSelector />
         </section>
 
         <Separator />
@@ -76,7 +76,7 @@ export default function SettingsPage() {
                 setDialogOpen(true);
               }}
             >
-              <Plus className="h-4 w-4 mr-1" /> {t("addInstance")}
+              <Plus className="mr-1 size-4" /> {t("addInstance")}
             </Button>
           </div>
           {loadingInstances ? (
@@ -106,7 +106,7 @@ export default function SettingsPage() {
             <div className="space-y-3">
               {(instances ?? []).map((inst) => (
                 <div key={inst.id} className="flex items-center gap-4">
-                  <span className="text-sm font-medium w-36 truncate">
+                  <span className="w-36 truncate text-sm font-medium">
                     {inst.name}
                   </span>
                   <ScoringModeSelector instanceId={inst.id} />
@@ -123,7 +123,7 @@ export default function SettingsPage() {
           <section className="space-y-4">
             <div>
               <h2 className="text-lg font-semibold">{t("wantedCfs")}</h2>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 {t("wantedCfsHelp")}
               </p>
             </div>

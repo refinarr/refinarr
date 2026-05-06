@@ -385,7 +385,7 @@ function Body<T extends FlaggedMedia>({ columns, Card }: BodyProps<T>) {
         <div
           className={
             data.isFetching
-              ? "opacity-50 pointer-events-none transition-opacity"
+              ? "pointer-events-none opacity-50 transition-opacity"
               : "transition-opacity"
           }
         >
@@ -420,7 +420,7 @@ function Body<T extends FlaggedMedia>({ columns, Card }: BodyProps<T>) {
       <div ref={sentinelRef} className="h-4" />
       {data.isFetchingNextPage && (
         <div className="flex justify-center py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Loader2 className="text-muted-foreground size-5 animate-spin" />
         </div>
       )}
     </>

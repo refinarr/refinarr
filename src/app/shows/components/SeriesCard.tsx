@@ -20,7 +20,7 @@ export function SeriesCard({ item, ctx }: Props) {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex min-w-0 items-center gap-2">
         <SeverityDot
           severity={getSeverity(
             score,
@@ -29,12 +29,12 @@ export function SeriesCard({ item, ctx }: Props) {
             hasFile,
           )}
         />
-        <span className="font-medium truncate">{item.title}</span>
-        <span className="text-muted-foreground text-xs shrink-0">
+        <span className="truncate font-medium">{item.title}</span>
+        <span className="text-muted-foreground shrink-0 text-xs">
           {item.year}
         </span>
       </div>
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="text-muted-foreground flex items-center gap-3 text-xs">
         {isProfileMode(scoringMode) && !hasFile ? (
           <span>{t("noFile")}</span>
         ) : (
@@ -54,7 +54,7 @@ export function SeriesCard({ item, ctx }: Props) {
             <CfBadge key={cf.id} name={cf.name} missing />
           ))}
           {issues.length > 3 && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               +{issues.length - 3}
             </span>
           )}

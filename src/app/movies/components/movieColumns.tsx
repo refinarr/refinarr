@@ -70,9 +70,9 @@ export function movieColumns(
       header: tCols("title"),
       sortKey: "title",
       render: (m) => (
-        <div className="flex items-baseline gap-2 min-w-0">
-          <span className="font-medium truncate">{m.title}</span>
-          <span className="text-muted-foreground text-xs shrink-0">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <span className="truncate font-medium">{m.title}</span>
+          <span className="text-muted-foreground shrink-0 text-xs">
             {m.year}
           </span>
           {renderSearchBadge(m.id, m.title)}
@@ -97,7 +97,7 @@ export function movieColumns(
       render: (m) => {
         if (isProfileMode(scoringMode) && !m.hasFile) {
           return (
-            <span className="text-xs text-muted-foreground">{t("noFile")}</span>
+            <span className="text-muted-foreground text-xs">{t("noFile")}</span>
           );
         }
         return (
@@ -128,7 +128,7 @@ export function movieColumns(
               <CfBadge key={cf.id} name={cf.name} missing />
             ))}
             {items.length > 3 && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 +{items.length - 3}
               </span>
             )}

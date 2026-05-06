@@ -22,7 +22,7 @@ export function MovieCard({ item, ctx }: Props) {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-2 min-w-0 flex-wrap">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <SeverityDot
           severity={getSeverity(
             score,
@@ -31,8 +31,8 @@ export function MovieCard({ item, ctx }: Props) {
             item.hasFile,
           )}
         />
-        <span className="font-medium truncate">{item.title}</span>
-        <span className="text-muted-foreground text-xs shrink-0">
+        <span className="truncate font-medium">{item.title}</span>
+        <span className="text-muted-foreground shrink-0 text-xs">
           {item.year}
         </span>
         {queuedIds.has(item.id) && (
@@ -47,7 +47,7 @@ export function MovieCard({ item, ctx }: Props) {
           />
         )}
       </div>
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="text-muted-foreground flex items-center gap-3 text-xs">
         {isProfileMode(scoringMode) && !item.hasFile ? (
           <span>{t("noFile")}</span>
         ) : (
@@ -61,7 +61,7 @@ export function MovieCard({ item, ctx }: Props) {
             <CfBadge key={cf.id} name={cf.name} missing />
           ))}
           {issues.length > 3 && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               +{issues.length - 3}
             </span>
           )}

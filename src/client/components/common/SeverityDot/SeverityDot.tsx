@@ -15,7 +15,7 @@ export function SeverityDot({ severity, className }: Props) {
       role="img"
       aria-label={severityLabel[severity]}
       title={severityLabel[severity]}
-      className={`inline-block h-2.5 w-2.5 rounded-full ${severityClass[severity]} ${className ?? ""}`}
+      className={`inline-block size-2.5 rounded-full ${severityClass[severity]} ${className ?? ""}`}
     />
   );
 }

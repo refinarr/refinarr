@@ -18,9 +18,9 @@ export function SettingsCardSkeleton({ rows = 2 }: Props) {
               <Skeleton className="h-3 w-56" />
             </div>
             <div className="flex gap-2">
-              <Skeleton className="h-9 w-9 rounded-md" />
-              <Skeleton className="h-9 w-9 rounded-md" />
-              <Skeleton className="h-9 w-9 rounded-md" />
+              <Skeleton className="size-9 rounded-md" />
+              <Skeleton className="size-9 rounded-md" />
+              <Skeleton className="size-9 rounded-md" />
             </div>
           </CardContent>
         </Card>

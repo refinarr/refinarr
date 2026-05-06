@@ -11,10 +11,10 @@ export function NoFilterMatchState({ onClear }: Props) {
   const t = useTranslations("states.noFilterMatch");
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-      <SearchX className="h-12 w-12 text-muted-foreground" />
+      <SearchX className="text-muted-foreground size-12" />
       <div>
         <p className="text-lg font-semibold">{t("title")}</p>
-        <p className="text-sm text-muted-foreground mt-1">{t("body")}</p>
+        <p className="text-muted-foreground mt-1 text-sm">{t("body")}</p>
       </div>
       <Button variant="outline" size="sm" onClick={onClear}>
         {t("cta")}

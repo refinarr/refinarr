@@ -25,7 +25,7 @@ export function CfScoreList({
   const hiddenCount = missingFormats.length - visibleMissing.length;
 
   return (
-    <div className="flex flex-wrap gap-1 mt-1">
+    <div className="mt-1 flex flex-wrap gap-1">
       {sortedFormats.map((cf) => (
         <CfScore key={`p-${cf.id}`} name={cf.name} score={cf.score} />
       ))}
@@ -35,7 +35,7 @@ export function CfScoreList({
       {hiddenCount > 0 && (
         <button
           type="button"
-          className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline px-1.5"
+          className="text-muted-foreground hover:text-foreground px-1.5 text-xs underline-offset-2 hover:underline"
           onClick={() => setShowAllMissing(true)}
         >
           +{hiddenCount} more

@@ -65,11 +65,11 @@ export default function LogsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">{t("title")}</h1>
-              <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1.5">
+              <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-sm">
                 {isConnected ? (
-                  <Wifi className="h-3 w-3 text-green-500" />
+                  <Wifi className="text-ok size-3" />
                 ) : (
-                  <WifiOff className="h-3 w-3 text-destructive" />
+                  <WifiOff className="text-critical size-3" />
                 )}
                 {isConnected ? t("live") : t("reconnecting")}
                 {total > 0 && (
@@ -86,15 +86,15 @@ export default function LogsPage() {
                 onClick={handleClear}
                 disabled={total === 0 || clear.isPending}
               >
-                <Trash2 className="h-3.5 w-3.5 mr-1 text-destructive" />
+                <Trash2 className="text-destructive mr-1 size-3.5" />
                 {t("clearAll")}
               </Button>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <div className="relative min-w-64 flex-1">
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
@@ -123,21 +123,21 @@ export default function LogsPage() {
 
           {isLoading && (
             <div className="flex justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <Loader2 className="text-muted-foreground size-5 animate-spin" />
             </div>
           )}
 
           {!isLoading && entries.length === 0 && (
-            <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
+            <div className="text-muted-foreground rounded-lg border p-8 text-center text-sm">
               {t("empty")}
             </div>
           )}
 
           {!isLoading && entries.length > 0 && (
-            <div className="rounded-lg border overflow-hidden">
+            <div className="overflow-hidden rounded-lg border">
               <table className="w-full text-sm">
                 <thead className="bg-background border-b">
-                  <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr className="text-muted-foreground text-left text-xs tracking-wide uppercase">
                     <th className="w-6 px-3 py-2.5" />
                     <th className="w-44 px-3 py-2.5 font-medium">
                       {tCols("time")}

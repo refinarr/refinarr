@@ -30,7 +30,7 @@ export function RetryButton({ logId, title }: Props) {
       onClick={handleRetry}
       disabled={retry.isPending}
     >
-      <RotateCcw className="h-3 w-3 mr-1" /> Retry
+      <RotateCcw className="mr-1 size-3" /> Retry
     </Button>
   );
 }

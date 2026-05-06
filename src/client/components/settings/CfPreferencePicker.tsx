@@ -73,8 +73,8 @@ export function CfPreferencePicker({ instance }: Props) {
   if (loadingCfs) {
     return (
       <Card>
-        <CardContent className="flex items-center gap-2 py-4 text-muted-foreground text-sm">
-          <Loader2 className="h-4 w-4 animate-spin" /> {t("loading")}
+        <CardContent className="text-muted-foreground flex items-center gap-2 py-4 text-sm">
+          <Loader2 className="size-4 animate-spin" /> {t("loading")}
         </CardContent>
       </Card>
     );
@@ -83,7 +83,7 @@ export function CfPreferencePicker({ instance }: Props) {
   if (!available?.length) {
     return (
       <Card>
-        <CardContent className="py-4 text-sm text-muted-foreground">
+        <CardContent className="text-muted-foreground py-4 text-sm">
           {t("empty", { name: instance.name })}
         </CardContent>
       </Card>
@@ -127,7 +127,7 @@ export function CfPreferencePicker({ instance }: Props) {
               />
               <Label
                 htmlFor={`cf-${instance.id}-${cf.id}`}
-                className="text-sm cursor-pointer"
+                className="cursor-pointer text-sm"
               >
                 {cf.name}
               </Label>

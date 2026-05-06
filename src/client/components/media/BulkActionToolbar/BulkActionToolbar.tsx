@@ -47,9 +47,9 @@ export function BulkActionToolbar({
             total: progress.total,
           })}
         </div>
-        <div className="ml-auto h-1 w-24 overflow-hidden rounded bg-muted-foreground/20">
+        <div className="bg-muted-foreground/20 ml-auto h-1 w-24 overflow-hidden rounded-sm">
           <div
-            className="h-full rounded bg-primary transition-all"
+            className="bg-primary h-full rounded-sm transition-all"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -60,7 +60,7 @@ export function BulkActionToolbar({
             onClick={onCancel}
             aria-label={t("cancel")}
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
           </Button>
         )}
       </div>

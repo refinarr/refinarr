@@ -40,11 +40,11 @@ export function SeasonAccordion({
     <AccordionItem value={`season-${season}`}>
       <div className="relative">
         <AccordionTrigger className="px-3 pr-24">
-          <div className="flex w-full items-center justify-between pr-2 gap-2">
+          <div className="flex w-full items-center justify-between gap-2 pr-2">
             <span className="text-sm font-medium">
               {t("season", { season })}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {t("seasonProgress", {
                 affected: affectedCount,
                 total: files.length,
@@ -53,26 +53,26 @@ export function SeasonAccordion({
           </div>
         </AccordionTrigger>
         {affectedCount > 0 && (
-          <div className="absolute right-9 top-1/2 -translate-y-1/2 z-10 flex items-center gap-1">
+          <div className="absolute top-1/2 right-9 z-10 flex -translate-y-1/2 items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               title={t("searchSeasonAria", { season })}
               aria-label={t("searchSeasonAria", { season })}
               onClick={() => onSearch()}
             >
-              <Search className="h-3.5 w-3.5" />
+              <Search className="size-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               title={t("deleteSeasonAria", { season })}
               aria-label={t("deleteSeasonAria", { season })}
               onClick={() => onDelete(false)}
             >
-              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              <Trash2 className="text-destructive size-3.5" />
             </Button>
           </div>
         )}
