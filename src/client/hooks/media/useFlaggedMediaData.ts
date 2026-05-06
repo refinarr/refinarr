@@ -16,7 +16,10 @@ type MediaQueryResult<T> = {
 
 export type FlaggedMediaQueryHook<T extends FlaggedMedia> = (
   instanceId: number,
-  filters: MediaFilters & { scoringMode: ScoringMode },
+  filters: Omit<MediaFilters, "maxScore"> & {
+    maxScore?: number;
+    scoringMode: ScoringMode;
+  },
 ) => MediaQueryResult<T>;
 
 export interface FlaggedMediaData<T extends FlaggedMedia> {
@@ -34,7 +37,10 @@ export interface FlaggedMediaData<T extends FlaggedMedia> {
 export function useFlaggedMediaData<T extends FlaggedMedia>(
   useQuery: FlaggedMediaQueryHook<T>,
   activeInstance: number,
-  filters: MediaFilters & { scoringMode: ScoringMode },
+  filters: Omit<MediaFilters, "maxScore"> & {
+    maxScore?: number;
+    scoringMode: ScoringMode;
+  },
 ): FlaggedMediaData<T> {
   const q = useQuery(activeInstance, filters);
   return {
