@@ -20,6 +20,12 @@ interface Options {
 // html/body overflow lock), falling back to the viewport if main isn't
 // in the DOM yet (tests / SSR).
 //
+// IntersectionObserver only emits entries whose state CHANGED since
+// the last callback — never a full snapshot. We maintain `current`
+// across callbacks so when `b` enters while `a` is still intersecting,
+// `a` (the topmost) wins instead of being clobbered by the partial
+// batch that only contains `b`.
+//
 // Callers own the active-id state. They can suppress feedback during
 // programmatic scroll (e.g. click-driven smooth-scroll) by gating the
 // onChange handler — no internal lock here.
@@ -32,12 +38,27 @@ export function useActiveSection({
     if (ids.length === 0 || typeof window === "undefined") return;
     const margin = `0px 0px -${Math.round((1 - threshold) * 100)}% 0px`;
     const root = document.getElementById("main");
+    const current = new Map<string, number>(); // id → boundingClientRect.top
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible[0]) onChange(visible[0].target.id);
+        for (const e of entries) {
+          const id = (e.target as HTMLElement).id;
+          if (e.isIntersecting) {
+            current.set(id, e.boundingClientRect.top);
+          } else {
+            current.delete(id);
+          }
+        }
+        if (current.size === 0) return;
+        let bestId: string | null = null;
+        let bestTop = Infinity;
+        for (const [id, top] of current) {
+          if (top < bestTop) {
+            bestId = id;
+            bestTop = top;
+          }
+        }
+        if (bestId) onChange(bestId);
       },
       { root, rootMargin: margin, threshold: 0 },
     );

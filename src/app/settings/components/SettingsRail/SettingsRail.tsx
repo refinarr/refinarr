@@ -1,5 +1,6 @@
 "use client";
 import type { ComponentType } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/client/lib/utils";
 
 export interface SettingsRailItem {
@@ -16,9 +17,10 @@ interface Props {
 }
 
 export function SettingsRail({ items, active, onSelect, className }: Props) {
+  const t = useTranslations("settings");
   return (
     <nav
-      aria-label="Settings sections"
+      aria-label={t("navAriaLabel")}
       className={cn("flex w-56 shrink-0 flex-col gap-1 self-start", className)}
     >
       {items.map(({ id, label, icon: Icon }) => {

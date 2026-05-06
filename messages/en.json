@@ -317,7 +317,8 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Manage your refinarr instances, theme, and account.",
+    "subtitle": "Manage your refinarr instances and preferences.",
+    "navAriaLabel": "Settings sections",
     "sections": {
       "general": "General",
       "appearance": "Appearance",

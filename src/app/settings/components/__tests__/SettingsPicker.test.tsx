@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Settings } from "lucide-react";
@@ -13,12 +13,27 @@ const ITEMS: SettingsRailItem[] = [
 ];
 
 describe("SettingsPicker", () => {
+  // Save originals so we can restore them in afterAll. Without this
+  // the shims leak into other tests in the same Vitest worker and can
+  // hide DOM API regressions.
+  const original = {
+    hasPointerCapture: Element.prototype.hasPointerCapture,
+    releasePointerCapture: Element.prototype.releasePointerCapture,
+    scrollIntoView: Element.prototype.scrollIntoView,
+  };
+
   beforeAll(() => {
     // Base UI / Radix-style Select uses pointer-capture APIs that
     // happy-dom doesn't fully implement.
     Element.prototype.hasPointerCapture = () => false;
     Element.prototype.releasePointerCapture = () => {};
     Element.prototype.scrollIntoView = () => {};
+  });
+
+  afterAll(() => {
+    Element.prototype.hasPointerCapture = original.hasPointerCapture;
+    Element.prototype.releasePointerCapture = original.releasePointerCapture;
+    Element.prototype.scrollIntoView = original.scrollIntoView;
   });
 
   it("renders the active section label in the trigger", () => {

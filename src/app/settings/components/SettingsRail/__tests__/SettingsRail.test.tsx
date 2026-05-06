@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { Settings } from "lucide-react";
+import { renderWithProviders } from "@/test/render";
 import { SettingsRail, type SettingsRailItem } from "../SettingsRail";
 
 const ITEMS: SettingsRailItem[] = [
@@ -12,7 +13,9 @@ const ITEMS: SettingsRailItem[] = [
 
 describe("SettingsRail", () => {
   it("renders one button per item with the label", () => {
-    render(<SettingsRail items={ITEMS} active="general" onSelect={() => {}} />);
+    renderWithProviders(
+      <SettingsRail items={ITEMS} active="general" onSelect={() => {}} />,
+    );
     expect(screen.getAllByRole("button")).toHaveLength(3);
     expect(
       screen.getByRole("button", { name: /general/i }),
@@ -26,7 +29,7 @@ describe("SettingsRail", () => {
   });
 
   it("marks the active item with aria-current=true", () => {
-    render(
+    renderWithProviders(
       <SettingsRail items={ITEMS} active="appearance" onSelect={() => {}} />,
     );
     const active = screen.getByRole("button", { name: /appearance/i });
@@ -37,7 +40,9 @@ describe("SettingsRail", () => {
 
   it("calls onSelect with the clicked item id", () => {
     const onSelect = vi.fn();
-    render(<SettingsRail items={ITEMS} active="general" onSelect={onSelect} />);
+    renderWithProviders(
+      <SettingsRail items={ITEMS} active="general" onSelect={onSelect} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: /instances/i }));
     expect(onSelect).toHaveBeenCalledWith("instances");
   });

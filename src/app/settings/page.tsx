@@ -138,7 +138,7 @@ export default function SettingsPage() {
   // overscroll inside <main> can't drag it. The picker is mobile-only;
   // desktop uses the SettingsRail beside the content.
   const pageHeader = (
-    <div className="space-y-3 px-4 pt-4 pb-3 md:px-6 md:pt-6 md:pb-4">
+    <div className="space-y-subgroup p-header">
       <header>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground mt-1 text-sm">{t("subtitle")}</p>
