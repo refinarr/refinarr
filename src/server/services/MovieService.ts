@@ -24,7 +24,16 @@ import {
 import { badRequest } from "@/server/lib/api-errors";
 import type { RetryActionOptions } from "./media-services";
 
-export class MovieService extends MediaService {
+export class MovieService extends MediaService<FlaggedMovie> {
+  protected readonly cacheNamespace = "movies";
+
+  protected getFlaggedForWarm(
+    instanceId: number,
+    query: MediaQuery,
+  ): Promise<{ items: FlaggedMovie[]; total: number }> {
+    return this.getFlaggedMovies(instanceId, query);
+  }
+
   async getFlaggedMovies(
     instanceId: number,
     query: MediaQuery,
@@ -33,7 +42,7 @@ export class MovieService extends MediaService {
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
     const mode = instance.scoringMode;
-    const cacheKey = `movies:${instanceId}:${mode}`;
+    const cacheKey = this.flaggedCacheKey(instanceId, mode);
     const cached = await this.readWithSwr<{ flagged: FlaggedMovie[] }>({
       cacheKey,
       instanceId: instance.id,
@@ -198,28 +207,6 @@ export class MovieService extends MediaService {
           sizeOnDisk: file?.size ?? 0,
         };
       });
-  }
-
-  // Returns the flagged-count from cache if warm, or null if cold. Used by
-  // the dashboard summary route to avoid triggering a multi-second upstream
-  // build inline. Caller is responsible for kicking off a background warm
-  // when null is returned.
-  getCachedFlaggedTotal(instanceId: number, mode: ScoringMode): number | null {
-    return this.readCachedFlaggedTotal(`movies:${instanceId}:${mode}`);
-  }
-
-  // Uniform name across MovieService / SeriesService for use via
-  // mediaServiceFor(arrType) in routes that don't care which media type.
-  // Warms the flagged-media cache by issuing a minimal getFlaggedMovies
-  // call. Errors propagate to the caller (the dashboard route swallows
-  // them since this is fire-and-forget).
-  warmFlaggedCache(instanceId: number): Promise<unknown> {
-    return this.getFlaggedMovies(instanceId, {
-      page: 1,
-      limit: 1,
-      sortBy: "score",
-      order: "asc",
-    });
   }
 
   // Re-runs a stored ActionLog payload. Movies-specific fields:
