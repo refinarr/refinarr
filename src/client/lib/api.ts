@@ -44,8 +44,12 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       },
     });
   } catch (err) {
+    // Network failure — no response, so no traceId. Capture the stack so
+    // the AppLog row at least points at the call site instead of just
+    // "Failed to fetch /something".
     const message = err instanceof Error ? err.message : "Network error";
-    reportClientError({ message, path, method });
+    const stack = err instanceof Error ? err.stack : undefined;
+    reportClientError({ message, path, method, status: 0, stack });
     throw new ApiClientError({ status: 0, message, path, method });
   }
 
@@ -81,7 +85,8 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     return (await res.json()) as T;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid API response";
-    reportClientError({ message, path, method, status: res.status, traceId });
+    const stack = err instanceof Error ? err.stack : undefined;
+    reportClientError({ message, path, method, status: res.status, traceId, stack });
     throw new ApiClientError({
       status: res.status,
       message: "Invalid API response",
