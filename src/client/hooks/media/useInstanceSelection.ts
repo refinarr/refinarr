@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useInstances } from "../data/useInstances";
 import type { ArrType, Instance } from "@/shared/types/models";
+import { useInstances } from "../data/useInstances";
 
 export function parseUrlInstance(raw: string | null): number {
   const n = Number(raw ?? "0");

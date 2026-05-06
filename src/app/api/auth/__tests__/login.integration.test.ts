@@ -1,9 +1,9 @@
 import { describe, test, expect, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { POST as login } from "@/app/api/auth/login/route";
-import { POST as setup } from "@/app/api/auth/setup/route";
 import { prisma } from "@/server/lib/db";
 import { SESSION_COOKIE } from "@/server/lib/auth";
+import { POST as login } from "@/app/api/auth/login/route";
+import { POST as setup } from "@/app/api/auth/setup/route";
 
 function loginReq(body: unknown, ip = "1.1.1.1"): NextRequest {
   return new NextRequest("http://localhost/api/auth/login", {

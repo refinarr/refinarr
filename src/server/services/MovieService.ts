@@ -1,12 +1,3 @@
-import type {
-  FlaggedMovie,
-  ActionLog,
-  MediaQuery,
-  ScoringMode,
-} from "@/shared/types/models";
-import { movieRetryPayloadSchema } from "@/shared/types/schemas";
-import { isProfileMode } from "@/shared/scoring-mode";
-import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
@@ -14,6 +5,7 @@ import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { RadarrClient } from "@/server/clients/RadarrClient";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
+import { badRequest } from "@/server/lib/api-errors";
 import {
   isMissingWantedFormats,
   getMissingFormats,
@@ -21,7 +13,15 @@ import {
   isBelowProfileScore,
   scoreProfileCoverage,
 } from "@/shared/scoring";
-import { badRequest } from "@/server/lib/api-errors";
+import { isProfileMode } from "@/shared/scoring-mode";
+import { movieRetryPayloadSchema } from "@/shared/types/schemas";
+import type {
+  FlaggedMovie,
+  ActionLog,
+  MediaQuery,
+  ScoringMode,
+} from "@/shared/types/models";
+import { MediaService } from "./MediaService";
 import type { RetryActionOptions } from "./media-services";
 
 export class MovieService extends MediaService<FlaggedMovie> {

@@ -1,5 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -9,7 +10,6 @@ import {
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
 import { FormField } from "@/client/components/ui/form-field";
-import { Loader2 } from "lucide-react";
 import { useMe } from "@/client/hooks/data/useMe";
 import { usePasswordChangeForm } from "./usePasswordChangeForm";
 

@@ -1,5 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -12,7 +13,6 @@ import {
   useInstances,
   useUpdateInstance,
 } from "@/client/hooks/data/useInstances";
-import { toast } from "sonner";
 import { ALL_SCORING_MODES, DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
 import type { ScoringMode } from "@/shared/types/models";
 

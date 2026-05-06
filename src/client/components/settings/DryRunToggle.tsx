@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { Switch } from "@/client/components/ui/switch";
 import { Label } from "@/client/components/ui/label";
 import { Badge } from "@/client/components/ui/badge";
@@ -15,8 +17,6 @@ import {
 import { Button } from "@/client/components/ui/button";
 import { useConfig, useUpdateConfig } from "@/client/hooks/data/useConfig";
 import { cn } from "@/client/lib/utils";
-import { toast } from "sonner";
-import { AlertTriangle, ShieldCheck } from "lucide-react";
 
 interface Props {
   // When true, render inside a prominent Card with state-aware styling

@@ -23,6 +23,34 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      // Enforce the project's layered import order:
+      //   builtin → external → @/server → @/client → @/shared → relative.
+      // --fix sorts automatically so neither the human nor the reviewer
+      // has to think about it. `eslint-plugin-import` ships with
+      // eslint-config-next.
+      "import/order": [
+        "warn",
+        {
+          groups: [
+            "builtin",
+            "external",
+            "internal",
+            ["parent", "sibling", "index"],
+          ],
+          pathGroups: [
+            { pattern: "@/server/**", group: "internal", position: "before" },
+            { pattern: "@/client/**", group: "internal", position: "before" },
+            { pattern: "@/shared/**", group: "internal", position: "before" },
+            { pattern: "@/**", group: "internal" },
+          ],
+          pathGroupsExcludedImportTypes: ["builtin", "external"],
+          // "ignore" rather than "never" because test files often have a
+          // blank line between their last import and a `vi.hoisted` setup
+          // that the rule miscategorizes as a group break.
+          "newlines-between": "ignore",
+          alphabetize: { order: "ignore" },
+        },
+      ],
       // Complexity
       "sonarjs/cognitive-complexity": ["warn", 15],
       "sonarjs/no-nested-conditional": "warn",

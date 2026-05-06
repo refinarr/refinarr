@@ -1,7 +1,7 @@
+import type { LogLevel } from "@/shared/types/models";
 import { logger } from "./logger";
 import { redactContext } from "./redact";
 import { eventBus } from "./event-bus";
-import type { LogLevel } from "@/shared/types/models";
 
 interface LogFields {
   source?: string;

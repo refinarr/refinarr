@@ -1,10 +1,10 @@
 import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
-import { GET, POST } from "@/app/api/instances/route";
-import { GET as getOne, PUT, DELETE } from "@/app/api/instances/[id]/route";
 import { prisma } from "@/server/lib/db";
 import { isEncrypted } from "@/server/lib/crypto";
 import { dataCache } from "@/server/lib/DataCache";
+import { GET as getOne, PUT, DELETE } from "@/app/api/instances/[id]/route";
+import { GET, POST } from "@/app/api/instances/route";
 
 const ctxFor = (id: number) => ({
   params: Promise.resolve({ id: String(id) }),

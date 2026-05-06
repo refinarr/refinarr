@@ -1,11 +1,11 @@
+import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/server/lib/log-sources";
 import type {
   SearchQueueAction,
   SearchQueueEntry,
   SearchQueueStatus,
 } from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
-import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 
 const _retentionEnv = parseInt(
   process.env.SEARCH_QUEUE_RETENTION_CAP ?? "",

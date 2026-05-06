@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
-import { logger } from "./logger";
 import type { AppLogEntry } from "@/shared/types/models";
+import { logger } from "./logger";
 
 /**
  * Server-pushed events for the SSE channel. Keep this list small —

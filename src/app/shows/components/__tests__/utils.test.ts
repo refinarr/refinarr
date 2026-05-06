@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest";
-import { groupBySeason, filename } from "@/app/shows/components/utils";
 import type { EpisodeFileEntry } from "@/shared/types/models";
+import { groupBySeason, filename } from "@/app/shows/components/utils";
 
 function ep(
   id: number,

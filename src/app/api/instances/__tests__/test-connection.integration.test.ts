@@ -1,10 +1,10 @@
 import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
+import { dataCache } from "@/server/lib/DataCache";
 import { POST as createInstance } from "@/app/api/instances/route";
 import { POST as testConnection } from "@/app/api/instances/[id]/test/route";
 import { POST as refresh } from "@/app/api/instances/[id]/refresh/route";
 import { mswServer, radarrHandlers } from "@/test/msw";
-import { dataCache } from "@/server/lib/DataCache";
 
 const baseUrl = "http://192.168.1.10:7878";
 const valid = {

@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { describe, it, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import messages from "../../../../../messages/en.json";
 import type { CfPreference, QualityProfile } from "@/shared/types/models";
+import messages from "../../../../../messages/en.json";
 import { useFilterChips } from "../useFilterChips";
 import { useMediaFilters, type MediaFiltersResult } from "../useMediaFilters";
 

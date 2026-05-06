@@ -1,9 +1,9 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { Edit2, Trash2, Plug, Hourglass } from "lucide-react";
 import { Card, CardContent } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
-import { Edit2, Trash2, Plug, Hourglass } from "lucide-react";
 import {
   useDeleteInstance,
   useTestConnection,

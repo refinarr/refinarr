@@ -1,8 +1,8 @@
 import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
+import { prisma } from "@/server/lib/db";
 import { GET, POST } from "@/app/api/ignore/route";
 import { DELETE } from "@/app/api/ignore/[id]/route";
-import { prisma } from "@/server/lib/db";
 
 const ctxNone = { params: Promise.resolve({}) };
 const ctxFor = (id: number) => ({

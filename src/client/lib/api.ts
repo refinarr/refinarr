@@ -1,5 +1,5 @@
-import { reportClientError } from "./client-error-logger";
 import type { ApiErrorResponse } from "@/shared/types/api";
+import { reportClientError } from "./client-error-logger";
 
 interface ApiClientErrorOptions {
   status: number;

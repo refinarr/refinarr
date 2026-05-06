@@ -28,6 +28,7 @@ import {
   CommandList,
 } from "@/client/components/ui/command";
 import { useInstances } from "@/client/hooks/data/useInstances";
+import { useConfig } from "@/client/hooks/data/useConfig";
 import type { ArrType } from "@/shared/types/models";
 import { ARR_LIBRARY_ROUTE } from "@/shared/arr-type";
 
@@ -45,7 +46,6 @@ const ARR_GROUPS: Record<
   radarr: { headingKey: "groups.radarrInstance", Icon: Film },
   sonarr: { headingKey: "groups.sonarrInstance", Icon: Tv2 },
 };
-import { useConfig } from "@/client/hooks/data/useConfig";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);

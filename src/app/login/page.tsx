@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useTranslations } from "next-intl";
+import { Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -14,7 +15,6 @@ import { Input } from "@/client/components/ui/input";
 import { Button } from "@/client/components/ui/button";
 import { FormField } from "@/client/components/ui/form-field";
 import { api, ApiClientError } from "@/client/lib/api";
-import { Loader2 } from "lucide-react";
 
 function LoginForm() {
   const t = useTranslations("auth.login");

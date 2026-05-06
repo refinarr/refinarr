@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { instanceService } from "@/server/services/InstanceService";
 import { dataCache } from "@/server/lib/DataCache";
-import { instanceUpdateSchema } from "@/shared/types/schemas";
 import { notFound, parseJson, positiveInt } from "@/server/lib/api-errors";
+import { instanceUpdateSchema } from "@/shared/types/schemas";
 import type { Instance } from "@/shared/types/models";
 import type { InstanceListItem } from "@/shared/types/api";
 

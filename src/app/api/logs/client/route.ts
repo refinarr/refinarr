@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { clientErrorReportSchema } from "@/shared/types/schemas";
 import { parseJson, tooManyRequests } from "@/server/lib/api-errors";
 import { appLogger } from "@/server/lib/app-logger";
 import { createApiHandler } from "@/server/lib/handler";
 import { LogSource } from "@/server/lib/log-sources";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { redactString } from "@/server/lib/redact";
+import { clientErrorReportSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
   const { allowed, retryAfterMs } = checkRateLimit(

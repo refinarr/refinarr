@@ -1,6 +1,7 @@
 "use client";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { Search, ChevronDown, Check } from "lucide-react";
 import { Input } from "@/client/components/ui/input";
 import { Slider } from "@/client/components/ui/slider";
 import {
@@ -16,13 +17,12 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/client/components/ui/popover";
-import { Search, ChevronDown, Check } from "lucide-react";
 import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
 import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { cn } from "@/client/lib/utils";
+import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 import { isManualMode } from "@/shared/scoring-mode";
 import type { ArrType, ScoringMode } from "@/shared/types/models";
-import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 
 interface Props {
   arrType: ArrType;

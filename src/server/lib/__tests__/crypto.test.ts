@@ -1,8 +1,8 @@
-import { describe, test, expect, vi, afterEach } from "vitest";
 import { randomBytes } from "crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
+import { describe, test, expect, vi, afterEach } from "vitest";
 
 // ENCRYPTION_KEY must be set before the crypto module is imported for the
 // first time in this worker. global-setup.ts already sets it, but we ensure

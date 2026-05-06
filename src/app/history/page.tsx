@@ -2,6 +2,7 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Trash2 } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { HistoryTable } from "@/client/components/history/HistoryTable";
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
@@ -16,7 +17,6 @@ import {
 } from "@/client/components/ui/select";
 import { Label } from "@/client/components/ui/label";
 import { Button } from "@/client/components/ui/button";
-import { Trash2 } from "lucide-react";
 import { useHistory, useClearHistory } from "@/client/hooks/data/useHistory";
 import { useInstances } from "@/client/hooks/data/useInstances";
 import { useInfiniteScroll } from "@/client/hooks/ui/useInfiniteScroll";

@@ -1,5 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { EyeOff } from "lucide-react";
+import { Button } from "@/client/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -7,13 +9,9 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/client/components/ui/sheet";
-import { Button } from "@/client/components/ui/button";
-import { EyeOff } from "lucide-react";
 import { Accordion } from "@/client/components/ui/accordion";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
-import { SeasonAccordion } from "@/app/shows/components/SeasonAccordion";
-import { groupBySeason, filename } from "@/app/shows/components/utils";
 import { getSeverity } from "@/client/lib/severity";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import { SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
@@ -22,6 +20,8 @@ import type {
   QualityProfile,
   ScoringMode,
 } from "@/shared/types/models";
+import { groupBySeason, filename } from "@/app/shows/components/utils";
+import { SeasonAccordion } from "@/app/shows/components/SeasonAccordion";
 
 interface Props {
   series: FlaggedSeries | null;

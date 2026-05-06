@@ -1,8 +1,8 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Badge } from "@/client/components/ui/badge";
 import { Search, Trash2, EyeOff, Activity } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { Badge } from "@/client/components/ui/badge";
 import type { ActionType } from "@/shared/types/models";
 
 // "delete_blacklist" is a legacy payload-internal label that may still

@@ -1,5 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { Search, EyeOff, Trash2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -8,7 +9,6 @@ import {
   SheetFooter,
 } from "@/client/components/ui/sheet";
 import { Button } from "@/client/components/ui/button";
-import { Search, EyeOff, Trash2 } from "lucide-react";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { CfScoreList } from "@/client/components/common/CfScoreList";
 import { SeverityDot } from "@/client/components/common/SeverityDot";

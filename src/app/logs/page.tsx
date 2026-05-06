@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Loader2, Trash2, Search, Wifi, WifiOff } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { AppLogRow } from "@/client/components/logs/AppLogRow";
@@ -18,7 +19,6 @@ import { useDebouncedValue } from "@/client/hooks/ui/useDebouncedValue";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import { withToast } from "@/client/lib/with-toast";
 import type { LogLevel } from "@/shared/types/models";
-import { Loader2, Trash2, Search, Wifi, WifiOff } from "lucide-react";
 
 const ALL = "__all__";
 

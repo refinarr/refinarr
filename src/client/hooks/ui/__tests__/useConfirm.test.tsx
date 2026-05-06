@@ -2,8 +2,8 @@
 import { describe, test, expect } from "vitest";
 import { useEffect } from "react";
 import userEvent from "@testing-library/user-event";
-import { useConfirm } from "../useConfirm";
 import { renderWithProviders, screen } from "@/test/render";
+import { useConfirm } from "../useConfirm";
 
 interface HostProps {
   onResolve: (v: boolean) => void;

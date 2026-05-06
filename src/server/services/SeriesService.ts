@@ -1,13 +1,3 @@
-import type {
-  FlaggedSeries,
-  EpisodeFileEntry,
-  ActionLog,
-  MediaQuery,
-  ScoringMode,
-} from "@/shared/types/models";
-import { seriesRetryPayloadSchema } from "@/shared/types/schemas";
-import { isProfileMode } from "@/shared/scoring-mode";
-import { MediaService } from "./MediaService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
@@ -15,6 +5,7 @@ import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { SonarrClient } from "@/server/clients/SonarrClient";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
+import { badRequest } from "@/server/lib/api-errors";
 import {
   isMissingWantedFormats,
   getMissingFormats,
@@ -22,7 +13,16 @@ import {
   isBelowProfileScore,
   scoreProfileCoverage,
 } from "@/shared/scoring";
-import { badRequest } from "@/server/lib/api-errors";
+import { isProfileMode } from "@/shared/scoring-mode";
+import { seriesRetryPayloadSchema } from "@/shared/types/schemas";
+import type {
+  FlaggedSeries,
+  EpisodeFileEntry,
+  ActionLog,
+  MediaQuery,
+  ScoringMode,
+} from "@/shared/types/models";
+import { MediaService } from "./MediaService";
 import type { RetryActionOptions } from "./media-services";
 
 export class SeriesService extends MediaService<FlaggedSeries> {

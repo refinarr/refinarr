@@ -1,13 +1,13 @@
-import type {
-  SearchQueueAction,
-  SearchQueueEntry,
-} from "@/shared/types/models";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { searchWorker } from "@/server/lib/search-worker";
 import { eventBus } from "@/server/lib/event-bus";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
+import type {
+  SearchQueueAction,
+  SearchQueueEntry,
+} from "@/shared/types/models";
 
 interface EnqueueInput {
   instanceId: number;

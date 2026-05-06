@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Plus } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { AddInstanceDialog } from "@/client/components/settings/AddInstanceDialog";
 import { InstanceCard } from "@/client/components/settings/InstanceCard";
@@ -9,14 +10,13 @@ import { ApiKeyCard } from "@/client/components/settings/ApiKeyCard";
 import { PasswordChangeCard } from "@/client/components/settings/PasswordChangeCard";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { AppearanceSelector } from "@/client/components/settings/AppearanceSelector";
-import { isManualMode } from "@/shared/scoring-mode";
 import { CfPreferencePicker } from "@/client/components/settings/CfPreferencePicker";
 import { SettingsCardSkeleton } from "@/client/components/states/SettingsCardSkeleton";
 import { Button } from "@/client/components/ui/button";
 import { Separator } from "@/client/components/ui/separator";
 import { useInstances } from "@/client/hooks/data/useInstances";
+import { isManualMode } from "@/shared/scoring-mode";
 import type { Instance } from "@/shared/types/models";
-import { Plus } from "lucide-react";
 
 const KNOWN_ANCHORS = new Set(["dry-run", "appearance"]);
 

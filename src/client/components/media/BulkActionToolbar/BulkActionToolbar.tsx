@@ -1,7 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Button } from "@/client/components/ui/button";
 import { Search, Trash2, EyeOff, X } from "lucide-react";
+import { Button } from "@/client/components/ui/button";
 import type { BulkProgress } from "./types";
 
 interface Props {

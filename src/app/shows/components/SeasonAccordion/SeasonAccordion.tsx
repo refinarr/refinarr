@@ -1,13 +1,13 @@
 "use client";
 import { useTranslations } from "next-intl";
-import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
+import { Search, Trash2 } from "lucide-react";
 import {
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
 } from "@/client/components/ui/accordion";
 import { Button } from "@/client/components/ui/button";
-import { Search, Trash2 } from "lucide-react";
+import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
 import { EpisodeFileRow } from "../EpisodeFileRow";
 
 interface Props {

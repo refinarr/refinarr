@@ -6,7 +6,6 @@ import {
   getSession,
   SESSION_COOKIE,
 } from "@/server/lib/auth";
-import { passwordChangeSchema } from "@/shared/types/schemas";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
@@ -17,6 +16,7 @@ import {
   unauthorized,
 } from "@/server/lib/api-errors";
 import { createApiHandler } from "@/server/lib/handler";
+import { passwordChangeSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
   const { allowed, retryAfterMs } = checkRateLimit(

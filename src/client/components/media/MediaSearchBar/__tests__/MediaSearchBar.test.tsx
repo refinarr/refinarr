@@ -1,8 +1,12 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 import { renderWithProviders, screen } from "@/test/render";
+import { MediaSearchBar } from "../MediaSearchBar";
 
+// vi.mock is hoisted by vitest, so position relative to imports doesn't
+// affect execution order.
 vi.mock("@/client/hooks/data/useQualityProfiles", () => ({
   useQualityProfiles: () => ({ data: [] }),
 }));
@@ -10,9 +14,6 @@ vi.mock("@/client/hooks/data/useQualityProfiles", () => ({
 vi.mock("@/client/hooks/data/usePreferences", () => ({
   usePreferences: () => ({ data: [] }),
 }));
-
-import { MediaSearchBar } from "../MediaSearchBar";
-import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 
 const baseFilters: MediaFilters = {
   sortBy: "score",

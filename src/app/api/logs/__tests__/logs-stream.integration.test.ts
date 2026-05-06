@@ -1,8 +1,8 @@
 import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
-import { GET } from "@/app/api/logs/stream/route";
 import { eventBus } from "@/server/lib/event-bus";
 import type { AppLogEntry } from "@/shared/types/models";
+import { GET } from "@/app/api/logs/stream/route";
 
 interface ParsedFrame {
   id: number | null;
