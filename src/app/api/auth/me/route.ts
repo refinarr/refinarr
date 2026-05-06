@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createApiHandler } from "@/server/lib/handler";
+import { unauthorized } from "@/server/lib/api-errors";
 import { prisma } from "@/server/lib/db";
 import { getSession, SESSION_COOKIE } from "@/server/lib/auth";
 
-export async function GET(req: NextRequest) {
+export const GET = createApiHandler(async (req: NextRequest) => {
   // Reverse-proxy trust mode: the upstream auth identifies the user.
   if (process.env.TRUST_PROXY_AUTH === "true") {
     const headerName = process.env.PROXY_USER_HEADER ?? "X-Remote-User";
@@ -13,13 +15,10 @@ export async function GET(req: NextRequest) {
   }
 
   const sessionId = req.cookies.get(SESSION_COOKIE)?.value;
-  if (!sessionId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!sessionId) throw unauthorized();
   const session = await getSession(sessionId);
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) throw unauthorized();
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
-  if (!user)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) throw unauthorized();
   return NextResponse.json({ username: user.username, source: "session" });
-}
+});

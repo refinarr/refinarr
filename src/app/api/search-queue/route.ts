@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
+import { positiveInt } from "@/server/lib/api-errors";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 
 export const GET = createApiHandler(async (req: NextRequest) => {
@@ -11,21 +12,17 @@ export const GET = createApiHandler(async (req: NextRequest) => {
     const items = await searchQueueService.listAllPending();
     return NextResponse.json({ items });
   }
-  const instanceId = Number(instanceIdRaw);
-  if (!Number.isInteger(instanceId) || instanceId <= 0) {
-    return NextResponse.json({ error: "Invalid instanceId" }, { status: 400 });
-  }
+  const instanceId = positiveInt(instanceIdRaw, "instanceId");
   const status = await searchQueueService.getStatus(instanceId);
   const items = await searchQueueService.listPending(instanceId);
   return NextResponse.json({ ...status, items });
 });
 
 export const DELETE = createApiHandler(async (req: NextRequest) => {
-  const instanceIdRaw = req.nextUrl.searchParams.get("instanceId");
-  const instanceId = Number(instanceIdRaw);
-  if (!Number.isInteger(instanceId) || instanceId <= 0) {
-    return NextResponse.json({ error: "Invalid instanceId" }, { status: 400 });
-  }
+  const instanceId = positiveInt(
+    req.nextUrl.searchParams.get("instanceId") ?? undefined,
+    "instanceId",
+  );
   const removed = await searchQueueService.clearPending(instanceId);
   return NextResponse.json({ removed });
 });
