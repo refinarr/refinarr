@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { Switch } from "@/client/components/ui/switch";
 import { Label } from "@/client/components/ui/label";
@@ -16,6 +15,7 @@ import {
 } from "@/client/components/ui/dialog";
 import { Button } from "@/client/components/ui/button";
 import { useConfig, useUpdateConfig } from "@/client/hooks/data/useConfig";
+import { withToast } from "@/client/lib/with-toast";
 import { cn } from "@/client/lib/utils";
 
 interface Props {
@@ -33,19 +33,21 @@ export function DryRunToggle({ prominent = false }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const isDryRun = config?.dryRun ?? true;
+  const updateDryRun = (dryRun: boolean) =>
+    withToast(updateConfig, {
+      success: tToast(dryRun ? "enabled" : "disabled"),
+    })({ dryRun: String(dryRun) });
 
   const handleToggle = (checked: boolean) => {
     if (!checked) {
       setConfirmOpen(true);
     } else {
-      updateConfig.mutate({ dryRun: "true" });
-      toast.info(tToast("enabled"));
+      updateDryRun(true);
     }
   };
 
   const goLive = async () => {
-    await updateConfig.mutateAsync({ dryRun: "false" });
-    toast.warning(tToast("disabled"));
+    await updateDryRun(false);
     setConfirmOpen(false);
   };
 

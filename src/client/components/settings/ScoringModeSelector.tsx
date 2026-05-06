@@ -1,6 +1,5 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -13,6 +12,7 @@ import {
   useInstances,
   useUpdateInstance,
 } from "@/client/hooks/data/useInstances";
+import { withToast } from "@/client/lib/with-toast";
 import { ALL_SCORING_MODES, DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
 import type { ScoringMode } from "@/shared/types/models";
 
@@ -32,15 +32,17 @@ export function ScoringModeSelector({ instanceId, compact = false }: Props) {
     DEFAULT_SCORING_MODE) as ScoringMode;
 
   const handleChange = async (value: string) => {
-    await updateInstance.mutateAsync({
-      id: instanceId,
-      data: { scoringMode: value as ScoringMode },
-    });
-    toast.success(
-      tToast("scoringMode", {
-        mode: t(`scoringModeOptions.${value as ScoringMode}`),
+    const scoringMode = value as ScoringMode;
+    const updateScoringMode = withToast(updateInstance, {
+      success: tToast("scoringMode", {
+        mode: t(`scoringModeOptions.${scoringMode}`),
       }),
-    );
+    });
+
+    await updateScoringMode({
+      id: instanceId,
+      data: { scoringMode },
+    });
   };
 
   const select = (

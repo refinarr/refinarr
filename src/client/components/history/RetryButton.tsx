@@ -1,8 +1,9 @@
 "use client";
 import { RotateCcw } from "lucide-react";
-import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/client/components/ui/button";
 import { useRetryAction } from "@/client/hooks/data/useRetryAction";
+import { withToast } from "@/client/lib/with-toast";
 
 interface Props {
   logId: number;
@@ -10,16 +11,16 @@ interface Props {
 }
 
 export function RetryButton({ logId, title }: Props) {
+  const tRetry = useTranslations("toast.retry");
   const retry = useRetryAction();
+  const retryWithToast = withToast(retry, {
+    loading: tRetry("running", { title }),
+    success: tRetry("succeeded"),
+    error: tRetry("failed"),
+  });
 
   const handleRetry = async () => {
-    const promise = retry.mutateAsync(logId);
-    toast.promise(promise, {
-      loading: `Retrying ${title}…`,
-      success: "Done",
-      error: "Failed again",
-    });
-    await promise;
+    await retryWithToast(logId);
   };
 
   return (

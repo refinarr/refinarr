@@ -27,15 +27,14 @@ describe("withToast", () => {
     const mutation = makeMutation<string, { id: number }>(
       async ({ id }) => `done-${id}`,
     );
-    // Cast: full UseMutationResult shape isn't needed for this helper.
-    const run = withToast(mutation as never, { success: "ok" });
+    const run = withToast(mutation, { success: "ok" });
     await expect(run({ id: 42 })).resolves.toBe("done-42");
     expect(mutation.mutateAsync).toHaveBeenCalledWith({ id: 42 });
   });
 
   test("hands the promise to toast.promise with success/loading/error labels", async () => {
     const mutation = makeMutation(async () => "ok");
-    const run = withToast(mutation as never, {
+    const run = withToast(mutation, {
       loading: "Saving…",
       success: "Saved",
     });
@@ -43,13 +42,13 @@ describe("withToast", () => {
     expect(promiseSpy).toHaveBeenCalledTimes(1);
     const [, opts] = promiseSpy.mock.calls[0];
     expect(opts.loading).toBe("Saving…");
-    expect(opts.success).toBe("Saved");
+    expect(opts.success("ok")).toBe("Saved");
     expect(typeof opts.error).toBe("function");
   });
 
   test("uses default loading copy when not provided", async () => {
     const mutation = makeMutation(async () => "ok");
-    const run = withToast(mutation as never, { success: "Saved" });
+    const run = withToast(mutation, { success: "Saved" });
     await run(undefined);
     const [, opts] = promiseSpy.mock.calls[0];
     expect(opts.loading).toBe("Loading…");
@@ -57,7 +56,7 @@ describe("withToast", () => {
 
   test("error formatter prefers the explicit error message when provided", async () => {
     const mutation = makeMutation(async () => "ok");
-    const run = withToast(mutation as never, {
+    const run = withToast(mutation, {
       success: "ok",
       error: "Custom failure",
     });
@@ -68,7 +67,7 @@ describe("withToast", () => {
 
   test("error formatter falls back to err.message when no explicit error label", async () => {
     const mutation = makeMutation(async () => "ok");
-    const run = withToast(mutation as never, { success: "ok" });
+    const run = withToast(mutation, { success: "ok" });
     await run(undefined);
     const [, opts] = promiseSpy.mock.calls[0];
     expect(opts.error(new Error("Network down"))).toBe("Network down");
@@ -76,9 +75,33 @@ describe("withToast", () => {
 
   test("error formatter uses generic copy when err is not an Error", async () => {
     const mutation = makeMutation(async () => "ok");
-    const run = withToast(mutation as never, { success: "ok" });
+    const run = withToast(mutation, { success: "ok" });
     await run(undefined);
     const [, opts] = promiseSpy.mock.calls[0];
     expect(opts.error("string-error")).toMatch(/something went wrong/i);
+  });
+
+  test("success formatter receives resolved data and variables", async () => {
+    const mutation = makeMutation<string, { id: number }>(
+      async ({ id }) => `done-${id}`,
+    );
+    const run = withToast(mutation, {
+      success: (data, vars) => `${data}:${vars.id}`,
+    });
+    await run({ id: 7 });
+    const [, opts] = promiseSpy.mock.calls[0];
+    expect(opts.success("done-7")).toBe("done-7:7");
+  });
+
+  test("error formatter receives error and variables", async () => {
+    const mutation = makeMutation<string, { id: number }>(async () => "unused");
+    const run = withToast(mutation, {
+      success: "ok",
+      error: (err, vars) =>
+        err instanceof Error ? `${err.message}:${vars.id}` : "unknown",
+    });
+    await run({ id: 9 });
+    const [, opts] = promiseSpy.mock.calls[0];
+    expect(opts.error(new Error("failed"))).toBe("failed:9");
   });
 });
