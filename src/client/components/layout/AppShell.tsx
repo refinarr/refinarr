@@ -17,9 +17,14 @@ import { TopHeader } from "./TopHeader";
 
 interface Props {
   children: ReactNode;
+  // Renders between TopHeader and main on mobile only. Use this for
+  // page-level mobile sticky headers (e.g. Settings picker) — placing
+  // them at the flex layout level instead of inside <main> means iOS
+  // rubber-band overscroll inside <main> can't drag them around.
+  mobileHeader?: ReactNode;
 }
 
-export function AppShell({ children }: Props) {
+export function AppShell({ children, mobileHeader }: Props) {
   const tA11y = useTranslations("a11y");
   const tNav = useTranslations("nav");
   // Desktop sidebar state — persisted, slides the inline rail in/out.
@@ -47,7 +52,7 @@ export function AppShell({ children }: Props) {
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden">
       <a
         href="#main"
         className="focus:bg-primary focus:text-primary-foreground focus:ring-ring sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:ring-2 focus:ring-offset-2 focus:outline-none"
@@ -55,6 +60,8 @@ export function AppShell({ children }: Props) {
         {tA11y("skipToContent")}
       </a>
       <TopHeader onToggleSidebar={handleToggle} />
+
+      {mobileHeader && <div className="md:hidden">{mobileHeader}</div>}
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar open={desktopSidebar.open} />

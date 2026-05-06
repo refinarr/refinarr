@@ -88,7 +88,7 @@ export default async function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: FOUC_SCRIPT }} />
       </head>
-      <body className="bg-background text-foreground min-h-full">
+      <body className="bg-background text-foreground">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>
           <Toaster richColors />

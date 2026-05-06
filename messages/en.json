@@ -317,6 +317,14 @@
   },
   "settings": {
     "title": "Settings",
+    "subtitle": "Manage your refinarr instances, theme, and account.",
+    "sections": {
+      "general": "General",
+      "appearance": "Appearance",
+      "instances": "Instances",
+      "apiAccess": "API Access",
+      "account": "Account"
+    },
     "instances": "Instances",
     "addInstance": "Add Instance",
     "scoringMode": "Scoring Mode",
