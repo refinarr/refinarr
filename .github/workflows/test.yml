@@ -2,9 +2,9 @@ name: test
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,11 +23,8 @@ jobs:
           node-version: 22
           cache: yarn
 
-      - name: Install dependencies
+      - name: Install dependencies (postinstall runs prisma generate)
         run: yarn install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: yarn prisma generate
 
       - name: Lint
         run: yarn lint
@@ -58,11 +55,8 @@ jobs:
           node-version: 22
           cache: yarn
 
-      - name: Install dependencies
+      - name: Install dependencies (postinstall runs prisma generate)
         run: yarn install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: yarn prisma generate
 
       - name: Install Playwright browsers
         run: yarn playwright install --with-deps chromium

@@ -142,6 +142,16 @@ const eslintConfig = defineConfig([
       "sonarjs/cognitive-complexity": "off",
     },
   },
+  // Theme surface vars are intentionally repeated oklch literals — that's
+  // the whole point of the file (one place where every CSS-var value lives).
+  // The duplicate-string rule fires by design; silence it here so noise
+  // doesn't drown out real warnings on other files.
+  {
+    files: ["src/client/themes/_surface-vars.ts"],
+    rules: {
+      "sonarjs/no-duplicate-string": "off",
+    },
+  },
   // Tailwind class-name correctness for our own components. Catches:
   //   • duplicate classes (`flex flex-col flex`)
   //   • conflicting classes (`p-2 p-4`)

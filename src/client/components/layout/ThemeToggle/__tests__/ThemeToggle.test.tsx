@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, beforeAll } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { renderWithProviders, screen } from "@/test/render";
 import { THEME_BRAND_KEY, THEME_MODE_KEY } from "@/client/lib/theme";
+import { renderWithProviders, screen } from "@/test/render";
 import { ThemeToggle } from "../ThemeToggle";
 
 describe("ThemeToggle", () => {
