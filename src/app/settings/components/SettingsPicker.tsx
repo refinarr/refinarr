@@ -31,24 +31,19 @@ export function SettingsPicker({ items, active, onSelect, className }: Props) {
         if (v) onSelect(v);
       }}
     >
-      <SelectTrigger
-        className={cn(
-          "h-control-lg w-full text-base [&>svg]:size-5",
-          className,
-        )}
-      >
+      <SelectTrigger className={cn("w-full", className)}>
         <SelectValue>
-          <span className="flex items-center gap-2.5">
-            {ActiveIcon ? <ActiveIcon className="size-5" /> : null}
+          <span className="flex items-center gap-2">
+            {ActiveIcon ? <ActiveIcon className="size-4" /> : null}
             <span className="font-medium">{activeItem?.label ?? ""}</span>
           </span>
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {items.map(({ id, label, icon: Icon }) => (
-          <SelectItem key={id} value={id} className="h-control text-base">
-            <span className="flex items-center gap-2.5">
-              <Icon className="size-5" />
+          <SelectItem key={id} value={id}>
+            <span className="flex items-center gap-2">
+              <Icon className="size-4" />
               {label}
             </span>
           </SelectItem>

@@ -53,7 +53,9 @@ export function ThemeSelector() {
               aria-checked={selected}
               onClick={() => setMode(id)}
               className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors",
+                // Height pulled from --spacing-control-xs so the mode
+                // toggle scales with the rest of the form-control family.
+                "h-control-xs flex items-center gap-1.5 rounded-md px-3 text-sm transition-colors",
                 selected
                   ? "bg-brand text-foreground-on-brand"
                   : "text-muted-foreground hover:text-foreground",

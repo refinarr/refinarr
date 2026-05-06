@@ -35,8 +35,10 @@ interface Props {
 const ALL = "__all__";
 
 // Shared pill style for every filter trigger so they line up visually.
+// Height pulled from the shared --spacing-control-sm token (globals.css)
+// so changing dropdown height across the app is a one-liner there.
 const PILL =
-  "inline-flex h-8 items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-xs font-medium whitespace-nowrap transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none dark:bg-input/30 dark:hover:bg-input/50";
+  "inline-flex h-control-sm items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-xs font-medium whitespace-nowrap transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none dark:bg-input/30 dark:hover:bg-input/50";
 const PILL_ACTIVE =
   "border-primary bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90";
 

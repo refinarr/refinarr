@@ -25,14 +25,15 @@ export function BulkActionToolbar({
   const t = useTranslations("bulk");
   if (selectedCount === 0 && !progress) return null;
 
-  // Mobile: iOS Safari toolbar style — solid dark strip pinned to viewport
-  // bottom, no borders, ghost icon buttons, safe-area padding for the home
-  // indicator. Sized larger than desktop for thumb-friendly tap targets.
+  // Mobile: iOS Safari toolbar style — solid dark strip pinned just above
+  // the AppShell's bottom MobileTabBar (h-bottom-bar = 4rem +
+  // safe-area-inset), no borders, ghost icon buttons. Sized larger than
+  // desktop for thumb-friendly tap targets.
   // Desktop: card-style strip that sticks to the top of the main scroll
   // container so it stays visible while the user scrolls a long list and
   // selects rows further down.
   const wrapperClasses =
-    "fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 bg-muted px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:sticky md:top-0 md:bottom-auto md:mb-4 md:gap-2 md:rounded-md md:border-0 md:bg-accent md:px-3 md:py-3 md:pb-3";
+    "fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 bg-muted px-4 py-4 md:sticky md:top-0 md:bottom-auto md:mb-4 md:gap-2 md:rounded-md md:border-0 md:bg-accent md:px-3 md:py-3 md:pb-3";
 
   if (progress) {
     const pct =

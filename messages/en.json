@@ -70,7 +70,10 @@
     "logs": "Logs",
     "settings": "Settings",
     "menu": "Menu",
-    "openMenu": "Open navigation menu"
+    "more": "More",
+    "openMenu": "Open navigation menu",
+    "openMore": "Open more menu",
+    "primary": "Primary navigation"
   },
   "instanceSelector": {
     "selectInstance": "Select instance",

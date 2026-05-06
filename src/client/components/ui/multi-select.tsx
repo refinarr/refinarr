@@ -84,8 +84,11 @@ export function MultiSelect({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50 flex h-8 w-fit items-center justify-between gap-1.5 rounded-lg border bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50",
-          selected.length === 0 && "text-muted-foreground",
+          // Placeholder text intentionally NOT muted — empty filter
+          // chips read at the same weight as the other filter triggers
+          // sitting next to them, since both represent the "no-filter"
+          // default state.
+          "border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:hover:bg-input/50 h-control-sm flex w-fit items-center justify-between gap-1.5 rounded-lg border bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50",
           triggerClassName,
           className,
         )}
