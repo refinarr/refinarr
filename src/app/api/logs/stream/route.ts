@@ -35,8 +35,8 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   // Validate the resume cursor before using it in DB calls and id-dedup.
   // An invalid (NaN / negative) value would silently poison findSince().
   const rawId = resumeId ?? req.nextUrl.searchParams.get("lastId") ?? "0";
-  const parsedId = parseInt(rawId, 10);
-  if (!Number.isInteger(parsedId) || parsedId < 0)
+  const parsedId = Number(rawId);
+  if (!/^\d+$/.test(rawId) || !Number.isSafeInteger(parsedId))
     throw badRequest("Invalid cursor");
   let lastDeliveredId = parsedId;
   const isResume = resumeId !== null;
