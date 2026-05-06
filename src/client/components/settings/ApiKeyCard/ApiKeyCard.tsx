@@ -1,12 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
 import { Copy, Eye, EyeOff, Loader2, RefreshCw } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/client/components/ui/card";
+import { Card, CardContent } from "@/client/components/ui/card";
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
 import { FormField } from "@/client/components/ui/form-field";
@@ -20,7 +15,6 @@ import {
 import { useApiKeyActions } from "./useApiKeyActions";
 
 export function ApiKeyCard() {
-  const t = useTranslations("settings");
   const tk = useTranslations("settings.apiKey");
   const tCommon = useTranslations("common");
   const tLogin = useTranslations("auth.login");
@@ -42,9 +36,6 @@ export function ApiKeyCard() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{t("apiAccess")}</CardTitle>
-      </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-muted-foreground text-xs">{tk("description")}</p>
         <div className="flex items-center gap-2">
