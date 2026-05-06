@@ -2,6 +2,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "@/test/render";
+import type { ReactNode } from "react";
 import type { FlaggedMovie } from "@/shared/types/models";
 import type { FlaggedMediaQueryHook } from "@/client/hooks/media/useFlaggedMediaData";
 import { MOVIE_BULK_CONFIG } from "../../media-bulk-configs";
@@ -12,6 +13,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => "/movies",
   useSearchParams: () => new URLSearchParams(),
+}));
+
+vi.mock("@/client/components/layout/AppShell", () => ({
+  AppShell: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@/client/hooks/media/useInstanceSelection", () => ({
