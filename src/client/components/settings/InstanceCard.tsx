@@ -51,11 +51,13 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
         <Badge variant="outline" className="capitalize">
           {instance.type}
         </Badge>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <p className="font-medium">{instance.name}</p>
-          <p className="text-xs text-muted-foreground">{instance.url}</p>
+          <p className="text-muted-foreground truncate text-xs">
+            {instance.url}
+          </p>
           {noCfs && (
-            <p className="text-xs text-yellow-400 mt-0.5">
+            <p className="text-warning mt-0.5 text-xs">
               {t("noCfsConfigured")}
             </p>
           )}
@@ -69,12 +71,14 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
             })}
             className="gap-1"
           >
-            <Hourglass className="h-3 w-3" />
+            <Hourglass className="size-3" />
             {tForm("queuedBadge", { count: pendingCount })}
           </Badge>
         )}
         {failedCount > 0 && (
-          <Badge variant="destructive">{failedCount} failed</Badge>
+          <Badge variant="destructive">
+            {failedCount} {tForm("failedBadge")}
+          </Badge>
         )}
         <div className="flex gap-2">
           <Button
@@ -84,7 +88,7 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
             disabled={test.isPending}
             aria-label={tCommon("test")}
           >
-            <Plug className="h-4 w-4" />
+            <Plug className="size-4" />
           </Button>
           <Button
             variant="outline"
@@ -92,7 +96,7 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
             onClick={onEdit}
             aria-label={tCommon("edit")}
           >
-            <Edit2 className="h-4 w-4" />
+            <Edit2 className="size-4" />
           </Button>
           <Button
             variant="outline"
@@ -101,7 +105,7 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
             disabled={deleteInstance.isPending}
             aria-label={tCommon("delete")}
           >
-            <Trash2 className="h-4 w-4 text-destructive" />
+            <Trash2 className="text-destructive size-4" />
           </Button>
         </div>
       </CardContent>

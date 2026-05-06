@@ -1,6 +1,7 @@
 "use client";
 import { RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
+
 import { Button } from "@/client/components/ui/button";
 import { useRetryAction } from "@/client/hooks/data/useRetryAction";
 import { withToast } from "@/client/lib/with-toast";
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function RetryButton({ logId, title }: Props) {
+  const tHistory = useTranslations("history.retry");
   const tRetry = useTranslations("toast.retry");
   const retry = useRetryAction();
   const retryWithToast = withToast(retry, {
@@ -30,7 +32,7 @@ export function RetryButton({ logId, title }: Props) {
       onClick={handleRetry}
       disabled={retry.isPending}
     >
-      <RotateCcw className="h-3 w-3 mr-1" /> Retry
+      <RotateCcw className="mr-1 size-3" /> {tHistory("retry")}
     </Button>
   );
 }

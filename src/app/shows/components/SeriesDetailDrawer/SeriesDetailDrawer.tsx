@@ -93,21 +93,21 @@ export function SeriesDetailDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl flex flex-col gap-0">
+      <SheetContent className="flex w-full flex-col gap-0 sm:max-w-2xl">
         <SheetHeader className="border-b">
           <div className="flex items-center gap-2">
             <SeverityDot severity={severity} />
             <SheetTitle className="text-base">{series.title}</SheetTitle>
           </div>
-          <p className="text-xs text-muted-foreground">{series.year}</p>
+          <p className="text-muted-foreground text-xs">{series.year}</p>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4 text-sm">
           <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
             <span className="text-muted-foreground">{tDrawer("score")}</span>
             <span>
               {showNoFile ? (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {tShows("noFile")}
                 </span>
               ) : (
@@ -126,7 +126,7 @@ export function SeriesDetailDrawer({
           </div>
 
           <div className="border-t pt-3">
-            <h3 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            <h3 className="text-muted-foreground mb-2 text-xs tracking-wide uppercase">
               {tDrawer("seasons")}
             </h3>
             {seasons.length > 0 ? (
@@ -192,9 +192,9 @@ export function SeriesDetailDrawer({
           </div>
         </div>
 
-        <SheetFooter className="border-t flex-row gap-2 justify-end">
+        <SheetFooter className="flex-row justify-end gap-2 border-t">
           <Button variant="outline" size="sm" onClick={() => onIgnore(series)}>
-            <EyeOff className="h-4 w-4 mr-1" /> {tCommon("ignore")}
+            <EyeOff className="mr-1 size-4" /> {tCommon("ignore")}
           </Button>
         </SheetFooter>
         {confirmDialog}

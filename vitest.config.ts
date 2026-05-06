@@ -1,9 +1,8 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [react()],
   test: {
     environment: "node",
     globals: false,
@@ -13,6 +12,11 @@ export default defineConfig({
     exclude: ["e2e/**", "node_modules/**", ".next/**"],
     // No file parallelism so DB-backed tests share the same migrated SQLite file.
     fileParallelism: false,
+    // DATABASE_URL must be in env (not just set in globalSetup) so worker
+    // processes that import the Prisma singleton at module-load time read
+    // the test DB, not the dev fallback. globalSetup also sets it, but
+    // that mutation doesn't always propagate to worker children.
+    env: { DATABASE_URL: "file:./local/vitest-test.db" },
     coverage: {
       provider: "v8",
       include: [
@@ -30,5 +34,5 @@ export default defineConfig({
       thresholds: { lines: 85, functions: 85, branches: 85, statements: 85 },
     },
   },
-  resolve: { conditions: ["node"] },
+  resolve: { conditions: ["node"], tsconfigPaths: true },
 });

@@ -90,7 +90,7 @@ export function MediaSearchBar({
   return (
     <div className="space-y-3">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
         <Input
           value={filters.q}
           onChange={(e) => onChange({ q: e.target.value })}
@@ -206,7 +206,7 @@ export function MediaSearchBar({
           <button
             type="button"
             onClick={clearAll}
-            className="ml-1 text-xs text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground ml-1 text-xs"
           >
             {t("clearAll")}
           </button>

@@ -23,11 +23,11 @@ export function getSeverity(
 }
 
 export const severityClass: Record<Severity, string> = {
-  critical: "bg-red-500",
-  low: "bg-orange-500",
-  warning: "bg-yellow-500",
-  ok: "bg-green-500",
-  missing: "bg-slate-500",
+  critical: "bg-critical",
+  low: "bg-warning",
+  warning: "bg-warning",
+  ok: "bg-ok",
+  missing: "bg-neutral-soft",
 };
 
 export const severityLabel: Record<Severity, string> = {

@@ -1,16 +1,21 @@
 "use client";
-import { HealthDot } from "./HealthDot";
-import { Logo } from "./Logo";
+import { cn } from "@/client/lib/utils";
 import { NavContent } from "./NavContent";
 
-export function Sidebar() {
+interface Props {
+  open: boolean;
+}
+
+export function Sidebar({ open }: Props) {
   return (
-    <aside className="hidden md:flex h-screen w-56 flex-col border-r border-border bg-card px-3 py-4">
-      <div className="mb-6 flex items-center gap-2 px-3">
-        <Logo size="lg" />
-        <HealthDot />
-      </div>
-      <NavContent />
+    <aside
+      aria-hidden={!open}
+      className={cn(
+        "border-border bg-card hidden h-full flex-col overflow-hidden border-r transition-[width] duration-200 md:flex",
+        open ? "w-56 px-3 py-4" : "w-0 p-0",
+      )}
+    >
+      {open && <NavContent />}
     </aside>
   );
 }

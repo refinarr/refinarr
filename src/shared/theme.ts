@@ -1,15 +1,16 @@
-// Hex mirror of the brand palette in src/app/globals.css.
+// Hex mirror of the brand palette held in `src/client/themes/<id>.ts`.
 //
 // For all in-app styling, prefer the Tailwind utilities (`bg-brand`,
-// `bg-surface-dark`, `fill-foreground-on-brand`, ...) which read from
-// globals.css at runtime and follow theme switches.
+// `text-foreground-on-brand`, `bg-critical`, …) which read from CSS
+// vars applied at runtime by `src/client/lib/theme.ts` and follow theme
+// switches automatically.
 //
 // This file exists only because Next.js metadata (PWA manifest, viewport
 // `themeColor`, OG images) is serialised at SSR / build time and cannot
 // read CSS custom properties.
 //
-// If you change colors here, also update the matching tokens in
-// `src/app/globals.css` `@theme { … }` (and vice versa).
+// If you change a theme's `--background` oklch in `src/client/themes/`,
+// update the matching hex below to keep the metadata in sync.
 
 export const SURFACE_DARK = "#0a0a0a";
 export const SURFACE_LIGHT = "#ffffff";

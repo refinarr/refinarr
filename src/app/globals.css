@@ -3,26 +3,23 @@
 @import "shadcn/tailwind.css";
 
 /* ----------------------------------------------------------------------
- * BRAND PALETTE — single source of truth.
+ * Theme tokens are owned by `src/client/themes/<id>.ts` files. Each theme
+ * file declares the full CSS-var payload (shadcn neutrals + brand +
+ * status semantics). The runtime in `src/client/lib/theme.ts` writes
+ * those vars onto :root via setProperty() at hydration.
  *
- * Edit these five tokens to recolor the entire app. Each one becomes a
- * Tailwind utility (e.g. `bg-brand-amber`, `bg-surface-dark`,
- * `fill-foreground-on-brand`) and is referenced by the per-theme blocks
- * below to set --brand.
+ * The blocks below cover only the two pieces CSS has to own:
+ *   1. The first-paint safety vars per [data-theme="..."] (so the
+ *      anti-FOUC script in app/layout.tsx can paint the correct
+ *      background before JS runs).
+ *   2. The @theme inline mappings that expose CSS vars as Tailwind
+ *      utilities (bg-brand, bg-critical, text-warning, …).
  *
- * Hex equivalents (for the small set of files that cannot read CSS at
- * runtime — favicon SVG, manifest.ts, viewport metadata) are mirrored in
- * `src/shared/theme.ts`. Keep them in sync if you change colors here.
+ * To recolor anything, edit the relevant theme TS file. To add a token,
+ * add it to every theme TS file AND extend the @theme inline block.
  * -------------------------------------------------------------------- */
-@theme {
-  --color-brand-amber: oklch(0.78 0.16 75);          /* #f59e0b */
-  --color-brand-teal: oklch(0.74 0.13 180);          /* #14b8a6 */
-  --color-surface-dark: oklch(0.145 0 0);            /* #0a0a0a */
-  --color-surface-light: oklch(1 0 0);               /* #ffffff */
-  --color-foreground-on-brand: oklch(0.145 0 0);     /* dark text on brand */
-}
 
-@custom-variant dark (&:is([data-theme="dark-orange"] *, [data-theme="dark-teal"] *));
+@custom-variant dark (&:is(.dark, .dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -59,7 +56,25 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
   --color-brand: var(--brand);
+  --color-foreground-on-brand: var(--foreground-on-brand);
+
+  --color-critical: var(--critical);
+  --color-critical-foreground: var(--critical-foreground);
+  --color-critical-soft: var(--critical-soft);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-ok: var(--ok);
+  --color-ok-foreground: var(--ok-foreground);
+  --color-ok-soft: var(--ok-soft);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-soft: var(--info-soft);
+  --color-neutral-soft: var(--neutral-soft);
+  --color-neutral-foreground: var(--neutral-foreground);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -69,6 +84,9 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* First-paint safety: surface is keyed on the .dark class (toggled by
+   the anti-FOUC inline script in app/layout.tsx). The runtime applies
+   the full CSS-var payload at hydration. */
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -76,8 +94,8 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.78 0.16 75);
+  --primary-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -87,33 +105,48 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.78 0.16 75);
+  --brand: oklch(0.78 0.16 75);
+  --foreground-on-brand: oklch(0.145 0 0);
+  --critical: oklch(0.55 0.22 25);
+  --critical-foreground: oklch(0.985 0 0);
+  --critical-soft: oklch(0.94 0.05 25);
+  --warning: oklch(0.55 0.18 70);
+  --warning-foreground: oklch(0.985 0 0);
+  --warning-soft: oklch(0.94 0.05 70);
+  --ok: oklch(0.5 0.18 145);
+  --ok-foreground: oklch(0.985 0 0);
+  --ok-soft: oklch(0.94 0.05 145);
+  --info: oklch(0.5 0.18 240);
+  --info-foreground: oklch(0.985 0 0);
+  --info-soft: oklch(0.94 0.05 240);
+  --neutral-soft: oklch(0.95 0 0);
+  --neutral-foreground: oklch(0.4 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.78 0.16 75);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.78 0.16 75);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
 }
 
-[data-theme="dark-orange"],
-[data-theme="dark-teal"] {
+.dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.78 0.16 75);
+  --primary-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -123,27 +156,51 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.78 0.16 75);
+  --brand: oklch(0.78 0.16 75);
+  --foreground-on-brand: oklch(0.145 0 0);
+  --critical: oklch(0.7 0.2 25);
+  --critical-foreground: oklch(0.985 0 0);
+  --critical-soft: oklch(0.3 0.12 25);
+  --warning: oklch(0.78 0.16 75);
+  --warning-foreground: oklch(0.145 0 0);
+  --warning-soft: oklch(0.32 0.1 75);
+  --ok: oklch(0.74 0.16 145);
+  --ok-foreground: oklch(0.145 0 0);
+  --ok-soft: oklch(0.3 0.1 145);
+  --info: oklch(0.72 0.13 240);
+  --info-foreground: oklch(0.145 0 0);
+  --info-soft: oklch(0.3 0.08 240);
+  --neutral-soft: oklch(0.3 0 0);
+  --neutral-foreground: oklch(0.78 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.78 0.16 75);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.78 0.16 75);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --radius: 0.625rem;
 }
 
-/* Per-theme brand accent. The neutral palette is set above by the
-   data-theme selectors; this just maps each theme to a palette token. */
-[data-theme="light"],
-[data-theme="dark-orange"] { --brand: var(--color-brand-amber); }
-[data-theme="dark-teal"]   { --brand: var(--color-brand-teal); }
+/* Theme transition: applied briefly during a switch so the var change
+   feels gradual rather than snap. The .theme-transition class is added
+   by setTheme() in src/client/lib/theme.ts and removed after 200ms. */
+.theme-transition,
+.theme-transition * {
+  transition:
+    background-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    fill 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    stroke 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
 
 @layer base {
   * {

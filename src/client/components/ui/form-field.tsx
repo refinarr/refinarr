@@ -33,12 +33,12 @@ export function FormField({ id, label, description, error, children }: Props) {
       <Label htmlFor={id}>{label}</Label>
       {enhanced}
       {description && (
-        <p id={descId} className="text-xs text-muted-foreground">
+        <p id={descId} className="text-muted-foreground text-xs">
           {description}
         </p>
       )}
       {error && (
-        <p id={errId} role="alert" className="text-xs text-destructive">
+        <p id={errId} role="alert" className="text-destructive text-xs">
           {error}
         </p>
       )}

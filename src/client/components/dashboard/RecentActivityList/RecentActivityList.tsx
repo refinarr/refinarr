@@ -22,37 +22,37 @@ export function RecentActivityList({ logs }: Props) {
   const tc = useTranslations("common");
   return (
     <Card>
-      <CardHeader className="pb-2 flex-row items-center justify-between">
+      <CardHeader className="flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium">
           {t("recentActivity")}
         </CardTitle>
         <Link
           href="/history"
-          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
         >
-          {tc("viewAll")} <ArrowRight className="h-3 w-3" />
+          {tc("viewAll")} <ArrowRight className="size-3" />
         </Link>
       </CardHeader>
       <CardContent>
         {logs.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 text-center">
+          <p className="text-muted-foreground py-4 text-center text-sm">
             {t("noRecentActions")}
           </p>
         ) : (
           <ul className="divide-y">
             {logs.map((log) => (
-              <li key={log.id} className="py-2 flex items-center gap-3">
+              <li key={log.id} className="flex items-center gap-3 py-2">
                 <div className="w-20 shrink-0">
                   <ActionStatusBadge status={log.status} />
                 </div>
                 <div className="w-24 shrink-0">
                   <ActionTypeBadge action={log.action} />
                 </div>
-                <span className="text-sm truncate flex-1" title={log.title}>
+                <span className="flex-1 truncate text-sm" title={log.title}>
                   {log.title}
                 </span>
                 <span
-                  className="text-xs text-muted-foreground tabular-nums shrink-0"
+                  className="text-muted-foreground shrink-0 text-xs tabular-nums"
                   title={new Date(
                     log.lastRetriedAt ?? log.createdAt,
                   ).toLocaleString()}

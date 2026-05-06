@@ -36,13 +36,13 @@ export function HistoryTable({ logs }: Props) {
         {logs.map((log) => (
           <TableRow key={log.id}>
             <TableCell
-              className="text-xs text-muted-foreground whitespace-nowrap"
+              className="text-muted-foreground text-xs whitespace-nowrap"
               title={new Date(log.createdAt).toLocaleString()}
             >
               {formatRelative(log.createdAt)}
               {log.lastRetriedAt && (
                 <span
-                  className="ml-1 text-muted-foreground/70"
+                  className="text-muted-foreground/70 ml-1"
                   title={new Date(log.lastRetriedAt).toLocaleString()}
                 >
                   ·{" "}

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import type { KeyboardEvent } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/client/components/ui/badge";
 import { LogLevelBadge } from "@/client/components/logs/LogLevelBadge";
@@ -23,31 +24,44 @@ export function AppLogRow({ entry }: Props) {
   const [expanded, setExpanded] = useState(false);
   const formatted = formatContext(entry.context);
   const hasContext = formatted !== null;
+  const toggleExpanded = () => {
+    if (hasContext) setExpanded((v) => !v);
+  };
+  const handleKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
+    if (!hasContext) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    toggleExpanded();
+  };
 
   return (
     <>
       <tr
-        className={`border-t hover:bg-muted/30 transition-colors ${hasContext ? "cursor-pointer" : ""}`}
-        onClick={() => hasContext && setExpanded((v) => !v)}
+        className={`hover:bg-muted/30 focus-visible:ring-ring/50 border-t transition-colors focus-visible:ring-2 focus-visible:outline-none ${hasContext ? "cursor-pointer" : ""}`}
+        onClick={toggleExpanded}
+        onKeyDown={handleKeyDown}
+        tabIndex={hasContext ? 0 : -1}
+        role={hasContext ? "button" : undefined}
+        aria-expanded={hasContext ? expanded : undefined}
       >
-        <td className="px-3 py-2 align-middle w-6">
+        <td className="w-6 px-3 py-2 align-middle">
           {hasContext &&
             (expanded ? (
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              <ChevronDown className="text-muted-foreground size-3.5" />
             ) : (
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <ChevronRight className="text-muted-foreground size-3.5" />
             ))}
         </td>
         <td
-          className="px-3 py-2 align-middle w-44 text-xs text-muted-foreground tabular-nums"
+          className="text-muted-foreground w-44 px-3 py-2 align-middle text-xs tabular-nums"
           title={new Date(entry.createdAt).toLocaleString()}
         >
           {formatRelative(entry.createdAt)}
         </td>
-        <td className="px-3 py-2 align-middle w-20">
+        <td className="w-20 px-3 py-2 align-middle">
           <LogLevelBadge level={entry.level} />
         </td>
-        <td className="px-3 py-2 align-middle w-32">
+        <td className="w-32 px-3 py-2 align-middle">
           {entry.source && (
             <Badge variant="outline" className="text-[10px]">
               {entry.source}
@@ -61,7 +75,7 @@ export function AppLogRow({ entry }: Props) {
       {expanded && formatted && (
         <tr className="bg-muted/20 border-t">
           <td colSpan={5} className="px-3 py-2">
-            <pre className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-all max-h-72 overflow-y-auto">
+            <pre className="text-muted-foreground max-h-72 overflow-y-auto font-mono text-xs break-all whitespace-pre-wrap">
               {formatted}
             </pre>
           </td>

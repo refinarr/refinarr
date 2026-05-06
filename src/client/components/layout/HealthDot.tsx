@@ -1,13 +1,15 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useHealth } from "@/client/hooks/data/useHealth";
 
 export function HealthDot() {
+  const t = useTranslations("health");
   const { data, isError } = useHealth();
   const ok = !isError && data?.status === "ok";
   return (
     <span
-      className={`h-2 w-2 rounded-full ${ok ? "bg-green-500" : "bg-red-500"}`}
-      title={ok ? "Connected" : "Disconnected"}
+      className={`size-2 rounded-full ${ok ? "bg-ok" : "bg-critical"}`}
+      title={ok ? t("connected") : t("disconnected")}
     />
   );
 }

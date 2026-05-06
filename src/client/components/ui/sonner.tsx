@@ -1,6 +1,5 @@
 "use client";
 
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   CircleCheckIcon,
@@ -9,11 +8,12 @@ import {
   OctagonXIcon,
   Loader2Icon,
 } from "lucide-react";
+import { useTheme } from "@/client/hooks/ui/useTheme";
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme } = useTheme();
+  const { surface } = useTheme();
   const sonnerTheme: ToasterProps["theme"] =
-    theme === "light" ? "light" : "dark";
+    surface === "dark" ? "dark" : "light";
 
   return (
     <Sonner

@@ -11,8 +11,8 @@ type ConnState = "checking" | "connected" | "disconnected";
 
 const DOT_CLASS: Record<ConnState, string> = {
   checking: "bg-muted-foreground/40 animate-pulse",
-  connected: "bg-emerald-500",
-  disconnected: "bg-destructive",
+  connected: "bg-ok",
+  disconnected: "bg-critical",
 };
 
 function getConnState(isLoading: boolean, ok: boolean): ConnState {
@@ -29,7 +29,7 @@ export function InstanceConnectionDot({ instanceId }: Props) {
 
   return (
     <span
-      className={cn("inline-block h-2 w-2 rounded-full", DOT_CLASS[state])}
+      className={cn("inline-block size-2 rounded-full", DOT_CLASS[state])}
       title={label}
       aria-label={label}
     />

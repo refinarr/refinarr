@@ -21,8 +21,8 @@ interface Props {
 
 const toneClasses: Record<Tone, string> = {
   default: "text-foreground",
-  warning: "text-yellow-400",
-  destructive: "text-destructive",
+  warning: "text-warning",
+  destructive: "text-critical",
 };
 
 export function KpiCard({
@@ -36,11 +36,11 @@ export function KpiCard({
   const inner = (
     <Card
       className={
-        href ? "transition-colors hover:bg-muted/40 cursor-pointer" : ""
+        href ? "hover:bg-muted/40 cursor-pointer transition-colors" : ""
       }
     >
       <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <CardTitle className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           {label}
         </CardTitle>
       </CardHeader>

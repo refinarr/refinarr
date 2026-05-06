@@ -62,21 +62,21 @@ export function NavContent({ onNavigate }: Props) {
             href={href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              "focus-visible:ring-ring focus-visible:ring-offset-background flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
               pathname === href
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
             )}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="size-4" />
             {t(key)}
           </Link>
         ))}
       </nav>
-      <div className="mt-auto px-3 pt-4 border-t border-border">
+      <div className="border-border mt-auto border-t px-3 pt-4">
         {me && (
           <p
-            className="text-xs text-muted-foreground truncate mb-2"
+            className="text-muted-foreground mb-2 truncate text-xs"
             title={me.username}
           >
             {me.username}
@@ -87,9 +87,9 @@ export function NavContent({ onNavigate }: Props) {
             type="button"
             onClick={() => logout.mutate()}
             disabled={logout.isPending}
-            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex items-center gap-2 rounded-md text-xs focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
-            <LogOut className="h-3.5 w-3.5" />
+            <LogOut className="size-3.5" />
             {tAuth("logout")}
           </button>
         )}

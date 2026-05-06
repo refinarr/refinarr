@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+
 import { Badge } from "@/client/components/ui/badge";
 import { useHistoryErrors } from "@/client/hooks/data/useHistory";
 
@@ -8,6 +10,7 @@ interface Props {
 }
 
 export function InstanceErrorSummary({ instanceId }: Props) {
+  const tStatus = useTranslations("history.statusLabels");
   const { data: errors } = useHistoryErrors(instanceId);
   const count = errors?.length ?? 0;
   if (count === 0) return null;
@@ -18,7 +21,7 @@ export function InstanceErrorSummary({ instanceId }: Props) {
       className="flex items-center gap-1"
     >
       <Badge variant="destructive">{count}</Badge>
-      <span className="text-xs text-muted-foreground">failed</span>
+      <span className="text-muted-foreground text-xs">{tStatus("failed")}</span>
     </Link>
   );
 }

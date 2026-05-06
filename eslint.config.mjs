@@ -2,6 +2,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import prettier from "eslint-config-prettier/flat";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import betterTailwind from "eslint-plugin-better-tailwindcss";
 import sonarjs from "eslint-plugin-sonarjs";
 
 const eslintConfig = defineConfig([
@@ -139,6 +140,30 @@ const eslintConfig = defineConfig([
     rules: {
       "sonarjs/no-nested-conditional": "off",
       "sonarjs/cognitive-complexity": "off",
+    },
+  },
+  // Tailwind class-name correctness for our own components. Catches:
+  //   • duplicate classes (`flex flex-col flex`)
+  //   • conflicting classes (`p-2 p-4`)
+  //   • shorthand opportunities (`pt-2 pb-2` → `py-2`, `w-[32px]` → `w-8`)
+  //   • unregistered classes (typos / classes not declared in @theme)
+  // Class ordering is intentionally NOT enforced here — prettier-plugin-
+  // tailwindcss owns sorting and would conflict.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/client/components/ui/**"],
+    plugins: { "better-tailwindcss": betterTailwind },
+    settings: {
+      "better-tailwindcss": {
+        entryPoint: "src/app/globals.css",
+      },
+    },
+    rules: {
+      "better-tailwindcss/enforce-canonical-classes": "error",
+      "better-tailwindcss/enforce-shorthand-classes": "error",
+      "better-tailwindcss/no-conflicting-classes": "error",
+      "better-tailwindcss/no-duplicate-classes": "error",
+      "better-tailwindcss/no-deprecated-classes": "error",
     },
   },
   // Override default ignores of eslint-config-next.

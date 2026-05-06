@@ -4,10 +4,10 @@ import { Badge } from "@/client/components/ui/badge";
 import type { ActionStatus } from "@/shared/types/models";
 
 const classes: Record<ActionStatus, string> = {
-  success: "bg-green-950 text-green-300 border-green-800",
-  dry_run: "bg-purple-950 text-purple-300 border-purple-800",
-  failed: "bg-red-950 text-red-300 border-red-800",
-  pending: "bg-slate-700/40 text-slate-300 border-slate-600",
+  success: "bg-ok-soft text-ok border-ok/30",
+  dry_run: "bg-info-soft text-info border-info/30",
+  failed: "bg-critical-soft text-critical border-critical/30",
+  pending: "bg-neutral-soft text-neutral-foreground border-border",
 };
 
 const labelKeys: Record<

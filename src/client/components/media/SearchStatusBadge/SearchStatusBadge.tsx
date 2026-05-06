@@ -17,10 +17,9 @@ type Props =
     };
 
 const classes: Record<Status, string> = {
-  pending:
-    "bg-amber-950/40 text-amber-300 border-amber-800/60 hover:bg-amber-950/60",
+  pending: "bg-warning-soft text-warning border-warning/30 hover:bg-warning/20",
   searched:
-    "bg-slate-700/40 text-slate-300 border-slate-600 hover:bg-slate-700/60",
+    "bg-neutral-soft text-neutral-foreground border-border hover:bg-muted",
 };
 
 export function SearchStatusBadge(props: Props) {
@@ -44,7 +43,7 @@ export function SearchStatusBadge(props: Props) {
   return (
     <Link href={href} title={tooltip} aria-label={tooltip}>
       <Badge variant="outline" className={cn("gap-1 text-xs", classes[status])}>
-        <Icon className="h-3 w-3" />
+        <Icon className="size-3" />
         {label}
       </Badge>
     </Link>

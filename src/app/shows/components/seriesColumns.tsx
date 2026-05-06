@@ -56,9 +56,9 @@ export function seriesColumns(
       render: (s) => {
         const recent = !queuedIds.has(s.id) ? recentMap.get(s.id) : undefined;
         return (
-          <div className="flex items-baseline gap-2 min-w-0">
-            <span className="font-medium truncate">{s.title}</span>
-            <span className="text-muted-foreground text-xs shrink-0">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="truncate font-medium">{s.title}</span>
+            <span className="text-muted-foreground shrink-0 text-xs">
               {s.year}
             </span>
             {queuedIds.has(s.id) && (
@@ -94,7 +94,7 @@ export function seriesColumns(
       render: (s) => {
         if (isProfileMode(scoringMode) && s.episodeFiles.length === 0) {
           return (
-            <span className="text-xs text-muted-foreground">{t("noFile")}</span>
+            <span className="text-muted-foreground text-xs">{t("noFile")}</span>
           );
         }
         return (
@@ -131,7 +131,7 @@ export function seriesColumns(
               <CfBadge key={cf.id} name={cf.name} missing />
             ))}
             {items.length > 3 && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 +{items.length - 3}
               </span>
             )}

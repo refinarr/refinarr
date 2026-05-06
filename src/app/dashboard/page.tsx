@@ -50,7 +50,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">{t("title")}</h1>
-              <p className="text-muted-foreground text-sm mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 {t("subtitle")}
               </p>
             </div>
@@ -65,7 +65,7 @@ export default function DashboardPage() {
                 variant="outline"
                 onClick={() => router.push("/settings")}
               >
-                <Plus className="h-4 w-4 mr-1" /> {t("addInstance")}
+                <Plus className="mr-1 size-4" /> {t("addInstance")}
               </Button>
             </div>
           </div>
@@ -107,7 +107,7 @@ export default function DashboardPage() {
             enabledInstances.length > 0 && <AllClearState />}
 
           <div>
-            <h2 className="text-lg font-semibold mb-3">{t("instances")}</h2>
+            <h2 className="mb-3 text-lg font-semibold">{t("instances")}</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {(summary?.perInstance ?? []).map((inst) => (
                 <InstanceSummaryCard key={inst.id} instance={inst} />

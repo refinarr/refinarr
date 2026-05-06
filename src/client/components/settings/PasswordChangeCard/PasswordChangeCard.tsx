@@ -34,10 +34,10 @@ export function PasswordChangeCard() {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">{t("title")}</CardTitle>
-        <p className="text-xs text-muted-foreground mt-1">{t("description")}</p>
+        <p className="text-muted-foreground mt-1 text-xs">{t("description")}</p>
       </CardHeader>
       <CardContent>
-        <form onSubmit={submit} className="space-y-4 max-w-md">
+        <form onSubmit={submit} className="max-w-md space-y-4">
           <FormField
             id="current-password"
             label={t("currentPassword")}
@@ -81,12 +81,12 @@ export function PasswordChangeCard() {
             />
           </FormField>
           {errors.form && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-destructive text-sm">
               {errors.form}
             </p>
           )}
           <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
             {t("submit")}
           </Button>
         </form>

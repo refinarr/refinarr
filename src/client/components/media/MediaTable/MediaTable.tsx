@@ -65,25 +65,39 @@ export function MediaTable<T extends { id: number }>({
           ))}
         </ul>
       )}
-      <div className={`rounded-lg border overflow-x-auto ${tableHidden}`}>
+      <div className={`overflow-x-auto rounded-lg border ${tableHidden}`}>
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-background border-b z-10">
-            <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <thead className="bg-background sticky top-0 z-10 border-b">
+            <tr className="text-muted-foreground text-left text-xs tracking-wide uppercase">
               <th className="w-10 px-3 py-2.5" />
               {columns.map((col) => {
                 const isActiveSort = col.sortKey === sortBy;
+                let ariaSort: "ascending" | "descending" | "none" | undefined;
+                if (col.sortKey && !isActiveSort) ariaSort = "none";
+                else if (isActiveSort)
+                  ariaSort = order === "asc" ? "ascending" : "descending";
                 let arrow = "";
                 if (isActiveSort) arrow = order === "asc" ? " ↑" : " ↓";
                 return (
                   <th
                     key={col.key}
-                    className={`px-3 py-2.5 font-medium ${col.className ?? ""} ${col.sortKey ? "cursor-pointer select-none hover:text-foreground" : ""}`}
-                    onClick={
-                      col.sortKey ? () => onSortChange(col.sortKey!) : undefined
-                    }
+                    className={`px-3 py-2.5 font-medium ${col.className ?? ""}`}
+                    aria-sort={ariaSort}
                   >
-                    {col.header}
-                    {arrow && <span className="text-foreground">{arrow}</span>}
+                    {col.sortKey ? (
+                      <button
+                        type="button"
+                        className="hover:text-foreground cursor-pointer select-none"
+                        onClick={() => onSortChange(col.sortKey!)}
+                      >
+                        {col.header}
+                        {arrow && (
+                          <span className="text-foreground">{arrow}</span>
+                        )}
+                      </button>
+                    ) : (
+                      col.header
+                    )}
                   </th>
                 );
               })}
@@ -93,7 +107,7 @@ export function MediaTable<T extends { id: number }>({
             {rows.map((row) => (
               <tr
                 key={row.id}
-                className="group relative border-t hover:bg-muted/40 cursor-pointer transition-colors"
+                className="group hover:bg-muted/40 relative cursor-pointer border-t transition-colors"
                 onClick={() => onRowClick(row.id)}
               >
                 <td
@@ -118,7 +132,7 @@ export function MediaTable<T extends { id: number }>({
                 ))}
                 {rowActions && (
                   <td
-                    className="absolute right-0 top-0 h-full px-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-muted/60"
+                    className="bg-muted/60 absolute top-0 right-0 flex h-full items-center gap-1 px-3 opacity-0 transition-opacity group-hover:opacity-100"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {rowActions(row)}

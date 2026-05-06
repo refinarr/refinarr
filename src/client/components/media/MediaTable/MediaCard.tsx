@@ -21,7 +21,7 @@ export function MediaCard<T extends { id: number }>({
   actions,
 }: Props<T>) {
   return (
-    <li className="rounded-lg border bg-card transition-colors hover:bg-muted/40">
+    <li className="bg-card hover:bg-muted/40 rounded-lg border transition-colors">
       <div
         className="flex cursor-pointer items-start gap-3 p-3"
         onClick={onRowClick}
@@ -36,7 +36,7 @@ export function MediaCard<T extends { id: number }>({
           <Checkbox checked={selected} onCheckedChange={onToggleSelect} />
         </span>
         <div className="min-w-0 flex-1">{renderCard(row)}</div>
-        <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <ChevronRight className="text-muted-foreground mt-0.5 size-4 shrink-0" />
       </div>
       {actions && (
         <div

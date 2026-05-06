@@ -36,38 +36,38 @@ export function EpisodeFileRow({
     >
       <div className="flex items-center justify-between gap-4">
         <span
-          className="font-mono text-xs text-muted-foreground truncate"
+          className="text-muted-foreground truncate font-mono text-xs"
           title={file.relativePath}
         >
           {name}
         </span>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           {isProfileMode(scoringMode) && (
             <ScoreLabel
               score={file.customFormatScore}
               minProfileScore={file.minProfileScore}
             />
           )}
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               title={t("search")}
               aria-label={t("search")}
               onClick={() => onSearch()}
             >
-              <Search className="h-3.5 w-3.5" />
+              <Search className="size-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="size-7"
               title={t("delete")}
               aria-label={t("delete")}
               onClick={() => onDelete(false)}
             >
-              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              <Trash2 className="text-destructive size-3.5" />
             </Button>
           </div>
         </div>

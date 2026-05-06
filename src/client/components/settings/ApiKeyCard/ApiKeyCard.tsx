@@ -46,7 +46,7 @@ export function ApiKeyCard() {
         <CardTitle className="text-base">{t("apiAccess")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-xs text-muted-foreground">{tk("description")}</p>
+        <p className="text-muted-foreground text-xs">{tk("description")}</p>
         <div className="flex items-center gap-2">
           <Input
             readOnly
@@ -62,7 +62,7 @@ export function ApiKeyCard() {
                 onClick={hide}
                 aria-label={tk("hide")}
               >
-                <EyeOff className="h-4 w-4" />
+                <EyeOff className="size-4" />
               </Button>
               <Button
                 variant="outline"
@@ -70,12 +70,12 @@ export function ApiKeyCard() {
                 onClick={copy}
                 aria-label={tk("copy")}
               >
-                <Copy className="h-4 w-4" />
+                <Copy className="size-4" />
               </Button>
             </>
           ) : (
             <Button variant="outline" size="sm" onClick={() => ask("reveal")}>
-              <Eye className="h-4 w-4 mr-1" /> {tk("reveal")}
+              <Eye className="mr-1 size-4" /> {tk("reveal")}
             </Button>
           )}
           <Button
@@ -84,7 +84,7 @@ export function ApiKeyCard() {
             onClick={() => ask("rotate")}
             aria-label={tk("rotate")}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="size-4" />
           </Button>
         </div>
       </CardContent>
@@ -118,9 +118,7 @@ export function ApiKeyCard() {
                 {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
+                {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
                 {pending === "rotate" ? tk("rotate") : tk("reveal")}
               </Button>
             </DialogFooter>
