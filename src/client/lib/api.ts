@@ -86,7 +86,14 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid API response";
     const stack = err instanceof Error ? err.stack : undefined;
-    reportClientError({ message, path, method, status: res.status, traceId, stack });
+    reportClientError({
+      message,
+      path,
+      method,
+      status: res.status,
+      traceId,
+      stack,
+    });
     throw new ApiClientError({
       status: res.status,
       message: "Invalid API response",
