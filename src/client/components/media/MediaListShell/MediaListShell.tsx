@@ -187,7 +187,11 @@ function Root<T extends MediaItem>({
   const noCfsConfigured =
     isManualMode(scoringMode) && (prefs?.length ?? 0) === 0;
 
-  const filters = useMediaFilters(scoringMode, inst.activeInstance);
+  const filters = useMediaFilters(
+    scoringMode,
+    inst.activeInstance,
+    showAllEnabled,
+  );
   const data = useMediaData<T>(useQuery, inst.activeInstance, filters.forQuery);
   const queuedIds = useQueuedMediaIds(inst.activeInstance);
   const recentMap = useRecentSearchMap(inst.activeInstance);

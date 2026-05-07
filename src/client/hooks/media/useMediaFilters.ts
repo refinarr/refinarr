@@ -56,6 +56,10 @@ export const defaultMediaFilters: MediaFilters = {
   flaggedOnly: true,
 };
 
+function mediaFiltersForInstance(showAllMedia: boolean): MediaFilters {
+  return { ...defaultMediaFilters, flaggedOnly: !showAllMedia };
+}
+
 export interface MediaFiltersResult {
   filters: MediaFilters;
   setFilters: React.Dispatch<React.SetStateAction<MediaFilters>>;
@@ -76,8 +80,11 @@ export interface MediaFiltersResult {
 export function useMediaFilters(
   scoringMode: ScoringMode,
   instanceId: number,
+  showAllMedia = false,
 ): MediaFiltersResult {
-  const [filters, setFilters] = useState<MediaFilters>(defaultMediaFilters);
+  const [filters, setFilters] = useState<MediaFilters>(() =>
+    mediaFiltersForInstance(showAllMedia),
+  );
   const debouncedMinScore = useDebouncedValue(filters.minScore, 400);
   const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
   const debouncedMinSize = useDebouncedValue(filters.minSize, 400);
@@ -104,9 +111,15 @@ export function useMediaFilters(
   // CF IDs and quality-profile IDs are per-instance, so switching instance
   // leaves stale IDs in the filter that point at unrelated entities. Clear
   // them when the active instance changes.
-  const [trackedInstance, setTrackedInstance] = useState(instanceId);
-  if (trackedInstance !== instanceId) {
-    setTrackedInstance(instanceId);
+  const [trackedInstance, setTrackedInstance] = useState({
+    id: instanceId,
+    showAllMedia,
+  });
+  if (
+    trackedInstance.id !== instanceId ||
+    trackedInstance.showAllMedia !== showAllMedia
+  ) {
+    setTrackedInstance({ id: instanceId, showAllMedia });
     setFilters((f) => ({
       ...f,
       profileIds: [],
@@ -114,6 +127,7 @@ export function useMediaFilters(
       missingCfMatch: "all",
       hasNegativeCfIds: [],
       hasNegativeCfMatch: "all",
+      flaggedOnly: !showAllMedia,
     }));
   }
 

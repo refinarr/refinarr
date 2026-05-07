@@ -64,7 +64,7 @@ export function MediaSearchBar({
       hasNegativeCfIds: [],
       hasNegativeCfMatch: "all",
       onlyMissing: false,
-      flaggedOnly: true,
+      flaggedOnly: !showAllEnabled,
     });
 
   return (

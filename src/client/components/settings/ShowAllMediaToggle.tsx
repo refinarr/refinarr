@@ -28,6 +28,7 @@ export function ShowAllMediaToggle({ instanceId }: Props) {
   const handleChange = async (next: boolean) => {
     const apply = withToast(updateInstance, {
       success: tToast(next ? "showAllMediaOn" : "showAllMediaOff"),
+      error: tToast("instance.updateFailed"),
     });
     await apply({ id: instanceId, data: { showAllMedia: next } });
   };
