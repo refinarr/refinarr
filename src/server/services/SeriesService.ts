@@ -2,7 +2,12 @@ import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
-import { SonarrClient } from "@/server/clients/SonarrClient";
+// Type-only import — `SonarrClient` shows up only in a type assertion
+// inside `buildFlaggedSeries` (the inline cast goes away when the
+// Phase 3a-bis template-method refactor lands). Keeping it `import
+// type` means no value-level subclass import survives, satisfying the
+// "subclasses constructed only via ArrClientFactory" rule.
+import type { SonarrClient } from "@/server/clients/SonarrClient";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import { badRequest } from "@/server/lib/api-errors";
@@ -365,9 +370,9 @@ export class SeriesService extends MediaService<FlaggedSeries> {
     triggerSearch = false,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
+    // No SonarrClient cast — base ArrClient.deleteFile + triggerSearch
+    // cover everything this method needs.
+    const { instance, client } = await this.withClient(instanceId);
 
     return this.executeAction({
       instanceName: instance.name,
@@ -386,7 +391,7 @@ export class SeriesService extends MediaService<FlaggedSeries> {
       },
       run: async () => {
         for (const fileId of fileIds) {
-          await client.deleteEpisodeFile(fileId);
+          await client.deleteFile(fileId);
         }
         if (triggerSearch) await client.triggerSearch(mediaId);
       },
@@ -399,9 +404,7 @@ export class SeriesService extends MediaService<FlaggedSeries> {
     title: string,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
+    const { instance, client } = await this.withClient(instanceId);
 
     return this.executeAction({
       instanceName: instance.name,
@@ -422,9 +425,8 @@ export class SeriesService extends MediaService<FlaggedSeries> {
     title: string,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
+    // Narrow to SonarrClient — triggerSeasonSearch is series-specific.
+    const { instance, client } = await this.withClient(instanceId, "sonarr");
 
     return this.executeAction({
       instanceName: instance.name,
@@ -451,9 +453,9 @@ export class SeriesService extends MediaService<FlaggedSeries> {
     title: string,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
+    // Narrow to SonarrClient — getEpisodes + triggerEpisodeSearch are
+    // series-specific.
+    const { instance, client } = await this.withClient(instanceId, "sonarr");
 
     return this.executeAction({
       instanceName: instance.name,

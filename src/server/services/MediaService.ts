@@ -1,4 +1,10 @@
+import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
+import {
+  ArrClientFactory,
+  type ClientFor,
+} from "@/server/clients/ArrClientFactory";
+import type { ArrClient } from "@/server/clients/ArrClient";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import {
@@ -11,7 +17,9 @@ import { getSeverity } from "@/shared/severity";
 import type {
   ActionLog,
   ActionType,
+  ArrType,
   FlaggedMedia,
+  Instance,
   MediaQuery,
   ScoringMode,
 } from "@/shared/types/models";
@@ -147,6 +155,46 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
     // Miss — block on rebuild. Concurrent miss callers share the same
     // promise via dataCache.rebuild.
     return dataCache.rebuild(cacheKey, build);
+  }
+
+  // Resolves an instance + creates its ArrClient, the boilerplate every
+  // action method (`triggerSearch`, `deleteFile`, etc.) used to repeat
+  // verbatim.
+  //
+  // Two call shapes:
+  //   `await this.withClient(instanceId)` → `client: ArrClient`,
+  //     for cross-arr operations (the abstract surface only).
+  //   `await this.withClient(instanceId, "sonarr")` → `client: SonarrClient`,
+  //     for arr-specific extras like `triggerSeasonSearch`. The
+  //     return-type narrowing comes from the `ClientFor<T>` mapping, so
+  //     the consumer doesn't need to import `SonarrClient` at all
+  //     (and stays inside the "subclasses constructed only via
+  //     ArrClientFactory" rule).
+  //
+  // The discriminator form runtime-checks `instance.type` against the
+  // requested arr type so a misuse (e.g. `withClient(radarrId, "sonarr")`)
+  // throws here, not at the first method call. The factory picks the
+  // matching client from `instance.type` so the runtime check is
+  // equivalent to `instanceof` without needing the subclass at runtime.
+  protected withClient(
+    instanceId: number,
+  ): Promise<{ instance: Instance; client: ArrClient }>;
+  protected withClient<T extends ArrType>(
+    instanceId: number,
+    expectedType: T,
+  ): Promise<{ instance: Instance; client: ClientFor<T> }>;
+  protected async withClient(
+    instanceId: number,
+    expectedType?: ArrType,
+  ): Promise<{ instance: Instance; client: ArrClient }> {
+    const instance = await instanceRepository.findById(instanceId);
+    if (!instance) throw new Error(`Instance ${instanceId} not found`);
+    if (expectedType && instance.type !== expectedType) {
+      throw new Error(
+        `Instance ${instanceId} is type ${instance.type}, expected ${expectedType}`,
+      );
+    }
+    return { instance, client: ArrClientFactory.createArrClient(instance) };
   }
 
   protected applyQuery<T extends FlaggedMedia>(

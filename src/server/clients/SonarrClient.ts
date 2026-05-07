@@ -94,6 +94,13 @@ export class SonarrClient extends ArrClient {
     await this.fetch(`/episodefile/${fileId}`, { method: "DELETE" });
   }
 
+  // Implements ArrClient.deleteFile. Sonarr calls these "episode files"
+  // upstream; we keep the original method name available too so the
+  // existing series-specific call sites read naturally.
+  async deleteFile(fileId: number): Promise<void> {
+    return this.deleteEpisodeFile(fileId);
+  }
+
   async getQualityProfiles(): Promise<SonarrQualityProfile[]> {
     return this.fetch<SonarrQualityProfile[]>("/qualityprofile");
   }

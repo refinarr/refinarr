@@ -1,8 +1,14 @@
 import { describe, test, expect } from "vitest";
 import { MediaService } from "@/server/services/MediaService";
 import { instanceService } from "@/server/services/InstanceService";
+// Type-only client imports — used inside `expect(...).toBeInstanceOf` /
+// runtime-result checks but not constructed directly. Keeps the
+// "subclasses constructed only via ArrClientFactory" rule intact.
+import { RadarrClient } from "@/server/clients/RadarrClient";
+import { SonarrClient } from "@/server/clients/SonarrClient";
 import { LogSource } from "@/server/lib/log-sources";
 import type {
+  ArrType,
   FlaggedMedia,
   MediaQuery,
   ScoringMode,
@@ -49,6 +55,16 @@ class TestMediaService extends MediaService<FlaggedMedia> {
     hasFile: (item: T) => boolean = () => true,
   ): { items: T[]; total: number } {
     return this.applyQuery(source, query, mode, hasFile);
+  }
+
+  // Test-only seam over the protected withClient so we can assert its
+  // success / not-found / type-mismatch behavior without going through
+  // one of the service action methods.
+  runWithClient(instanceId: number) {
+    return this.withClient(instanceId);
+  }
+  runWithClientTyped<T extends ArrType>(instanceId: number, expectedType: T) {
+    return this.withClient(instanceId, expectedType);
   }
 
   runAction(opts: {
@@ -245,5 +261,54 @@ describe("MediaService.applyQuery — filter branches", () => {
       () => false,
     );
     expect(result.items).toHaveLength(3);
+  });
+});
+
+describe("MediaService.withClient", () => {
+  test("resolves the instance + creates the right ArrClient subclass", async () => {
+    const radarr = await instanceService.create({ ...baseInstance });
+    const sonarr = await instanceService.create({
+      ...baseInstance,
+      type: "sonarr",
+      name: "Test Sonarr",
+      url: "http://192.168.1.20:8989",
+    });
+
+    const radarrResult = await testService.runWithClient(radarr.id);
+    expect(radarrResult.instance.id).toBe(radarr.id);
+    expect(radarrResult.client).toBeInstanceOf(RadarrClient);
+
+    const sonarrResult = await testService.runWithClient(sonarr.id);
+    expect(sonarrResult.instance.id).toBe(sonarr.id);
+    expect(sonarrResult.client).toBeInstanceOf(SonarrClient);
+  });
+
+  test("throws when the instance id doesn't exist", async () => {
+    await expect(testService.runWithClient(99_999)).rejects.toThrow(
+      /Instance 99999 not found/,
+    );
+  });
+
+  test("typed form succeeds when the instance matches the expected arr type", async () => {
+    const sonarr = await instanceService.create({
+      ...baseInstance,
+      type: "sonarr",
+      name: "Typed Sonarr",
+      url: "http://192.168.1.30:8989",
+    });
+    const result = await testService.runWithClientTyped(sonarr.id, "sonarr");
+    expect(result.client).toBeInstanceOf(SonarrClient);
+  });
+
+  test("typed form throws when the instance type doesn't match (no unchecked cast)", async () => {
+    // Create a Radarr instance and ask for "sonarr" — the runtime check
+    // should fire and prevent a class mismatch slipping through.
+    const radarr = await instanceService.create({
+      ...baseInstance,
+      name: "Mismatched Radarr",
+    });
+    await expect(
+      testService.runWithClientTyped(radarr.id, "sonarr"),
+    ).rejects.toThrow(/expected sonarr/);
   });
 });
