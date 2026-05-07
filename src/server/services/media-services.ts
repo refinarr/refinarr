@@ -2,19 +2,25 @@ import type { ActionLog, ArrType, ScoringMode } from "@/shared/types/models";
 import { movieService } from "./MovieService";
 import { seriesService } from "./SeriesService";
 
-export interface FlaggedCacheService {
+export interface MediaCacheService {
   /**
-   * Returns the flagged-count from cache if warm, or null if cold. Used by
-   * the dashboard summary route to avoid triggering a multi-second
-   * upstream build inline.
+   * Returns the flagged-item count from cache if warm, or null if cold.
+   * Used by the dashboard summary route's "X flagged" numerator.
    */
-  getCachedFlaggedTotal(instanceId: number, mode: ScoringMode): number | null;
+  getCachedFlaggedCount(instanceId: number, mode: ScoringMode): number | null;
 
   /**
-   * Fires a minimal getFlagged* call to warm the cache. Used as
+   * Returns the total cached item count (visible-library size) if warm,
+   * or null if cold. Used by the dashboard summary route's "/ Y"
+   * denominator.
+   */
+  getCachedTotalCount(instanceId: number, mode: ScoringMode): number | null;
+
+  /**
+   * Fires a minimal getMovies/getSeries call to warm the cache. Used as
    * fire-and-forget by the dashboard route when the cache is cold.
    */
-  warmFlaggedCache(instanceId: number): Promise<unknown>;
+  warmMediaCache(instanceId: number): Promise<unknown>;
 }
 
 export interface RetryableMediaService {
@@ -34,7 +40,7 @@ export interface RetryableMediaService {
 // instance's arr type. MovieService and SeriesService both implement this;
 // callers go through mediaServiceFor(inst.type) instead of hard-coding
 // `inst.type === "radarr" ? movieService : seriesService`.
-export type MediaRouteService = FlaggedCacheService & RetryableMediaService;
+export type MediaRouteService = MediaCacheService & RetryableMediaService;
 
 export interface RetryActionOptions {
   actionLogId?: number;

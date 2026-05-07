@@ -89,10 +89,10 @@ export function InstanceSummaryCard({ instance }: Props) {
           className="bg-muted/20 hover:bg-muted/40 flex items-center justify-between rounded-md border px-3 py-2 transition-colors"
         >
           <span className="flex items-baseline gap-1 text-sm">
-            {instance.flaggedCount === null ? (
+            {instance.flaggedCount === null || instance.totalCount === null ? (
               <>
                 <span className="text-muted-foreground text-2xl font-bold tabular-nums">
-                  —
+                  — / —
                 </span>
                 <span className="text-muted-foreground">
                   {t(flaggedNounKey, { count: 0 })}
@@ -100,8 +100,19 @@ export function InstanceSummaryCard({ instance }: Props) {
               </>
             ) : (
               <>
-                <span className="text-2xl font-bold tabular-nums">
+                <span
+                  className="text-2xl font-bold tabular-nums"
+                  aria-label={t("flaggedOfTotal", {
+                    flagged: instance.flaggedCount,
+                    total: instance.totalCount,
+                  })}
+                >
                   {instance.flaggedCount}
+                  <span className="text-muted-foreground" aria-hidden="true">
+                    {" "}
+                    /{" "}
+                  </span>
+                  {instance.totalCount}
                 </span>
                 <span className="text-muted-foreground">
                   {t(flaggedNounKey, { count: instance.flaggedCount })}

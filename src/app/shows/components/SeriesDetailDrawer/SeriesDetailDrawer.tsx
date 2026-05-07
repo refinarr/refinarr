@@ -16,7 +16,7 @@ import { getSeverity } from "@/client/lib/severity";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import { SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
 import type {
-  FlaggedSeries,
+  SeriesItem,
   QualityProfile,
   ScoringMode,
 } from "@/shared/types/models";
@@ -24,29 +24,29 @@ import { groupBySeason, filename } from "@/app/shows/components/utils";
 import { SeasonAccordion } from "@/app/shows/components/SeasonAccordion";
 
 interface Props {
-  series: FlaggedSeries | null;
+  series: SeriesItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   scoringMode: ScoringMode;
   profiles: QualityProfile[] | undefined;
-  onIgnore: (series: FlaggedSeries) => void;
+  onIgnore: (series: SeriesItem) => void;
   onSearchSeason: (
-    series: FlaggedSeries,
+    series: SeriesItem,
     seasonNumber: number,
   ) => Promise<unknown>;
   onSearchEpisode: (
-    series: FlaggedSeries,
+    series: SeriesItem,
     fileId: number,
     label: string,
   ) => Promise<unknown>;
   onDeleteSeason: (
-    series: FlaggedSeries,
+    series: SeriesItem,
     seasonNumber: number,
     fileIds: number[],
     search: boolean,
   ) => Promise<unknown>;
   onDeleteEpisode: (
-    series: FlaggedSeries,
+    series: SeriesItem,
     fileId: number,
     label: string,
     search: boolean,

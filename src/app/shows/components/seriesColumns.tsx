@@ -19,11 +19,11 @@ import {
   isManualMode,
   isProfileMode,
 } from "@/shared/scoring-mode";
-import type { FlaggedSeries } from "@/shared/types/models";
+import type { SeriesItem } from "@/shared/types/models";
 
 export function seriesColumns(
-  ctx: MediaListShellRenderCtx<FlaggedSeries>,
-): ColumnDef<FlaggedSeries>[] {
+  ctx: MediaListShellRenderCtx<SeriesItem>,
+): ColumnDef<SeriesItem>[] {
   const {
     scoringMode,
     profiles,

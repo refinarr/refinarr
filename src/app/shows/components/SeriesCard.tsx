@@ -5,11 +5,11 @@ import type { MediaListShellRenderCtx } from "@/client/components/media/MediaLis
 import { formatBytes } from "@/client/lib/format";
 import { getSeverity } from "@/client/lib/severity";
 import { ISSUES_FOR, SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
-import type { FlaggedSeries } from "@/shared/types/models";
+import type { SeriesItem } from "@/shared/types/models";
 
 interface Props {
-  item: FlaggedSeries;
-  ctx: MediaListShellRenderCtx<FlaggedSeries>;
+  item: SeriesItem;
+  ctx: MediaListShellRenderCtx<SeriesItem>;
 }
 
 export function SeriesCard({ item, ctx }: Props) {

@@ -1,10 +1,10 @@
 "use client";
 
-import type { FlaggedMedia, ScoringMode } from "@/shared/types/models";
+import type { MediaItem, ScoringMode } from "@/shared/types/models";
 import type { MediaFilters } from "./useMediaFilters";
 
 // Shape consumed by the query hooks (useMovies / useSeries) and by
-// useFlaggedMediaData. Keeps every range bound nullable on the source
+// useMediaData. Keeps every range bound nullable on the source
 // MediaFilters but serialized to optional numbers — appendFilterParams
 // drops undefined keys so the URL only carries actually-set bounds.
 type ForQueryFilters = Omit<
@@ -29,12 +29,12 @@ type MediaQueryResult<T> = {
   refetch: () => unknown;
 };
 
-export type FlaggedMediaQueryHook<T extends FlaggedMedia> = (
+export type MediaDataQueryHook<T extends MediaItem> = (
   instanceId: number,
   filters: ForQueryFilters,
 ) => MediaQueryResult<T>;
 
-export interface FlaggedMediaData<T extends FlaggedMedia> {
+export interface MediaData<T extends MediaItem> {
   items: T[];
   total: number;
   isLoading: boolean;
@@ -46,11 +46,11 @@ export interface FlaggedMediaData<T extends FlaggedMedia> {
   refetch: () => unknown;
 }
 
-export function useFlaggedMediaData<T extends FlaggedMedia>(
-  useQuery: FlaggedMediaQueryHook<T>,
+export function useMediaData<T extends MediaItem>(
+  useQuery: MediaDataQueryHook<T>,
   activeInstance: number,
   filters: ForQueryFilters,
-): FlaggedMediaData<T> {
+): MediaData<T> {
   const q = useQuery(activeInstance, filters);
   return {
     items: q.data?.pages.flatMap((p) => p.items) ?? [],

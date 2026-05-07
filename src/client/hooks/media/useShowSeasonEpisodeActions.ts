@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
 import { withToast } from "@/client/lib/with-toast";
-import type { ActionLog, FlaggedSeries } from "@/shared/types/models";
+import type { ActionLog, SeriesItem } from "@/shared/types/models";
 
 export interface SeasonEpisodeConfig {
   instanceId: number;
@@ -26,7 +26,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       series,
       seasonNumber,
     }: {
-      series: FlaggedSeries;
+      series: SeriesItem;
       seasonNumber: number;
     }) =>
       api.post<ActionLog>(`/sonarr/series/season-search`, {
@@ -46,7 +46,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       fileId,
       label,
     }: {
-      series: FlaggedSeries;
+      series: SeriesItem;
       fileId: number;
       label: string;
     }) =>
@@ -68,7 +68,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       fileIds,
       search,
     }: {
-      series: FlaggedSeries;
+      series: SeriesItem;
       seasonNumber: number;
       fileIds: number[];
       search: boolean;
@@ -93,7 +93,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       label,
       search,
     }: {
-      series: FlaggedSeries;
+      series: SeriesItem;
       fileId: number;
       label: string;
       search: boolean;
@@ -145,18 +145,18 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
   });
 
   return {
-    runSearchSeason: (series: FlaggedSeries, seasonNumber: number) =>
+    runSearchSeason: (series: SeriesItem, seasonNumber: number) =>
       searchSeasonWithToast({ series, seasonNumber }),
-    runSearchEpisode: (series: FlaggedSeries, fileId: number, label: string) =>
+    runSearchEpisode: (series: SeriesItem, fileId: number, label: string) =>
       searchEpisodeWithToast({ series, fileId, label }),
     runDeleteSeason: (
-      series: FlaggedSeries,
+      series: SeriesItem,
       seasonNumber: number,
       fileIds: number[],
       search: boolean,
     ) => deleteSeasonWithToast({ series, seasonNumber, fileIds, search }),
     runDeleteEpisode: (
-      series: FlaggedSeries,
+      series: SeriesItem,
       fileId: number,
       label: string,
       search: boolean,

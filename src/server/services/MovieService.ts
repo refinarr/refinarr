@@ -17,7 +17,7 @@ import {
 import { movieRetryPayloadSchema } from "@/shared/types/schemas";
 import type {
   CustomFormat,
-  FlaggedMovie,
+  MovieItem,
   ActionLog,
   MediaQuery,
   ScoringMode,
@@ -44,63 +44,64 @@ type ManualCtx = {
   wantedCfs: Array<{ id: number; name: string }>;
 };
 
-export class MovieService extends MediaService<FlaggedMovie> {
+export class MovieService extends MediaService<MovieItem> {
   protected readonly cacheNamespace = "movies";
 
-  protected getFlaggedForWarm(
+  protected getForWarm(
     instanceId: number,
     query: MediaQuery,
-  ): Promise<{ items: FlaggedMovie[]; total: number }> {
-    return this.getFlaggedMovies(instanceId, query);
+  ): Promise<{ items: MovieItem[]; total: number }> {
+    return this.getMovies(instanceId, query);
   }
 
-  async getFlaggedMovies(
+  async getMovies(
     instanceId: number,
     query: MediaQuery,
-  ): Promise<{ items: FlaggedMovie[]; total: number }> {
+  ): Promise<{ items: MovieItem[]; total: number }> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
     const mode = instance.scoringMode;
-    const cacheKey = this.flaggedCacheKey(instanceId, mode);
-    const cached = await this.readWithSwr<{ flagged: FlaggedMovie[] }>({
+    const cacheKey = this.mediaCacheKey(instanceId, mode);
+    const cached = await this.readWithSwr<{ items: MovieItem[] }>({
       cacheKey,
       instanceId: instance.id,
       logSource: LogSource.MovieService,
-      backgroundErrorMessage: "Background flagged-movies rebuild failed",
-      build: () => this.buildFlaggedAndLog(instance.id, instance, mode),
+      backgroundErrorMessage: "Background movies rebuild failed",
+      build: () => this.buildAndLog(instance.id, instance, mode),
     });
-    return this.applyQuery(cached.flagged, query, mode);
+    return this.applyQuery(cached.items, query, mode);
   }
 
-  private async buildFlaggedAndLog(
+  private async buildAndLog(
     instanceId: number,
     instance: NonNullable<
       Awaited<ReturnType<typeof instanceRepository.findById>>
     >,
     mode: ScoringMode,
-  ): Promise<{ flagged: FlaggedMovie[] }> {
+  ): Promise<{ items: MovieItem[] }> {
     const startedAt = Date.now();
-    const flagged = await this.buildFlaggedMovies(instance, mode);
-    appLogger.debug("Built flagged movies cache", {
+    const items = await this.buildMovies(instance, mode);
+    appLogger.debug("Built movies cache", {
       source: LogSource.MovieService,
       context: {
         instanceId,
         instanceName: instance.name,
         mode,
-        flagged: flagged.length,
+        items: items.length,
+        flagged: items.filter((m) => m.flagged).length,
         durationMs: Date.now() - startedAt,
       },
     });
-    return { flagged };
+    return { items };
   }
 
-  private async buildFlaggedMovies(
+  private async buildMovies(
     instance: NonNullable<
       Awaited<ReturnType<typeof instanceRepository.findById>>
     >,
     mode: ScoringMode,
-  ): Promise<FlaggedMovie[]> {
+  ): Promise<MovieItem[]> {
     const client = ArrClientFactory.createArrClient(instance) as RadarrClient;
     const [movies, profiles] = await Promise.all([
       client.getMovies(),
@@ -131,7 +132,7 @@ export class MovieService extends MediaService<FlaggedMovie> {
     });
   }
 
-  private toMovieProfileItem(ctx: ProfileCtx): FlaggedMovie {
+  private toMovieProfileItem(ctx: ProfileCtx): MovieItem {
     const { item, file, profile, cfScoreMap, positiveProfileCfs } = ctx;
     const score = file?.customFormatScore ?? 0;
     const fileCfs = file?.customFormats ?? [];
@@ -162,7 +163,7 @@ export class MovieService extends MediaService<FlaggedMovie> {
     };
   }
 
-  private toMovieManualItem(ctx: ManualCtx): FlaggedMovie {
+  private toMovieManualItem(ctx: ManualCtx): MovieItem {
     const { item, file, wantedIds, wantedCfs } = ctx;
     const fileCfs = file?.customFormats ?? [];
     // Manual mode doesn't decorate against a profile's positive CFs —

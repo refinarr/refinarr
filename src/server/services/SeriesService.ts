@@ -1,7 +1,7 @@
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 // Type-only — `SonarrClient` shows up in a type assertion inside
-// `buildFlaggedSeries` (the factory still constructs the real subclass;
+// `buildSeries` (the factory still constructs the real subclass;
 // no value-level import keeps the "subclasses constructed only via
 // ArrClientFactory" rule intact).
 import type {
@@ -21,7 +21,7 @@ import {
 import { seriesRetryPayloadSchema } from "@/shared/types/schemas";
 import type {
   CustomFormat,
-  FlaggedSeries,
+  SeriesItem,
   EpisodeFileEntry,
   ActionLog,
   MediaQuery,
@@ -51,7 +51,7 @@ type ManualCtx = {
 };
 
 // Per-series file counts derived from upstream `seasons[].statistics`.
-// Used both for the FlaggedMedia.{existingFileCount,totalFileCount}
+// Used both for the MediaItem.{existingFileCount,totalFileCount}
 // fields and to derive whether a series is "missing" episodes.
 function fileCounts(s: SonarrSeries): { existing: number; total: number } {
   return (s.seasons ?? []).reduce(
@@ -63,63 +63,64 @@ function fileCounts(s: SonarrSeries): { existing: number; total: number } {
   );
 }
 
-export class SeriesService extends MediaService<FlaggedSeries> {
+export class SeriesService extends MediaService<SeriesItem> {
   protected readonly cacheNamespace = "series";
 
-  protected getFlaggedForWarm(
+  protected getForWarm(
     instanceId: number,
     query: MediaQuery,
-  ): Promise<{ items: FlaggedSeries[]; total: number }> {
-    return this.getFlaggedSeries(instanceId, query);
+  ): Promise<{ items: SeriesItem[]; total: number }> {
+    return this.getSeries(instanceId, query);
   }
 
-  async getFlaggedSeries(
+  async getSeries(
     instanceId: number,
     query: MediaQuery,
-  ): Promise<{ items: FlaggedSeries[]; total: number }> {
+  ): Promise<{ items: SeriesItem[]; total: number }> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
     const mode = instance.scoringMode;
-    const cacheKey = this.flaggedCacheKey(instanceId, mode);
-    const cached = await this.readWithSwr<{ flagged: FlaggedSeries[] }>({
+    const cacheKey = this.mediaCacheKey(instanceId, mode);
+    const cached = await this.readWithSwr<{ items: SeriesItem[] }>({
       cacheKey,
       instanceId: instance.id,
       logSource: LogSource.SeriesService,
-      backgroundErrorMessage: "Background flagged-series rebuild failed",
-      build: () => this.buildFlaggedAndLog(instance.id, instance, mode),
+      backgroundErrorMessage: "Background series rebuild failed",
+      build: () => this.buildAndLog(instance.id, instance, mode),
     });
-    return this.applyQuery(cached.flagged, query, mode);
+    return this.applyQuery(cached.items, query, mode);
   }
 
-  private async buildFlaggedAndLog(
+  private async buildAndLog(
     instanceId: number,
     instance: NonNullable<
       Awaited<ReturnType<typeof instanceRepository.findById>>
     >,
     mode: ScoringMode,
-  ): Promise<{ flagged: FlaggedSeries[] }> {
+  ): Promise<{ items: SeriesItem[] }> {
     const startedAt = Date.now();
-    const flagged = await this.buildFlaggedSeries(instance, mode);
-    appLogger.debug("Built flagged series cache", {
+    const items = await this.buildSeries(instance, mode);
+    appLogger.debug("Built series cache", {
       source: LogSource.SeriesService,
       context: {
         instanceId,
         instanceName: instance.name,
         mode,
-        flagged: flagged.length,
+        items: items.length,
+        flagged: items.filter((s) => s.flagged).length,
         durationMs: Date.now() - startedAt,
       },
     });
-    return { flagged };
+    return { items };
   }
 
-  private async buildFlaggedSeries(
+  private async buildSeries(
     instance: NonNullable<
       Awaited<ReturnType<typeof instanceRepository.findById>>
     >,
     mode: ScoringMode,
-  ): Promise<FlaggedSeries[]> {
+  ): Promise<SeriesItem[]> {
     const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
     const [series, profiles] = await Promise.all([
       client.getSeries(),
@@ -151,7 +152,7 @@ export class SeriesService extends MediaService<FlaggedSeries> {
     });
   }
 
-  private toSeriesProfileItem(ctx: ProfileCtx): FlaggedSeries {
+  private toSeriesProfileItem(ctx: ProfileCtx): SeriesItem {
     const {
       item: s,
       file: files,
@@ -241,7 +242,7 @@ export class SeriesService extends MediaService<FlaggedSeries> {
     };
   }
 
-  private toSeriesManualItem(ctx: ManualCtx): FlaggedSeries {
+  private toSeriesManualItem(ctx: ManualCtx): SeriesItem {
     const { item: s, file: files, profileMaps, wantedIds, wantedCfs } = ctx;
     const allMissingIds = new Set<number>();
     let affectedEpisodeCount = 0;

@@ -37,7 +37,7 @@ const profile = {
 };
 
 describe("GET /api/sonarr/series", () => {
-  test("returns paginated FlaggedSeries wrapper", async () => {
+  test("returns paginated SeriesItem wrapper", async () => {
     const instanceId = await makeInstance();
     await preferenceRepository.setForInstance(instanceId, [
       { cfId: 10, cfName: "HDR" },

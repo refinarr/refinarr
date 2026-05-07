@@ -9,7 +9,7 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const page = Number(s.get("page") ?? "1");
   const limit = Number(s.get("limit") ?? "50");
 
-  const { items, total } = await seriesService.getFlaggedSeries(instanceId, {
+  const { items, total } = await seriesService.getSeries(instanceId, {
     page,
     limit,
     ...parseMediaQuery(s),

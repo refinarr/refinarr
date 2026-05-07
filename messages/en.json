@@ -146,6 +146,7 @@
       "disabled": "Disabled",
       "flaggedMoviesNoun": "{count, plural, one {flagged movie} other {flagged movies}}",
       "flaggedSeriesNoun": "{count, plural, one {flagged series} other {flagged series}}",
+      "flaggedOfTotal": "{flagged} of {total}",
       "settings": "Settings"
     }
   },

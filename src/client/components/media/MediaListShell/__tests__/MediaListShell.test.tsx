@@ -2,8 +2,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import type { FlaggedMediaQueryHook } from "@/client/hooks/media/useFlaggedMediaData";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MediaDataQueryHook } from "@/client/hooks/media/useMediaData";
+import type { MovieItem } from "@/shared/types/models";
 import { renderWithProviders } from "@/test/render";
 import { MOVIE_BULK_CONFIG } from "../../media-bulk-configs";
 
@@ -77,7 +77,7 @@ vi.mock("@/client/hooks/media/useBulkHandlers", () => ({
 
 import { MediaListShell } from "../MediaListShell";
 
-const baseMovie: FlaggedMovie = {
+const baseMovie: MovieItem = {
   id: 7,
   title: "Test Movie",
   year: 2024,
@@ -96,9 +96,7 @@ const baseMovie: FlaggedMovie = {
   flagged: true,
 };
 
-function makeUseQuery(
-  items: FlaggedMovie[] = [],
-): FlaggedMediaQueryHook<FlaggedMovie> {
+function makeUseQuery(items: MovieItem[] = []): MediaDataQueryHook<MovieItem> {
   return () => ({
     data:
       items.length > 0
@@ -124,11 +122,8 @@ describe("MediaListShell", () => {
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
       >
-        <MediaListShell.Body<FlaggedMovie>
-          columns={() => []}
-          Card={() => null}
-        />
-        <MediaListShell.Drawer<FlaggedMovie> as={() => null} />
+        <MediaListShell.Body<MovieItem> columns={() => []} Card={() => null} />
+        <MediaListShell.Drawer<MovieItem> as={() => null} />
       </MediaListShell>,
     );
     expect(screen.getByText(/all clear/i)).toBeInTheDocument();
@@ -146,7 +141,7 @@ describe("MediaListShell", () => {
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
       >
-        <MediaListShell.Body<FlaggedMovie> columns={columns} Card={Card} />
+        <MediaListShell.Body<MovieItem> columns={columns} Card={Card} />
       </MediaListShell>,
     );
 
@@ -172,7 +167,7 @@ describe("MediaListShell", () => {
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
       >
-        <MediaListShell.Drawer<FlaggedMovie> as={Drawer} />
+        <MediaListShell.Drawer<MovieItem> as={Drawer} />
       </MediaListShell>,
     );
 

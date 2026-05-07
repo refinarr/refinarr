@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import type { FlaggedMovie, FlaggedSeries } from "@/shared/types/models";
+import type { MovieItem, SeriesItem } from "@/shared/types/models";
 import { MOVIE_BULK_CONFIG, SERIES_BULK_CONFIG } from "../media-bulk-configs";
 
-const baseMovie: FlaggedMovie = {
+const baseMovie: MovieItem = {
   id: 7,
   title: "Test Movie",
   year: 2024,
@@ -21,7 +21,7 @@ const baseMovie: FlaggedMovie = {
   flagged: true,
 };
 
-const baseSeries: FlaggedSeries = {
+const baseSeries: SeriesItem = {
   id: 9,
   title: "Test Series",
   year: 2024,

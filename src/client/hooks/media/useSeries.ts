@@ -3,7 +3,7 @@ import { useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
 import { appendFilterParams } from "@/client/lib/build-query-params";
-import type { FlaggedSeries } from "@/shared/types/models";
+import type { SeriesItem } from "@/shared/types/models";
 import type { PaginatedResponse } from "@/shared/types/api";
 import type { MediaQueryFilters } from "./useMediaFilters";
 
@@ -17,7 +17,7 @@ export function useSeries(instanceId: number, filters: MediaQueryFilters = {}) {
   return useInfiniteQuery({
     queryKey: queryKeys.series(instanceId, filters),
     queryFn: ({ pageParam = 1 }) =>
-      api.get<PaginatedResponse<FlaggedSeries>>(
+      api.get<PaginatedResponse<SeriesItem>>(
         `/sonarr/series?${params}&page=${pageParam}`,
       ),
     initialPageParam: 1,

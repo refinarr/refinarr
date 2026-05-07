@@ -69,7 +69,7 @@ export interface MediaQuery {
   monitorStatus?: MonitorStatus;
 }
 
-export interface FlaggedMedia {
+export interface MediaItem {
   id: number;
   title: string;
   year: number;
@@ -100,7 +100,7 @@ export interface FlaggedMedia {
   flagged: boolean;
 }
 
-export interface FlaggedMovie extends FlaggedMedia {
+export interface MovieItem extends MediaItem {
   movieFileId: number;
   hasFile: boolean;
 }
@@ -117,7 +117,7 @@ export interface EpisodeFileEntry {
   size: number;
 }
 
-export interface FlaggedSeries extends FlaggedMedia {
+export interface SeriesItem extends MediaItem {
   affectedEpisodeCount: number;
   totalEpisodeCount: number;
   episodeFiles: EpisodeFileEntry[];

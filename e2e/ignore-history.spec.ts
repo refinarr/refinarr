@@ -1,11 +1,11 @@
 import { test, expect } from "@playwright/test";
 import type { PaginatedResponse } from "@/shared/types/api";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MovieItem } from "@/shared/types/models";
 
 // Reuse the session created by auth.spec.ts — avoids extra login API calls.
 test.use({ storageState: "e2e/.auth/user.json" });
 
-const FAKE_MOVIE: FlaggedMovie = {
+const FAKE_MOVIE: MovieItem = {
   id: 2,
   title: "Ignorable Film",
   year: 2023,
@@ -38,14 +38,14 @@ test.beforeEach(async () => {
 });
 
 test("ignoring a movie removes it from the flagged list", async ({ page }) => {
-  const moviesResponse: PaginatedResponse<FlaggedMovie> = {
+  const moviesResponse: PaginatedResponse<MovieItem> = {
     items: [FAKE_MOVIE],
     total: 1,
     page: 1,
     limit: 50,
     hasMore: false,
   };
-  const emptyResponse: PaginatedResponse<FlaggedMovie> = {
+  const emptyResponse: PaginatedResponse<MovieItem> = {
     items: [],
     total: 0,
     page: 1,

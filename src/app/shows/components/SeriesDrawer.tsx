@@ -1,12 +1,12 @@
 "use client";
 import { useShowSeasonEpisodeActions } from "@/client/hooks/media/useShowSeasonEpisodeActions";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
-import type { FlaggedSeries } from "@/shared/types/models";
+import type { SeriesItem } from "@/shared/types/models";
 import { SeriesDetailDrawer } from "./SeriesDetailDrawer";
 
 interface Props {
-  item: FlaggedSeries | null;
-  ctx: MediaListShellRenderCtx<FlaggedSeries>;
+  item: SeriesItem | null;
+  ctx: MediaListShellRenderCtx<SeriesItem>;
   close: () => void;
 }
 

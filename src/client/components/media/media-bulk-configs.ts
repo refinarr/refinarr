@@ -1,13 +1,13 @@
 import type { BulkActionsConfig } from "@/client/hooks/media/useBulkMediaActions";
 import type {
-  FlaggedMedia,
-  FlaggedMovie,
-  FlaggedSeries,
+  MediaItem,
+  MovieItem,
+  SeriesItem,
   MediaType,
 } from "@/shared/types/models";
 
 // 1. Define the standard "Base" that every action uses
-const createBaseBody = (item: FlaggedMedia, instId: number) => ({
+const createBaseBody = (item: MediaItem, instId: number) => ({
   instanceId: instId,
   mediaId: item.id,
   title: item.title,
@@ -17,7 +17,7 @@ const createBaseBody = (item: FlaggedMedia, instId: number) => ({
  * 2. The Optimized Factory
  * We only ask for the things that CHANGE between Movie and Series.
  */
-function createBulkConfig<T extends FlaggedMedia>(
+function createBulkConfig<T extends MediaItem>(
   mediaType: MediaType,
   endpoints: { search: string; delete: string },
   logic: {
@@ -54,7 +54,7 @@ function createBulkConfig<T extends FlaggedMedia>(
 }
 
 // 3. Clean, readable implementations
-export const MOVIE_BULK_CONFIG = createBulkConfig<FlaggedMovie>(
+export const MOVIE_BULK_CONFIG = createBulkConfig<MovieItem>(
   "movie",
   { search: "/radarr/movies/search", delete: "/radarr/movies/delete" },
   {
@@ -63,7 +63,7 @@ export const MOVIE_BULK_CONFIG = createBulkConfig<FlaggedMovie>(
   },
 );
 
-export const SERIES_BULK_CONFIG = createBulkConfig<FlaggedSeries>(
+export const SERIES_BULK_CONFIG = createBulkConfig<SeriesItem>(
   "series",
   { search: "/sonarr/series/search", delete: "/sonarr/series/delete" },
   {

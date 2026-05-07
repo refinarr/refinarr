@@ -15,20 +15,20 @@ import { SeverityDot } from "@/client/components/common/SeverityDot";
 import { getSeverity } from "@/client/lib/severity";
 import { SCORE_FOR } from "@/shared/scoring-mode";
 import type {
-  FlaggedMovie,
+  MovieItem,
   QualityProfile,
   ScoringMode,
 } from "@/shared/types/models";
 
 interface Props {
-  movie: FlaggedMovie | null;
+  movie: MovieItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   scoringMode: ScoringMode;
   profiles: QualityProfile[] | undefined;
-  onSearch: (movie: FlaggedMovie) => void;
-  onIgnore: (movie: FlaggedMovie) => void;
-  onDelete?: (movie: FlaggedMovie, triggerSearch: boolean) => void;
+  onSearch: (movie: MovieItem) => void;
+  onIgnore: (movie: MovieItem) => void;
+  onDelete?: (movie: MovieItem, triggerSearch: boolean) => void;
 }
 
 export function MovieDetailDrawer({

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import type { PaginatedResponse } from "@/shared/types/api";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MovieItem } from "@/shared/types/models";
 
 test.use({
   storageState: "e2e/.auth/user.json",
@@ -16,7 +16,7 @@ const FAKE_INSTANCE = {
   createdAt: new Date().toISOString(),
 };
 
-const FAKE_MOVIE: FlaggedMovie = {
+const FAKE_MOVIE: MovieItem = {
   id: 1,
   title: "The Missing Format",
   year: 2024,
@@ -35,7 +35,7 @@ const FAKE_MOVIE: FlaggedMovie = {
   flagged: true,
 };
 
-const FAKE_RESPONSE: PaginatedResponse<FlaggedMovie> = {
+const FAKE_RESPONSE: PaginatedResponse<MovieItem> = {
   items: [FAKE_MOVIE],
   total: 1,
   page: 1,
