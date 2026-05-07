@@ -9,6 +9,10 @@ export interface ColumnDef<T> {
   header: ReactNode;
   sortKey?: "score" | "title" | "added" | "size";
   className?: string;
+  // Optional filter trigger rendered inline next to the header (Excel
+  // / Airtable-style funnel popover). Column defs decide which slice
+  // of the page-level filter state this column controls.
+  filter?: ReactNode;
   render: (row: T) => ReactNode;
 }
 
@@ -84,20 +88,23 @@ export function MediaTable<T extends { id: number }>({
                     className={`px-3 py-2.5 font-medium ${col.className ?? ""}`}
                     aria-sort={ariaSort}
                   >
-                    {col.sortKey ? (
-                      <button
-                        type="button"
-                        className="hover:text-foreground cursor-pointer select-none"
-                        onClick={() => onSortChange(col.sortKey!)}
-                      >
-                        {col.header}
-                        {arrow && (
-                          <span className="text-foreground">{arrow}</span>
-                        )}
-                      </button>
-                    ) : (
-                      col.header
-                    )}
+                    <span className="inline-flex items-center gap-1">
+                      {col.sortKey ? (
+                        <button
+                          type="button"
+                          className="hover:text-foreground cursor-pointer select-none"
+                          onClick={() => onSortChange(col.sortKey!)}
+                        >
+                          {col.header}
+                          {arrow && (
+                            <span className="text-foreground">{arrow}</span>
+                          )}
+                        </button>
+                      ) : (
+                        col.header
+                      )}
+                      {col.filter}
+                    </span>
                   </th>
                 );
               })}

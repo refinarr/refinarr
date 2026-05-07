@@ -1,5 +1,6 @@
 import { CfBadge } from "@/client/components/common/CfBadge";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
+import { CfColumnFunnel } from "@/client/components/media/CfColumnFunnel";
 import { SearchStatusBadge } from "@/client/components/media/SearchStatusBadge";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
 import type { ColumnDef } from "@/client/components/media/MediaTable";
@@ -11,6 +12,7 @@ import {
   ISSUES_FOR,
   ISSUES_HEADER_KEY,
   SCORE_FOR,
+  isManualMode,
   isProfileMode,
 } from "@/shared/scoring-mode";
 import type { FlaggedSeries } from "@/shared/types/models";
@@ -24,10 +26,17 @@ export function seriesColumns(
     queuedIds,
     recentMap,
     activeInstance,
+    filters,
+    onFilterChange,
+    cfOptions,
     t,
     tCols,
     tTime,
   } = ctx;
+  const issuesHeaderLabel = tCols(ISSUES_HEADER_KEY[scoringMode]);
+  const cfFunnelOptions = isManualMode(scoringMode)
+    ? cfOptions.missing
+    : cfOptions.penalty;
 
   return [
     {
@@ -121,7 +130,16 @@ export function seriesColumns(
     },
     {
       key: "issues",
-      header: tCols(ISSUES_HEADER_KEY[scoringMode]),
+      header: issuesHeaderLabel,
+      filter: (
+        <CfColumnFunnel
+          scoringMode={scoringMode}
+          options={cfFunnelOptions}
+          filters={filters}
+          onChange={onFilterChange}
+          columnLabel={issuesHeaderLabel}
+        />
+      ),
       render: (s) => {
         const items = ISSUES_FOR[scoringMode](s);
         if (!items.length) return null;

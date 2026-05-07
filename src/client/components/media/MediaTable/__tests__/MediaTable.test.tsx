@@ -78,4 +78,22 @@ describe("MediaTable", () => {
     await userEvent.click(checkbox);
     expect(onRowClick).not.toHaveBeenCalled();
   });
+
+  it("renders col.filter inline next to the header label", () => {
+    const columnsWithFilter: ColumnDef<Row>[] = [
+      {
+        key: "title",
+        header: "Title",
+        sortKey: "title",
+        filter: <button data-testid="title-funnel">funnel</button>,
+        render: (r) => r.title,
+      },
+    ];
+    render(<MediaTable {...baseProps} columns={columnsWithFilter} />);
+    const funnel = screen.getByTestId("title-funnel");
+    expect(funnel).toBeInTheDocument();
+    // The funnel should sit inside the same <th> as the sort button.
+    const th = funnel.closest("th")!;
+    expect(th.textContent).toMatch(/title/i);
+  });
 });

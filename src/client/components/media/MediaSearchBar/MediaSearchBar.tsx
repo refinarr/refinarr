@@ -123,47 +123,52 @@ export function MediaSearchBar({
           </SelectContent>
         </Select>
 
-        {isManualMode(scoringMode) ? (
-          <MultiSelect
-            options={wantedCfOptions}
-            selected={filters.missingCfIds}
-            onChange={(next) => onChange({ missingCfIds: next })}
-            placeholder={t("anyMissingFormat")}
-            label={t("missingHeading")}
-            singleLabel={(name) => t("missingLabel", { name })}
-            multiLabel={(count) => t("missingMultiLabel", { count })}
-            matchMode={filters.missingCfMatch}
-            onMatchModeChange={(m) => onChange({ missingCfMatch: m })}
-            matchAnyLabel={t("matchAny")}
-            matchAllLabel={t("matchAll")}
-            matchAnySuffix={t("matchAnySuffix")}
-            matchAllSuffix={t("matchAllSuffix")}
-            triggerClassName={cn(
-              PILL,
-              filters.missingCfIds.length > 0 && PILL_ACTIVE,
-            )}
-          />
-        ) : (
-          <MultiSelect
-            options={negativeCfOptions}
-            selected={filters.hasNegativeCfIds}
-            onChange={(next) => onChange({ hasNegativeCfIds: next })}
-            placeholder={t("anyPenaltyFormat")}
-            label={t("penaltyHeading")}
-            singleLabel={(name) => t("penaltyLabel", { name })}
-            multiLabel={(count) => t("penaltyMultiLabel", { count })}
-            matchMode={filters.hasNegativeCfMatch}
-            onMatchModeChange={(m) => onChange({ hasNegativeCfMatch: m })}
-            matchAnyLabel={t("matchAny")}
-            matchAllLabel={t("matchAll")}
-            matchAnySuffix={t("matchAnySuffix")}
-            matchAllSuffix={t("matchAllSuffix")}
-            triggerClassName={cn(
-              PILL,
-              filters.hasNegativeCfIds.length > 0 && PILL_ACTIVE,
-            )}
-          />
-        )}
+        {/* CF filter is mobile-only (lg:hidden) — desktop renders a
+            CfColumnFunnel inside the table's issues column header
+            instead, so the filter sits next to the data it filters. */}
+        <div className="contents lg:hidden">
+          {isManualMode(scoringMode) ? (
+            <MultiSelect
+              options={wantedCfOptions}
+              selected={filters.missingCfIds}
+              onChange={(next) => onChange({ missingCfIds: next })}
+              placeholder={t("anyMissingFormat")}
+              label={t("missingHeading")}
+              singleLabel={(name) => t("missingLabel", { name })}
+              multiLabel={(count) => t("missingMultiLabel", { count })}
+              matchMode={filters.missingCfMatch}
+              onMatchModeChange={(m) => onChange({ missingCfMatch: m })}
+              matchAnyLabel={t("matchAny")}
+              matchAllLabel={t("matchAll")}
+              matchAnySuffix={t("matchAnySuffix")}
+              matchAllSuffix={t("matchAllSuffix")}
+              triggerClassName={cn(
+                PILL,
+                filters.missingCfIds.length > 0 && PILL_ACTIVE,
+              )}
+            />
+          ) : (
+            <MultiSelect
+              options={negativeCfOptions}
+              selected={filters.hasNegativeCfIds}
+              onChange={(next) => onChange({ hasNegativeCfIds: next })}
+              placeholder={t("anyPenaltyFormat")}
+              label={t("penaltyHeading")}
+              singleLabel={(name) => t("penaltyLabel", { name })}
+              multiLabel={(count) => t("penaltyMultiLabel", { count })}
+              matchMode={filters.hasNegativeCfMatch}
+              onMatchModeChange={(m) => onChange({ hasNegativeCfMatch: m })}
+              matchAnyLabel={t("matchAny")}
+              matchAllLabel={t("matchAll")}
+              matchAnySuffix={t("matchAnySuffix")}
+              matchAllSuffix={t("matchAllSuffix")}
+              triggerClassName={cn(
+                PILL,
+                filters.hasNegativeCfIds.length > 0 && PILL_ACTIVE,
+              )}
+            />
+          )}
+        </div>
 
         {isManualMode(scoringMode) && (
           <Popover>

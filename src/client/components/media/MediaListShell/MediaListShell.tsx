@@ -2,6 +2,7 @@
 import {
   createContext,
   useContext,
+  useMemo,
   useState,
   type ComponentType,
   type ReactNode,
@@ -39,7 +40,10 @@ import { withToast } from "@/client/lib/with-toast";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import { useInfiniteScroll } from "@/client/hooks/ui/useInfiniteScroll";
 import { useInstanceSelection } from "@/client/hooks/media/useInstanceSelection";
-import { useMediaFilters } from "@/client/hooks/media/useMediaFilters";
+import {
+  useMediaFilters,
+  type MediaFilters,
+} from "@/client/hooks/media/useMediaFilters";
 import { useFilterChips } from "@/client/hooks/media/useFilterChips";
 import { useMediaSelection } from "@/client/hooks/media/useMediaSelection";
 import { useDetailDrawer } from "@/client/hooks/media/useDetailDrawer";
@@ -77,6 +81,19 @@ export interface MediaListShellRenderCtx<T extends FlaggedMedia> {
   runSearch: (item: T) => Promise<unknown>;
   runIgnore: (item: T) => Promise<unknown>;
   runDelete: (item: T, triggerSearch: boolean) => Promise<unknown>;
+  // Filter state + patch setter exposed so column defs can render
+  // per-column funnel popovers (e.g. CfColumnFunnel) that mutate the
+  // same filter slice MediaSearchBar reads from.
+  filters: MediaFilters;
+  onFilterChange: (patch: Partial<MediaFilters>) => void;
+  // Pre-computed CF option lists — `missing` is the user's "wanted"
+  // CFs (manual scoring), `penalty` is the negative-score formats from
+  // active quality profiles (profile scoring). Same shape both ways
+  // so column funnels stay scoring-mode-agnostic.
+  cfOptions: {
+    missing: { id: number; name: string }[];
+    penalty: { id: number; name: string }[];
+  };
   t: TFn;
   tCols: TFn;
   tTime: TFn;
@@ -195,6 +212,19 @@ function Root<T extends FlaggedMedia>({
     profiles,
   });
 
+  const cfOptions = useMemo(() => {
+    const missing = (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }));
+    const penaltyPairs = (profiles ?? [])
+      .flatMap((p) => p.formatItems ?? [])
+      .filter((item) => item.score < 0)
+      .map((item) => [item.format, item.name] as const);
+    const penalty = Array.from(new Map(penaltyPairs), ([id, name]) => ({
+      id,
+      name,
+    }));
+    return { missing, penalty };
+  }, [prefs, profiles]);
+
   const ctx: MediaListShellRenderCtx<T> = {
     arrType,
     scoringMode,
@@ -213,6 +243,10 @@ function Root<T extends FlaggedMedia>({
         isBulk: false,
         search: triggerSearch,
       }),
+    filters: filters.filters,
+    onFilterChange: (patch) =>
+      filters.setFilters((prev) => ({ ...prev, ...patch })),
+    cfOptions,
     t,
     tCols,
     tTime,

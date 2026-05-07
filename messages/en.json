@@ -220,7 +220,12 @@
     "openFilters": "Filters",
     "applyFilters": "Apply",
     "onlyMissing": "Only missing",
-    "clearAll": "Clear all"
+    "clearAll": "Clear all",
+    "columnFilterAriaLabel": "Filter {column}",
+    "missingColumnDescription": "Toggle Custom Formats this column must be missing.",
+    "penaltyColumnDescription": "Toggle penalty Custom Formats this column must contain.",
+    "noFormatsAvailable": "No Custom Formats available.",
+    "clearFilter": "Clear filter"
   },
   "bulk": {
     "selected": "{count} selected",
