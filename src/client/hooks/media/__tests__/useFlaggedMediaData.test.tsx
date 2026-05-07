@@ -59,6 +59,10 @@ describe("useFlaggedMediaData", () => {
       missingFormats: [],
       unwantedFormats: [],
       sizeOnDisk: 0,
+      monitored: true,
+      existingFileCount: 1,
+      totalFileCount: 1,
+      flagged: true,
     };
   }
 

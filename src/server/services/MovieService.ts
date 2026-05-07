@@ -51,7 +51,7 @@ export class MovieService extends MediaService<FlaggedMovie> {
       backgroundErrorMessage: "Background flagged-movies rebuild failed",
       build: () => this.buildFlaggedAndLog(instance.id, instance, mode),
     });
-    return this.applyQuery(cached.flagged, query, mode, (m) => m.hasFile);
+    return this.applyQuery(cached.flagged, query, mode);
   }
 
   private async buildFlaggedAndLog(
@@ -123,72 +123,71 @@ export class MovieService extends MediaService<FlaggedMovie> {
         .map((e) => e.mediaId),
     );
 
-    if (isProfileMode(mode)) {
-      return movies
-        .filter((m) => !ignoredSet.has(m.id))
-        .filter((m) => {
-          const profile = profileMap.get(m.qualityProfileId);
-          if (!profile) return false;
-          const score = fileMap.get(m.id)?.customFormatScore ?? 0;
-          return isBelowProfileScore(score, profile.cutoffFormatScore);
-        })
-        .map((m) => {
-          const profile = profileMap.get(m.qualityProfileId)!;
-          const file = fileMap.get(m.id);
-          const score = file?.customFormatScore ?? 0;
-          const cfScores =
-            profileScoreMap.get(m.qualityProfileId) ??
-            new Map<number, number>();
-          const positiveProfileCfs =
-            profileFormatMap.get(m.qualityProfileId) ?? [];
-          const fileCfs = file?.customFormats ?? [];
-          const fileCfIds = new Set(fileCfs.map((cf) => cf.id));
-          const unwantedFormats = fileCfs
-            .filter((cf) => (cfScores.get(cf.id) ?? 0) < 0)
-            .map((cf) => ({
-              id: cf.id,
-              name: cf.name,
-              score: cfScores.get(cf.id),
-            }));
-          return {
-            id: m.id,
-            title: m.title,
-            year: m.year,
-            qualityProfileId: m.qualityProfileId,
-            movieFileId: m.movieFileId,
-            customFormats: fileCfs.map((cf) => ({
-              id: cf.id,
-              name: cf.name,
-              score: cfScores.get(cf.id),
-            })),
-            customFormatScore: score,
-            hasFile: m.hasFile,
-            cfScore: scoreProfileCoverage(score, profile.cutoffFormatScore),
-            missingFormats: positiveProfileCfs.filter(
-              (cf) => !fileCfIds.has(cf.id),
-            ),
-            unwantedFormats,
-            minProfileScore: profile.cutoffFormatScore,
-            sizeOnDisk: file?.size ?? 0,
-          };
-        });
-    }
-
-    const prefs = await preferenceRepository.findByInstance(instanceId);
-    if (prefs.length === 0) return [];
-
+    // Manual-mode prefs fetched eagerly so the per-item map can branch on
+    // mode without an extra await inside the loop.
+    const prefs = !isProfileMode(mode)
+      ? await preferenceRepository.findByInstance(instanceId)
+      : [];
     const wantedIds = prefs.map((p) => p.cfId);
     const wantedCfs = prefs.map((p) => ({ id: p.cfId, name: p.cfName }));
 
+    if (isProfileMode(mode)) {
+      return (
+        movies
+          .filter((m) => !ignoredSet.has(m.id))
+          // Movies pointing at a deleted profile are in a broken upstream
+          // state — drop them rather than poisoning the cache with items
+          // that have no scoring context.
+          .filter((m) => profileMap.has(m.qualityProfileId))
+          .map((m) => {
+            const profile = profileMap.get(m.qualityProfileId)!;
+            const file = fileMap.get(m.id);
+            const score = file?.customFormatScore ?? 0;
+            const cfScores =
+              profileScoreMap.get(m.qualityProfileId) ??
+              new Map<number, number>();
+            const positiveProfileCfs =
+              profileFormatMap.get(m.qualityProfileId) ?? [];
+            const fileCfs = file?.customFormats ?? [];
+            const fileCfIds = new Set(fileCfs.map((cf) => cf.id));
+            const unwantedFormats = fileCfs
+              .filter((cf) => (cfScores.get(cf.id) ?? 0) < 0)
+              .map((cf) => ({
+                id: cf.id,
+                name: cf.name,
+                score: cfScores.get(cf.id),
+              }));
+            return {
+              id: m.id,
+              title: m.title,
+              year: m.year,
+              qualityProfileId: m.qualityProfileId,
+              movieFileId: m.movieFileId,
+              customFormats: fileCfs.map((cf) => ({
+                id: cf.id,
+                name: cf.name,
+                score: cfScores.get(cf.id),
+              })),
+              customFormatScore: score,
+              hasFile: m.hasFile,
+              cfScore: scoreProfileCoverage(score, profile.cutoffFormatScore),
+              missingFormats: positiveProfileCfs.filter(
+                (cf) => !fileCfIds.has(cf.id),
+              ),
+              unwantedFormats,
+              minProfileScore: profile.cutoffFormatScore,
+              sizeOnDisk: file?.size ?? 0,
+              monitored: m.monitored,
+              existingFileCount: m.hasFile ? 1 : 0,
+              totalFileCount: 1,
+              flagged: isBelowProfileScore(score, profile.cutoffFormatScore),
+            };
+          })
+      );
+    }
+
     return movies
       .filter((m) => !ignoredSet.has(m.id))
-      .filter((m) => {
-        if (!m.hasFile) return true;
-        return isMissingWantedFormats(
-          fileMap.get(m.id)?.customFormats ?? [],
-          wantedIds,
-        );
-      })
       .map((m) => {
         const file = fileMap.get(m.id);
         const cfScores =
@@ -199,6 +198,17 @@ export class MovieService extends MediaService<FlaggedMovie> {
             name: cf.name,
             score: cfScores.get(cf.id),
           })) ?? [];
+        // Manual-mode flagged predicate: no file at all OR file is missing
+        // any of the user's wanted CFs. With zero prefs configured no
+        // movie can be flagged — flagged stays false for every item, but
+        // they all still appear in the cache for the "Show all" view.
+        const flagged =
+          wantedIds.length > 0 &&
+          (!m.hasFile ||
+            isMissingWantedFormats(
+              fileMap.get(m.id)?.customFormats ?? [],
+              wantedIds,
+            ));
         return {
           id: m.id,
           title: m.title,
@@ -212,6 +222,10 @@ export class MovieService extends MediaService<FlaggedMovie> {
           missingFormats: getMissingFormats(formats, wantedCfs),
           unwantedFormats: [],
           sizeOnDisk: file?.size ?? 0,
+          monitored: m.monitored,
+          existingFileCount: m.hasFile ? 1 : 0,
+          totalFileCount: 1,
+          flagged,
         };
       });
   }

@@ -38,19 +38,17 @@ class TestMediaService extends MediaService<FlaggedMedia> {
       backgroundErrorMessage: "Test flagged-media rebuild failed",
       build: async () => ({ flagged: this.flagged }),
     });
-    return this.applyQuery(cached.flagged, query, "manual", () => true);
+    return this.applyQuery(cached.flagged, query, "manual");
   }
 
   // Test-only seam over the protected applyQuery so the filter-branch
-  // tests below can drive it directly with arbitrary query + mode +
-  // hasFile predicates.
+  // tests below can drive it directly with arbitrary query + mode.
   runQuery<T extends FlaggedMedia>(
     source: T[],
     query: MediaQuery,
     mode: ScoringMode = "manual",
-    hasFile: (item: T) => boolean = () => true,
   ): { items: T[]; total: number } {
-    return this.applyQuery(source, query, mode, hasFile);
+    return this.applyQuery(source, query, mode);
   }
 
   // Test-only seam over the protected withClient so we can assert its
@@ -91,6 +89,10 @@ function makeFlaggedMedia(id: number): FlaggedMedia {
     missingFormats: [],
     unwantedFormats: [],
     sizeOnDisk: 0,
+    monitored: true,
+    existingFileCount: 1,
+    totalFileCount: 1,
+    flagged: true,
   };
 }
 
@@ -244,15 +246,102 @@ describe("MediaService.applyQuery — filter branches", () => {
     expect(result.items.map((m) => m.id).sort()).toEqual([2, 3]);
   });
 
+  test("flaggedOnly defaults to true — non-flagged items hidden", () => {
+    const mixed = [
+      { ...makeFlaggedMedia(1), flagged: true },
+      { ...makeFlaggedMedia(2), flagged: false },
+      { ...makeFlaggedMedia(3), flagged: true },
+    ];
+    const result = testService.runQuery(mixed, baseQuery);
+    expect(result.items.map((m) => m.id).sort()).toEqual([1, 3]);
+  });
+
+  test("flaggedOnly: false returns the full library", () => {
+    const mixed = [
+      { ...makeFlaggedMedia(1), flagged: true },
+      { ...makeFlaggedMedia(2), flagged: false },
+      { ...makeFlaggedMedia(3), flagged: true },
+    ];
+    const result = testService.runQuery(mixed, {
+      ...baseQuery,
+      flaggedOnly: false,
+    });
+    expect(result.items.map((m) => m.id).sort()).toEqual([1, 2, 3]);
+  });
+
+  test("monitorStatus 'unmonitored' returns only !monitored items", () => {
+    const mixed = [
+      { ...makeFlaggedMedia(1), monitored: true },
+      { ...makeFlaggedMedia(2), monitored: false },
+      { ...makeFlaggedMedia(3), monitored: true },
+    ];
+    const result = testService.runQuery(mixed, {
+      ...baseQuery,
+      monitorStatus: "unmonitored",
+    });
+    expect(result.items.map((m) => m.id)).toEqual([2]);
+  });
+
+  test("monitorStatus 'missing' returns only items with absent files", () => {
+    // 1: monitored, fully downloaded → not missing
+    // 2: monitored, partial downloads → missing
+    // 3: unmonitored, partial downloads → not missing (rule requires monitored)
+    const mixed = [
+      {
+        ...makeFlaggedMedia(1),
+        monitored: true,
+        existingFileCount: 10,
+        totalFileCount: 10,
+      },
+      {
+        ...makeFlaggedMedia(2),
+        monitored: true,
+        existingFileCount: 1,
+        totalFileCount: 100,
+      },
+      {
+        ...makeFlaggedMedia(3),
+        monitored: false,
+        existingFileCount: 1,
+        totalFileCount: 100,
+      },
+    ];
+    const result = testService.runQuery(mixed, {
+      ...baseQuery,
+      monitorStatus: "missing",
+    });
+    expect(result.items.map((m) => m.id)).toEqual([2]);
+  });
+
+  test("regression: a series with 1-of-100 episodes downloaded is not 'has file'", () => {
+    // The retired hasFile callback used to read `episodeFiles.length > 0`
+    // which would have returned true here. The replacement field-based
+    // check (existingFileCount > 0 only when *any* file is downloaded)
+    // still includes this series via existingFileCount=1 — but the
+    // monitorStatus="missing" filter correctly captures it as missing.
+    const partial = {
+      ...makeFlaggedMedia(1),
+      monitored: true,
+      existingFileCount: 1,
+      totalFileCount: 100,
+    };
+    const result = testService.runQuery([partial], {
+      ...baseQuery,
+      monitorStatus: "missing",
+    });
+    expect(result.items.map((m) => m.id)).toEqual([1]);
+  });
+
   test("missing severity bucket flags items without files", () => {
-    const result = testService.runQuery(
-      items(),
-      { ...baseQuery, severities: ["missing"] },
-      "manual",
-      // Pretend no item has a file — every item should drop into
-      // the "missing" bucket via getSeverity's hasFile=false branch.
-      () => false,
-    );
+    // Mark every item as having no file → getSeverity returns "missing".
+    const noFileItems = items().map((m) => ({
+      ...m,
+      existingFileCount: 0,
+    }));
+    const result = testService.runQuery(noFileItems, {
+      ...baseQuery,
+      severities: ["missing"],
+    });
     expect(result.items).toHaveLength(3);
   });
 });

@@ -23,6 +23,9 @@ describe("parseMediaQuery", () => {
       hasNegativeCfIds: undefined,
       hasNegativeCfMatch: "all",
       onlyMissing: false,
+      // Default-on flagged-only filter; default "all" monitor status.
+      flaggedOnly: true,
+      monitorStatus: "all",
     });
   });
 
@@ -121,5 +124,34 @@ describe("parseMediaQuery", () => {
   test("threads q through unchanged when present", () => {
     expect(parseMediaQuery(urlParams("q=matrix")).q).toBe("matrix");
     expect(parseMediaQuery(urlParams("")).q).toBeUndefined();
+  });
+
+  test("flaggedOnly defaults to true — only `?flaggedOnly=false` flips it", () => {
+    expect(parseMediaQuery(urlParams("")).flaggedOnly).toBe(true);
+    expect(parseMediaQuery(urlParams("flaggedOnly=true")).flaggedOnly).toBe(
+      true,
+    );
+    expect(parseMediaQuery(urlParams("flaggedOnly=junk")).flaggedOnly).toBe(
+      true,
+    );
+    expect(parseMediaQuery(urlParams("flaggedOnly=false")).flaggedOnly).toBe(
+      false,
+    );
+  });
+
+  test("monitorStatus parses the four valid values + falls back to 'all'", () => {
+    expect(parseMediaQuery(urlParams("")).monitorStatus).toBe("all");
+    expect(
+      parseMediaQuery(urlParams("monitorStatus=monitored")).monitorStatus,
+    ).toBe("monitored");
+    expect(
+      parseMediaQuery(urlParams("monitorStatus=unmonitored")).monitorStatus,
+    ).toBe("unmonitored");
+    expect(
+      parseMediaQuery(urlParams("monitorStatus=missing")).monitorStatus,
+    ).toBe("missing");
+    expect(
+      parseMediaQuery(urlParams("monitorStatus=invalid")).monitorStatus,
+    ).toBe("all");
   });
 });

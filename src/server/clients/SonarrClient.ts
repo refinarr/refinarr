@@ -6,6 +6,18 @@ interface SonarrSeries {
   title: string;
   year: number;
   qualityProfileId: number;
+  monitored: boolean;
+  // Per-season episode + episode-file counts. Used to compute the
+  // total / existing file counts for FlaggedSeries without a second API
+  // call. Sonarr returns this on every series payload.
+  seasons?: Array<{
+    seasonNumber: number;
+    monitored: boolean;
+    statistics?: {
+      episodeCount: number;
+      episodeFileCount: number;
+    };
+  }>;
 }
 
 export interface SonarrEpisodeFile {

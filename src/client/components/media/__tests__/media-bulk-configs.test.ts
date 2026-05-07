@@ -15,6 +15,10 @@ const baseMovie: FlaggedMovie = {
   missingFormats: [],
   unwantedFormats: [],
   sizeOnDisk: 0,
+  monitored: true,
+  existingFileCount: 1,
+  totalFileCount: 1,
+  flagged: true,
 };
 
 const baseSeries: FlaggedSeries = {
@@ -52,6 +56,10 @@ const baseSeries: FlaggedSeries = {
     },
   ],
   sizeOnDisk: 0,
+  monitored: true,
+  existingFileCount: 2,
+  totalFileCount: 5,
+  flagged: true,
 };
 
 describe("MOVIE_BULK_CONFIG", () => {
