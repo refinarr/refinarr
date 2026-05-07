@@ -100,6 +100,7 @@
   --spacing-control: 2.75rem; /* prominent form control height — iOS 44pt touch target */
   --spacing-control-lg: 3.25rem; /* primary CTA / hero pickers */
   --spacing-bottom-bar: 4rem; /* mobile bottom tab bar height (excludes safe-area inset) */
+  --spacing-mobile-filter-bar: 3rem; /* mobile filter toolbar height (sits above the tab bar) */
 }
 
 /* First-paint safety: surface is keyed on the .dark class (toggled by

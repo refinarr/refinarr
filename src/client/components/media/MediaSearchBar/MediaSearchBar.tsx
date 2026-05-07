@@ -74,11 +74,20 @@ export function MediaSearchBar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        {/*
+          The Only-missing pill is desktop-only. On mobile the same
+          toggle lives in MobileFilterBar so the search bar stays
+          tight and one-handed reachability is preserved.
+        */}
         <button
           type="button"
           aria-pressed={onlyMissingActive}
           onClick={() => onChange({ onlyMissing: !filters.onlyMissing })}
-          className={cn(PILL, onlyMissingActive && PILL_ACTIVE)}
+          className={cn(
+            "hidden md:inline-flex",
+            PILL,
+            onlyMissingActive && PILL_ACTIVE,
+          )}
         >
           {onlyMissingActive && <Check className="size-3" />}
           {t("onlyMissing")}

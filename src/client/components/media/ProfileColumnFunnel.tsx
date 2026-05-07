@@ -5,10 +5,43 @@ import type { QualityProfile } from "@/shared/types/models";
 import { ColumnFilter } from "./ColumnFilter";
 import { FilterChipButton } from "./FilterChipButton";
 
-interface Props {
+interface BodyProps {
   profiles: QualityProfile[] | undefined;
   filters: MediaFilters;
   onChange: (patch: Partial<MediaFilters>) => void;
+}
+
+export function ProfileFunnelBody({ profiles, filters, onChange }: BodyProps) {
+  const t = useTranslations("filters");
+  const selected = filters.profileIds;
+  const toggle = (id: number) =>
+    onChange({
+      profileIds: selected.includes(id)
+        ? selected.filter((x) => x !== id)
+        : [...selected, id],
+    });
+  if (!profiles || profiles.length === 0) {
+    return (
+      <p className="text-muted-foreground text-xs">
+        {t("noProfilesAvailable")}
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {profiles.map((p) => (
+        <FilterChipButton
+          key={p.id}
+          label={p.name}
+          selected={selected.includes(p.id)}
+          onClick={() => toggle(p.id)}
+        />
+      ))}
+    </div>
+  );
+}
+
+interface Props extends BodyProps {
   columnLabel: string;
 }
 
@@ -19,15 +52,7 @@ export function ProfileColumnFunnel({
   columnLabel,
 }: Props) {
   const t = useTranslations("filters");
-  const selected = filters.profileIds;
-  const active = selected.length > 0;
-  const toggle = (id: number) =>
-    onChange({
-      profileIds: selected.includes(id)
-        ? selected.filter((x) => x !== id)
-        : [...selected, id],
-    });
-
+  const active = filters.profileIds.length > 0;
   return (
     <ColumnFilter
       active={active}
@@ -37,22 +62,11 @@ export function ProfileColumnFunnel({
       onClear={active ? () => onChange({ profileIds: [] }) : undefined}
       clearLabel={t("clearFilter")}
     >
-      {!profiles || profiles.length === 0 ? (
-        <p className="text-muted-foreground text-xs">
-          {t("noProfilesAvailable")}
-        </p>
-      ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {profiles.map((p) => (
-            <FilterChipButton
-              key={p.id}
-              label={p.name}
-              selected={selected.includes(p.id)}
-              onClick={() => toggle(p.id)}
-            />
-          ))}
-        </div>
-      )}
+      <ProfileFunnelBody
+        profiles={profiles}
+        filters={filters}
+        onChange={onChange}
+      />
     </ColumnFilter>
   );
 }

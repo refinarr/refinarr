@@ -40,10 +40,36 @@ const PROFILE_BUCKETS: Bucket[] = [
   { id: "positive", labelKey: "profilePositive", min: 1, max: null },
 ];
 
-interface Props {
+interface BodyProps {
   scoringMode: ScoringMode;
   filters: MediaFilters;
   onChange: (patch: Partial<MediaFilters>) => void;
+}
+
+export function ScoreFunnelBody({ scoringMode, filters, onChange }: BodyProps) {
+  const tBuckets = useTranslations("filters.scoreBuckets");
+  const buckets = isManualMode(scoringMode) ? MANUAL_BUCKETS : PROFILE_BUCKETS;
+  const matchesBucket = (b: Bucket) =>
+    filters.minScore === b.min && filters.maxScore === b.max;
+  const select = (b: Bucket) => {
+    if (matchesBucket(b)) onChange({ minScore: null, maxScore: null });
+    else onChange({ minScore: b.min, maxScore: b.max });
+  };
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {buckets.map((b) => (
+        <FilterChipButton
+          key={b.id}
+          label={tBuckets(b.labelKey)}
+          selected={matchesBucket(b)}
+          onClick={() => select(b)}
+        />
+      ))}
+    </div>
+  );
+}
+
+interface Props extends BodyProps {
   columnLabel: string;
 }
 
@@ -54,16 +80,7 @@ export function ScoreColumnFunnel({
   columnLabel,
 }: Props) {
   const t = useTranslations("filters");
-  const tBuckets = useTranslations("filters.scoreBuckets");
-  const buckets = isManualMode(scoringMode) ? MANUAL_BUCKETS : PROFILE_BUCKETS;
   const active = filters.minScore !== null || filters.maxScore !== null;
-  const matchesBucket = (b: Bucket) =>
-    filters.minScore === b.min && filters.maxScore === b.max;
-  const select = (b: Bucket) => {
-    if (matchesBucket(b)) onChange({ minScore: null, maxScore: null });
-    else onChange({ minScore: b.min, maxScore: b.max });
-  };
-
   return (
     <ColumnFilter
       active={active}
@@ -75,16 +92,11 @@ export function ScoreColumnFunnel({
       }
       clearLabel={t("clearFilter")}
     >
-      <div className="flex flex-wrap gap-1.5">
-        {buckets.map((b) => (
-          <FilterChipButton
-            key={b.id}
-            label={tBuckets(b.labelKey)}
-            selected={matchesBucket(b)}
-            onClick={() => select(b)}
-          />
-        ))}
-      </div>
+      <ScoreFunnelBody
+        scoringMode={scoringMode}
+        filters={filters}
+        onChange={onChange}
+      />
     </ColumnFilter>
   );
 }

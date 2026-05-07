@@ -27,10 +27,9 @@ const BUCKETS: Bucket[] = [
   { id: "gt50", labelKey: "gt50", min: 50 * GB, max: null },
 ];
 
-interface Props {
+interface BodyProps {
   filters: MediaFilters;
   onChange: (patch: Partial<MediaFilters>) => void;
-  columnLabel: string;
 }
 
 // Single-select bucket chips for the "size" column. Each chip maps to a
@@ -38,18 +37,35 @@ interface Props {
 // filter. Buckets that don't match the current filter (e.g. a manually
 // dialled-in range from a future iteration) leave no chip active but
 // keep the Clear affordance available.
-export function SizeColumnFunnel({ filters, onChange, columnLabel }: Props) {
-  const t = useTranslations("filters");
+export function SizeFunnelBody({ filters, onChange }: BodyProps) {
   const tBuckets = useTranslations("filters.sizeBuckets");
-  const active = filters.minSize !== null || filters.maxSize !== null;
   const matchesBucket = (b: Bucket) =>
     filters.minSize === b.min && filters.maxSize === b.max;
-
   const select = (b: Bucket) => {
     if (matchesBucket(b)) onChange({ minSize: null, maxSize: null });
     else onChange({ minSize: b.min, maxSize: b.max });
   };
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {BUCKETS.map((b) => (
+        <FilterChipButton
+          key={b.id}
+          label={tBuckets(b.labelKey)}
+          selected={matchesBucket(b)}
+          onClick={() => select(b)}
+        />
+      ))}
+    </div>
+  );
+}
 
+interface Props extends BodyProps {
+  columnLabel: string;
+}
+
+export function SizeColumnFunnel({ filters, onChange, columnLabel }: Props) {
+  const t = useTranslations("filters");
+  const active = filters.minSize !== null || filters.maxSize !== null;
   return (
     <ColumnFilter
       active={active}
@@ -61,16 +77,7 @@ export function SizeColumnFunnel({ filters, onChange, columnLabel }: Props) {
       }
       clearLabel={t("clearFilter")}
     >
-      <div className="flex flex-wrap gap-1.5">
-        {BUCKETS.map((b) => (
-          <FilterChipButton
-            key={b.id}
-            label={tBuckets(b.labelKey)}
-            selected={matchesBucket(b)}
-            onClick={() => select(b)}
-          />
-        ))}
-      </div>
+      <SizeFunnelBody filters={filters} onChange={onChange} />
     </ColumnFilter>
   );
 }

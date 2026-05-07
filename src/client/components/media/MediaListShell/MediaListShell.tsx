@@ -18,6 +18,7 @@ import {
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
 import { MediaPageHeader } from "@/client/components/media/MediaPageHeader";
 import { MediaSearchBar } from "@/client/components/media/MediaSearchBar";
+import { MobileFilterBar } from "@/client/components/media/MobileFilterBar";
 import {
   MediaTable,
   type ColumnDef,
@@ -285,7 +286,24 @@ function Root<T extends FlaggedMedia>({
     <AppShell>
       <PageErrorBoundary>
         <ShellContext.Provider value={value}>
-          <div className="flex flex-col gap-4">{children}</div>
+          {/*
+            pb-mobile-filter-bar reserves vertical space below the last
+            row so it isn't hidden behind the fixed MobileFilterBar.
+            md:pb-0 zeroes the reservation on desktop where the
+            MobileFilterBar is hidden.
+          */}
+          <div className="pb-mobile-filter-bar flex flex-col gap-4 md:pb-0">
+            {children}
+          </div>
+          <MobileFilterBar
+            scoringMode={ctx.scoringMode}
+            profiles={profiles}
+            cfOptions={cfOptions}
+            filters={filters.filters}
+            onChange={(patch) =>
+              filters.setFilters((prev) => ({ ...prev, ...patch }))
+            }
+          />
           {confirmDialog}
         </ShellContext.Provider>
       </PageErrorBoundary>
