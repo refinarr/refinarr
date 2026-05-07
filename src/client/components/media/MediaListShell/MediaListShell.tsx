@@ -178,9 +178,12 @@ function Root<T extends MediaItem>({
   const refreshMutation = useRefreshInstance();
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
 
+  const activeInstanceRow = inst.typedInstances.find(
+    (i) => i.id === inst.activeInstance,
+  );
   const scoringMode: ScoringMode =
-    inst.typedInstances.find((i) => i.id === inst.activeInstance)
-      ?.scoringMode ?? DEFAULT_SCORING_MODE;
+    activeInstanceRow?.scoringMode ?? DEFAULT_SCORING_MODE;
+  const showAllEnabled = activeInstanceRow?.showAllMedia ?? false;
   const noCfsConfigured =
     isManualMode(scoringMode) && (prefs?.length ?? 0) === 0;
 
@@ -296,6 +299,7 @@ function Root<T extends MediaItem>({
             profiles={profiles}
             cfOptions={cfOptions}
             filters={filters.filters}
+            showAllEnabled={showAllEnabled}
             onChange={(patch) =>
               filters.setFilters((prev) => ({ ...prev, ...patch }))
             }
@@ -339,11 +343,19 @@ function Header() {
 }
 
 function SearchBar() {
-  const { filters } = useShellContext();
+  const { filters, inst } = useShellContext();
+  // Per-instance capability gate. The "Show all" pill is only reachable
+  // when the active instance has Advanced mode (Instance.showAllMedia)
+  // turned on in settings — the server enforces the same flag, so a
+  // disabled instance ignores the pill regardless.
+  const showAllEnabled =
+    inst.typedInstances.find((i) => i.id === inst.activeInstance)
+      ?.showAllMedia ?? false;
   return (
     <MediaSearchBar
       filters={filters.filters}
       onChange={(next) => filters.setFilters((prev) => ({ ...prev, ...next }))}
+      showAllEnabled={showAllEnabled}
     />
   );
 }

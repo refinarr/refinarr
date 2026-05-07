@@ -15,6 +15,7 @@ function publicView(i: Instance): InstanceListItem {
     enabled: i.enabled,
     scoringMode: i.scoringMode,
     searchesPerHour: i.searchesPerHour,
+    showAllMedia: i.showAllMedia,
     createdAt: i.createdAt,
   };
 }

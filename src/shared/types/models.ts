@@ -19,6 +19,13 @@ export interface Instance {
   enabled: boolean;
   scoringMode: ScoringMode;
   searchesPerHour: number;
+  // Per-instance opt-in for "Advanced — show all media". When false
+  // (default), the API serves flagged-only items even if the request
+  // asks for `flaggedOnly=false`. When true, the page-level toggle
+  // becomes available so the user can view/search/delete non-flagged
+  // items too. Recommended OFF; surfaced like dryRun (deliberate
+  // opt-in with a warning).
+  showAllMedia: boolean;
   createdAt: Date;
 }
 

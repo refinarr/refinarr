@@ -4,6 +4,7 @@ import { Edit2, Trash2, Plug, Hourglass } from "lucide-react";
 import { Card, CardContent } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
+import { ShowAllMediaToggle } from "@/client/components/settings/ShowAllMediaToggle";
 import {
   useDeleteInstance,
   useTestConnection,
@@ -47,66 +48,71 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
 
   return (
     <Card>
-      <CardContent className="flex items-center gap-4 py-4">
-        <Badge variant="outline" className="capitalize">
-          {instance.type}
-        </Badge>
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">{instance.name}</p>
-          <p className="text-muted-foreground truncate text-xs">
-            {instance.url}
-          </p>
-          {noCfs && (
-            <p className="text-warning mt-0.5 text-xs">
-              {t("noCfsConfigured")}
+      <CardContent className="space-y-3 py-4">
+        <div className="flex items-center gap-4">
+          <Badge variant="outline" className="capitalize">
+            {instance.type}
+          </Badge>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium">{instance.name}</p>
+            <p className="text-muted-foreground truncate text-xs">
+              {instance.url}
             </p>
+            {noCfs && (
+              <p className="text-warning mt-0.5 text-xs">
+                {t("noCfsConfigured")}
+              </p>
+            )}
+          </div>
+          {pendingCount > 0 && (
+            <Badge
+              variant="outline"
+              title={tForm("queuedBadgeTooltip", {
+                count: pendingCount,
+                eta: formatEta(queue?.etaMs ?? 0, tTime),
+              })}
+              className="gap-1"
+            >
+              <Hourglass className="size-3" />
+              {tForm("queuedBadge", { count: pendingCount })}
+            </Badge>
           )}
+          {failedCount > 0 && (
+            <Badge variant="destructive">
+              {failedCount} {tForm("failedBadge")}
+            </Badge>
+          )}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleTest}
+              disabled={test.isPending}
+              aria-label={tCommon("test")}
+            >
+              <Plug className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onEdit}
+              aria-label={tCommon("edit")}
+            >
+              <Edit2 className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleDelete}
+              disabled={deleteInstance.isPending}
+              aria-label={tCommon("delete")}
+            >
+              <Trash2 className="text-destructive size-4" />
+            </Button>
+          </div>
         </div>
-        {pendingCount > 0 && (
-          <Badge
-            variant="outline"
-            title={tForm("queuedBadgeTooltip", {
-              count: pendingCount,
-              eta: formatEta(queue?.etaMs ?? 0, tTime),
-            })}
-            className="gap-1"
-          >
-            <Hourglass className="size-3" />
-            {tForm("queuedBadge", { count: pendingCount })}
-          </Badge>
-        )}
-        {failedCount > 0 && (
-          <Badge variant="destructive">
-            {failedCount} {tForm("failedBadge")}
-          </Badge>
-        )}
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleTest}
-            disabled={test.isPending}
-            aria-label={tCommon("test")}
-          >
-            <Plug className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={onEdit}
-            aria-label={tCommon("edit")}
-          >
-            <Edit2 className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleDelete}
-            disabled={deleteInstance.isPending}
-            aria-label={tCommon("delete")}
-          >
-            <Trash2 className="text-destructive size-4" />
-          </Button>
+        <div className="border-t pt-3">
+          <ShowAllMediaToggle instanceId={instance.id} />
         </div>
       </CardContent>
     </Card>

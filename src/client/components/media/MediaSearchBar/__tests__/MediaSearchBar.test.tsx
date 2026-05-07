@@ -20,6 +20,7 @@ const baseFilters: MediaFilters = {
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
   onlyMissing: false,
+  flaggedOnly: true,
 };
 
 describe("MediaSearchBar", () => {
@@ -92,6 +93,7 @@ describe("MediaSearchBar", () => {
       hasNegativeCfIds: [],
       hasNegativeCfMatch: "all",
       onlyMissing: false,
+      flaggedOnly: true,
     });
   });
 });

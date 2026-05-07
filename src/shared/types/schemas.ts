@@ -31,6 +31,7 @@ export const instanceUpdateSchema = z.object({
   enabled: z.boolean().optional(),
   scoringMode: z.enum(["manual", "profile"]).optional(),
   searchesPerHour: z.number().int().min(1).max(1000).optional(),
+  showAllMedia: z.boolean().optional(),
 });
 
 export const instanceTestSchema = z.object({

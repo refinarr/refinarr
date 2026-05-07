@@ -8,6 +8,11 @@ import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 interface Props {
   filters: MediaFilters;
   onChange: (next: Partial<MediaFilters>) => void;
+  // True when the active instance has Advanced mode (showAllMedia)
+  // enabled in settings — surfaces the "Show all" pill. Hidden by
+  // default; the server enforces flaggedOnly=true regardless if the
+  // capability is off, so this is a UX-only gate.
+  showAllEnabled?: boolean;
 }
 
 // Visual-only pill style for the always-visible quick toggle. Form-control
@@ -22,9 +27,16 @@ const PILL_ACTIVE =
 // toggle. Per-column filters (profile, score, size, severity, CFs) live
 // in the table column headers via ColumnFilter funnels — see
 // movieColumns / seriesColumns for the wiring.
-export function MediaSearchBar({ filters, onChange }: Props) {
+export function MediaSearchBar({
+  filters,
+  onChange,
+  showAllEnabled = false,
+}: Props) {
   const t = useTranslations("filters");
   const onlyMissingActive = filters.onlyMissing;
+  // "Show all" is conceptually !flaggedOnly. The pill is on when the
+  // user has flipped flaggedOnly off.
+  const showAllActive = !filters.flaggedOnly;
   const anyActive =
     filters.profileIds.length > 0 ||
     filters.severities.length > 0 ||
@@ -35,6 +47,7 @@ export function MediaSearchBar({ filters, onChange }: Props) {
     filters.minSize !== null ||
     filters.maxSize !== null ||
     onlyMissingActive ||
+    showAllActive ||
     filters.q !== "";
 
   const clearAll = () =>
@@ -51,6 +64,7 @@ export function MediaSearchBar({ filters, onChange }: Props) {
       hasNegativeCfIds: [],
       hasNegativeCfMatch: "all",
       onlyMissing: false,
+      flaggedOnly: true,
     });
 
   return (
@@ -84,6 +98,22 @@ export function MediaSearchBar({ filters, onChange }: Props) {
           {onlyMissingActive && <Check className="size-3" />}
           {t("onlyMissing")}
         </button>
+
+        {showAllEnabled && (
+          <button
+            type="button"
+            aria-pressed={showAllActive}
+            onClick={() => onChange({ flaggedOnly: !filters.flaggedOnly })}
+            className={cn(
+              "hidden md:inline-flex",
+              PILL,
+              showAllActive && PILL_ACTIVE,
+            )}
+          >
+            {showAllActive && <Check className="size-3" />}
+            {t("showAll")}
+          </button>
+        )}
 
         {anyActive && (
           <button

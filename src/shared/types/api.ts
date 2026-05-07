@@ -42,6 +42,7 @@ export interface CreateInstanceDto {
 
 export type UpdateInstanceDto = Partial<CreateInstanceDto> & {
   scoringMode?: "manual" | "profile";
+  showAllMedia?: boolean;
 };
 
 /**
@@ -55,6 +56,7 @@ export interface InstanceListItem {
   enabled: boolean;
   scoringMode: "manual" | "profile";
   searchesPerHour: number;
+  showAllMedia: boolean;
   createdAt: string | Date;
 }
 

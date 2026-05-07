@@ -27,6 +27,7 @@ export class InstanceService {
     enabled?: boolean;
     scoringMode?: ScoringMode;
     searchesPerHour?: number;
+    showAllMedia?: boolean;
   }): Promise<Instance> {
     assertSafeArrUrl(data.url);
     const created = await instanceRepository.create({
@@ -105,6 +106,7 @@ export class InstanceService {
       enabled: true,
       scoringMode: DEFAULT_SCORING_MODE,
       searchesPerHour: 20,
+      showAllMedia: false,
       createdAt: new Date(),
     };
     const client = ArrClientFactory.createArrClient(transient);

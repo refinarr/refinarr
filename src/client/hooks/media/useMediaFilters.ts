@@ -23,6 +23,12 @@ export interface MediaFilters {
   hasNegativeCfIds: number[];
   hasNegativeCfMatch: MatchMode;
   onlyMissing: boolean;
+  // Page-level "Show all" toggle. Default true mirrors the existing
+  // contract (only flagged items are shown). When the user flips it
+  // off, non-flagged items are included in the list — but only if the
+  // active instance has the showAllMedia capability flag enabled, since
+  // the server enforces flaggedOnly=true otherwise.
+  flaggedOnly: boolean;
 }
 
 // Hook query input — every field optional, plus scoringMode. useMovies /
@@ -47,6 +53,7 @@ export const defaultMediaFilters: MediaFilters = {
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
   onlyMissing: false,
+  flaggedOnly: true,
 };
 
 export interface MediaFiltersResult {

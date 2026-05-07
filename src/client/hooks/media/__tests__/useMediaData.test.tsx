@@ -20,6 +20,7 @@ const baseFilters = {
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all" as const,
   onlyMissing: false,
+  flaggedOnly: true,
   scoringMode: "manual" as const,
 };
 

@@ -21,6 +21,7 @@ const baseFilters: MediaFilters = {
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
   onlyMissing: false,
+  flaggedOnly: true,
 };
 
 const profiles: QualityProfile[] = [

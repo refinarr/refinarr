@@ -228,6 +228,7 @@
     "openFilters": "Filters",
     "applyFilters": "Apply",
     "onlyMissing": "Only missing",
+    "showAll": "Show all",
     "clearAll": "Clear all",
     "toolbarAriaLabel": "Filter toolbar",
     "activeCountAriaLabel": "{count, plural, one {# active filter} other {# active filters}}",
@@ -380,6 +381,8 @@
     },
     "wantedCfs": "Wanted Custom Formats",
     "wantedCfsHelp": "Select which Custom Formats each instance should have. Media missing any of these will be flagged.",
+    "showAllMedia": "Advanced — show all media",
+    "showAllMediaHelp": "By default the library view only shows flagged items — media that doesn't yet meet your custom-format requirements. Turn this on to view, search, or delete items that already pass (for further enhancement). Recommended off.",
     "noCfsConfigured": "No Custom Formats configured",
     "dryRunMode": "Dry Run Mode",
     "appearance": {
@@ -566,6 +569,8 @@
       "disabled": "Live mode on. Actions will execute against your *arr instances."
     },
     "scoringMode": "Scoring mode set to {mode}",
+    "showAllMediaOn": "Show-all-media enabled — non-flagged items now visible.",
+    "showAllMediaOff": "Show-all-media disabled — only flagged items will be shown.",
     "apiKey": {
       "copied": "API key copied",
       "regenerated": "API key regenerated"

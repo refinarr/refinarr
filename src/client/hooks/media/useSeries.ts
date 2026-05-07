@@ -13,6 +13,9 @@ export function useSeries(instanceId: number, filters: MediaQueryFilters = {}) {
     limit: "50",
   });
   appendFilterParams(params, filters);
+  // See useMovies — appendFilterParams skips false, but the server
+  // wants an explicit `flaggedOnly=false` for "Show all".
+  if (filters.flaggedOnly === false) params.set("flaggedOnly", "false");
 
   return useInfiniteQuery({
     queryKey: queryKeys.series(instanceId, filters),

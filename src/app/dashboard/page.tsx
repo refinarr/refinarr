@@ -20,7 +20,11 @@ export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const tDryRun = useTranslations("settings.dryRun");
   const { data: instances, isLoading: loadingInstances } = useInstances();
-  const { data: summary, isLoading: loadingSummary } = useDashboardSummary();
+  const {
+    data: summary,
+    isLoading: loadingSummary,
+    isError: summaryError,
+  } = useDashboardSummary();
   const { data: config } = useConfig();
 
   if (!loadingInstances && (instances?.length ?? 0) === 0) {
@@ -84,7 +88,9 @@ export default function DashboardPage() {
               href="/movies"
               tone={(flaggedMovies ?? 0) > 0 ? "warning" : "default"}
               loading={loadingSummary}
-              valueLoading={!loadingSummary && flaggedMovies === null}
+              valueLoading={
+                !loadingSummary && !summaryError && flaggedMovies === null
+              }
             />
             <KpiCard
               label={t("kpi.flaggedSeries")}
@@ -92,7 +98,9 @@ export default function DashboardPage() {
               href="/shows"
               tone={(flaggedSeries ?? 0) > 0 ? "warning" : "default"}
               loading={loadingSummary}
-              valueLoading={!loadingSummary && flaggedSeries === null}
+              valueLoading={
+                !loadingSummary && !summaryError && flaggedSeries === null
+              }
             />
             <KpiCard
               label={t("kpi.failed24h")}
