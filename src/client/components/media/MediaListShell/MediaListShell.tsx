@@ -343,12 +343,9 @@ function Header() {
 }
 
 function SearchBar() {
-  const { ctx, inst, filters } = useShellContext();
+  const { filters } = useShellContext();
   return (
     <MediaSearchBar
-      arrType={ctx.arrType}
-      instanceId={inst.activeInstance}
-      scoringMode={ctx.scoringMode}
       filters={filters.filters}
       onChange={(next) => filters.setFilters((prev) => ({ ...prev, ...next }))}
     />

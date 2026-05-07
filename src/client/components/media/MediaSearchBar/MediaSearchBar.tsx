@@ -4,12 +4,8 @@ import { Search, Check } from "lucide-react";
 import { Input } from "@/client/components/ui/input";
 import { cn } from "@/client/lib/utils";
 import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
-import type { ArrType, ScoringMode } from "@/shared/types/models";
 
 interface Props {
-  arrType: ArrType;
-  instanceId: number;
-  scoringMode: ScoringMode;
   filters: MediaFilters;
   onChange: (next: Partial<MediaFilters>) => void;
 }
@@ -26,13 +22,7 @@ const PILL_ACTIVE =
 // toggle. Per-column filters (profile, score, size, severity, CFs) live
 // in the table column headers via ColumnFilter funnels — see
 // movieColumns / seriesColumns for the wiring.
-export function MediaSearchBar({
-  arrType: _arrType,
-  instanceId: _instanceId,
-  scoringMode: _scoringMode,
-  filters,
-  onChange,
-}: Props) {
+export function MediaSearchBar({ filters, onChange }: Props) {
   const t = useTranslations("filters");
   const onlyMissingActive = filters.onlyMissing;
   const anyActive =
@@ -57,7 +47,9 @@ export function MediaSearchBar({
       minSize: null,
       maxSize: null,
       missingCfIds: [],
+      missingCfMatch: "all",
       hasNegativeCfIds: [],
+      hasNegativeCfMatch: "all",
       onlyMissing: false,
     });
 

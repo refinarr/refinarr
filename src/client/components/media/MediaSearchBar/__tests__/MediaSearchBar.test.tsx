@@ -25,13 +25,7 @@ const baseFilters: MediaFilters = {
 describe("MediaSearchBar", () => {
   it("renders the search input and the Only missing toggle pill", () => {
     renderWithProviders(
-      <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
-        filters={baseFilters}
-        onChange={vi.fn()}
-      />,
+      <MediaSearchBar filters={baseFilters} onChange={vi.fn()} />,
     );
     expect(screen.getByPlaceholderText(/search title/i)).toBeInTheDocument();
     expect(
@@ -42,13 +36,7 @@ describe("MediaSearchBar", () => {
   it("invokes onChange when the Only missing pill is toggled", async () => {
     const onChange = vi.fn();
     renderWithProviders(
-      <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
-        filters={baseFilters}
-        onChange={onChange}
-      />,
+      <MediaSearchBar filters={baseFilters} onChange={onChange} />,
     );
     await userEvent.click(
       screen.getByRole("button", { name: /only missing/i }),
@@ -58,13 +46,7 @@ describe("MediaSearchBar", () => {
 
   it("shows Clear all only when at least one filter is active", async () => {
     const { rerender } = renderWithProviders(
-      <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
-        filters={baseFilters}
-        onChange={vi.fn()}
-      />,
+      <MediaSearchBar filters={baseFilters} onChange={vi.fn()} />,
     );
     expect(
       screen.queryByRole("button", { name: /clear all/i }),
@@ -72,9 +54,6 @@ describe("MediaSearchBar", () => {
 
     rerender(
       <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
         filters={{ ...baseFilters, onlyMissing: true }}
         onChange={vi.fn()}
       />,
@@ -88,9 +67,6 @@ describe("MediaSearchBar", () => {
     const onChange = vi.fn();
     renderWithProviders(
       <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
         filters={{
           ...baseFilters,
           profileIds: [1],
@@ -112,7 +88,9 @@ describe("MediaSearchBar", () => {
       minSize: null,
       maxSize: null,
       missingCfIds: [],
+      missingCfMatch: "all",
       hasNegativeCfIds: [],
+      hasNegativeCfMatch: "all",
       onlyMissing: false,
     });
   });

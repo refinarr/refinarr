@@ -16,9 +16,11 @@ interface Props {
   onChange: (patch: Partial<MediaFilters>) => void;
 }
 
-// Counts every distinct active filter axis so the badge on the Filters
-// button reads "Filters · 3" rather than summing chip selections inside
-// each axis (which would double-count multi-select chips).
+// Counts the sheet-managed filter axes only — onlyMissing has its own
+// always-visible toggle in this bar, so including it would inflate the
+// Filters badge while the sheet itself can't see/clear it. Multi-select
+// axes count once (not per chip) so "Filters · N" reads as the number
+// of axes that mutate the table, not the number of selected chips.
 function countActiveFilters(f: MediaFilters): number {
   let n = 0;
   if (f.profileIds.length > 0) n += 1;
@@ -27,7 +29,6 @@ function countActiveFilters(f: MediaFilters): number {
   if (f.minSize !== null || f.maxSize !== null) n += 1;
   if (f.missingCfIds.length > 0) n += 1;
   if (f.hasNegativeCfIds.length > 0) n += 1;
-  if (f.onlyMissing) n += 1;
   return n;
 }
 
@@ -55,8 +56,7 @@ export function MobileFilterBar({
       <div
         role="toolbar"
         aria-label={t("toolbarAriaLabel")}
-        className="bg-card/90 border-border/60 fixed inset-x-0 bottom-[calc(var(--spacing-bottom-bar)+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 border-t px-3 backdrop-blur-md md:hidden"
-        style={{ height: "var(--spacing-mobile-filter-bar)" }}
+        className="bg-card/90 border-border/60 h-mobile-filter-bar fixed inset-x-0 bottom-[calc(var(--spacing-bottom-bar)+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 border-t px-3 backdrop-blur-md md:hidden"
       >
         <button
           type="button"
