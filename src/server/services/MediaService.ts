@@ -1,4 +1,7 @@
+import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
+import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
+import type { ArrClient } from "@/server/clients/ArrClient";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import {
@@ -12,6 +15,7 @@ import type {
   ActionLog,
   ActionType,
   FlaggedMedia,
+  Instance,
   MediaQuery,
   ScoringMode,
 } from "@/shared/types/models";
@@ -147,6 +151,21 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
     // Miss — block on rebuild. Concurrent miss callers share the same
     // promise via dataCache.rebuild.
     return dataCache.rebuild(cacheKey, build);
+  }
+
+  // Resolves an instance + creates its ArrClient, the boilerplate every
+  // action method (`triggerSearch`, `deleteFile`, etc.) used to repeat
+  // verbatim. Generic so callers that need an arr-specific client
+  // (`SonarrClient` for `triggerSeasonSearch`, etc.) can narrow with
+  // `withClient<SonarrClient>(...)`. Defaults to the abstract `ArrClient`
+  // base for action methods that only use cross-arr operations.
+  protected async withClient<TClient extends ArrClient = ArrClient>(
+    instanceId: number,
+  ): Promise<{ instance: Instance; client: TClient }> {
+    const instance = await instanceRepository.findById(instanceId);
+    if (!instance) throw new Error(`Instance ${instanceId} not found`);
+    const client = ArrClientFactory.createArrClient(instance) as TClient;
+    return { instance, client };
   }
 
   protected applyQuery<T extends FlaggedMedia>(

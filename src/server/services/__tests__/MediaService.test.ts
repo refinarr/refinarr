@@ -1,6 +1,8 @@
 import { describe, test, expect } from "vitest";
 import { MediaService } from "@/server/services/MediaService";
 import { instanceService } from "@/server/services/InstanceService";
+import { RadarrClient } from "@/server/clients/RadarrClient";
+import { SonarrClient } from "@/server/clients/SonarrClient";
 import { LogSource } from "@/server/lib/log-sources";
 import type {
   FlaggedMedia,
@@ -49,6 +51,13 @@ class TestMediaService extends MediaService<FlaggedMedia> {
     hasFile: (item: T) => boolean = () => true,
   ): { items: T[]; total: number } {
     return this.applyQuery(source, query, mode, hasFile);
+  }
+
+  // Test-only seam over the protected withClient so we can assert its
+  // success / not-found behavior without going through one of the four
+  // service action methods.
+  runWithClient(instanceId: number) {
+    return this.withClient(instanceId);
   }
 
   runAction(opts: {
@@ -245,5 +254,31 @@ describe("MediaService.applyQuery — filter branches", () => {
       () => false,
     );
     expect(result.items).toHaveLength(3);
+  });
+});
+
+describe("MediaService.withClient", () => {
+  test("resolves the instance + creates the right ArrClient subclass", async () => {
+    const radarr = await instanceService.create({ ...baseInstance });
+    const sonarr = await instanceService.create({
+      ...baseInstance,
+      type: "sonarr",
+      name: "Test Sonarr",
+      url: "http://192.168.1.20:8989",
+    });
+
+    const radarrResult = await testService.runWithClient(radarr.id);
+    expect(radarrResult.instance.id).toBe(radarr.id);
+    expect(radarrResult.client).toBeInstanceOf(RadarrClient);
+
+    const sonarrResult = await testService.runWithClient(sonarr.id);
+    expect(sonarrResult.instance.id).toBe(sonarr.id);
+    expect(sonarrResult.client).toBeInstanceOf(SonarrClient);
+  });
+
+  test("throws when the instance id doesn't exist", async () => {
+    await expect(testService.runWithClient(99_999)).rejects.toThrow(
+      /Instance 99999 not found/,
+    );
   });
 });

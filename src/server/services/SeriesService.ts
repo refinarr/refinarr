@@ -365,9 +365,9 @@ export class SeriesService extends MediaService<FlaggedSeries> {
     triggerSearch = false,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
+    // No SonarrClient cast — base ArrClient.deleteFile + triggerSearch
+    // cover everything this method needs.
+    const { instance, client } = await this.withClient(instanceId);
 
     return this.executeAction({
       instanceName: instance.name,
@@ -386,7 +386,7 @@ export class SeriesService extends MediaService<FlaggedSeries> {
       },
       run: async () => {
         for (const fileId of fileIds) {
-          await client.deleteEpisodeFile(fileId);
+          await client.deleteFile(fileId);
         }
         if (triggerSearch) await client.triggerSearch(mediaId);
       },
@@ -399,9 +399,7 @@ export class SeriesService extends MediaService<FlaggedSeries> {
     title: string,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
+    const { instance, client } = await this.withClient(instanceId);
 
     return this.executeAction({
       instanceName: instance.name,
@@ -422,9 +420,9 @@ export class SeriesService extends MediaService<FlaggedSeries> {
     title: string,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
+    // SonarrClient cast — triggerSeasonSearch is series-specific.
+    const { instance, client } =
+      await this.withClient<SonarrClient>(instanceId);
 
     return this.executeAction({
       instanceName: instance.name,
@@ -451,9 +449,10 @@ export class SeriesService extends MediaService<FlaggedSeries> {
     title: string,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
+    // SonarrClient cast — getEpisodes + triggerEpisodeSearch are
+    // series-specific.
+    const { instance, client } =
+      await this.withClient<SonarrClient>(instanceId);
 
     return this.executeAction({
       instanceName: instance.name,

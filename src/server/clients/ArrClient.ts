@@ -83,4 +83,16 @@ export abstract class ArrClient {
   abstract getQualityProfiles(): Promise<
     Array<{ id: number; name: string; minUpgradeFormatScore: number }>
   >;
+
+  // Trigger an item-level search. Item is whatever the *arr considers the
+  // primary unit — movie / series / album / scene. Each subclass posts the
+  // appropriate command to /command. Service action methods can call this
+  // through an `ArrClient`-typed reference (no `as RadarrClient` cast).
+  abstract triggerSearch(itemId: number): Promise<void>;
+
+  // Delete a file from the *arr's library. Each subclass routes to the
+  // right endpoint (Radarr's /moviefile/{id}, Sonarr's /episodefile/{id},
+  // etc.). Returns once the upstream confirms the delete; a follow-up
+  // search (if requested) is the caller's job.
+  abstract deleteFile(fileId: number): Promise<void>;
 }

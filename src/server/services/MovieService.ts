@@ -264,9 +264,7 @@ export class MovieService extends MediaService<FlaggedMovie> {
     title: string,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as RadarrClient;
+    const { instance, client } = await this.withClient(instanceId);
 
     return this.executeAction({
       instanceName: instance.name,
@@ -288,9 +286,7 @@ export class MovieService extends MediaService<FlaggedMovie> {
     triggerSearch = true,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as RadarrClient;
+    const { instance, client } = await this.withClient(instanceId);
 
     return this.executeAction({
       instanceName: instance.name,
