@@ -82,7 +82,7 @@ test("mobile bottom tab bar exposes primary nav and the More button opens the se
   await expect(page.getByRole("link", { name: /logs/i })).toBeVisible();
 });
 
-test("movies page renders cards and the filter pills are visible on mobile", async ({
+test("movies page renders cards and the MobileFilterBar exposes the Only-missing + Filters controls", async ({
   page,
 }) => {
   await page.goto("/movies");
@@ -93,14 +93,19 @@ test("movies page renders cards and the filter pills are visible on mobile", asy
   await expect(cardList).toBeVisible({ timeout: 10_000 });
   await expect(cardList.getByText("The Missing Format")).toBeVisible();
 
-  // Filter pills wrap naturally on mobile — no separate sheet trigger.
-  // The Only-missing toggle is the always-visible quick filter.
+  // MobileFilterBar is fixed at the bottom and owns the always-visible
+  // Only-missing toggle plus the Filters sheet trigger.
+  const filterBar = page.getByRole("toolbar", { name: /filter toolbar/i });
+  await expect(filterBar).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /only missing/i }),
+    filterBar.getByRole("button", { name: /only missing/i }),
+  ).toBeVisible();
+  await expect(
+    filterBar.getByRole("button", { name: /^filters/i }),
   ).toBeVisible();
 });
 
-test("only-missing pill toggles to active state when tapped", async ({
+test("MobileFilterBar's Only-missing toggle commits the filter", async ({
   page,
 }) => {
   await page.goto("/movies");
@@ -109,9 +114,12 @@ test("only-missing pill toggles to active state when tapped", async ({
     .getByText("The Missing Format")
     .waitFor({ timeout: 10_000 });
 
-  const toggle = page.getByRole("button", { name: /only missing/i });
+  const filterBar = page.getByRole("toolbar", { name: /filter toolbar/i });
+  const toggle = filterBar.getByRole("button", { name: /only missing/i });
   await toggle.click();
-  // After tapping, a "Clear all" link appears since at least one filter is now active.
+  // Activated state surfaces both as the toggle's aria-pressed and the
+  // search bar's "Clear all" link in the top-of-page filter strip.
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: /clear all/i })).toBeVisible({
     timeout: 5_000,
   });

@@ -2,7 +2,11 @@ import { describe, test, expect } from "vitest";
 import { MediaService } from "@/server/services/MediaService";
 import { instanceService } from "@/server/services/InstanceService";
 import { LogSource } from "@/server/lib/log-sources";
-import type { FlaggedMedia, MediaQuery } from "@/shared/types/models";
+import type {
+  FlaggedMedia,
+  MediaQuery,
+  ScoringMode,
+} from "@/shared/types/models";
 
 // Minimal subclass that exposes the protected `executeAction` so we can
 // drive its branches directly. Production subclasses (MovieService,
@@ -33,6 +37,18 @@ class TestMediaService extends MediaService<FlaggedMedia> {
       build: async () => ({ flagged: this.flagged }),
     });
     return this.applyQuery(cached.flagged, query, "manual", () => true);
+  }
+
+  // Test-only seam over the protected applyQuery so the filter-branch
+  // tests below can drive it directly with arbitrary query + mode +
+  // hasFile predicates.
+  runQuery<T extends FlaggedMedia>(
+    source: T[],
+    query: MediaQuery,
+    mode: ScoringMode = "manual",
+    hasFile: (item: T) => boolean = () => true,
+  ): { items: T[]; total: number } {
+    return this.applyQuery(source, query, mode, hasFile);
   }
 
   runAction(opts: {
@@ -129,5 +145,105 @@ describe("MediaService flagged cache contract", () => {
 
     expect(service.getCachedFlaggedTotal(instanceId, "manual")).toBe(2);
     expect(otherService.getCachedFlaggedTotal(instanceId, "manual")).toBe(1);
+  });
+});
+
+describe("MediaService.applyQuery — filter branches", () => {
+  // Default query that selects every item; per-test extends with the
+  // filter slice under examination.
+  const baseQuery: Omit<MediaQuery, never> = {
+    page: 1,
+    limit: 50,
+    sortBy: "score",
+    order: "asc",
+  };
+
+  function items() {
+    // Spread of profileIds, score, and size so the branches can be
+    // exercised without writing per-test fixtures.
+    const a: FlaggedMedia = {
+      ...makeFlaggedMedia(1),
+      qualityProfileId: 10,
+      cfScore: 0.1,
+      sizeOnDisk: 500_000_000, // 500 MB
+    };
+    const b: FlaggedMedia = {
+      ...makeFlaggedMedia(2),
+      qualityProfileId: 20,
+      cfScore: 0.5,
+      sizeOnDisk: 5_000_000_000, // 5 GB
+    };
+    const c: FlaggedMedia = {
+      ...makeFlaggedMedia(3),
+      qualityProfileId: 30,
+      cfScore: 0.95,
+      sizeOnDisk: 30_000_000_000, // 30 GB
+    };
+    return [a, b, c];
+  }
+
+  test("filters by minScore lower bound", () => {
+    const result = testService.runQuery(items(), {
+      ...baseQuery,
+      minScore: 0.4,
+    });
+    expect(result.items.map((m) => m.id)).toEqual([2, 3]);
+  });
+
+  test("filters by maxScore upper bound", () => {
+    const result = testService.runQuery(items(), {
+      ...baseQuery,
+      maxScore: 0.4,
+    });
+    expect(result.items.map((m) => m.id)).toEqual([1]);
+  });
+
+  test("filters by minSize / maxSize range", () => {
+    const result = testService.runQuery(items(), {
+      ...baseQuery,
+      minSize: 1_000_000_000,
+      maxSize: 10_000_000_000,
+    });
+    expect(result.items.map((m) => m.id)).toEqual([2]);
+  });
+
+  test("filters by profileIds (multi)", () => {
+    const result = testService.runQuery(items(), {
+      ...baseQuery,
+      profileIds: [10, 30],
+    });
+    expect(result.items.map((m) => m.id).sort()).toEqual([1, 3]);
+  });
+
+  test("filters by severities (manual mode buckets)", () => {
+    // cfScore: 0.1 (critical), 0.5 (low), 0.95 (ok). Manual mode reads
+    // cfScore directly via SCORE_FOR; no profile cutoff in play.
+    const result = testService.runQuery(items(), {
+      ...baseQuery,
+      severities: ["ok"],
+    });
+    expect(result.items.map((m) => m.id)).toEqual([3]);
+  });
+
+  test("severities + profileIds + range compose (AND)", () => {
+    const result = testService.runQuery(items(), {
+      ...baseQuery,
+      severities: ["low", "ok"],
+      profileIds: [20, 30],
+      minSize: 4_000_000_000,
+    });
+    expect(result.items.map((m) => m.id).sort()).toEqual([2, 3]);
+  });
+
+  test("missing severity bucket flags items without files", () => {
+    const result = testService.runQuery(
+      items(),
+      { ...baseQuery, severities: ["missing"] },
+      "manual",
+      // Pretend no item has a file — every item should drop into
+      // the "missing" bucket via getSeverity's hasFile=false branch.
+      () => false,
+    );
+    expect(result.items).toHaveLength(3);
   });
 });

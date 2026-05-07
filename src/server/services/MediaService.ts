@@ -7,6 +7,7 @@ import {
   CACHE_TTL_MS,
 } from "@/server/lib/DataCache";
 import { SCORE_FOR } from "@/shared/scoring-mode";
+import { getSeverity } from "@/shared/severity";
 import type {
   ActionLog,
   ActionType,
@@ -160,12 +161,32 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
       flagged = flagged.filter((m) => !hasFile(m));
     }
 
-    const maxScore = query.maxScore;
-    if (maxScore !== undefined) {
-      // Filter against the same accessor the score sort uses, so the
-      // "max score" slider behaves consistently across modes.
-      const scoreOf = SCORE_FOR[mode];
-      flagged = flagged.filter((m) => scoreOf(m) <= maxScore);
+    const scoreOf = SCORE_FOR[mode];
+    if (query.minScore !== undefined) {
+      const min = query.minScore;
+      flagged = flagged.filter((m) => scoreOf(m) >= min);
+    }
+    if (query.maxScore !== undefined) {
+      const max = query.maxScore;
+      flagged = flagged.filter((m) => scoreOf(m) <= max);
+    }
+
+    if (query.minSize !== undefined) {
+      const min = query.minSize;
+      flagged = flagged.filter((m) => m.sizeOnDisk >= min);
+    }
+    if (query.maxSize !== undefined) {
+      const max = query.maxSize;
+      flagged = flagged.filter((m) => m.sizeOnDisk <= max);
+    }
+
+    if (query.severities && query.severities.length > 0) {
+      const wanted = new Set(query.severities);
+      flagged = flagged.filter((m) =>
+        wanted.has(
+          getSeverity(scoreOf(m), m.minProfileScore, mode, hasFile(m)),
+        ),
+      );
     }
 
     if (query.q) {
@@ -177,8 +198,9 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
       );
     }
 
-    if (query.profileId !== undefined) {
-      flagged = flagged.filter((m) => m.qualityProfileId === query.profileId);
+    if (query.profileIds && query.profileIds.length > 0) {
+      const wanted = new Set(query.profileIds);
+      flagged = flagged.filter((m) => wanted.has(m.qualityProfileId));
     }
 
     if (query.missingCfIds && query.missingCfIds.length > 0) {

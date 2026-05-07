@@ -5,22 +5,16 @@ import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 import { renderWithProviders, screen } from "@/test/render";
 import { MediaSearchBar } from "../MediaSearchBar";
 
-// vi.mock is hoisted by vitest, so position relative to imports doesn't
-// affect execution order.
-vi.mock("@/client/hooks/data/useQualityProfiles", () => ({
-  useQualityProfiles: () => ({ data: [] }),
-}));
-
-vi.mock("@/client/hooks/data/usePreferences", () => ({
-  usePreferences: () => ({ data: [] }),
-}));
-
 const baseFilters: MediaFilters = {
   sortBy: "score",
   order: "asc",
-  maxScore: 1,
+  minScore: null,
+  maxScore: null,
+  minSize: null,
+  maxSize: null,
   q: "",
-  profileId: null,
+  profileIds: [],
+  severities: [],
   missingCfIds: [],
   missingCfMatch: "all",
   hasNegativeCfIds: [],
@@ -31,13 +25,7 @@ const baseFilters: MediaFilters = {
 describe("MediaSearchBar", () => {
   it("renders the search input and the Only missing toggle pill", () => {
     renderWithProviders(
-      <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
-        filters={baseFilters}
-        onChange={vi.fn()}
-      />,
+      <MediaSearchBar filters={baseFilters} onChange={vi.fn()} />,
     );
     expect(screen.getByPlaceholderText(/search title/i)).toBeInTheDocument();
     expect(
@@ -48,13 +36,7 @@ describe("MediaSearchBar", () => {
   it("invokes onChange when the Only missing pill is toggled", async () => {
     const onChange = vi.fn();
     renderWithProviders(
-      <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
-        filters={baseFilters}
-        onChange={onChange}
-      />,
+      <MediaSearchBar filters={baseFilters} onChange={onChange} />,
     );
     await userEvent.click(
       screen.getByRole("button", { name: /only missing/i }),
@@ -64,13 +46,7 @@ describe("MediaSearchBar", () => {
 
   it("shows Clear all only when at least one filter is active", async () => {
     const { rerender } = renderWithProviders(
-      <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
-        filters={baseFilters}
-        onChange={vi.fn()}
-      />,
+      <MediaSearchBar filters={baseFilters} onChange={vi.fn()} />,
     );
     expect(
       screen.queryByRole("button", { name: /clear all/i }),
@@ -78,9 +54,6 @@ describe("MediaSearchBar", () => {
 
     rerender(
       <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
         filters={{ ...baseFilters, onlyMissing: true }}
         onChange={vi.fn()}
       />,
@@ -94,12 +67,10 @@ describe("MediaSearchBar", () => {
     const onChange = vi.fn();
     renderWithProviders(
       <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
         filters={{
           ...baseFilters,
-          profileId: 1,
+          profileIds: [1],
+          minScore: 0,
           maxScore: 0.5,
           onlyMissing: true,
           q: "x",
@@ -110,10 +81,16 @@ describe("MediaSearchBar", () => {
     await userEvent.click(screen.getByRole("button", { name: /clear all/i }));
     expect(onChange).toHaveBeenCalledWith({
       q: "",
-      profileId: null,
+      profileIds: [],
+      severities: [],
+      minScore: null,
+      maxScore: null,
+      minSize: null,
+      maxSize: null,
       missingCfIds: [],
+      missingCfMatch: "all",
       hasNegativeCfIds: [],
-      maxScore: 1,
+      hasNegativeCfMatch: "all",
       onlyMissing: false,
     });
   });

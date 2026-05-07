@@ -630,16 +630,32 @@ describe("SeriesService — sort edge cases", () => {
     expect(result.items).toHaveLength(2);
   });
 
-  test("filters by profileId", async () => {
+  test("filters by profileIds", async () => {
     const inst = (await instanceService.getAll())[0];
     const result = await seriesService.getFlaggedSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
       order: "asc",
-      profileId: 999,
+      profileIds: [999],
     });
     expect(result.items).toEqual([]);
+  });
+
+  test("filters by profileIds — multi keeps matches, drops non-matches", async () => {
+    // The seeded series both sit on qualityProfileId=1; 999 is unknown.
+    // A multi-id filter [1, 999] must keep the matches and silently drop
+    // the non-matching id rather than rejecting the whole list.
+    const inst = (await instanceService.getAll())[0];
+    const result = await seriesService.getFlaggedSeries(inst.id, {
+      page: 1,
+      limit: 50,
+      sortBy: "title",
+      order: "asc",
+      profileIds: [1, 999],
+    });
+    expect(result.items.length).toBeGreaterThan(0);
+    expect(result.items.every((s) => s.qualityProfileId === 1)).toBe(true);
   });
 
   test("filters by missingCfIds (single)", async () => {

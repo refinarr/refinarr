@@ -126,10 +126,14 @@ describe("useFilterChips", () => {
       result.current.filters.setFilters((f) => ({
         ...f,
         q: "x",
-        profileId: 100,
+        profileIds: [100],
+        severities: ["critical"],
         missingCfIds: [10],
         hasNegativeCfIds: [50],
+        minScore: 0,
         maxScore: 0.5,
+        minSize: 0,
+        maxSize: 1_000_000_000,
         onlyMissing: true,
         sortBy: "title",
         order: "desc",
@@ -139,10 +143,14 @@ describe("useFilterChips", () => {
     act(() => result.current.clearActiveFilters());
     captured = result.current.filters.filters;
     expect(captured.q).toBe("");
-    expect(captured.profileId).toBe(null);
+    expect(captured.profileIds).toEqual([]);
+    expect(captured.severities).toEqual([]);
     expect(captured.missingCfIds).toEqual([]);
     expect(captured.hasNegativeCfIds).toEqual([]);
-    expect(captured.maxScore).toBe(1);
+    expect(captured.minScore).toBeNull();
+    expect(captured.maxScore).toBeNull();
+    expect(captured.minSize).toBeNull();
+    expect(captured.maxSize).toBeNull();
     expect(captured.onlyMissing).toBe(false);
     // Preferences preserved
     expect(captured.sortBy).toBe("title");
