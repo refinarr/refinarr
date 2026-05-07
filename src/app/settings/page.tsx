@@ -138,7 +138,7 @@ export default function SettingsPage() {
   // overscroll inside <main> can't drag it. The picker is mobile-only;
   // desktop uses the SettingsRail beside the content.
   const pageHeader = (
-    <div className="space-y-subgroup p-header">
+    <div className="bg-card border-border/60 space-y-section p-header border-b">
       <header>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground mt-1 text-sm">{t("subtitle")}</p>
@@ -162,12 +162,14 @@ export default function SettingsPage() {
 
           <div className="space-y-page max-w-2xl flex-1">
             <section id="general" className={sectionClass("general")}>
-              <h2 className="text-lg font-semibold">{t("sections.general")}</h2>
+              <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
+                {t("sections.general")}
+              </h2>
               <DryRunToggle prominent />
             </section>
 
             <section id="appearance" className={sectionClass("appearance")}>
-              <h2 className="text-lg font-semibold">
+              <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
                 {t("sections.appearance")}
               </h2>
               <ThemeSelector />
@@ -175,11 +177,11 @@ export default function SettingsPage() {
 
             <section id="instances" className={sectionClass("instances")}>
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">
+                <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
                   {t("sections.instances")}
                 </h2>
                 <Button
-                  size="sm"
+                  className="ml-auto"
                   onClick={() => {
                     setEditing(null);
                     setDialogOpen(true);
@@ -239,7 +241,7 @@ export default function SettingsPage() {
             </section>
 
             <section id="api-access" className={sectionClass("api-access")}>
-              <h2 className="text-lg font-semibold">
+              <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
                 {t("sections.apiAccess")}
               </h2>
               <ApiKeyCard />
@@ -247,7 +249,7 @@ export default function SettingsPage() {
 
             {showAccount && (
               <section id="account" className={sectionClass("account")}>
-                <h2 className="text-lg font-semibold">
+                <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
                   {t("sections.account")}
                 </h2>
                 <PasswordChangeCard />

@@ -56,12 +56,14 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-3">
               {config && (
-                <Badge variant={config.dryRun ? "outline" : "destructive"}>
+                <Badge
+                  size="md"
+                  variant={config.dryRun ? "outline" : "destructive"}
+                >
                   {config.dryRun ? tDryRun("badgeOn") : tDryRun("badgeOff")}
                 </Badge>
               )}
               <Button
-                size="sm"
                 variant="outline"
                 onClick={() => router.push("/settings")}
               >
