@@ -14,9 +14,9 @@ interface Props {
 
 // Per-instance opt-in for "Advanced — show all media". Mirrors the
 // shape of ScoringModeSelector so each instance gets its own row in
-// the Instances section. Server enforces the same flag at the API
-// layer (MediaService.enforceShowAllMedia), so this control only
-// gates the page-level toggle visibility, not the underlying ability.
+// the Instances section. When enabled, that instance defaults library
+// pages to all media; when disabled, the server enforces flagged-only
+// results even if a client sends flaggedOnly=false.
 export function ShowAllMediaToggle({ instanceId }: Props) {
   const t = useTranslations("settings");
   const tToast = useTranslations("toast");

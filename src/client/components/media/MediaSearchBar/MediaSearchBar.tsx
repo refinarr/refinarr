@@ -8,10 +8,9 @@ import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 interface Props {
   filters: MediaFilters;
   onChange: (next: Partial<MediaFilters>) => void;
-  // True when the active instance has Advanced mode (showAllMedia)
-  // enabled in settings — surfaces the "Show all" pill. Hidden by
-  // default; the server enforces flaggedOnly=true regardless if the
-  // capability is off, so this is a UX-only gate.
+  // True when the active instance defaults to showing all media. Also
+  // surfaces the "Show all" pill; when false, the server enforces
+  // flaggedOnly=true regardless of client state.
   showAllEnabled?: boolean;
 }
 
@@ -34,9 +33,11 @@ export function MediaSearchBar({
 }: Props) {
   const t = useTranslations("filters");
   const onlyMissingActive = filters.onlyMissing;
+  const defaultFlaggedOnly = !showAllEnabled;
   // "Show all" is conceptually !flaggedOnly. The pill is on when the
   // user has flipped flaggedOnly off.
   const showAllActive = !filters.flaggedOnly;
+  const flaggedModeChanged = filters.flaggedOnly !== defaultFlaggedOnly;
   const anyActive =
     filters.profileIds.length > 0 ||
     filters.severities.length > 0 ||
@@ -47,7 +48,7 @@ export function MediaSearchBar({
     filters.minSize !== null ||
     filters.maxSize !== null ||
     onlyMissingActive ||
-    showAllActive ||
+    flaggedModeChanged ||
     filters.q !== "";
 
   const clearAll = () =>
@@ -64,7 +65,7 @@ export function MediaSearchBar({
       hasNegativeCfIds: [],
       hasNegativeCfMatch: "all",
       onlyMissing: false,
-      flaggedOnly: !showAllEnabled,
+      flaggedOnly: defaultFlaggedOnly,
     });
 
   return (

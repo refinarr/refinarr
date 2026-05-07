@@ -88,15 +88,26 @@ describe("useMediaFilters", () => {
     expect(result.current.filters.q).toBe("stay");
   });
 
-  it("updates flaggedOnly when the active instance show-all setting changes", () => {
+  it("updates flaggedOnly without clearing filters when the active instance show-all setting changes", () => {
     const { result, rerender } = renderHook(
       ({ showAllMedia }: { showAllMedia: boolean }) =>
         useMediaFilters("profile", 1, showAllMedia),
       { initialProps: { showAllMedia: false } },
     );
+    act(() => {
+      result.current.setFilters((f) => ({
+        ...f,
+        profileIds: [7],
+        missingCfIds: [10],
+        missingCfMatch: "any",
+      }));
+    });
     expect(result.current.filters.flaggedOnly).toBe(true);
 
     rerender({ showAllMedia: true });
     expect(result.current.filters.flaggedOnly).toBe(false);
+    expect(result.current.filters.profileIds).toEqual([7]);
+    expect(result.current.filters.missingCfIds).toEqual([10]);
+    expect(result.current.filters.missingCfMatch).toBe("any");
   });
 });

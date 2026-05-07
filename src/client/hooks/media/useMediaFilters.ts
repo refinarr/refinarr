@@ -23,11 +23,9 @@ export interface MediaFilters {
   hasNegativeCfIds: number[];
   hasNegativeCfMatch: MatchMode;
   onlyMissing: boolean;
-  // Page-level "Show all" toggle. Default true mirrors the existing
-  // contract (only flagged items are shown). When the user flips it
-  // off, non-flagged items are included in the list — but only if the
-  // active instance has the showAllMedia capability flag enabled, since
-  // the server enforces flaggedOnly=true otherwise.
+  // Page-level view mode. true shows only flagged items; false includes
+  // all media. Instance.showAllMedia supplies the per-instance default,
+  // and the server still enforces flaggedOnly=true when that setting is off.
   flaggedOnly: boolean;
 }
 
@@ -115,10 +113,7 @@ export function useMediaFilters(
     id: instanceId,
     showAllMedia,
   });
-  if (
-    trackedInstance.id !== instanceId ||
-    trackedInstance.showAllMedia !== showAllMedia
-  ) {
+  if (trackedInstance.id !== instanceId) {
     setTrackedInstance({ id: instanceId, showAllMedia });
     setFilters((f) => ({
       ...f,
@@ -129,6 +124,9 @@ export function useMediaFilters(
       hasNegativeCfMatch: "all",
       flaggedOnly: !showAllMedia,
     }));
+  } else if (trackedInstance.showAllMedia !== showAllMedia) {
+    setTrackedInstance({ id: instanceId, showAllMedia });
+    setFilters((f) => ({ ...f, flaggedOnly: !showAllMedia }));
   }
 
   return {

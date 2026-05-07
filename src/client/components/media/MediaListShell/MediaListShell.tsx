@@ -348,10 +348,9 @@ function Header() {
 
 function SearchBar() {
   const { filters, inst } = useShellContext();
-  // Per-instance capability gate. The "Show all" pill is only reachable
-  // when the active instance has Advanced mode (Instance.showAllMedia)
-  // turned on in settings — the server enforces the same flag, so a
-  // disabled instance ignores the pill regardless.
+  // Per-instance default view mode. The "Show all" pill is reachable
+  // when Instance.showAllMedia is on; the server enforces flagged-only
+  // for disabled instances regardless of client state.
   const showAllEnabled =
     inst.typedInstances.find((i) => i.id === inst.activeInstance)
       ?.showAllMedia ?? false;

@@ -13,8 +13,8 @@ interface Props {
   profiles: QualityProfile[] | undefined;
   cfOptions: { missing: CfOption[]; penalty: CfOption[] };
   filters: MediaFilters;
-  // Whether the active instance has Advanced mode (showAllMedia) on.
-  // Surfaces the "Show all" pill alongside "Only missing".
+  // Whether the active instance defaults to all media. Surfaces the
+  // "Show all" pill alongside "Only missing".
   showAllEnabled?: boolean;
   onChange: (patch: Partial<MediaFilters>) => void;
 }
