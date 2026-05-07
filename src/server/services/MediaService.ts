@@ -1,4 +1,6 @@
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
+import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
+import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
 import {
   ArrClientFactory,
@@ -12,7 +14,7 @@ import {
   CACHE_STALE_MS,
   CACHE_TTL_MS,
 } from "@/server/lib/DataCache";
-import { SCORE_FOR } from "@/shared/scoring-mode";
+import { isProfileMode, SCORE_FOR } from "@/shared/scoring-mode";
 import { getSeverity } from "@/shared/severity";
 import type {
   ActionLog,
@@ -22,9 +24,65 @@ import type {
   FlaggedMedia,
   Instance,
   MediaQuery,
+  MediaType,
+  QualityProfile,
   ScoringMode,
 } from "@/shared/types/models";
 import { dryRunService } from "./DryRunService";
+
+interface ProfileMaps {
+  byId: Map<number, QualityProfile>;
+  scoresByProfile: Map<number, Map<number, number>>;
+  positiveByProfile: Map<number, CustomFormat[]>;
+}
+
+interface DecorateArgs {
+  fileCfs: Array<{ id: number; name: string }>;
+  cfScoreMap: Map<number, number>;
+  positiveProfileCfs: CustomFormat[];
+}
+
+interface DecorateResult {
+  customFormats: CustomFormat[];
+  missingFormats: CustomFormat[];
+  unwantedFormats: CustomFormat[];
+}
+
+interface ProfileItemContext<TUpstream, TFile> {
+  item: TUpstream;
+  file: TFile;
+  profile: QualityProfile;
+  cfScoreMap: Map<number, number>;
+  positiveProfileCfs: CustomFormat[];
+}
+
+interface ManualItemContext<TUpstream, TFile> {
+  item: TUpstream;
+  file: TFile;
+  profileMaps: ProfileMaps;
+  wantedIds: number[];
+  wantedCfs: Array<{ id: number; name: string }>;
+}
+
+interface BuildPipelineArgs<TUpstream extends UpstreamItem, TFile, TFlagged> {
+  instance: Instance;
+  mode: ScoringMode;
+  mediaType: MediaType;
+  items: TUpstream[];
+  profiles: QualityProfile[];
+  filesFor: (item: TUpstream) => TFile;
+  toProfileItem: (ctx: ProfileItemContext<TUpstream, TFile>) => TFlagged;
+  toManualItem: (ctx: ManualItemContext<TUpstream, TFile>) => TFlagged;
+}
+
+// Minimal shape every *arr upstream item satisfies — used as the
+// `extends` constraint on `runBuildPipeline`'s TUpstream so the
+// orchestrator can consult `id` + `qualityProfileId` without forcing
+// the subclass to thread its concrete payload type through here.
+interface UpstreamItem {
+  id: number;
+  qualityProfileId: number;
+}
 
 interface ExecuteActionOptions {
   instanceId: number;
@@ -347,6 +405,135 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
       );
     }
     return { instance, client: ArrClientFactory.createArrClient(instance) };
+  }
+
+  // Build the three profile-derived maps every *arr build needs:
+  //   byId — profile lookup, also used to drop items pointing at a
+  //     deleted profile (broken upstream state).
+  //   scoresByProfile — per-profile cfId → score, used to enrich
+  //     `customFormats` and partition `unwantedFormats`.
+  //   positiveByProfile — per-profile profile-rewarded CFs as
+  //     `CustomFormat[]` (carrying score), used as the `missingFormats`
+  //     candidate set in profile mode.
+  protected buildProfileMaps(profiles: QualityProfile[]): ProfileMaps {
+    const byId = new Map(profiles.map((p) => [p.id, p]));
+    const scoresByProfile = new Map<number, Map<number, number>>();
+    const positiveByProfile = new Map<number, CustomFormat[]>();
+    for (const p of profiles) {
+      const cfMap = new Map<number, number>();
+      for (const item of p.formatItems) cfMap.set(item.format, item.score);
+      scoresByProfile.set(p.id, cfMap);
+      positiveByProfile.set(
+        p.id,
+        p.formatItems
+          .filter((item) => item.score > 0)
+          .map((item) => ({
+            id: item.format,
+            name: item.name,
+            score: item.score,
+          })),
+      );
+    }
+    return { byId, scoresByProfile, positiveByProfile };
+  }
+
+  // Resolve the set of media ids the user has marked "ignore" for this
+  // instance. Filtered to the caller's mediaType because IgnoreEntry rows
+  // share the table across all media types.
+  protected async findIgnoredMediaIds(
+    instanceId: number,
+    mediaType: MediaType,
+  ): Promise<Set<number>> {
+    const entries = await ignoreRepository.findByInstance(instanceId);
+    return new Set(
+      entries.filter((e) => e.mediaType === mediaType).map((e) => e.mediaId),
+    );
+  }
+
+  // Partition a file's CFs into the three shapes downstream code reads:
+  //   customFormats — every CF the file carries, enriched with the
+  //     profile's score for that CF (so the UI can colour by score).
+  //   missingFormats — profile-rewarded CFs the file does NOT carry.
+  //   unwantedFormats — CFs the file carries that score < 0 in the profile.
+  // Pure function over its inputs; no IO or state.
+  protected decorateCustomFormats({
+    fileCfs,
+    cfScoreMap,
+    positiveProfileCfs,
+  }: DecorateArgs): DecorateResult {
+    const fileCfIds = new Set(fileCfs.map((cf) => cf.id));
+    const customFormats: CustomFormat[] = fileCfs.map((cf) => ({
+      id: cf.id,
+      name: cf.name,
+      score: cfScoreMap.get(cf.id),
+    }));
+    const missingFormats = positiveProfileCfs.filter(
+      (cf) => !fileCfIds.has(cf.id),
+    );
+    const unwantedFormats: CustomFormat[] = fileCfs
+      .filter((cf) => (cfScoreMap.get(cf.id) ?? 0) < 0)
+      .map((cf) => ({
+        id: cf.id,
+        name: cf.name,
+        score: cfScoreMap.get(cf.id),
+      }));
+    return { customFormats, missingFormats, unwantedFormats };
+  }
+
+  // Template-method orchestrator for the build pipeline. The subclass
+  // provides the upstream items + per-item file resolver + per-mode
+  // adapters; this method handles the cross-arr concerns:
+  //   1. Build profile maps.
+  //   2. Skip ignored items.
+  //   3. In profile mode: skip items pointing at a deleted profile
+  //      (broken upstream state, can't be scored).
+  //   4. In manual mode: load wanted-CF prefs once.
+  //   5. Dispatch to the per-mode adapter for each visible item.
+  //
+  // TUpstream / TFile are method-scoped generics so the class itself
+  // stays single-generic on TFlagged (test subclasses don't need to
+  // thread types they never use).
+  protected async runBuildPipeline<TUpstream extends UpstreamItem, TFile>(
+    args: BuildPipelineArgs<TUpstream, TFile, TFlagged>,
+  ): Promise<TFlagged[]> {
+    const { instance, mode, mediaType, items, profiles, filesFor } = args;
+    const profileMaps = this.buildProfileMaps(profiles);
+    const ignoredSet = await this.findIgnoredMediaIds(instance.id, mediaType);
+    const visible = items.filter((i) => !ignoredSet.has(i.id));
+
+    if (isProfileMode(mode)) {
+      return visible
+        .filter((i) => profileMaps.byId.has(i.qualityProfileId))
+        .map((item) => {
+          const profile = profileMaps.byId.get(item.qualityProfileId)!;
+          const cfScoreMap =
+            profileMaps.scoresByProfile.get(item.qualityProfileId) ??
+            new Map<number, number>();
+          const positiveProfileCfs =
+            profileMaps.positiveByProfile.get(item.qualityProfileId) ?? [];
+          return args.toProfileItem({
+            item,
+            file: filesFor(item),
+            profile,
+            cfScoreMap,
+            positiveProfileCfs,
+          });
+        });
+    }
+
+    const prefs = await preferenceRepository.findByInstance(instance.id);
+    const wantedIds = prefs.map((p) => p.cfId);
+    const wantedCfs = prefs.map((p) => ({ id: p.cfId, name: p.cfName }));
+
+    return visible.map((item) =>
+      args.toManualItem({
+        item,
+        file: filesFor(item),
+        profileMaps,
+        wantedIds,
+        wantedCfs,
+      }),
+    );
   }
 
   protected applyQuery<T extends FlaggedMedia>(
