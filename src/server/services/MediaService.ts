@@ -1,6 +1,9 @@
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
-import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
+import {
+  ArrClientFactory,
+  type ClientFor,
+} from "@/server/clients/ArrClientFactory";
 import type { ArrClient } from "@/server/clients/ArrClient";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
@@ -14,6 +17,7 @@ import { getSeverity } from "@/shared/severity";
 import type {
   ActionLog,
   ActionType,
+  ArrType,
   FlaggedMedia,
   Instance,
   MediaQuery,
@@ -160,34 +164,37 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
   // Two call shapes:
   //   `await this.withClient(instanceId)` → `client: ArrClient`,
   //     for cross-arr operations (the abstract surface only).
-  //   `await this.withClient(instanceId, SonarrClient)` → `client: SonarrClient`,
-  //     for arr-specific extras like `triggerSeasonSearch`.
+  //   `await this.withClient(instanceId, "sonarr")` → `client: SonarrClient`,
+  //     for arr-specific extras like `triggerSeasonSearch`. The
+  //     return-type narrowing comes from the `ClientFor<T>` mapping, so
+  //     the consumer doesn't need to import `SonarrClient` at all
+  //     (and stays inside the "subclasses constructed only via
+  //     ArrClientFactory" rule).
   //
-  // The expected-class form runtime-checks the produced client via
-  // `instanceof` so a misuse (e.g. `withClient(radarrId, SonarrClient)`)
-  // throws here, not at the first method call. This satisfies the
-  // project's "no unchecked `as` casts" rule — the cast is guarded by
-  // the runtime `instanceof` immediately above it.
+  // The discriminator form runtime-checks `instance.type` against the
+  // requested arr type so a misuse (e.g. `withClient(radarrId, "sonarr")`)
+  // throws here, not at the first method call. The factory picks the
+  // matching client from `instance.type` so the runtime check is
+  // equivalent to `instanceof` without needing the subclass at runtime.
   protected withClient(
     instanceId: number,
   ): Promise<{ instance: Instance; client: ArrClient }>;
-  protected withClient<TClient extends ArrClient>(
+  protected withClient<T extends ArrType>(
     instanceId: number,
-    expected: new (...args: never[]) => TClient,
-  ): Promise<{ instance: Instance; client: TClient }>;
-  protected async withClient<TClient extends ArrClient>(
+    expectedType: T,
+  ): Promise<{ instance: Instance; client: ClientFor<T> }>;
+  protected async withClient(
     instanceId: number,
-    expected?: new (...args: never[]) => TClient,
-  ): Promise<{ instance: Instance; client: ArrClient | TClient }> {
+    expectedType?: ArrType,
+  ): Promise<{ instance: Instance; client: ArrClient }> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance);
-    if (expected && !(client instanceof expected)) {
+    if (expectedType && instance.type !== expectedType) {
       throw new Error(
-        `Instance ${instanceId} (${instance.type}) is not a ${expected.name}`,
+        `Instance ${instanceId} is type ${instance.type}, expected ${expectedType}`,
       );
     }
-    return { instance, client };
+    return { instance, client: ArrClientFactory.createArrClient(instance) };
   }
 
   protected applyQuery<T extends FlaggedMedia>(
