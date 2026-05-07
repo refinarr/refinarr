@@ -26,10 +26,16 @@ describe("parseMediaQuery", () => {
     });
   });
 
-  test("threads sortBy + order through verbatim", () => {
+  test("threads sortBy + order through verbatim when valid", () => {
     const out = parseMediaQuery(urlParams("sortBy=size&order=desc"));
     expect(out.sortBy).toBe("size");
     expect(out.order).toBe("desc");
+  });
+
+  test("falls back to defaults when sortBy / order are invalid", () => {
+    const out = parseMediaQuery(urlParams("sortBy=hax0r&order=sideways"));
+    expect(out.sortBy).toBe("score");
+    expect(out.order).toBe("asc");
   });
 
   test("parses CSV id lists and drops invalid entries", () => {
@@ -77,13 +83,15 @@ describe("parseMediaQuery", () => {
   });
 
   test("normalises matchMode — only `any` flips off the default `all`", () => {
-    expect(parseMediaQuery(urlParams("missingCfMatch=any")).missingCfMatch)
-      .toBe("any");
+    expect(
+      parseMediaQuery(urlParams("missingCfMatch=any")).missingCfMatch,
+    ).toBe("any");
     expect(
       parseMediaQuery(urlParams("missingCfMatch=any")).hasNegativeCfMatch,
     ).toBe("all");
-    expect(parseMediaQuery(urlParams("missingCfMatch=junk")).missingCfMatch)
-      .toBe("all");
+    expect(
+      parseMediaQuery(urlParams("missingCfMatch=junk")).missingCfMatch,
+    ).toBe("all");
   });
 
   test("treats onlyMissing as a strict boolean string", () => {

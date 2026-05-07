@@ -87,7 +87,11 @@ export function CfColumnFunnel({
         </p>
       ) : (
         <>
-          <div className="flex gap-1 rounded-md border p-0.5">
+          <div
+            role="radiogroup"
+            aria-label={t("matchModeAriaLabel")}
+            className="flex gap-1 rounded-md border p-0.5"
+          >
             <MatchToggle
               value="all"
               current={matchMode}

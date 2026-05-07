@@ -48,7 +48,7 @@ export function seriesColumns(
   return [
     {
       key: "severity",
-      header: "",
+      header: <span className="sr-only">{tCols("severity")}</span>,
       className: "w-8",
       filter: (
         <SeverityColumnFunnel

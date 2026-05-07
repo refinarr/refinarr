@@ -10,18 +10,23 @@ interface Bucket {
   id: string;
   // Translation key suffix under "filters.scoreBuckets.*".
   labelKey: string;
-  // Inclusive on both sides; null = unbounded on that side.
+  // Half-open semantically: items match when score ≥ min AND score ≤ max.
+  // Manual-mode upper bounds are shifted just below the next bucket's
+  // floor (e.g. <30% → 0.2999) so the server's inclusive ≤ comparison
+  // behaves as half-open without changing applyQuery's contract for
+  // every other consumer of maxScore. null = unbounded on that side.
   min: number | null;
   max: number | null;
 }
 
 // Manual-mode (cfScore 0..1, fraction of wanted CFs present):
-// the buckets line up with the four severity bands so the funnel reads
-// the same as the severity dot.
+// buckets line up with the four severity bands so the funnel reads the
+// same as the severity dot. cfScore = k / N for small integer N, so a
+// 0.0001 gap is well below the granularity of any real score.
 const MANUAL_BUCKETS: Bucket[] = [
-  { id: "lt30", labelKey: "manualLt30", min: null, max: 0.3 },
-  { id: "30to60", labelKey: "manual30to60", min: 0.3, max: 0.6 },
-  { id: "60to85", labelKey: "manual60to85", min: 0.6, max: 0.85 },
+  { id: "lt30", labelKey: "manualLt30", min: null, max: 0.2999 },
+  { id: "30to60", labelKey: "manual30to60", min: 0.3, max: 0.5999 },
+  { id: "60to85", labelKey: "manual60to85", min: 0.6, max: 0.8499 },
   { id: "gt85", labelKey: "manualGt85", min: 0.85, max: null },
 ];
 

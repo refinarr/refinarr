@@ -21,10 +21,12 @@ interface Props {
   // Trigger button accessible name — needed because the visible label
   // is icon-only.
   triggerAriaLabel: string;
-  // Optional clear handler — when provided AND `active`, a "Clear"
-  // affordance shows at the bottom of the popover.
+  // Optional clear handler — when provided AND `active`, a Clear
+  // affordance shows at the bottom of the popover. `clearLabel` is
+  // required (not nullable) so callers always supply an i18n'd string;
+  // no English fallback lives in the primitive.
   onClear?: () => void;
-  clearLabel?: string;
+  clearLabel: string;
   // Body of the popover (the actual filter controls).
   children: ReactNode;
   contentClassName?: string;
@@ -83,7 +85,7 @@ export function ColumnFilter({
               onClick={onClear}
               className="text-muted-foreground hover:text-foreground text-xs"
             >
-              {clearLabel ?? "Clear"}
+              {clearLabel}
             </button>
           </div>
         )}

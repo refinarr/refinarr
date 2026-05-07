@@ -29,6 +29,7 @@ describe("ColumnFilter", () => {
         active={false}
         title="Filter X"
         triggerAriaLabel="Filter X column"
+        clearLabel="Clear filter"
       >
         body
       </ColumnFilter>,
@@ -45,6 +46,7 @@ describe("ColumnFilter", () => {
         title="Filter Status"
         description="Set conditions to filter this column"
         triggerAriaLabel="Filter Status column"
+        clearLabel="Clear filter"
       >
         <div data-testid="body">body content</div>
       </ColumnFilter>,

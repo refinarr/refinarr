@@ -213,6 +213,7 @@
     "penaltyMultiLabel": "{count} penalty formats",
     "matchAny": "Match any",
     "matchAll": "Match all (default)",
+    "matchModeAriaLabel": "Match mode",
     "matchAnySuffix": "any",
     "matchAllSuffix": "all",
     "profileLabel": "Profile: {name}",

@@ -75,7 +75,10 @@ describe("ScoreColumnFunnel", () => {
       await userEvent.click(
         await screen.findByRole("button", { name: "30 – 60%" }),
       );
-      expect(onChange).toHaveBeenCalledWith({ minScore: 0.3, maxScore: 0.6 });
+      expect(onChange).toHaveBeenCalledWith({
+        minScore: 0.3,
+        maxScore: 0.5999,
+      });
     });
   });
 
@@ -124,7 +127,7 @@ describe("ScoreColumnFunnel", () => {
     renderWithProviders(
       <ScoreColumnFunnel
         scoringMode="manual"
-        filters={{ ...baseFilters, minScore: 0.3, maxScore: 0.6 }}
+        filters={{ ...baseFilters, minScore: 0.3, maxScore: 0.5999 }}
         onChange={onChange}
         columnLabel="Score"
       />,

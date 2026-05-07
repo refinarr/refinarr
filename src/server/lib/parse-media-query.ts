@@ -7,6 +7,13 @@ const VALID_SEVERITIES: ReadonlySet<Severity> = new Set([
   "ok",
   "missing",
 ]);
+const VALID_SORT_BY: ReadonlySet<MediaQuery["sortBy"]> = new Set([
+  "score",
+  "title",
+  "added",
+  "size",
+]);
+const VALID_ORDER: ReadonlySet<"asc" | "desc"> = new Set(["asc", "desc"]);
 
 function parseIdList(raw: string | null): number[] | undefined {
   if (!raw) return undefined;
@@ -42,8 +49,16 @@ function parseMatchMode(raw: string | null): "any" | "all" {
 export function parseMediaQuery(
   s: URLSearchParams,
 ): Omit<MediaQuery, "page" | "limit"> {
-  const sortBy = (s.get("sortBy") ?? "score") as MediaQuery["sortBy"];
-  const order = (s.get("order") ?? "asc") as "asc" | "desc";
+  const rawSortBy = s.get("sortBy");
+  const sortBy: MediaQuery["sortBy"] = VALID_SORT_BY.has(
+    rawSortBy as MediaQuery["sortBy"],
+  )
+    ? (rawSortBy as MediaQuery["sortBy"])
+    : "score";
+  const rawOrder = s.get("order");
+  const order: "asc" | "desc" = VALID_ORDER.has(rawOrder as "asc" | "desc")
+    ? (rawOrder as "asc" | "desc")
+    : "asc";
   return {
     sortBy,
     order,
