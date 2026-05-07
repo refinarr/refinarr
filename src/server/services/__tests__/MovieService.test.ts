@@ -572,6 +572,92 @@ describe("MovieService.getMovies — error paths", () => {
   });
 });
 
+describe("MovieService.getMovies — showAllMedia capability gate", () => {
+  // Defense-in-depth: even if a request reaches the endpoint with
+  // `?flaggedOnly=false`, the server must override that to true unless
+  // the instance has Advanced mode enabled. The UI hides the toggle
+  // when off, but X-Api-Key holders could still try the URL directly.
+  beforeEach(async () => {
+    setupRadarrMocks({
+      movies: [
+        {
+          id: 1,
+          title: "Already Good",
+          year: 2024,
+          qualityProfileId: 1,
+          hasFile: true,
+          movieFileId: 1,
+        },
+        {
+          id: 2,
+          title: "Missing CF",
+          year: 2024,
+          qualityProfileId: 1,
+          hasFile: true,
+          movieFileId: 2,
+        },
+      ],
+      files: [
+        // Movie 1 has the wanted CF — flagged=false in manual mode.
+        {
+          id: 1,
+          movieId: 1,
+          size: 0,
+          customFormats: [{ id: 10, name: "HDR" }],
+          customFormatScore: 0,
+        },
+        // Movie 2 missing — flagged=true.
+        {
+          id: 2,
+          movieId: 2,
+          size: 0,
+          customFormats: [],
+          customFormatScore: 0,
+        },
+      ],
+      profiles: [],
+    });
+  });
+
+  test("showAllMedia=false forces flaggedOnly=true regardless of request", async () => {
+    const instance = await instanceService.create({
+      ...baseInstance,
+      scoringMode: "manual",
+      showAllMedia: false,
+    });
+    await preferenceRepository.setForInstance(instance.id, [
+      { cfId: 10, cfName: "HDR" },
+    ]);
+    const result = await movieService.getMovies(instance.id, {
+      page: 1,
+      limit: 50,
+      sortBy: "score",
+      order: "asc",
+      flaggedOnly: false,
+    });
+    expect(result.items.map((m) => m.id)).toEqual([2]);
+  });
+
+  test("showAllMedia=true respects flaggedOnly=false", async () => {
+    const instance = await instanceService.create({
+      ...baseInstance,
+      scoringMode: "manual",
+      showAllMedia: true,
+    });
+    await preferenceRepository.setForInstance(instance.id, [
+      { cfId: 10, cfName: "HDR" },
+    ]);
+    const result = await movieService.getMovies(instance.id, {
+      page: 1,
+      limit: 50,
+      sortBy: "score",
+      order: "asc",
+      flaggedOnly: false,
+    });
+    expect(result.items.map((m) => m.id).sort()).toEqual([1, 2]);
+  });
+});
+
 describe("MovieService.getMovies — sort edge cases", () => {
   beforeEach(async () => {
     const instance = await createInstance("manual");

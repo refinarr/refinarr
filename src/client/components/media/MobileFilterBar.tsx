@@ -13,6 +13,9 @@ interface Props {
   profiles: QualityProfile[] | undefined;
   cfOptions: { missing: CfOption[]; penalty: CfOption[] };
   filters: MediaFilters;
+  // Whether the active instance defaults to all media. Surfaces the
+  // "Show all" pill alongside "Only missing".
+  showAllEnabled?: boolean;
   onChange: (patch: Partial<MediaFilters>) => void;
 }
 
@@ -44,12 +47,14 @@ export function MobileFilterBar({
   profiles,
   cfOptions,
   filters,
+  showAllEnabled = false,
   onChange,
 }: Props) {
   const t = useTranslations("filters");
   const [sheetOpen, setSheetOpen] = useState(false);
   const activeCount = countActiveFilters(filters);
   const onlyMissingActive = filters.onlyMissing;
+  const showAllActive = !filters.flaggedOnly;
 
   return (
     <>
@@ -72,6 +77,23 @@ export function MobileFilterBar({
           {onlyMissingActive && <Check className="size-3" />}
           {t("onlyMissing")}
         </button>
+
+        {showAllEnabled && (
+          <button
+            type="button"
+            aria-pressed={showAllActive}
+            onClick={() => onChange({ flaggedOnly: !filters.flaggedOnly })}
+            className={cn(
+              "h-control-sm inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+              showAllActive
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-input text-muted-foreground hover:bg-accent hover:text-foreground",
+            )}
+          >
+            {showAllActive && <Check className="size-3" />}
+            {t("showAll")}
+          </button>
+        )}
 
         <button
           type="button"

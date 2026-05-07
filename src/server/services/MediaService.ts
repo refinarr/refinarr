@@ -573,6 +573,19 @@ export abstract class MediaService<TItem extends MediaItem> {
     return { items: sorted.slice(start, start + query.limit), total };
   }
 
+  // Defense-in-depth normalization. The page-level "Show all" toggle is
+  // gated by Instance.showAllMedia — a per-instance opt-in. When the
+  // instance has the flag off, force `flaggedOnly = true` regardless of
+  // what the request asks. The UI also hides the toggle, but an attacker
+  // / curious user with the X-Api-Key could still hit `?flaggedOnly=false`
+  // directly; this layer makes the flag a real capability gate.
+  protected enforceShowAllMedia(
+    query: MediaQuery,
+    instance: Instance,
+  ): MediaQuery {
+    return instance.showAllMedia ? query : { ...query, flaggedOnly: true };
+  }
+
   protected async executeAction(
     opts: ExecuteActionOptions,
   ): Promise<ActionLog> {

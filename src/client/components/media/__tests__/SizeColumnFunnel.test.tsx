@@ -22,6 +22,7 @@ const baseFilters: MediaFilters = {
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
   onlyMissing: false,
+  flaggedOnly: true,
 };
 
 describe("SizeColumnFunnel", () => {

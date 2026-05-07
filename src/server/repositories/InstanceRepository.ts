@@ -11,6 +11,7 @@ interface RawInstanceRow {
   enabled: boolean;
   scoringMode: string;
   searchesPerHour: number;
+  showAllMedia: boolean;
   createdAt: Date;
 }
 
@@ -18,14 +19,15 @@ function toInstance(row: RawInstanceRow): Instance {
   return { ...row, apiKey: decryptSecret(row.apiKey) } as Instance;
 }
 
-// Both columns have DB-level defaults, so callers don't need to provide
-// them on create — the column will fill in.
+// Columns with DB-level defaults are optional on create — Prisma fills
+// them in. Keeps test fixtures from having to spell them out.
 type CreateInstanceInput = Omit<
   Instance,
-  "id" | "createdAt" | "scoringMode" | "searchesPerHour"
+  "id" | "createdAt" | "scoringMode" | "searchesPerHour" | "showAllMedia"
 > & {
   scoringMode?: ScoringMode;
   searchesPerHour?: number;
+  showAllMedia?: boolean;
 };
 
 export class InstanceRepository extends BaseRepository<Instance> {

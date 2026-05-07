@@ -70,7 +70,11 @@ export class MovieService extends MediaService<MovieItem> {
       backgroundErrorMessage: "Background movies rebuild failed",
       build: () => this.buildAndLog(instance.id, instance, mode),
     });
-    return this.applyQuery(cached.items, query, mode);
+    return this.applyQuery(
+      cached.items,
+      this.enforceShowAllMedia(query, instance),
+      mode,
+    );
   }
 
   private async buildAndLog(

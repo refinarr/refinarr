@@ -178,13 +178,20 @@ function Root<T extends MediaItem>({
   const refreshMutation = useRefreshInstance();
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
 
+  const activeInstanceRow = inst.typedInstances.find(
+    (i) => i.id === inst.activeInstance,
+  );
   const scoringMode: ScoringMode =
-    inst.typedInstances.find((i) => i.id === inst.activeInstance)
-      ?.scoringMode ?? DEFAULT_SCORING_MODE;
+    activeInstanceRow?.scoringMode ?? DEFAULT_SCORING_MODE;
+  const showAllEnabled = activeInstanceRow?.showAllMedia ?? false;
   const noCfsConfigured =
     isManualMode(scoringMode) && (prefs?.length ?? 0) === 0;
 
-  const filters = useMediaFilters(scoringMode, inst.activeInstance);
+  const filters = useMediaFilters(
+    scoringMode,
+    inst.activeInstance,
+    showAllEnabled,
+  );
   const data = useMediaData<T>(useQuery, inst.activeInstance, filters.forQuery);
   const queuedIds = useQueuedMediaIds(inst.activeInstance);
   const recentMap = useRecentSearchMap(inst.activeInstance);
@@ -296,6 +303,7 @@ function Root<T extends MediaItem>({
             profiles={profiles}
             cfOptions={cfOptions}
             filters={filters.filters}
+            showAllEnabled={showAllEnabled}
             onChange={(patch) =>
               filters.setFilters((prev) => ({ ...prev, ...patch }))
             }
@@ -339,11 +347,18 @@ function Header() {
 }
 
 function SearchBar() {
-  const { filters } = useShellContext();
+  const { filters, inst } = useShellContext();
+  // Per-instance default view mode. The "Show all" pill is reachable
+  // when Instance.showAllMedia is on; the server enforces flagged-only
+  // for disabled instances regardless of client state.
+  const showAllEnabled =
+    inst.typedInstances.find((i) => i.id === inst.activeInstance)
+      ?.showAllMedia ?? false;
   return (
     <MediaSearchBar
       filters={filters.filters}
       onChange={(next) => filters.setFilters((prev) => ({ ...prev, ...next }))}
+      showAllEnabled={showAllEnabled}
     />
   );
 }

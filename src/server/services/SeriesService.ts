@@ -89,7 +89,11 @@ export class SeriesService extends MediaService<SeriesItem> {
       backgroundErrorMessage: "Background series rebuild failed",
       build: () => this.buildAndLog(instance.id, instance, mode),
     });
-    return this.applyQuery(cached.items, query, mode);
+    return this.applyQuery(
+      cached.items,
+      this.enforceShowAllMedia(query, instance),
+      mode,
+    );
   }
 
   private async buildAndLog(

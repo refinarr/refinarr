@@ -18,6 +18,11 @@ export function useMovies(instanceId: number, filters: MediaQueryFilters = {}) {
     limit: "50",
   });
   appendFilterParams(params, filters);
+  // appendFilterParams skips falsy booleans, but `flaggedOnly=false`
+  // is the explicit "Show all" signal the server expects, so set it
+  // by hand. The default (true) stays implicit — omitting matches the
+  // server's parseMediaQuery default.
+  if (filters.flaggedOnly === false) params.set("flaggedOnly", "false");
 
   return useInfiniteQuery({
     queryKey: queryKeys.movies(instanceId, filters),
