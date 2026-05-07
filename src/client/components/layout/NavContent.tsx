@@ -45,18 +45,24 @@ const links: NavLink[] = [
 
 interface Props {
   onNavigate?: () => void;
+  // Hide nav links whose `key` is in this set. Used by the mobile More
+  // drawer to skip routes already represented in the bottom tab bar.
+  excludeKeys?: ReadonlySet<NavLink["key"]>;
 }
 
-export function NavContent({ onNavigate }: Props) {
+export function NavContent({ onNavigate, excludeKeys }: Props) {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const tAuth = useTranslations("auth");
   const { data: me } = useMe();
   const logout = useLogout();
+  const visibleLinks = excludeKeys
+    ? links.filter((l) => !excludeKeys.has(l.key))
+    : links;
   return (
     <>
       <nav className="flex flex-col gap-1">
-        {links.map(({ href, key, icon: Icon }) => (
+        {visibleLinks.map(({ href, key, icon: Icon }) => (
           <Link
             key={href}
             href={href}

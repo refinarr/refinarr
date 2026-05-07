@@ -51,7 +51,12 @@ describe("BulkActionToolbar", () => {
     );
     const toolbar = screen.getByText(/1 selected/i).parentElement!;
     expect(toolbar.className).toContain("fixed");
-    expect(toolbar.className).toContain("bottom-0");
+    // Lifted above the AppShell's mobile bottom tab bar
+    // (--spacing-bottom-bar + safe-area-inset-bottom) so the toolbar
+    // isn't hidden behind it.
+    expect(toolbar.className).toContain(
+      "bottom-[calc(var(--spacing-bottom-bar)+env(safe-area-inset-bottom))]",
+    );
     expect(toolbar.className).toContain("md:sticky");
     expect(toolbar.className).toContain("md:top-0");
   });

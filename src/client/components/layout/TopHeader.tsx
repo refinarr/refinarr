@@ -19,6 +19,7 @@ export function TopHeader({ onToggleSidebar }: Props) {
         size="icon-sm"
         onClick={onToggleSidebar}
         aria-label={tNav("openMenu")}
+        className="hidden md:inline-flex"
       >
         <Menu className="size-5" />
       </Button>

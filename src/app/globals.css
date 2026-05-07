@@ -89,13 +89,17 @@
      once. Each --spacing-* extends Tailwind's spacing scale, so all
      spacing utilities work: space-y-{name}, gap-{name}, p-{name},
      m-{name}, h-{name}, w-{name}, size-{name}, scroll-mt-{name}, … */
-  --spacing-page: 1.5rem;       /* between page-level chunks (header, content blocks) */
-  --spacing-section: 1rem;      /* inside a content section */
-  --spacing-subgroup: 0.75rem;  /* inside subgroups (e.g. per-instance configs) */
-  --spacing-header: 1.25rem;    /* sticky header bar inset padding (mobile-friendly) */
-  --spacing-control-sm: 2rem;   /* dense inline controls (badge-like) */
-  --spacing-control: 2.75rem;   /* default form control height — iOS 44pt touch target */
-  --spacing-control-lg: 3.25rem;/* prominent / touch-target controls (mobile picker, primary CTA) */
+  --spacing-page: 1.5rem; /* between page-level chunks (header, content blocks) */
+  --spacing-section: 1rem; /* inside a content section */
+  --spacing-content-top: 1rem; /* top padding when a page has no pageHeader slot */
+  --spacing-subgroup: 0.75rem; /* inside subgroups (e.g. per-instance configs) */
+  --spacing-header: 1.25rem; /* sticky header bar inset padding (mobile-friendly) */
+  --spacing-menu-item: 0.625rem; /* vertical padding for dropdown / menu items (Select, DropdownMenu) */
+  --spacing-control-xs: 1.75rem; /* extra-dense / compact inline controls */
+  --spacing-control-sm: 2.45rem; /* dense inline controls (badge-like, default Select trigger) */
+  --spacing-control: 2.75rem; /* prominent form control height — iOS 44pt touch target */
+  --spacing-control-lg: 3.25rem; /* primary CTA / hero pickers */
+  --spacing-bottom-bar: 4rem; /* mobile bottom tab bar height (excludes safe-area inset) */
 }
 
 /* First-paint safety: surface is keyed on the .dark class (toggled by

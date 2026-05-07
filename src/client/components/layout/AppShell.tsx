@@ -11,10 +11,14 @@ import { useSidebarOpen } from "@/client/hooks/ui/useSidebarOpen";
 import { cn } from "@/client/lib/utils";
 import { CommandPalette } from "./CommandPalette";
 import { KeyboardHelpDialog } from "./KeyboardHelpDialog";
-import { Logo } from "./Logo";
+import { MobileTabBar } from "./MobileTabBar";
 import { NavContent } from "./NavContent";
 import { Sidebar } from "./Sidebar";
 import { TopHeader } from "./TopHeader";
+
+// Routes already represented in the bottom tab bar are hidden from
+// the More drawer to avoid duplicate entry points.
+const MORE_DRAWER_EXCLUDE = new Set(["dashboard", "movies", "shows"] as const);
 
 interface Props {
   children: ReactNode;
@@ -31,27 +35,19 @@ export function AppShell({ children, pageHeader }: Props) {
   const tNav = useTranslations("nav");
   // Desktop sidebar state — persisted, slides the inline rail in/out.
   const desktopSidebar = useSidebarOpen();
-  // Mobile drawer is ephemeral — opens via the same hamburger when the
-  // viewport is below md, never persisted.
-  const [mobileOpen, setMobileOpen] = useState(false);
+  // Mobile More drawer — opens from the bottom tab bar's "More" tab,
+  // closes on navigate or when the viewport crosses into desktop.
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 768px)");
-    const closeMobileOnDesktop = () => {
-      if (mql.matches) setMobileOpen(false);
+    const closeMoreOnDesktop = () => {
+      if (mql.matches) setMoreOpen(false);
     };
-    closeMobileOnDesktop();
-    mql.addEventListener("change", closeMobileOnDesktop);
-    return () => mql.removeEventListener("change", closeMobileOnDesktop);
+    closeMoreOnDesktop();
+    mql.addEventListener("change", closeMoreOnDesktop);
+    return () => mql.removeEventListener("change", closeMoreOnDesktop);
   }, []);
-
-  const handleToggle = () => {
-    if (window.matchMedia("(min-width: 768px)").matches) {
-      desktopSidebar.toggle();
-    } else {
-      setMobileOpen((v) => !v);
-    }
-  };
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
@@ -61,20 +57,21 @@ export function AppShell({ children, pageHeader }: Props) {
       >
         {tA11y("skipToContent")}
       </a>
-      <TopHeader onToggleSidebar={handleToggle} />
+      <TopHeader onToggleSidebar={desktopSidebar.toggle} />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar open={desktopSidebar.open} />
 
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="flex flex-col gap-0 px-3 py-4">
-            <SheetTitle className="mb-6 px-3">
-              <Logo size="lg" />
-            </SheetTitle>
+        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+          <SheetContent side="right" className="flex flex-col gap-0 px-3 py-4">
+            <SheetTitle className="mb-6 px-3">{tNav("more")}</SheetTitle>
             <SheetDescription className="sr-only">
-              {tNav("menu")}
+              {tNav("primary")}
             </SheetDescription>
-            <NavContent onNavigate={() => setMobileOpen(false)} />
+            <NavContent
+              onNavigate={() => setMoreOpen(false)}
+              excludeKeys={MORE_DRAWER_EXCLUDE}
+            />
           </SheetContent>
         </Sheet>
 
@@ -84,14 +81,18 @@ export function AppShell({ children, pageHeader }: Props) {
             id="main"
             tabIndex={-1}
             className={cn(
-              "flex-1 overflow-y-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] focus:outline-none md:px-6 md:pb-6",
-              pageHeader ? "pt-0" : "pt-4 md:pt-6",
+              "md:pb-page flex-1 overflow-y-auto px-4 pb-[calc(var(--spacing-bottom-bar)+var(--spacing-page)+env(safe-area-inset-bottom))] focus:outline-none md:px-6",
+              pageHeader
+                ? "pt-section md:pt-page"
+                : "pt-content-top md:pt-page",
             )}
           >
             {children}
           </main>
         </div>
       </div>
+
+      <MobileTabBar onMoreClick={() => setMoreOpen(true)} moreOpen={moreOpen} />
 
       <CommandPalette />
       <KeyboardHelpDialog />
