@@ -57,19 +57,29 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test("topbar hamburger replaces the sidebar on mobile and opens the nav sheet", async ({
+test("mobile bottom tab bar exposes primary nav and the More button opens the secondary-nav sheet", async ({
   page,
 }) => {
   await page.goto("/dashboard");
-  // The desktop sidebar is hidden below md, and the dashboard nav links
-  // are not in the DOM until the sheet opens.
-  await expect(page.getByRole("link", { name: /movies/i })).toHaveCount(0);
 
-  await page.getByRole("button", { name: /open navigation menu/i }).click();
-  await expect(page.getByRole("link", { name: /movies/i })).toBeVisible({
+  // Primary destinations live in the always-visible MobileTabBar. The
+  // sidebar's hamburger is hidden below md, so the tab bar is the only
+  // entry point on mobile.
+  const tabBar = page.getByRole("navigation", { name: /primary navigation/i });
+  await expect(tabBar).toBeVisible({ timeout: 5_000 });
+  await expect(tabBar.getByRole("link", { name: /movies/i })).toBeVisible();
+  await expect(tabBar.getByRole("link", { name: /shows/i })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /open navigation menu/i }),
+  ).toBeHidden();
+
+  // Secondary routes (Settings / Logs / etc.) live behind the More
+  // button, which opens a sheet containing the rest of NavContent.
+  await tabBar.getByRole("button", { name: /open more menu/i }).click();
+  await expect(page.getByRole("link", { name: /settings/i })).toBeVisible({
     timeout: 5_000,
   });
-  await expect(page.getByRole("link", { name: /shows/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /logs/i })).toBeVisible();
 });
 
 test("movies page renders cards and the filter pills are visible on mobile", async ({

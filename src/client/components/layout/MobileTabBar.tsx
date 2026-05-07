@@ -40,7 +40,7 @@ export function MobileTabBar({ onMoreClick, moreOpen }: Props) {
       className="bg-card/90 border-border/60 fixed inset-x-0 bottom-0 z-30 border-t backdrop-blur-md md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="flex h-16 items-stretch">
+      <div className="h-bottom-bar flex items-stretch">
         {TABS.map(({ href, labelKey, icon: Icon }) => {
           const active = pathname === href;
           return (

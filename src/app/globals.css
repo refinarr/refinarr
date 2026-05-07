@@ -98,6 +98,7 @@
   --spacing-control-sm: 2.45rem; /* dense inline controls (badge-like, default Select trigger) */
   --spacing-control: 2.75rem; /* prominent form control height — iOS 44pt touch target */
   --spacing-control-lg: 3.25rem; /* primary CTA / hero pickers */
+  --spacing-bottom-bar: 4rem; /* mobile bottom tab bar height (excludes safe-area inset) */
 }
 
 /* First-paint safety: surface is keyed on the .dark class (toggled by

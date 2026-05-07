@@ -58,9 +58,10 @@ export function ScoringModeSelector({ instanceId, compact = false }: Props) {
       }}
     >
       <SelectTrigger
+        size={compact ? "sm" : "default"}
         className={
           compact
-            ? "hover:bg-primary/10 h-control-xs w-auto gap-1.5 border-none bg-transparent px-2 text-sm font-medium focus:ring-0"
+            ? "hover:bg-primary/10 w-auto gap-1.5 border-none bg-transparent px-2 text-sm font-medium focus:ring-0"
             : "w-36"
         }
       >

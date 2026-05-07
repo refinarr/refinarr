@@ -162,14 +162,14 @@ export default function SettingsPage() {
 
           <div className="space-y-page max-w-2xl flex-1">
             <section id="general" className={sectionClass("general")}>
-              <h2 className="hidden text-lg font-semibold md:block">
+              <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
                 {t("sections.general")}
               </h2>
               <DryRunToggle prominent />
             </section>
 
             <section id="appearance" className={sectionClass("appearance")}>
-              <h2 className="hidden text-lg font-semibold md:block">
+              <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
                 {t("sections.appearance")}
               </h2>
               <ThemeSelector />
@@ -177,7 +177,7 @@ export default function SettingsPage() {
 
             <section id="instances" className={sectionClass("instances")}>
               <div className="flex items-center justify-between">
-                <h2 className="hidden text-lg font-semibold md:block">
+                <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
                   {t("sections.instances")}
                 </h2>
                 <Button
@@ -241,7 +241,7 @@ export default function SettingsPage() {
             </section>
 
             <section id="api-access" className={sectionClass("api-access")}>
-              <h2 className="hidden text-lg font-semibold md:block">
+              <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
                 {t("sections.apiAccess")}
               </h2>
               <ApiKeyCard />
@@ -249,7 +249,7 @@ export default function SettingsPage() {
 
             {showAccount && (
               <section id="account" className={sectionClass("account")}>
-                <h2 className="hidden text-lg font-semibold md:block">
+                <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
                   {t("sections.account")}
                 </h2>
                 <PasswordChangeCard />
