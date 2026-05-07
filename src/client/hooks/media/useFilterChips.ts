@@ -2,7 +2,13 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { type FilterChip } from "@/client/components/common/ActiveFilterChips";
-import type { CfPreference, QualityProfile } from "@/shared/types/models";
+import { severityLabel } from "@/client/lib/severity";
+import { formatBytes } from "@/client/lib/format";
+import type {
+  CfPreference,
+  QualityProfile,
+  Severity,
+} from "@/shared/types/models";
 import type { MediaFiltersResult } from "./useMediaFilters";
 
 // CF chip-building helper — used only by useFilterChips, so it lives here
@@ -36,8 +42,8 @@ interface Args {
 
 export interface FilterChipsResult {
   chips: FilterChip[];
-  // Resets every value-bearing filter (q, profileId, CF lists, maxScore,
-  // onlyMissing). Preserves sort order and match-mode preferences.
+  // Resets every value-bearing filter. Preserves sort order and match-mode
+  // preferences.
   clearActiveFilters: () => void;
 }
 
@@ -61,9 +67,8 @@ export function useFilterChips({
     return Array.from(new Map(pairs), ([id, name]) => ({ id, name }));
   }, [profiles]);
 
-  const profileName = profiles?.find(
-    (p) => p.id === filters.filters.profileId,
-  )?.name;
+  const profileNameOf = (id: number) =>
+    profiles?.find((p) => p.id === id)?.name;
 
   const removeMissingCf = (id: number) =>
     filters.setFilters((f) => ({
@@ -74,6 +79,11 @@ export function useFilterChips({
     filters.setFilters((f) => ({
       ...f,
       hasNegativeCfIds: f.hasNegativeCfIds.filter((x) => x !== id),
+    }));
+  const removeProfile = (id: number) =>
+    filters.setFilters((f) => ({
+      ...f,
+      profileIds: f.profileIds.filter((x) => x !== id),
     }));
 
   const missingChips = buildCfChips({
@@ -91,18 +101,74 @@ export function useFilterChips({
     keyPrefix: "ncf",
   });
 
+  const profileChips: FilterChip[] = filters.filters.profileIds
+    .map((id): FilterChip | null => {
+      const name = profileNameOf(id);
+      return name
+        ? {
+            key: `profile-${id}`,
+            label: t("profileLabel", { name }),
+            onRemove: () => removeProfile(id),
+          }
+        : null;
+    })
+    .filter((c): c is FilterChip => c !== null);
+
+  const removeSeverity = (sev: Severity) =>
+    filters.setFilters((f) => ({
+      ...f,
+      severities: f.severities.filter((x) => x !== sev),
+    }));
+  const severityChips: FilterChip[] = filters.filters.severities.map((sev) => ({
+    key: `sev-${sev}`,
+    label: t("severityLabel", { name: severityLabel[sev] }),
+    onRemove: () => removeSeverity(sev),
+  }));
+
+  const { minScore, maxScore, minSize, maxSize } = filters.filters;
+  const scoreChip: FilterChip | null =
+    minScore !== null || maxScore !== null
+      ? {
+          key: "score",
+          label: t("scoreRangeLabel", {
+            min: minScore !== null ? String(minScore) : "−∞",
+            max: maxScore !== null ? String(maxScore) : "+∞",
+          }),
+          onRemove: () =>
+            filters.setFilters((f) => ({
+              ...f,
+              minScore: null,
+              maxScore: null,
+            })),
+        }
+      : null;
+  const sizeChip: FilterChip | null =
+    minSize !== null || maxSize !== null
+      ? {
+          key: "size",
+          label: t("sizeRangeLabel", {
+            min: minSize !== null ? formatBytes(minSize) : "0",
+            max: maxSize !== null ? formatBytes(maxSize) : "∞",
+          }),
+          onRemove: () =>
+            filters.setFilters((f) => ({
+              ...f,
+              minSize: null,
+              maxSize: null,
+            })),
+        }
+      : null;
+
   const chips: FilterChip[] = [
     filters.filters.q && {
       key: "q",
       label: t("queryLabel", { q: filters.filters.q }),
       onRemove: () => filters.setFilters((f) => ({ ...f, q: "" })),
     },
-    filters.filters.profileId !== null &&
-      profileName && {
-        key: "profile",
-        label: t("profileLabel", { name: profileName }),
-        onRemove: () => filters.setFilters((f) => ({ ...f, profileId: null })),
-      },
+    ...profileChips,
+    ...severityChips,
+    scoreChip,
+    sizeChip,
     ...missingChips,
     ...penaltyChips,
     filters.filters.onlyMissing && {
@@ -116,10 +182,14 @@ export function useFilterChips({
     filters.setFilters((f) => ({
       ...f,
       q: "",
-      profileId: null,
+      profileIds: [],
+      severities: [],
+      minScore: null,
+      maxScore: null,
+      minSize: null,
+      maxSize: null,
       missingCfIds: [],
       hasNegativeCfIds: [],
-      maxScore: 1,
       onlyMissing: false,
     }));
 

@@ -41,9 +41,16 @@ export interface MediaQuery {
   limit: number;
   sortBy: "score" | "title" | "added" | "size";
   order: "asc" | "desc";
+  // Score range — bounds depend on scoring mode (manual: 0..1; profile:
+  // raw integer score). Both omitted means "no filter".
+  minScore?: number;
   maxScore?: number;
+  // Size range in bytes. Both omitted means "no filter".
+  minSize?: number;
+  maxSize?: number;
   q?: string;
-  profileId?: number;
+  profileIds?: number[];
+  severities?: Severity[];
   missingCfIds?: number[];
   missingCfMatch?: "any" | "all";
   hasNegativeCfIds?: number[];

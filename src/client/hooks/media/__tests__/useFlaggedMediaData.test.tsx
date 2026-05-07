@@ -1,25 +1,26 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
-import type { FlaggedMedia, ScoringMode } from "@/shared/types/models";
+import type { FlaggedMedia } from "@/shared/types/models";
 import { useFlaggedMediaData } from "../useFlaggedMediaData";
 import type { FlaggedMediaQueryHook } from "../useFlaggedMediaData";
-import type { MediaFilters } from "../useMediaFilters";
 
 type Item = FlaggedMedia;
 
-const baseFilters: MediaFilters & { scoringMode: ScoringMode } = {
-  sortBy: "score",
-  order: "asc",
-  maxScore: 1,
+// Shape mirrors useMediaFilters' forQuery — bounds are optional numbers
+// (undefined when not set), not nullable like MediaFilters itself.
+const baseFilters = {
+  sortBy: "score" as const,
+  order: "asc" as const,
   q: "",
-  profileId: null,
+  profileIds: [],
+  severities: [],
   missingCfIds: [],
-  missingCfMatch: "all",
+  missingCfMatch: "all" as const,
   hasNegativeCfIds: [],
-  hasNegativeCfMatch: "all",
+  hasNegativeCfMatch: "all" as const,
   onlyMissing: false,
-  scoringMode: "manual",
+  scoringMode: "manual" as const,
 };
 
 function makeQueryHook(

@@ -630,14 +630,14 @@ describe("SeriesService — sort edge cases", () => {
     expect(result.items).toHaveLength(2);
   });
 
-  test("filters by profileId", async () => {
+  test("filters by profileIds", async () => {
     const inst = (await instanceService.getAll())[0];
     const result = await seriesService.getFlaggedSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
       order: "asc",
-      profileId: 999,
+      profileIds: [999],
     });
     expect(result.items).toEqual([]);
   });

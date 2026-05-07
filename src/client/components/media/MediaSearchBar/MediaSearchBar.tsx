@@ -1,27 +1,9 @@
 "use client";
-import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Search, ChevronDown, Check } from "lucide-react";
+import { Search, Check } from "lucide-react";
 import { Input } from "@/client/components/ui/input";
-import { Slider } from "@/client/components/ui/slider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/client/components/ui/select";
-import { MultiSelect } from "@/client/components/ui/multi-select";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/client/components/ui/popover";
-import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
-import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { cn } from "@/client/lib/utils";
 import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
-import { isManualMode } from "@/shared/scoring-mode";
 import type { ArrType, ScoringMode } from "@/shared/types/models";
 
 interface Props {
@@ -32,58 +14,50 @@ interface Props {
   onChange: (next: Partial<MediaFilters>) => void;
 }
 
-const ALL = "__all__";
-
-// Shared pill style for every filter trigger so they line up visually.
+// Visual-only pill style for the always-visible quick toggle. Form-control
+// sizing comes from h-control-sm so the pill lines up with primitives
+// elsewhere in the app.
 const PILL =
-  "inline-flex h-8 items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-xs font-medium whitespace-nowrap transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none dark:bg-input/30 dark:hover:bg-input/50";
+  "inline-flex h-control-sm items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-xs font-medium whitespace-nowrap transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none dark:bg-input/30 dark:hover:bg-input/50";
 const PILL_ACTIVE =
   "border-primary bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90";
 
+// Filter strip above the table. Title-search input + the "only missing"
+// toggle. Per-column filters (profile, score, size, severity, CFs) live
+// in the table column headers via ColumnFilter funnels — see
+// movieColumns / seriesColumns for the wiring.
 export function MediaSearchBar({
-  arrType,
-  instanceId,
-  scoringMode,
+  arrType: _arrType,
+  instanceId: _instanceId,
+  scoringMode: _scoringMode,
   filters,
   onChange,
 }: Props) {
   const t = useTranslations("filters");
-  const { data: profiles } = useQualityProfiles(arrType, instanceId);
-  const { data: prefs } = usePreferences(instanceId);
-
-  const wantedCfOptions = useMemo(
-    () => (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName })),
-    [prefs],
-  );
-
-  const negativeCfOptions = useMemo(() => {
-    const pairs = (profiles ?? [])
-      .flatMap((p) => p.formatItems ?? [])
-      .filter((item) => item.score < 0)
-      .map((item) => [item.format, item.name] as const);
-    return Array.from(new Map(pairs), ([id, name]) => ({ id, name }));
-  }, [profiles]);
-
-  const profileName = profiles?.find((p) => p.id === filters.profileId)?.name;
-
-  const profileActive = filters.profileId !== null;
-  const maxScoreActive = isManualMode(scoringMode) && filters.maxScore < 1;
   const onlyMissingActive = filters.onlyMissing;
   const anyActive =
-    profileActive ||
+    filters.profileIds.length > 0 ||
+    filters.severities.length > 0 ||
     filters.missingCfIds.length > 0 ||
     filters.hasNegativeCfIds.length > 0 ||
-    maxScoreActive ||
+    filters.minScore !== null ||
+    filters.maxScore !== null ||
+    filters.minSize !== null ||
+    filters.maxSize !== null ||
     onlyMissingActive ||
     filters.q !== "";
 
   const clearAll = () =>
     onChange({
       q: "",
-      profileId: null,
+      profileIds: [],
+      severities: [],
+      minScore: null,
+      maxScore: null,
+      minSize: null,
+      maxSize: null,
       missingCfIds: [],
       hasNegativeCfIds: [],
-      maxScore: 1,
       onlyMissing: false,
     });
 
@@ -100,103 +74,6 @@ export function MediaSearchBar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Select
-          value={filters.profileId === null ? ALL : String(filters.profileId)}
-          onValueChange={(v) =>
-            onChange({ profileId: v === ALL ? null : Number(v) })
-          }
-        >
-          <SelectTrigger className={cn(PILL, profileActive && PILL_ACTIVE)}>
-            <SelectValue>
-              {profileActive
-                ? t("profileLabel", { name: profileName ?? "" })
-                : t("allProfiles")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>{t("allProfiles")}</SelectItem>
-            {(profiles ?? []).map((p) => (
-              <SelectItem key={p.id} value={String(p.id)}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* CF filter is mobile-only (lg:hidden) — desktop renders a
-            CfColumnFunnel inside the table's issues column header
-            instead, so the filter sits next to the data it filters. */}
-        <div className="contents lg:hidden">
-          {isManualMode(scoringMode) ? (
-            <MultiSelect
-              options={wantedCfOptions}
-              selected={filters.missingCfIds}
-              onChange={(next) => onChange({ missingCfIds: next })}
-              placeholder={t("anyMissingFormat")}
-              label={t("missingHeading")}
-              singleLabel={(name) => t("missingLabel", { name })}
-              multiLabel={(count) => t("missingMultiLabel", { count })}
-              matchMode={filters.missingCfMatch}
-              onMatchModeChange={(m) => onChange({ missingCfMatch: m })}
-              matchAnyLabel={t("matchAny")}
-              matchAllLabel={t("matchAll")}
-              matchAnySuffix={t("matchAnySuffix")}
-              matchAllSuffix={t("matchAllSuffix")}
-              triggerClassName={cn(
-                PILL,
-                filters.missingCfIds.length > 0 && PILL_ACTIVE,
-              )}
-            />
-          ) : (
-            <MultiSelect
-              options={negativeCfOptions}
-              selected={filters.hasNegativeCfIds}
-              onChange={(next) => onChange({ hasNegativeCfIds: next })}
-              placeholder={t("anyPenaltyFormat")}
-              label={t("penaltyHeading")}
-              singleLabel={(name) => t("penaltyLabel", { name })}
-              multiLabel={(count) => t("penaltyMultiLabel", { count })}
-              matchMode={filters.hasNegativeCfMatch}
-              onMatchModeChange={(m) => onChange({ hasNegativeCfMatch: m })}
-              matchAnyLabel={t("matchAny")}
-              matchAllLabel={t("matchAll")}
-              matchAnySuffix={t("matchAnySuffix")}
-              matchAllSuffix={t("matchAllSuffix")}
-              triggerClassName={cn(
-                PILL,
-                filters.hasNegativeCfIds.length > 0 && PILL_ACTIVE,
-              )}
-            />
-          )}
-        </div>
-
-        {isManualMode(scoringMode) && (
-          <Popover>
-            <PopoverTrigger className={cn(PILL, maxScoreActive && PILL_ACTIVE)}>
-              {t("maxScore")}: {Math.round(filters.maxScore * 100)}%
-              <ChevronDown className="size-3 opacity-60" />
-            </PopoverTrigger>
-            <PopoverContent className="w-64">
-              <div className="flex items-center gap-3">
-                <Slider
-                  value={filters.maxScore}
-                  onValueChange={(v) => {
-                    const next = typeof v === "number" ? v : v[0];
-                    if (typeof next === "number") onChange({ maxScore: next });
-                  }}
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  className="flex-1"
-                />
-                <span className="w-10 text-right text-xs tabular-nums">
-                  {Math.round(filters.maxScore * 100)}%
-                </span>
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
-
         <button
           type="button"
           aria-pressed={onlyMissingActive}

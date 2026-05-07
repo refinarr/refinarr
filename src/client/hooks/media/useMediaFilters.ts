@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { isManualMode } from "@/shared/scoring-mode";
-import type { ScoringMode } from "@/shared/types/models";
+import type { ScoringMode, Severity } from "@/shared/types/models";
 import { useDebouncedValue } from "../ui/useDebouncedValue";
 
 export type MatchMode = "any" | "all";
@@ -8,9 +7,17 @@ export type MatchMode = "any" | "all";
 export interface MediaFilters {
   sortBy: "score" | "title" | "added" | "size";
   order: "asc" | "desc";
-  maxScore: number;
+  // Score range — manual mode 0..1, profile mode raw integer score.
+  // null = no bound on that side. Bounds for the UI slider come from
+  // the active mode/profiles via the column funnel, not from here.
+  minScore: number | null;
+  maxScore: number | null;
+  // Size range in bytes. null = no bound.
+  minSize: number | null;
+  maxSize: number | null;
   q: string;
-  profileId: number | null;
+  profileIds: number[];
+  severities: Severity[];
   missingCfIds: number[];
   missingCfMatch: MatchMode;
   hasNegativeCfIds: number[];
@@ -28,9 +35,13 @@ export type MediaQueryFilters = Partial<MediaFilters> & {
 export const defaultMediaFilters: MediaFilters = {
   sortBy: "score",
   order: "asc",
-  maxScore: 1,
+  minScore: null,
+  maxScore: null,
+  minSize: null,
+  maxSize: null,
   q: "",
-  profileId: null,
+  profileIds: [],
+  severities: [],
   missingCfIds: [],
   missingCfMatch: "all",
   hasNegativeCfIds: [],
@@ -41,12 +52,16 @@ export const defaultMediaFilters: MediaFilters = {
 export interface MediaFiltersResult {
   filters: MediaFilters;
   setFilters: React.Dispatch<React.SetStateAction<MediaFilters>>;
-  // maxScore is only meaningful in manual mode (a 0–1 coverage fraction).
-  // In profile mode the score is a raw integer (-1000…cutoff) and the
-  // slider isn't rendered, so omit the field so we don't accidentally
-  // filter the page down to "score ≤ 1" on the API side.
-  forQuery: Omit<MediaFilters, "maxScore"> & {
+  // null bounds are dropped on serialization — appendFilterParams skips
+  // null/undefined, so the URL only carries actually-set bounds.
+  forQuery: Omit<
+    MediaFilters,
+    "minScore" | "maxScore" | "minSize" | "maxSize"
+  > & {
+    minScore?: number;
     maxScore?: number;
+    minSize?: number;
+    maxSize?: number;
     scoringMode: ScoringMode;
   };
 }
@@ -56,9 +71,15 @@ export function useMediaFilters(
   instanceId: number,
 ): MediaFiltersResult {
   const [filters, setFilters] = useState<MediaFilters>(defaultMediaFilters);
+  const debouncedMinScore = useDebouncedValue(filters.minScore, 400);
   const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
+  const debouncedMinSize = useDebouncedValue(filters.minSize, 400);
+  const debouncedMaxSize = useDebouncedValue(filters.maxSize, 400);
   const debouncedQ = useDebouncedValue(filters.q, 300);
 
+  // Score bounds change shape between manual and profile modes (0..1 vs
+  // raw integer), so a value the user picked in one mode is meaningless
+  // after switching. CF / penalty selections are also mode-specific.
   const [trackedMode, setTrackedMode] = useState(scoringMode);
   if (trackedMode !== scoringMode) {
     setTrackedMode(scoringMode);
@@ -68,7 +89,8 @@ export function useMediaFilters(
       missingCfMatch: "all",
       hasNegativeCfIds: [],
       hasNegativeCfMatch: "all",
-      maxScore: 1,
+      minScore: null,
+      maxScore: null,
     }));
   }
 
@@ -80,7 +102,7 @@ export function useMediaFilters(
     setTrackedInstance(instanceId);
     setFilters((f) => ({
       ...f,
-      profileId: null,
+      profileIds: [],
       missingCfIds: [],
       missingCfMatch: "all",
       hasNegativeCfIds: [],
@@ -93,7 +115,10 @@ export function useMediaFilters(
     setFilters,
     forQuery: {
       ...filters,
-      maxScore: isManualMode(scoringMode) ? debouncedMaxScore : undefined,
+      minScore: debouncedMinScore ?? undefined,
+      maxScore: debouncedMaxScore ?? undefined,
+      minSize: debouncedMinSize ?? undefined,
+      maxSize: debouncedMaxSize ?? undefined,
       q: debouncedQ,
       scoringMode,
     },

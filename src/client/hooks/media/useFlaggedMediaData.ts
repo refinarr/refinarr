@@ -3,6 +3,21 @@
 import type { FlaggedMedia, ScoringMode } from "@/shared/types/models";
 import type { MediaFilters } from "./useMediaFilters";
 
+// Shape consumed by the query hooks (useMovies / useSeries) and by
+// useFlaggedMediaData. Keeps every range bound nullable on the source
+// MediaFilters but serialized to optional numbers — appendFilterParams
+// drops undefined keys so the URL only carries actually-set bounds.
+type ForQueryFilters = Omit<
+  MediaFilters,
+  "minScore" | "maxScore" | "minSize" | "maxSize"
+> & {
+  minScore?: number;
+  maxScore?: number;
+  minSize?: number;
+  maxSize?: number;
+  scoringMode: ScoringMode;
+};
+
 type MediaQueryResult<T> = {
   data?: { pages: Array<{ items: T[]; total: number }> };
   isLoading: boolean;
@@ -16,10 +31,7 @@ type MediaQueryResult<T> = {
 
 export type FlaggedMediaQueryHook<T extends FlaggedMedia> = (
   instanceId: number,
-  filters: Omit<MediaFilters, "maxScore"> & {
-    maxScore?: number;
-    scoringMode: ScoringMode;
-  },
+  filters: ForQueryFilters,
 ) => MediaQueryResult<T>;
 
 export interface FlaggedMediaData<T extends FlaggedMedia> {
@@ -37,10 +49,7 @@ export interface FlaggedMediaData<T extends FlaggedMedia> {
 export function useFlaggedMediaData<T extends FlaggedMedia>(
   useQuery: FlaggedMediaQueryHook<T>,
   activeInstance: number,
-  filters: Omit<MediaFilters, "maxScore"> & {
-    maxScore?: number;
-    scoringMode: ScoringMode;
-  },
+  filters: ForQueryFilters,
 ): FlaggedMediaData<T> {
   const q = useQuery(activeInstance, filters);
   return {

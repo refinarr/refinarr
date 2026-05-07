@@ -457,14 +457,14 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
     expect(result.items.every((m) => m.cfScore <= 0.5)).toBe(true);
   });
 
-  test("filters by profileId", async () => {
+  test("filters by profileIds", async () => {
     const inst = (await instanceService.getAll())[0];
     const result = await movieService.getFlaggedMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
       order: "asc",
-      profileId: 999,
+      profileIds: [999],
     });
     expect(result.items).toEqual([]);
   });

@@ -155,6 +155,7 @@
       "profile": "Profile",
       "score": "Score",
       "size": "Size",
+      "severity": "Severity",
       "missing": "Missing",
       "penalties": "Penalties"
     },
@@ -179,6 +180,7 @@
       "score": "Score",
       "size": "Size",
       "episodes": "Eps",
+      "severity": "Severity",
       "missing": "Missing",
       "penalties": "Penalties"
     },
@@ -225,7 +227,36 @@
     "missingColumnDescription": "Toggle Custom Formats this column must be missing.",
     "penaltyColumnDescription": "Toggle penalty Custom Formats this column must contain.",
     "noFormatsAvailable": "No Custom Formats available.",
-    "clearFilter": "Clear filter"
+    "clearFilter": "Clear filter",
+    "severityHeading": "Severity",
+    "severityColumnDescription": "Show only items in the selected severity buckets.",
+    "severityLabel": "{name}",
+    "profileHeading": "Quality profile",
+    "profileColumnDescription": "Show only items in the selected quality profiles.",
+    "noProfilesAvailable": "No quality profiles available.",
+    "scoreHeading": "Score",
+    "scoreColumnDescription": "Pick a score range.",
+    "scoreRangeLabel": "Score: {min} – {max}",
+    "scoreBuckets": {
+      "manualLt30": "< 30%",
+      "manual30to60": "30 – 60%",
+      "manual60to85": "60 – 85%",
+      "manualGt85": "85%+",
+      "profileNegative": "Negative",
+      "profileZero": "Zero",
+      "profilePositive": "Positive"
+    },
+    "sizeHeading": "File size",
+    "sizeColumnDescription": "Pick a size bucket.",
+    "sizeRangeLabel": "Size: {min} – {max}",
+    "sizeBuckets": {
+      "lt1": "< 1 GB",
+      "to1to5": "1 – 5 GB",
+      "to5to10": "5 – 10 GB",
+      "to10to25": "10 – 25 GB",
+      "to25to50": "25 – 50 GB",
+      "gt50": "> 50 GB"
+    }
   },
   "bulk": {
     "selected": "{count} selected",
