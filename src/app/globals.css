@@ -91,6 +91,7 @@
      m-{name}, h-{name}, w-{name}, size-{name}, scroll-mt-{name}, … */
   --spacing-page: 1.5rem; /* between page-level chunks (header, content blocks) */
   --spacing-section: 1rem; /* inside a content section */
+  --spacing-content-top: 1rem; /* top padding when a page has no pageHeader slot */
   --spacing-subgroup: 0.75rem; /* inside subgroups (e.g. per-instance configs) */
   --spacing-header: 1.25rem; /* sticky header bar inset padding (mobile-friendly) */
   --spacing-menu-item: 0.625rem; /* vertical padding for dropdown / menu items (Select, DropdownMenu) */

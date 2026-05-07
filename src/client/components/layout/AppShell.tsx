@@ -81,8 +81,10 @@ export function AppShell({ children, pageHeader }: Props) {
             id="main"
             tabIndex={-1}
             className={cn(
-              "flex-1 overflow-y-auto px-4 pb-[calc(var(--spacing-bottom-bar)+var(--spacing-page)+env(safe-area-inset-bottom))] focus:outline-none md:px-6 md:pb-6",
-              pageHeader ? "pt-section md:pt-page" : "pt-4 md:pt-6",
+              "md:pb-page flex-1 overflow-y-auto px-4 pb-[calc(var(--spacing-bottom-bar)+var(--spacing-page)+env(safe-area-inset-bottom))] focus:outline-none md:px-6",
+              pageHeader
+                ? "pt-section md:pt-page"
+                : "pt-content-top md:pt-page",
             )}
           >
             {children}

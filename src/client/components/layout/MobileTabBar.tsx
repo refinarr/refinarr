@@ -37,8 +37,7 @@ export function MobileTabBar({ onMoreClick, moreOpen }: Props) {
   return (
     <nav
       aria-label={t("primary")}
-      className="bg-card/90 border-border/60 fixed inset-x-0 bottom-0 z-30 border-t backdrop-blur-md md:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="bg-card/90 border-border/60 fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
     >
       <div className="h-bottom-bar flex items-stretch">
         {TABS.map(({ href, labelKey, icon: Icon }) => {
