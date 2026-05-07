@@ -39,7 +39,7 @@ const profile = {
 };
 
 describe("GET /api/radarr/movies", () => {
-  test("returns paginated FlaggedMovie wrapper through the full route handler", async () => {
+  test("returns paginated MovieItem wrapper through the full route handler", async () => {
     const instanceId = await makeInstance();
     await preferenceRepository.setForInstance(instanceId, [
       { cfId: 10, cfName: "HDR" },

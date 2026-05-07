@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { ArrowRight, Settings } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
+import { Skeleton } from "@/client/components/ui/skeleton";
 import { InstanceErrorSummary } from "@/client/components/history/InstanceErrorSummary";
 import { useInstanceHealth } from "@/client/hooks/data/useInstances";
 import type { DashboardInstanceSummary } from "@/shared/types/api";
@@ -88,27 +89,37 @@ export function InstanceSummaryCard({ instance }: Props) {
           href={`${libraryHref}?instanceId=${instance.id}`}
           className="bg-muted/20 hover:bg-muted/40 flex items-center justify-between rounded-md border px-3 py-2 transition-colors"
         >
-          <span className="flex items-baseline gap-1 text-sm">
-            {instance.flaggedCount === null ? (
-              <>
-                <span className="text-muted-foreground text-2xl font-bold tabular-nums">
-                  —
+          {instance.flaggedCount === null || instance.totalCount === null ? (
+            <span className="flex items-center gap-2 text-sm">
+              <Skeleton
+                className="h-8 w-20"
+                aria-label={t("flaggedOfTotalUnavailable")}
+              />
+              <span className="text-muted-foreground">
+                {t(flaggedNounKey, { count: 0 })}
+              </span>
+            </span>
+          ) : (
+            <span className="flex items-baseline gap-1 text-sm">
+              <span
+                className="text-2xl font-bold tabular-nums"
+                aria-label={t("flaggedOfTotal", {
+                  flagged: instance.flaggedCount,
+                  total: instance.totalCount,
+                })}
+              >
+                {instance.flaggedCount}
+                <span className="text-muted-foreground" aria-hidden="true">
+                  {" "}
+                  /{" "}
                 </span>
-                <span className="text-muted-foreground">
-                  {t(flaggedNounKey, { count: 0 })}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="text-2xl font-bold tabular-nums">
-                  {instance.flaggedCount}
-                </span>
-                <span className="text-muted-foreground">
-                  {t(flaggedNounKey, { count: instance.flaggedCount })}
-                </span>
-              </>
-            )}
-          </span>
+                {instance.totalCount}
+              </span>
+              <span className="text-muted-foreground">
+                {t(flaggedNounKey, { count: instance.flaggedCount })}
+              </span>
+            </span>
+          )}
           <ArrowRight className="text-muted-foreground size-4" />
         </Link>
 

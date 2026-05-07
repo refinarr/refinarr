@@ -1,11 +1,11 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
-import type { FlaggedMedia } from "@/shared/types/models";
-import { useFlaggedMediaData } from "../useFlaggedMediaData";
-import type { FlaggedMediaQueryHook } from "../useFlaggedMediaData";
+import type { MediaItem } from "@/shared/types/models";
+import { useMediaData } from "../useMediaData";
+import type { MediaDataQueryHook } from "../useMediaData";
 
-type Item = FlaggedMedia;
+type Item = MediaItem;
 
 // Shape mirrors useMediaFilters' forQuery — bounds are optional numbers
 // (undefined when not set), not nullable like MediaFilters itself.
@@ -32,7 +32,7 @@ function makeQueryHook(
     isFetchingNextPage: boolean;
     hasNextPage: boolean;
   }> = {},
-): FlaggedMediaQueryHook<Item> {
+): MediaDataQueryHook<Item> {
   return () => ({
     data: pages ? { pages } : undefined,
     isLoading: false,
@@ -46,7 +46,7 @@ function makeQueryHook(
   });
 }
 
-describe("useFlaggedMediaData", () => {
+describe("useMediaData", () => {
   function makeItem(id: number, title: string): Item {
     return {
       id,
@@ -74,25 +74,19 @@ describe("useFlaggedMediaData", () => {
       { items: [a, b], total: 3 },
       { items: [c], total: 3 },
     ]);
-    const { result } = renderHook(() =>
-      useFlaggedMediaData(hook, 1, baseFilters),
-    );
+    const { result } = renderHook(() => useMediaData(hook, 1, baseFilters));
     expect(result.current.items).toEqual([a, b, c]);
   });
 
   it("reads total from the first page", () => {
     const hook = makeQueryHook([{ items: [makeItem(1, "A")], total: 42 }]);
-    const { result } = renderHook(() =>
-      useFlaggedMediaData(hook, 1, baseFilters),
-    );
+    const { result } = renderHook(() => useMediaData(hook, 1, baseFilters));
     expect(result.current.total).toBe(42);
   });
 
   it("returns empty items and zero total when data is undefined", () => {
     const hook = makeQueryHook(undefined, { isLoading: true });
-    const { result } = renderHook(() =>
-      useFlaggedMediaData(hook, 1, baseFilters),
-    );
+    const { result } = renderHook(() => useMediaData(hook, 1, baseFilters));
     expect(result.current.items).toEqual([]);
     expect(result.current.total).toBe(0);
   });
@@ -104,9 +98,7 @@ describe("useFlaggedMediaData", () => {
       isFetchingNextPage: true,
       hasNextPage: true,
     });
-    const { result } = renderHook(() =>
-      useFlaggedMediaData(hook, 1, baseFilters),
-    );
+    const { result } = renderHook(() => useMediaData(hook, 1, baseFilters));
     expect(result.current.isError).toBe(true);
     expect(result.current.isFetching).toBe(true);
     expect(result.current.isFetchingNextPage).toBe(true);
@@ -115,7 +107,7 @@ describe("useFlaggedMediaData", () => {
 
   it("passes instanceId and filters through to the query hook", () => {
     const spy = vi.fn();
-    const hook: FlaggedMediaQueryHook<Item> = (...args) => {
+    const hook: MediaDataQueryHook<Item> = (...args) => {
       spy(...args);
       return {
         data: undefined,
@@ -128,7 +120,7 @@ describe("useFlaggedMediaData", () => {
         refetch: vi.fn(),
       };
     };
-    renderHook(() => useFlaggedMediaData(hook, 7, baseFilters));
+    renderHook(() => useMediaData(hook, 7, baseFilters));
     expect(spy).toHaveBeenCalledWith(7, baseFilters);
   });
 });

@@ -87,23 +87,33 @@ export interface DashboardInstanceSummary {
   type: ArrType;
   name: string;
   enabled: boolean;
-  // null when the flagged-media cache is cold for this instance — the
-  // dashboard avoids triggering an expensive build inline. The route fires
-  // a background warm; counts appear on the next dashboard refetch.
+  // null when the media cache is cold for this instance — the dashboard
+  // avoids triggering an expensive build inline. The route fires a
+  // background warm; counts appear on the next dashboard refetch.
+  // Rendered as "{flaggedCount} / {totalCount}" on the dashboard.
   flaggedCount: number | null;
+  totalCount: number | null;
   failedActionsCount: number;
   hasPreferences: boolean;
 }
 
+// Aggregated counts across every enabled instance of each *arr type.
+// `flagged*` and `total*` are null when at least one enabled instance of
+// that type is still cold — the dashboard renders "—" instead of "0" so
+// the cold state doesn't masquerade as "all clear". Resolves once every
+// enabled instance warms. The dashboard renders
+// "{flaggedMovies} / {totalMovies}" (and same for series) so the user
+// sees how much of the library is flagged.
+export interface DashboardTotals {
+  flaggedMovies: number | null;
+  totalMovies: number | null;
+  flaggedSeries: number | null;
+  totalSeries: number | null;
+  failedActions24h: number;
+}
+
 export interface DashboardSummary {
   perInstance: DashboardInstanceSummary[];
-  totals: {
-    // null when at least one enabled instance of that type is still cold —
-    // the dashboard renders "—" instead of "0" so the cold state doesn't
-    // masquerade as "all clear". Resolves once every enabled instance warms.
-    flaggedMovies: number | null;
-    flaggedSeries: number | null;
-    failedActions24h: number;
-  };
+  totals: DashboardTotals;
   recentActivity: ActionLog[];
 }

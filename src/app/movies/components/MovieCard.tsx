@@ -7,11 +7,11 @@ import { formatBytes } from "@/client/lib/format";
 import { formatRelative } from "@/client/lib/format-relative";
 import { getSeverity } from "@/client/lib/severity";
 import { ISSUES_FOR, SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MovieItem } from "@/shared/types/models";
 
 interface Props {
-  item: FlaggedMovie;
-  ctx: MediaListShellRenderCtx<FlaggedMovie>;
+  item: MovieItem;
+  ctx: MediaListShellRenderCtx<MovieItem>;
 }
 
 export function MovieCard({ item, ctx }: Props) {

@@ -21,7 +21,7 @@ import type {
   ActionType,
   CustomFormat,
   ArrType,
-  FlaggedMedia,
+  MediaItem,
   Instance,
   MediaQuery,
   MediaType,
@@ -64,15 +64,15 @@ interface ManualItemContext<TUpstream, TFile> {
   wantedCfs: Array<{ id: number; name: string }>;
 }
 
-interface BuildPipelineArgs<TUpstream extends UpstreamItem, TFile, TFlagged> {
+interface BuildPipelineArgs<TUpstream extends UpstreamItem, TFile, TItem> {
   instance: Instance;
   mode: ScoringMode;
   mediaType: MediaType;
   items: TUpstream[];
   profiles: QualityProfile[];
   filesFor: (item: TUpstream) => TFile;
-  toProfileItem: (ctx: ProfileItemContext<TUpstream, TFile>) => TFlagged;
-  toManualItem: (ctx: ManualItemContext<TUpstream, TFile>) => TFlagged;
+  toProfileItem: (ctx: ProfileItemContext<TUpstream, TFile>) => TItem;
+  toManualItem: (ctx: ManualItemContext<TUpstream, TFile>) => TItem;
 }
 
 // Minimal shape every *arr upstream item satisfies — used as the
@@ -126,11 +126,11 @@ function logContext(opts: ExecuteActionOptions, isDryRun: boolean) {
 // applyQuery / compareMedia / getSeverity. Field-based check fixes the
 // long-standing bug where a Sonarr series with 1-of-100 episodes
 // downloaded reported `hasFile=true`.
-function itemHasFile(item: FlaggedMedia): boolean {
+function itemHasFile(item: MediaItem): boolean {
   return item.existingFileCount > 0;
 }
 
-function compareMedia<T extends FlaggedMedia>(
+function compareMedia<T extends MediaItem>(
   a: T,
   b: T,
   sortBy: MediaQuery["sortBy"],
@@ -157,7 +157,7 @@ function compareMedia<T extends FlaggedMedia>(
 // axis (missingFormats / unwantedFormats). Used twice in `applyQuery`
 // — extracted here so the per-axis filter is a single line at the
 // call site and applyQuery's cognitive-complexity stays under threshold.
-function filterByCfList<T extends FlaggedMedia>(
+function filterByCfList<T extends MediaItem>(
   items: T[],
   wanted: number[],
   match: "any" | "all",
@@ -175,7 +175,7 @@ function filterByCfList<T extends FlaggedMedia>(
 // Three small filter passes split by axis so each function stays under
 // the cognitive-complexity threshold and applyQuery's pipeline reads as
 // a sequence of named steps.
-function filterMedia<T extends FlaggedMedia>(
+function filterMedia<T extends MediaItem>(
   source: T[],
   query: MediaQuery,
   mode: ScoringMode,
@@ -187,7 +187,7 @@ function filterMedia<T extends FlaggedMedia>(
 
 // Show-or-hide filters: flagged-only, monitor status, only-missing.
 // Drive what enters the user's view (vs. composing on the score axis).
-function applyVisibilityFilters<T extends FlaggedMedia>(
+function applyVisibilityFilters<T extends MediaItem>(
   source: T[],
   query: MediaQuery,
 ): T[] {
@@ -206,7 +206,7 @@ function applyVisibilityFilters<T extends FlaggedMedia>(
 
 // Numeric / enum ranges: score, size, severity. All evaluate a per-item
 // scalar against the query bounds.
-function applyRangeFilters<T extends FlaggedMedia>(
+function applyRangeFilters<T extends MediaItem>(
   source: T[],
   query: MediaQuery,
   mode: ScoringMode,
@@ -241,7 +241,7 @@ function applyRangeFilters<T extends FlaggedMedia>(
 }
 
 // Identity / set-membership filters: query string, profile ids, CF lists.
-function applyMatchFilters<T extends FlaggedMedia>(
+function applyMatchFilters<T extends MediaItem>(
   source: T[],
   query: MediaQuery,
 ): T[] {
@@ -281,7 +281,7 @@ function applyMatchFilters<T extends FlaggedMedia>(
 // monitor + file-count state. "missing" means monitored AND at least one
 // expected file is absent.
 function matchesMonitor(
-  item: FlaggedMedia,
+  item: MediaItem,
   status: NonNullable<MediaQuery["monitorStatus"]>,
 ): boolean {
   switch (status) {
@@ -296,28 +296,50 @@ function matchesMonitor(
   }
 }
 
-export abstract class MediaService<TFlagged extends FlaggedMedia> {
+export abstract class MediaService<TItem extends MediaItem> {
   protected abstract readonly cacheNamespace: string;
 
-  protected abstract getFlaggedForWarm(
+  protected abstract getForWarm(
     instanceId: number,
     query: MediaQuery,
-  ): Promise<{ items: TFlagged[]; total: number }>;
+  ): Promise<{ items: TItem[]; total: number }>;
 
-  protected flaggedCacheKey(instanceId: number, mode: ScoringMode): string {
+  protected mediaCacheKey(instanceId: number, mode: ScoringMode): string {
     return `${this.cacheNamespace}:${instanceId}:${mode}`;
   }
 
-  getCachedFlaggedTotal(instanceId: number, mode: ScoringMode): number | null {
-    const cached = dataCache.get<{ flagged: TFlagged[] }>(
-      this.flaggedCacheKey(instanceId, mode),
-      CACHE_TTL_MS,
+  // Flagged subset of the cache (per-item `flagged === true`). The
+  // dashboard reads this for the "X flagged" KPI; before this PR the
+  // method returned `cached.items.length`, which made a 1,000-movie
+  // library show as "1,000 flagged" once any item entered the cache.
+  //
+  // Reads from the full TTL+STALE window so the dashboard count tracks
+  // whatever the actual `/api/<arr>/<media>` path would serve. With the
+  // strict TTL here, an unrelated mutation (e.g. changing another
+  // instance's scoring mode 6 minutes after page load) would cause this
+  // instance's KPI to flip to skeleton even though its endpoint still
+  // returns data from the SWR stale window.
+  getCachedFlaggedCount(instanceId: number, mode: ScoringMode): number | null {
+    const cached = dataCache.get<{ items: TItem[] }>(
+      this.mediaCacheKey(instanceId, mode),
+      CACHE_TTL_MS + CACHE_STALE_MS,
     );
-    return cached?.flagged.length ?? null;
+    return cached?.items.filter((m) => m.flagged).length ?? null;
   }
 
-  warmFlaggedCache(instanceId: number): Promise<unknown> {
-    return this.getFlaggedForWarm(instanceId, {
+  // Visible-library size (cache row count). Used as the denominator
+  // in the dashboard's "X / Y" KPI. Same TTL+STALE window as
+  // `getCachedFlaggedCount` so both counts surface or skeleton in lockstep.
+  getCachedTotalCount(instanceId: number, mode: ScoringMode): number | null {
+    const cached = dataCache.get<{ items: TItem[] }>(
+      this.mediaCacheKey(instanceId, mode),
+      CACHE_TTL_MS + CACHE_STALE_MS,
+    );
+    return cached?.items.length ?? null;
+  }
+
+  warmMediaCache(instanceId: number): Promise<unknown> {
+    return this.getForWarm(instanceId, {
       page: 1,
       limit: 1,
       sortBy: "score",
@@ -491,11 +513,11 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
   //   5. Dispatch to the per-mode adapter for each visible item.
   //
   // TUpstream / TFile are method-scoped generics so the class itself
-  // stays single-generic on TFlagged (test subclasses don't need to
+  // stays single-generic on TItem (test subclasses don't need to
   // thread types they never use).
   protected async runBuildPipeline<TUpstream extends UpstreamItem, TFile>(
-    args: BuildPipelineArgs<TUpstream, TFile, TFlagged>,
-  ): Promise<TFlagged[]> {
+    args: BuildPipelineArgs<TUpstream, TFile, TItem>,
+  ): Promise<TItem[]> {
     const { instance, mode, mediaType, items, profiles, filesFor } = args;
     const profileMaps = this.buildProfileMaps(profiles);
     const ignoredSet = await this.findIgnoredMediaIds(instance.id, mediaType);
@@ -536,7 +558,7 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
     );
   }
 
-  protected applyQuery<T extends FlaggedMedia>(
+  protected applyQuery<T extends MediaItem>(
     source: T[],
     query: MediaQuery,
     mode: ScoringMode,

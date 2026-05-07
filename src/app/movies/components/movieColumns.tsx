@@ -19,11 +19,11 @@ import {
   isManualMode,
   isProfileMode,
 } from "@/shared/scoring-mode";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MovieItem } from "@/shared/types/models";
 
 export function movieColumns(
-  ctx: MediaListShellRenderCtx<FlaggedMovie>,
-): ColumnDef<FlaggedMovie>[] {
+  ctx: MediaListShellRenderCtx<MovieItem>,
+): ColumnDef<MovieItem>[] {
   const {
     scoringMode,
     profiles,

@@ -8,7 +8,7 @@ import {
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
 import { appendFilterParams } from "@/client/lib/build-query-params";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MovieItem } from "@/shared/types/models";
 import type { PaginatedResponse } from "@/shared/types/api";
 import type { MediaQueryFilters } from "./useMediaFilters";
 
@@ -22,7 +22,7 @@ export function useMovies(instanceId: number, filters: MediaQueryFilters = {}) {
   return useInfiniteQuery({
     queryKey: queryKeys.movies(instanceId, filters),
     queryFn: ({ pageParam = 1 }) =>
-      api.get<PaginatedResponse<FlaggedMovie>>(
+      api.get<PaginatedResponse<MovieItem>>(
         `/radarr/movies?${params}&page=${pageParam}`,
       ),
     initialPageParam: 1,

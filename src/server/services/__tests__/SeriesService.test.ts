@@ -127,11 +127,11 @@ const profile: SonarrProfile = {
   ],
 };
 
-describe("SeriesService.getFlaggedSeries — manual mode", () => {
+describe("SeriesService.getSeries — manual mode", () => {
   test("returns empty when no preferences are set", async () => {
     const instance = await createInstance("manual");
     setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
-    const result = await seriesService.getFlaggedSeries(instance.id, {
+    const result = await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -165,7 +165,7 @@ describe("SeriesService.getFlaggedSeries — manual mode", () => {
       ]),
       profiles: [profile],
     });
-    const result = await seriesService.getFlaggedSeries(instance.id, {
+    const result = await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -186,7 +186,7 @@ describe("SeriesService.getFlaggedSeries — manual mode", () => {
       files: new Map([[1, []]]),
       profiles: [profile],
     });
-    const result = await seriesService.getFlaggedSeries(instance.id, {
+    const result = await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -227,7 +227,7 @@ describe("SeriesService.getFlaggedSeries — manual mode", () => {
       ]),
       profiles: [profile],
     });
-    const result = await seriesService.getFlaggedSeries(instance.id, {
+    const result = await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -237,7 +237,7 @@ describe("SeriesService.getFlaggedSeries — manual mode", () => {
   });
 });
 
-describe("SeriesService.getFlaggedSeries — profile mode", () => {
+describe("SeriesService.getSeries — profile mode", () => {
   test("flags series whose worst episode score is below cutoff", async () => {
     const instance = await createInstance("profile");
     setupSonarrMocks({
@@ -260,7 +260,7 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
       ]),
       profiles: [profile],
     });
-    const result = await seriesService.getFlaggedSeries(instance.id, {
+    const result = await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -277,7 +277,7 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
       files: new Map([[1, []]]),
       profiles: [profile],
     });
-    const result = await seriesService.getFlaggedSeries(instance.id, {
+    const result = await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -311,7 +311,7 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
       ]),
       profiles: [profile],
     });
-    const result = await seriesService.getFlaggedSeries(instance.id, {
+    const result = await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -350,7 +350,7 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
       ]),
       profiles: [profile],
     });
-    const result = await seriesService.getFlaggedSeries(instance.id, {
+    const result = await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -365,7 +365,7 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
     expect(ef.unwantedFormats.find((c) => c.id === 12)?.score).toBe(-10);
   });
 
-  test("manual mode populates episodeFiles[].customFormats with profile scores", async () => {
+  test("profile mode populates episodeFiles[].customFormats with profile scores", async () => {
     const instance = await createInstance("profile");
     await preferenceRepository.setForInstance(instance.id, [
       { cfId: 11, cfName: "Atmos" },
@@ -390,7 +390,7 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
       ]),
       profiles: [profile],
     });
-    const result = await seriesService.getFlaggedSeries(instance.id, {
+    const result = await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -448,7 +448,7 @@ describe("SeriesService — query application", () => {
 
   test("filters by query string", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getFlaggedSeries(inst.id, {
+    const result = await seriesService.getSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -460,7 +460,7 @@ describe("SeriesService — query application", () => {
 
   test("filters by maxScore", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getFlaggedSeries(inst.id, {
+    const result = await seriesService.getSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -472,7 +472,7 @@ describe("SeriesService — query application", () => {
 
   test("sorts by size descending", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getFlaggedSeries(inst.id, {
+    const result = await seriesService.getSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "size",
@@ -590,9 +590,9 @@ describe("SeriesService — actions", () => {
     ).rejects.toThrow(/not found/);
   });
 
-  test("getFlaggedSeries throws when instance is missing", async () => {
+  test("getSeries throws when instance is missing", async () => {
     await expect(
-      seriesService.getFlaggedSeries(99999, {
+      seriesService.getSeries(99999, {
         page: 1,
         limit: 50,
         sortBy: "score",
@@ -629,7 +629,7 @@ describe("SeriesService — manual mode with file lacking customFormats", () => 
       ]),
       profiles: [profile],
     });
-    const result = await seriesService.getFlaggedSeries(instance.id, {
+    const result = await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -674,7 +674,7 @@ describe("SeriesService — sort edge cases", () => {
 
   test("score sort pushes fileless series to the end", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getFlaggedSeries(inst.id, {
+    const result = await seriesService.getSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -685,7 +685,7 @@ describe("SeriesService — sort edge cases", () => {
 
   test("'added' sort uses default no-op comparator", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getFlaggedSeries(inst.id, {
+    const result = await seriesService.getSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "added",
@@ -696,7 +696,7 @@ describe("SeriesService — sort edge cases", () => {
 
   test("filters by profileIds", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getFlaggedSeries(inst.id, {
+    const result = await seriesService.getSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -711,7 +711,7 @@ describe("SeriesService — sort edge cases", () => {
     // A multi-id filter [1, 999] must keep the matches and silently drop
     // the non-matching id rather than rejecting the whole list.
     const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getFlaggedSeries(inst.id, {
+    const result = await seriesService.getSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -724,7 +724,7 @@ describe("SeriesService — sort edge cases", () => {
 
   test("filters by missingCfIds (single)", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getFlaggedSeries(inst.id, {
+    const result = await seriesService.getSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -736,7 +736,7 @@ describe("SeriesService — sort edge cases", () => {
 
   test("filters by missingCfIds (multiple — ALL match, default)", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getFlaggedSeries(inst.id, {
+    const result = await seriesService.getSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -749,7 +749,7 @@ describe("SeriesService — sort edge cases", () => {
 
   test("filters by missingCfIds (multiple — ANY match)", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getFlaggedSeries(inst.id, {
+    const result = await seriesService.getSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -763,7 +763,7 @@ describe("SeriesService — sort edge cases", () => {
 
   test("filters by hasNegativeCfIds (no match → empty)", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getFlaggedSeries(inst.id, {
+    const result = await seriesService.getSeries(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -800,14 +800,14 @@ describe("SeriesService — cache reuse", () => {
       ]),
       profiles: [profile],
     });
-    await seriesService.getFlaggedSeries(instance.id, {
+    await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
       order: "asc",
     });
     const callsAfterFirst = fetchMock.mock.calls.length;
-    await seriesService.getFlaggedSeries(instance.id, {
+    await seriesService.getSeries(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",

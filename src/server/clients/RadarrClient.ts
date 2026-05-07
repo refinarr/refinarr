@@ -9,7 +9,7 @@ interface RadarrMovie {
   hasFile: boolean;
   movieFileId: number;
   // monitored is part of every Radarr movie payload — surface it so the
-  // FlaggedMedia output can carry it without a second API call.
+  // MediaItem output can carry it without a second API call.
   monitored: boolean;
 }
 

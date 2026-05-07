@@ -49,9 +49,9 @@ import { useFilterChips } from "@/client/hooks/media/useFilterChips";
 import { useMediaSelection } from "@/client/hooks/media/useMediaSelection";
 import { useDetailDrawer } from "@/client/hooks/media/useDetailDrawer";
 import {
-  useFlaggedMediaData,
-  type FlaggedMediaQueryHook,
-} from "@/client/hooks/media/useFlaggedMediaData";
+  useMediaData,
+  type MediaDataQueryHook,
+} from "@/client/hooks/media/useMediaData";
 import { useBulkAbort } from "@/client/hooks/media/useBulkAbort";
 import {
   useBulkMediaActions,
@@ -61,7 +61,7 @@ import { useBulkHandlers } from "@/client/hooks/media/useBulkHandlers";
 import { DEFAULT_SCORING_MODE, isManualMode } from "@/shared/scoring-mode";
 import type {
   ArrType,
-  FlaggedMedia,
+  MediaItem,
   QualityProfile,
   ScoringMode,
 } from "@/shared/types/models";
@@ -71,7 +71,7 @@ type TFn = ReturnType<typeof useTranslations>;
 // Render-time context handed to leaf components (Card, Drawer). Same shape
 // the props-based shell exposed; promoted to React Context so compound
 // sub-components don't need to receive ctx through props.
-export interface MediaListShellRenderCtx<T extends FlaggedMedia> {
+export interface MediaListShellRenderCtx<T extends MediaItem> {
   arrType: ArrType;
   scoringMode: ScoringMode;
   profiles: QualityProfile[] | undefined;
@@ -101,15 +101,15 @@ export interface MediaListShellRenderCtx<T extends FlaggedMedia> {
 }
 
 // Internal context — exposes everything sub-components need. Typed against
-// FlaggedMedia base; consumers narrow via useShellContext<T>().
+// MediaItem base; consumers narrow via useShellContext<T>().
 interface InternalShellContext {
-  ctx: MediaListShellRenderCtx<FlaggedMedia>;
+  ctx: MediaListShellRenderCtx<MediaItem>;
   inst: ReturnType<typeof useInstanceSelection>;
   filters: ReturnType<typeof useMediaFilters>;
-  data: ReturnType<typeof useFlaggedMediaData<FlaggedMedia>>;
-  selection: ReturnType<typeof useMediaSelection<FlaggedMedia>>;
-  drawer: ReturnType<typeof useDetailDrawer<FlaggedMedia>>;
-  handlers: ReturnType<typeof useBulkHandlers<FlaggedMedia>>;
+  data: ReturnType<typeof useMediaData<MediaItem>>;
+  selection: ReturnType<typeof useMediaSelection<MediaItem>>;
+  drawer: ReturnType<typeof useDetailDrawer<MediaItem>>;
+  handlers: ReturnType<typeof useBulkHandlers<MediaItem>>;
   bulkProgress: BulkProgress | null;
   abort: ReturnType<typeof useBulkAbort>;
   refreshMutation: ReturnType<typeof useRefreshInstance>;
@@ -123,12 +123,12 @@ interface InternalShellContext {
 
 const ShellContext = createContext<InternalShellContext | null>(null);
 
-function useShellContext<T extends FlaggedMedia>(): Omit<
+function useShellContext<T extends MediaItem>(): Omit<
   InternalShellContext,
   "ctx"
 > & {
   ctx: MediaListShellRenderCtx<T>;
-  data: ReturnType<typeof useFlaggedMediaData<T>>;
+  data: ReturnType<typeof useMediaData<T>>;
   selection: ReturnType<typeof useMediaSelection<T>>;
   drawer: ReturnType<typeof useDetailDrawer<T>>;
   handlers: ReturnType<typeof useBulkHandlers<T>>;
@@ -138,7 +138,7 @@ function useShellContext<T extends FlaggedMedia>(): Omit<
     throw new Error(
       "MediaListShell sub-components must be rendered inside <MediaListShell>",
     );
-  // Internal context erases T to FlaggedMedia. Narrow via cast — caller
+  // Internal context erases T to MediaItem. Narrow via cast — caller
   // supplies the type parameter when the page knows what kind of media this is.
   return value as never;
 }
@@ -147,19 +147,19 @@ function useShellContext<T extends FlaggedMedia>(): Omit<
 // Root
 // ─────────────────────────────────────────────────────────────────────────
 
-interface RootProps<T extends FlaggedMedia> {
+interface RootProps<T extends MediaItem> {
   arrType: ArrType;
   bulkConfig: Pick<
     BulkActionsConfig<T>,
     "mediaType" | "search" | "ignore" | "delete"
   >;
-  useQuery: FlaggedMediaQueryHook<T>;
+  useQuery: MediaDataQueryHook<T>;
   i18nNamespace: string;
   confirmDeleteBulkKey: string;
   children: ReactNode;
 }
 
-function Root<T extends FlaggedMedia>({
+function Root<T extends MediaItem>({
   arrType,
   bulkConfig,
   useQuery,
@@ -185,11 +185,7 @@ function Root<T extends FlaggedMedia>({
     isManualMode(scoringMode) && (prefs?.length ?? 0) === 0;
 
   const filters = useMediaFilters(scoringMode, inst.activeInstance);
-  const data = useFlaggedMediaData<T>(
-    useQuery,
-    inst.activeInstance,
-    filters.forQuery,
-  );
+  const data = useMediaData<T>(useQuery, inst.activeInstance, filters.forQuery);
   const queuedIds = useQueuedMediaIds(inst.activeInstance);
   const recentMap = useRecentSearchMap(inst.activeInstance);
   const selection = useMediaSelection<T>(
@@ -261,16 +257,16 @@ function Root<T extends FlaggedMedia>({
     );
   }
 
-  // Cast to the FlaggedMedia-erased shape the context exposes. Sub-components
+  // Cast to the MediaItem-erased shape the context exposes. Sub-components
   // re-narrow with their own T parameter via useShellContext<T>().
   const value: InternalShellContext = {
-    ctx: ctx as MediaListShellRenderCtx<FlaggedMedia>,
+    ctx: ctx as MediaListShellRenderCtx<MediaItem>,
     inst,
     filters,
-    data: data as ReturnType<typeof useFlaggedMediaData<FlaggedMedia>>,
-    selection: selection as ReturnType<typeof useMediaSelection<FlaggedMedia>>,
-    drawer: drawer as ReturnType<typeof useDetailDrawer<FlaggedMedia>>,
-    handlers: handlers as ReturnType<typeof useBulkHandlers<FlaggedMedia>>,
+    data: data as ReturnType<typeof useMediaData<MediaItem>>,
+    selection: selection as ReturnType<typeof useMediaSelection<MediaItem>>,
+    drawer: drawer as ReturnType<typeof useDetailDrawer<MediaItem>>,
+    handlers: handlers as ReturnType<typeof useBulkHandlers<MediaItem>>,
     bulkProgress,
     abort,
     refreshMutation,
@@ -389,12 +385,12 @@ function BulkBar() {
   );
 }
 
-interface BodyProps<T extends FlaggedMedia> {
+interface BodyProps<T extends MediaItem> {
   columns: (ctx: MediaListShellRenderCtx<T>) => ColumnDef<T>[];
   Card: ComponentType<{ item: T; ctx: MediaListShellRenderCtx<T> }>;
 }
 
-function Body<T extends FlaggedMedia>({ columns, Card }: BodyProps<T>) {
+function Body<T extends MediaItem>({ columns, Card }: BodyProps<T>) {
   const {
     ctx,
     inst,
@@ -476,7 +472,7 @@ function Body<T extends FlaggedMedia>({ columns, Card }: BodyProps<T>) {
   );
 }
 
-interface DrawerProps<T extends FlaggedMedia> {
+interface DrawerProps<T extends MediaItem> {
   as: ComponentType<{
     item: T | null;
     ctx: MediaListShellRenderCtx<T>;
@@ -484,7 +480,7 @@ interface DrawerProps<T extends FlaggedMedia> {
   }>;
 }
 
-function Drawer<T extends FlaggedMedia>({ as: Component }: DrawerProps<T>) {
+function Drawer<T extends MediaItem>({ as: Component }: DrawerProps<T>) {
   const { ctx, drawer } = useShellContext<T>();
   return (
     <Component
