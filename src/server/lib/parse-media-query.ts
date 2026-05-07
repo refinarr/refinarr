@@ -1,26 +1,43 @@
 import type { MediaQuery, Severity } from "@/shared/types/models";
 
-const VALID_SEVERITIES: ReadonlySet<Severity> = new Set([
+const VALID_SEVERITIES: ReadonlySet<string> = new Set<Severity>([
   "critical",
   "low",
   "warning",
   "ok",
   "missing",
 ]);
-const VALID_SORT_BY: ReadonlySet<MediaQuery["sortBy"]> = new Set([
+const VALID_SORT_BY: ReadonlySet<string> = new Set<MediaQuery["sortBy"]>([
   "score",
   "title",
   "added",
   "size",
 ]);
-const VALID_ORDER: ReadonlySet<"asc" | "desc"> = new Set(["asc", "desc"]);
+const VALID_ORDER: ReadonlySet<string> = new Set<"asc" | "desc">([
+  "asc",
+  "desc",
+]);
+
+function isSeverity(v: string): v is Severity {
+  return VALID_SEVERITIES.has(v);
+}
+
+function isSortBy(v: string): v is MediaQuery["sortBy"] {
+  return VALID_SORT_BY.has(v);
+}
+
+function isOrder(v: string): v is "asc" | "desc" {
+  return VALID_ORDER.has(v);
+}
 
 function parseIdList(raw: string | null): number[] | undefined {
   if (!raw) return undefined;
   const ids = raw
     .split(",")
     .map((s) => Number(s.trim()))
-    .filter((n) => Number.isFinite(n) && n > 0);
+    // Integer-only — `1.5` and `1e2` are rejected so the URL can't
+    // smuggle non-integer values into a SQL-shaped id filter.
+    .filter((n) => Number.isInteger(n) && n > 0);
   return ids.length > 0 ? ids : undefined;
 }
 
@@ -28,8 +45,8 @@ function parseSeverityList(raw: string | null): Severity[] | undefined {
   if (!raw) return undefined;
   const out = raw
     .split(",")
-    .map((s) => s.trim() as Severity)
-    .filter((s) => VALID_SEVERITIES.has(s));
+    .map((s) => s.trim())
+    .filter(isSeverity);
   return out.length > 0 ? out : undefined;
 }
 
@@ -50,15 +67,11 @@ export function parseMediaQuery(
   s: URLSearchParams,
 ): Omit<MediaQuery, "page" | "limit"> {
   const rawSortBy = s.get("sortBy");
-  const sortBy: MediaQuery["sortBy"] = VALID_SORT_BY.has(
-    rawSortBy as MediaQuery["sortBy"],
-  )
-    ? (rawSortBy as MediaQuery["sortBy"])
-    : "score";
+  const sortBy: MediaQuery["sortBy"] =
+    rawSortBy !== null && isSortBy(rawSortBy) ? rawSortBy : "score";
   const rawOrder = s.get("order");
-  const order: "asc" | "desc" = VALID_ORDER.has(rawOrder as "asc" | "desc")
-    ? (rawOrder as "asc" | "desc")
-    : "asc";
+  const order: "asc" | "desc" =
+    rawOrder !== null && isOrder(rawOrder) ? rawOrder : "asc";
   return {
     sortBy,
     order,

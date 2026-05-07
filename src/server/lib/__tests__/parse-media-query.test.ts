@@ -49,6 +49,17 @@ describe("parseMediaQuery", () => {
     expect(out.hasNegativeCfIds).toEqual([20]);
   });
 
+  test("rejects non-integer id values (1.5, 1e2 etc.)", () => {
+    const out = parseMediaQuery(urlParams("profileIds=1,1.5,3,1e2,4"));
+    // 1e2 parses as 100 and IS an integer, so it survives — that's
+    // intentional, the rule is integer-only, not "no scientific notation".
+    // `1.5` is the genuine reject.
+    expect(out.profileIds).toEqual([1, 3, 100, 4]);
+
+    const onlyFloats = parseMediaQuery(urlParams("profileIds=1.5,2.7"));
+    expect(onlyFloats.profileIds).toBeUndefined();
+  });
+
   test("returns undefined when an id list parses to nothing", () => {
     const out = parseMediaQuery(urlParams("profileIds=abc,xyz"));
     expect(out.profileIds).toBeUndefined();
@@ -92,6 +103,11 @@ describe("parseMediaQuery", () => {
     expect(
       parseMediaQuery(urlParams("missingCfMatch=junk")).missingCfMatch,
     ).toBe("all");
+    // Verify hasNegativeCfMatch flips on its own param, not just inherits
+    // from missingCfMatch.
+    expect(
+      parseMediaQuery(urlParams("hasNegativeCfMatch=any")).hasNegativeCfMatch,
+    ).toBe("any");
   });
 
   test("treats onlyMissing as a strict boolean string", () => {
