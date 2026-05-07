@@ -41,7 +41,9 @@ export function MobileTabBar({ onMoreClick, moreOpen }: Props) {
     >
       <div className="h-bottom-bar flex items-stretch">
         {TABS.map(({ href, labelKey, icon: Icon }) => {
-          const active = pathname === href;
+          const active =
+            pathname === href ||
+            (href !== "/" && pathname.startsWith(`${href}/`));
           return (
             <Link
               key={href}
