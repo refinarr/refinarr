@@ -421,8 +421,10 @@ export class SeriesService extends MediaService<FlaggedSeries> {
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
     // SonarrClient cast — triggerSeasonSearch is series-specific.
-    const { instance, client } =
-      await this.withClient<SonarrClient>(instanceId);
+    const { instance, client } = await this.withClient(
+      instanceId,
+      SonarrClient,
+    );
 
     return this.executeAction({
       instanceName: instance.name,
@@ -451,8 +453,10 @@ export class SeriesService extends MediaService<FlaggedSeries> {
   ): Promise<ActionLog> {
     // SonarrClient cast — getEpisodes + triggerEpisodeSearch are
     // series-specific.
-    const { instance, client } =
-      await this.withClient<SonarrClient>(instanceId);
+    const { instance, client } = await this.withClient(
+      instanceId,
+      SonarrClient,
+    );
 
     return this.executeAction({
       instanceName: instance.name,

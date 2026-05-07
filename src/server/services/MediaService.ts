@@ -155,16 +155,38 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
 
   // Resolves an instance + creates its ArrClient, the boilerplate every
   // action method (`triggerSearch`, `deleteFile`, etc.) used to repeat
-  // verbatim. Generic so callers that need an arr-specific client
-  // (`SonarrClient` for `triggerSeasonSearch`, etc.) can narrow with
-  // `withClient<SonarrClient>(...)`. Defaults to the abstract `ArrClient`
-  // base for action methods that only use cross-arr operations.
-  protected async withClient<TClient extends ArrClient = ArrClient>(
+  // verbatim.
+  //
+  // Two call shapes:
+  //   `await this.withClient(instanceId)` → `client: ArrClient`,
+  //     for cross-arr operations (the abstract surface only).
+  //   `await this.withClient(instanceId, SonarrClient)` → `client: SonarrClient`,
+  //     for arr-specific extras like `triggerSeasonSearch`.
+  //
+  // The expected-class form runtime-checks the produced client via
+  // `instanceof` so a misuse (e.g. `withClient(radarrId, SonarrClient)`)
+  // throws here, not at the first method call. This satisfies the
+  // project's "no unchecked `as` casts" rule — the cast is guarded by
+  // the runtime `instanceof` immediately above it.
+  protected withClient(
     instanceId: number,
-  ): Promise<{ instance: Instance; client: TClient }> {
+  ): Promise<{ instance: Instance; client: ArrClient }>;
+  protected withClient<TClient extends ArrClient>(
+    instanceId: number,
+    expected: new (...args: never[]) => TClient,
+  ): Promise<{ instance: Instance; client: TClient }>;
+  protected async withClient<TClient extends ArrClient>(
+    instanceId: number,
+    expected?: new (...args: never[]) => TClient,
+  ): Promise<{ instance: Instance; client: ArrClient | TClient }> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as TClient;
+    const client = ArrClientFactory.createArrClient(instance);
+    if (expected && !(client instanceof expected)) {
+      throw new Error(
+        `Instance ${instanceId} (${instance.type}) is not a ${expected.name}`,
+      );
+    }
     return { instance, client };
   }
 

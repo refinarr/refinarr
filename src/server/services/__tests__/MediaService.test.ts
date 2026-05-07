@@ -1,6 +1,7 @@
 import { describe, test, expect } from "vitest";
 import { MediaService } from "@/server/services/MediaService";
 import { instanceService } from "@/server/services/InstanceService";
+import type { ArrClient } from "@/server/clients/ArrClient";
 import { RadarrClient } from "@/server/clients/RadarrClient";
 import { SonarrClient } from "@/server/clients/SonarrClient";
 import { LogSource } from "@/server/lib/log-sources";
@@ -54,10 +55,16 @@ class TestMediaService extends MediaService<FlaggedMedia> {
   }
 
   // Test-only seam over the protected withClient so we can assert its
-  // success / not-found behavior without going through one of the four
-  // service action methods.
+  // success / not-found / type-mismatch behavior without going through
+  // one of the service action methods.
   runWithClient(instanceId: number) {
     return this.withClient(instanceId);
+  }
+  runWithClientTyped<TClient extends ArrClient>(
+    instanceId: number,
+    expected: new (...args: never[]) => TClient,
+  ) {
+    return this.withClient(instanceId, expected);
   }
 
   runAction(opts: {
@@ -280,5 +287,31 @@ describe("MediaService.withClient", () => {
     await expect(testService.runWithClient(99_999)).rejects.toThrow(
       /Instance 99999 not found/,
     );
+  });
+
+  test("typed form succeeds when the instance matches the expected client", async () => {
+    const sonarr = await instanceService.create({
+      ...baseInstance,
+      type: "sonarr",
+      name: "Typed Sonarr",
+      url: "http://192.168.1.30:8989",
+    });
+    const result = await testService.runWithClientTyped(
+      sonarr.id,
+      SonarrClient,
+    );
+    expect(result.client).toBeInstanceOf(SonarrClient);
+  });
+
+  test("typed form throws when the instance type doesn't match (no unchecked cast)", async () => {
+    // Create a Radarr instance and ask for a SonarrClient — the runtime
+    // check should fire and prevent a class mismatch slipping through.
+    const radarr = await instanceService.create({
+      ...baseInstance,
+      name: "Mismatched Radarr",
+    });
+    await expect(
+      testService.runWithClientTyped(radarr.id, SonarrClient),
+    ).rejects.toThrow(/is not a SonarrClient/);
   });
 });
