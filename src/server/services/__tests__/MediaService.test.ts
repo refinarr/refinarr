@@ -84,7 +84,7 @@ class TestMediaService extends MediaService<MediaItem> {
 
 const testService = new TestMediaService();
 
-function makeFlaggedMedia(id: number): MediaItem {
+function makeMediaItem(id: number): MediaItem {
   return {
     id,
     title: `Title ${id}`,
@@ -137,16 +137,16 @@ describe("MediaService flagged cache contract", () => {
   test("warmMediaCache populates getCachedFlaggedCount by namespace", async () => {
     const instanceId = 1;
     const service = new TestMediaService("test", [
-      makeFlaggedMedia(1),
-      makeFlaggedMedia(2),
+      makeMediaItem(1),
+      makeMediaItem(2),
     ]);
-    const otherService = new TestMediaService("other", [makeFlaggedMedia(3)]);
+    const otherService = new TestMediaService("other", [makeMediaItem(3)]);
 
     expect(service.getCachedFlaggedCount(instanceId, "manual")).toBeNull();
     expect(otherService.getCachedFlaggedCount(instanceId, "manual")).toBeNull();
 
     await expect(service.warmMediaCache(instanceId)).resolves.toEqual({
-      items: [makeFlaggedMedia(1)],
+      items: [makeMediaItem(1)],
       total: 2,
     });
 
@@ -173,11 +173,11 @@ describe("MediaService flagged cache contract", () => {
   test("getCachedFlaggedCount filters on per-item `flagged`; getCachedTotalCount returns library size", async () => {
     const instanceId = 1;
     const service = new TestMediaService("kpi-mix", [
-      { ...makeFlaggedMedia(1), flagged: true },
-      { ...makeFlaggedMedia(2), flagged: false },
-      { ...makeFlaggedMedia(3), flagged: true },
-      { ...makeFlaggedMedia(4), flagged: false },
-      { ...makeFlaggedMedia(5), flagged: false },
+      { ...makeMediaItem(1), flagged: true },
+      { ...makeMediaItem(2), flagged: false },
+      { ...makeMediaItem(3), flagged: true },
+      { ...makeMediaItem(4), flagged: false },
+      { ...makeMediaItem(5), flagged: false },
     ]);
 
     await service.warmMediaCache(instanceId);
@@ -207,19 +207,19 @@ describe("MediaService.applyQuery — filter branches", () => {
     // Spread of profileIds, score, and size so the branches can be
     // exercised without writing per-test fixtures.
     const a: MediaItem = {
-      ...makeFlaggedMedia(1),
+      ...makeMediaItem(1),
       qualityProfileId: 10,
       cfScore: 0.1,
       sizeOnDisk: 500_000_000, // 500 MB
     };
     const b: MediaItem = {
-      ...makeFlaggedMedia(2),
+      ...makeMediaItem(2),
       qualityProfileId: 20,
       cfScore: 0.5,
       sizeOnDisk: 5_000_000_000, // 5 GB
     };
     const c: MediaItem = {
-      ...makeFlaggedMedia(3),
+      ...makeMediaItem(3),
       qualityProfileId: 30,
       cfScore: 0.95,
       sizeOnDisk: 30_000_000_000, // 30 GB
@@ -282,9 +282,9 @@ describe("MediaService.applyQuery — filter branches", () => {
 
   test("flaggedOnly defaults to true — non-flagged items hidden", () => {
     const mixed = [
-      { ...makeFlaggedMedia(1), flagged: true },
-      { ...makeFlaggedMedia(2), flagged: false },
-      { ...makeFlaggedMedia(3), flagged: true },
+      { ...makeMediaItem(1), flagged: true },
+      { ...makeMediaItem(2), flagged: false },
+      { ...makeMediaItem(3), flagged: true },
     ];
     const result = testService.runQuery(mixed, baseQuery);
     expect(result.items.map((m) => m.id).sort()).toEqual([1, 3]);
@@ -292,9 +292,9 @@ describe("MediaService.applyQuery — filter branches", () => {
 
   test("flaggedOnly: false returns the full library", () => {
     const mixed = [
-      { ...makeFlaggedMedia(1), flagged: true },
-      { ...makeFlaggedMedia(2), flagged: false },
-      { ...makeFlaggedMedia(3), flagged: true },
+      { ...makeMediaItem(1), flagged: true },
+      { ...makeMediaItem(2), flagged: false },
+      { ...makeMediaItem(3), flagged: true },
     ];
     const result = testService.runQuery(mixed, {
       ...baseQuery,
@@ -305,9 +305,9 @@ describe("MediaService.applyQuery — filter branches", () => {
 
   test("monitorStatus 'unmonitored' returns only !monitored items", () => {
     const mixed = [
-      { ...makeFlaggedMedia(1), monitored: true },
-      { ...makeFlaggedMedia(2), monitored: false },
-      { ...makeFlaggedMedia(3), monitored: true },
+      { ...makeMediaItem(1), monitored: true },
+      { ...makeMediaItem(2), monitored: false },
+      { ...makeMediaItem(3), monitored: true },
     ];
     const result = testService.runQuery(mixed, {
       ...baseQuery,
@@ -322,19 +322,19 @@ describe("MediaService.applyQuery — filter branches", () => {
     // 3: unmonitored, partial downloads → not missing (rule requires monitored)
     const mixed = [
       {
-        ...makeFlaggedMedia(1),
+        ...makeMediaItem(1),
         monitored: true,
         existingFileCount: 10,
         totalFileCount: 10,
       },
       {
-        ...makeFlaggedMedia(2),
+        ...makeMediaItem(2),
         monitored: true,
         existingFileCount: 1,
         totalFileCount: 100,
       },
       {
-        ...makeFlaggedMedia(3),
+        ...makeMediaItem(3),
         monitored: false,
         existingFileCount: 1,
         totalFileCount: 100,
@@ -354,7 +354,7 @@ describe("MediaService.applyQuery — filter branches", () => {
     // still includes this series via existingFileCount=1 — but the
     // monitorStatus="missing" filter correctly captures it as missing.
     const partial = {
-      ...makeFlaggedMedia(1),
+      ...makeMediaItem(1),
       monitored: true,
       existingFileCount: 1,
       totalFileCount: 100,

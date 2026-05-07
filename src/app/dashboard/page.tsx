@@ -84,6 +84,7 @@ export default function DashboardPage() {
               href="/movies"
               tone={(flaggedMovies ?? 0) > 0 ? "warning" : "default"}
               loading={loadingSummary}
+              valueLoading={!loadingSummary && flaggedMovies === null}
             />
             <KpiCard
               label={t("kpi.flaggedSeries")}
@@ -91,6 +92,7 @@ export default function DashboardPage() {
               href="/shows"
               tone={(flaggedSeries ?? 0) > 0 ? "warning" : "default"}
               loading={loadingSummary}
+              valueLoading={!loadingSummary && flaggedSeries === null}
             />
             <KpiCard
               label={t("kpi.failed24h")}

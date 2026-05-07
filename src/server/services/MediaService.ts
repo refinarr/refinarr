@@ -312,21 +312,28 @@ export abstract class MediaService<TItem extends MediaItem> {
   // dashboard reads this for the "X flagged" KPI; before this PR the
   // method returned `cached.items.length`, which made a 1,000-movie
   // library show as "1,000 flagged" once any item entered the cache.
+  //
+  // Reads from the full TTL+STALE window so the dashboard count tracks
+  // whatever the actual `/api/<arr>/<media>` path would serve. With the
+  // strict TTL here, an unrelated mutation (e.g. changing another
+  // instance's scoring mode 6 minutes after page load) would cause this
+  // instance's KPI to flip to skeleton even though its endpoint still
+  // returns data from the SWR stale window.
   getCachedFlaggedCount(instanceId: number, mode: ScoringMode): number | null {
     const cached = dataCache.get<{ items: TItem[] }>(
       this.mediaCacheKey(instanceId, mode),
-      CACHE_TTL_MS,
+      CACHE_TTL_MS + CACHE_STALE_MS,
     );
     return cached?.items.filter((m) => m.flagged).length ?? null;
   }
 
   // Visible-library size (cache row count). Used as the denominator
-  // in the dashboard's "X / Y" KPI. Returns null on a cold cache,
-  // matching the convention of `getCachedFlaggedCount`.
+  // in the dashboard's "X / Y" KPI. Same TTL+STALE window as
+  // `getCachedFlaggedCount` so both counts surface or skeleton in lockstep.
   getCachedTotalCount(instanceId: number, mode: ScoringMode): number | null {
     const cached = dataCache.get<{ items: TItem[] }>(
       this.mediaCacheKey(instanceId, mode),
-      CACHE_TTL_MS,
+      CACHE_TTL_MS + CACHE_STALE_MS,
     );
     return cached?.items.length ?? null;
   }

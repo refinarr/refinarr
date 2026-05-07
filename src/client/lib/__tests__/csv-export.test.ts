@@ -65,13 +65,18 @@ const series: SeriesItem = {
   qualityProfileId: 1,
   customFormats: [],
   customFormatScore: 0,
-  hasFile: true,
   cfScore: 0.75,
   missingFormats: [{ id: 99, name: "Atmos" }],
   unwantedFormats: [],
-  episodeFileCount: 12,
-  episodeCount: 12,
-} as unknown as SeriesItem;
+  sizeOnDisk: 5_000_000_000,
+  monitored: true,
+  existingFileCount: 12,
+  totalFileCount: 12,
+  flagged: true,
+  affectedEpisodeCount: 0,
+  totalEpisodeCount: 12,
+  episodeFiles: [],
+};
 
 describe("exportMoviesCsv", () => {
   test("creates a CSV with title/year/score/missing/hasFile columns and triggers download", async () => {

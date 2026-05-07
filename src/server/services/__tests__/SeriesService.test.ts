@@ -365,7 +365,7 @@ describe("SeriesService.getSeries — profile mode", () => {
     expect(ef.unwantedFormats.find((c) => c.id === 12)?.score).toBe(-10);
   });
 
-  test("manual mode populates episodeFiles[].customFormats with profile scores", async () => {
+  test("profile mode populates episodeFiles[].customFormats with profile scores", async () => {
     const instance = await createInstance("profile");
     await preferenceRepository.setForInstance(instance.id, [
       { cfId: 11, cfName: "Atmos" },

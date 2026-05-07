@@ -37,7 +37,11 @@ function makeMovie(instanceTag: string, id: number): MovieItem {
     missingFormats: [{ id: 99, name: "HDR" }],
     unwantedFormats: [],
     sizeOnDisk: 1_000_000_000,
-  } as unknown as MovieItem;
+    monitored: true,
+    existingFileCount: 1,
+    totalFileCount: 1,
+    flagged: true,
+  };
 }
 
 test.beforeEach(async ({ page }) => {
