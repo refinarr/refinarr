@@ -31,6 +31,10 @@ import type {
 import { MediaService } from "./MediaService";
 import type { RetryActionOptions } from "./media-services";
 
+// Local shorthand for the SonarrSeries shape — derived from the client's
+// return type since `SonarrSeries` is internal to `SonarrClient.ts`.
+type SonarrSeries = Awaited<ReturnType<SonarrClient["getSeries"]>>[number];
+
 export class SeriesService extends MediaService<FlaggedSeries> {
   protected readonly cacheNamespace = "series";
 
@@ -57,12 +61,7 @@ export class SeriesService extends MediaService<FlaggedSeries> {
       backgroundErrorMessage: "Background flagged-series rebuild failed",
       build: () => this.buildFlaggedAndLog(instance.id, instance, mode),
     });
-    return this.applyQuery(
-      cached.flagged,
-      query,
-      mode,
-      (s) => s.episodeFiles.length > 0,
-    );
+    return this.applyQuery(cached.flagged, query, mode);
   }
 
   private async buildFlaggedAndLog(
@@ -133,123 +132,136 @@ export class SeriesService extends MediaService<FlaggedSeries> {
       .map((s) => s.id);
     const episodeFilesMap = await client.getAllEpisodeFiles(seriesIds);
 
+    // Per-series counts come from upstream `seasons[].statistics`. Used
+    // both for the FlaggedMedia.{existingFileCount,totalFileCount}
+    // fields and to derive whether a series is "missing" episodes.
+    const fileCounts = (s: SonarrSeries) =>
+      (s.seasons ?? []).reduce(
+        (acc, season) => ({
+          existing: acc.existing + (season.statistics?.episodeFileCount ?? 0),
+          total: acc.total + (season.statistics?.episodeCount ?? 0),
+        }),
+        { existing: 0, total: 0 },
+      );
+
     if (isProfileMode(mode)) {
-      return series
-        .filter((s) => !ignoredSet.has(s.id))
-        .filter((s) => {
-          const profile = profileMap.get(s.qualityProfileId);
-          if (!profile) return false;
-          const files = episodeFilesMap.get(s.id) ?? [];
-          if (files.length === 0) return profile.cutoffFormatScore > 0;
-          return files.some((f) =>
-            isBelowProfileScore(
-              f.customFormatScore ?? 0,
-              profile.cutoffFormatScore,
-            ),
-          );
-        })
-        .map((s) => {
-          const profile = profileMap.get(s.qualityProfileId)!;
-          const files = episodeFilesMap.get(s.id) ?? [];
-          const worstScore = files.length
-            ? Math.min(...files.map((f) => f.customFormatScore ?? 0))
-            : 0;
-          const affectedEpisodeCount = files.filter((f) =>
-            isBelowProfileScore(
-              f.customFormatScore ?? 0,
-              profile.cutoffFormatScore,
-            ),
-          ).length;
-          const cfScores =
-            profileScoreMap.get(s.qualityProfileId) ??
-            new Map<number, number>();
-          const positiveProfileCfs =
-            profileFormatMap.get(s.qualityProfileId) ?? [];
-          const episodeFiles: EpisodeFileEntry[] = files.map((f) => {
-            const fileCfs = f.customFormats ?? [];
-            const fileCfIds = new Set(fileCfs.map((cf) => cf.id));
-            const unwantedFormats = fileCfs
-              .filter((cf) => (cfScores.get(cf.id) ?? 0) < 0)
-              .map((cf) => ({
-                id: cf.id,
-                name: cf.name,
-                score: cfScores.get(cf.id),
-              }));
-            return {
-              id: f.id,
-              seasonNumber: f.seasonNumber,
-              relativePath: f.relativePath,
-              customFormats: fileCfs.map((cf) => ({
-                id: cf.id,
-                name: cf.name,
-                score: cfScores.get(cf.id),
-              })),
-              customFormatScore: f.customFormatScore ?? 0,
-              missingFormats: positiveProfileCfs.filter(
-                (cf) => !fileCfIds.has(cf.id),
-              ),
-              unwantedFormats,
-              minProfileScore: profile.cutoffFormatScore,
-              size: f.size ?? 0,
-            };
-          });
-          const missingCfIds = new Set<number>();
-          const unwantedCfIds = new Map<
-            number,
-            { id: number; name: string; score?: number }
-          >();
-          for (const ef of episodeFiles) {
-            if (
+      return (
+        series
+          .filter((s) => !ignoredSet.has(s.id))
+          // Series pointing at a deleted profile are in a broken upstream
+          // state — drop them rather than poisoning the cache with items
+          // that have no scoring context.
+          .filter((s) => profileMap.has(s.qualityProfileId))
+          .map((s) => {
+            const profile = profileMap.get(s.qualityProfileId)!;
+            const files = episodeFilesMap.get(s.id) ?? [];
+            const worstScore = files.length
+              ? Math.min(...files.map((f) => f.customFormatScore ?? 0))
+              : 0;
+            const affectedEpisodeCount = files.filter((f) =>
               isBelowProfileScore(
-                ef.customFormatScore,
+                f.customFormatScore ?? 0,
                 profile.cutoffFormatScore,
-              )
-            ) {
-              ef.missingFormats.forEach((cf) => missingCfIds.add(cf.id));
+              ),
+            ).length;
+            const counts = fileCounts(s);
+            // Flagged in profile mode: at least one episode below cutoff,
+            // or no files yet under a profile that expects positive scoring.
+            const flagged =
+              files.length === 0
+                ? profile.cutoffFormatScore > 0
+                : files.some((f) =>
+                    isBelowProfileScore(
+                      f.customFormatScore ?? 0,
+                      profile.cutoffFormatScore,
+                    ),
+                  );
+            const cfScores =
+              profileScoreMap.get(s.qualityProfileId) ??
+              new Map<number, number>();
+            const positiveProfileCfs =
+              profileFormatMap.get(s.qualityProfileId) ?? [];
+            const episodeFiles: EpisodeFileEntry[] = files.map((f) => {
+              const fileCfs = f.customFormats ?? [];
+              const fileCfIds = new Set(fileCfs.map((cf) => cf.id));
+              const unwantedFormats = fileCfs
+                .filter((cf) => (cfScores.get(cf.id) ?? 0) < 0)
+                .map((cf) => ({
+                  id: cf.id,
+                  name: cf.name,
+                  score: cfScores.get(cf.id),
+                }));
+              return {
+                id: f.id,
+                seasonNumber: f.seasonNumber,
+                relativePath: f.relativePath,
+                customFormats: fileCfs.map((cf) => ({
+                  id: cf.id,
+                  name: cf.name,
+                  score: cfScores.get(cf.id),
+                })),
+                customFormatScore: f.customFormatScore ?? 0,
+                missingFormats: positiveProfileCfs.filter(
+                  (cf) => !fileCfIds.has(cf.id),
+                ),
+                unwantedFormats,
+                minProfileScore: profile.cutoffFormatScore,
+                size: f.size ?? 0,
+              };
+            });
+            const missingCfIds = new Set<number>();
+            const unwantedCfIds = new Map<
+              number,
+              { id: number; name: string; score?: number }
+            >();
+            for (const ef of episodeFiles) {
+              if (
+                isBelowProfileScore(
+                  ef.customFormatScore,
+                  profile.cutoffFormatScore,
+                )
+              ) {
+                ef.missingFormats.forEach((cf) => missingCfIds.add(cf.id));
+              }
+              ef.unwantedFormats.forEach((cf) => unwantedCfIds.set(cf.id, cf));
             }
-            ef.unwantedFormats.forEach((cf) => unwantedCfIds.set(cf.id, cf));
-          }
-          const missingFormats =
-            files.length === 0
-              ? positiveProfileCfs
-              : positiveProfileCfs.filter((cf) => missingCfIds.has(cf.id));
-          return {
-            id: s.id,
-            title: s.title,
-            year: s.year,
-            qualityProfileId: s.qualityProfileId,
-            customFormats: [],
-            customFormatScore: worstScore,
-            cfScore: scoreProfileCoverage(
-              worstScore,
-              profile.cutoffFormatScore,
-            ),
-            missingFormats,
-            unwantedFormats: Array.from(unwantedCfIds.values()),
-            minProfileScore: profile.cutoffFormatScore,
-            affectedEpisodeCount,
-            totalEpisodeCount: files.length,
-            episodeFiles,
-            sizeOnDisk: files.reduce((acc, f) => acc + (f.size ?? 0), 0),
-          };
-        });
+            const missingFormats =
+              files.length === 0
+                ? positiveProfileCfs
+                : positiveProfileCfs.filter((cf) => missingCfIds.has(cf.id));
+            return {
+              id: s.id,
+              title: s.title,
+              year: s.year,
+              qualityProfileId: s.qualityProfileId,
+              customFormats: [],
+              customFormatScore: worstScore,
+              cfScore: scoreProfileCoverage(
+                worstScore,
+                profile.cutoffFormatScore,
+              ),
+              missingFormats,
+              unwantedFormats: Array.from(unwantedCfIds.values()),
+              minProfileScore: profile.cutoffFormatScore,
+              affectedEpisodeCount,
+              totalEpisodeCount: files.length,
+              episodeFiles,
+              sizeOnDisk: files.reduce((acc, f) => acc + (f.size ?? 0), 0),
+              monitored: s.monitored,
+              existingFileCount: counts.existing,
+              totalFileCount: counts.total,
+              flagged,
+            };
+          })
+      );
     }
 
     const prefs = await preferenceRepository.findByInstance(instanceId);
-    if (prefs.length === 0) return [];
-
     const wantedIds = prefs.map((p) => p.cfId);
     const wantedCfs = prefs.map((p) => ({ id: p.cfId, name: p.cfName }));
 
     return series
       .filter((s) => !ignoredSet.has(s.id))
-      .filter((s) => {
-        const files = episodeFilesMap.get(s.id) ?? [];
-        if (files.length === 0) return true;
-        return files.some((f) =>
-          isMissingWantedFormats(f.customFormats ?? [], wantedIds),
-        );
-      })
       .map((s) => {
         const files = episodeFilesMap.get(s.id) ?? [];
         const allMissingIds = new Set<number>();
@@ -289,6 +301,19 @@ export class SeriesService extends MediaService<FlaggedSeries> {
           unwantedFormats: [],
           size: f.size ?? 0,
         }));
+        const counts = fileCounts(s);
+        // Manual-mode flagged predicate: at least one episode is missing
+        // any of the user's wanted CFs. With zero prefs configured no
+        // series can be flagged — flagged stays false but every series
+        // still appears in the cache for the "Show all" view. Likewise
+        // a series with no episode files is flagged when prefs exist
+        // (every wanted CF is missing by definition).
+        const flagged =
+          wantedIds.length > 0 &&
+          (files.length === 0 ||
+            files.some((f) =>
+              isMissingWantedFormats(f.customFormats ?? [], wantedIds),
+            ));
         return {
           id: s.id,
           title: s.title,
@@ -303,6 +328,10 @@ export class SeriesService extends MediaService<FlaggedSeries> {
           totalEpisodeCount: files.length,
           episodeFiles,
           sizeOnDisk: files.reduce((acc, f) => acc + (f.size ?? 0), 0),
+          monitored: s.monitored,
+          existingFileCount: counts.existing,
+          totalFileCount: counts.total,
+          flagged,
         };
       });
   }

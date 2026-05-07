@@ -17,6 +17,7 @@ import { getSeverity } from "@/shared/severity";
 import type {
   ActionLog,
   ActionType,
+  CustomFormat,
   ArrType,
   FlaggedMedia,
   Instance,
@@ -62,20 +63,28 @@ function logContext(opts: ExecuteActionOptions, isDryRun: boolean) {
   };
 }
 
+// True iff the item has at least one file on disk. Replaces the
+// per-subclass `hasFile` callback that used to be threaded through
+// applyQuery / compareMedia / getSeverity. Field-based check fixes the
+// long-standing bug where a Sonarr series with 1-of-100 episodes
+// downloaded reported `hasFile=true`.
+function itemHasFile(item: FlaggedMedia): boolean {
+  return item.existingFileCount > 0;
+}
+
 function compareMedia<T extends FlaggedMedia>(
   a: T,
   b: T,
   sortBy: MediaQuery["sortBy"],
   mode: ScoringMode,
   dir: 1 | -1,
-  hasFile: (item: T) => boolean,
 ): number {
   if (sortBy === "added") return 0;
   if (sortBy === "title") return a.title.localeCompare(b.title) * dir;
   // Items without a file sink to the bottom regardless of sort direction so
   // the "worst N" view is never polluted by entries with no on-disk reference.
-  const aHas = hasFile(a);
-  const bHas = hasFile(b);
+  const aHas = itemHasFile(a);
+  const bHas = itemHasFile(b);
   if (aHas !== bHas) return aHas ? -1 : 1;
   if (!aHas) return 0;
   if (sortBy === "score") {
@@ -84,6 +93,149 @@ function compareMedia<T extends FlaggedMedia>(
     return (av - bv) * dir;
   }
   return (a.sizeOnDisk - b.sizeOnDisk) * dir;
+}
+
+// Match a list of CF ids against the CFs an item carries on a given
+// axis (missingFormats / unwantedFormats). Used twice in `applyQuery`
+// — extracted here so the per-axis filter is a single line at the
+// call site and applyQuery's cognitive-complexity stays under threshold.
+function filterByCfList<T extends FlaggedMedia>(
+  items: T[],
+  wanted: number[],
+  match: "any" | "all",
+  axis: (item: T) => CustomFormat[],
+): T[] {
+  const matchAll = match === "all";
+  return items.filter((m) => {
+    const have = new Set(axis(m).map((cf) => cf.id));
+    return matchAll
+      ? wanted.every((id) => have.has(id))
+      : wanted.some((id) => have.has(id));
+  });
+}
+
+// Three small filter passes split by axis so each function stays under
+// the cognitive-complexity threshold and applyQuery's pipeline reads as
+// a sequence of named steps.
+function filterMedia<T extends FlaggedMedia>(
+  source: T[],
+  query: MediaQuery,
+  mode: ScoringMode,
+): T[] {
+  const visibility = applyVisibilityFilters(source, query);
+  const ranges = applyRangeFilters(visibility, query, mode);
+  return applyMatchFilters(ranges, query);
+}
+
+// Show-or-hide filters: flagged-only, monitor status, only-missing.
+// Drive what enters the user's view (vs. composing on the score axis).
+function applyVisibilityFilters<T extends FlaggedMedia>(
+  source: T[],
+  query: MediaQuery,
+): T[] {
+  let out = source;
+  // Default-on flagged-only filter preserves the original contract
+  // ("flagged items only"). Set query.flaggedOnly === false for
+  // "Show all".
+  if (query.flaggedOnly !== false) out = out.filter((m) => m.flagged);
+  if (query.monitorStatus && query.monitorStatus !== "all") {
+    const status = query.monitorStatus;
+    out = out.filter((m) => matchesMonitor(m, status));
+  }
+  if (query.onlyMissing) out = out.filter((m) => !itemHasFile(m));
+  return out;
+}
+
+// Numeric / enum ranges: score, size, severity. All evaluate a per-item
+// scalar against the query bounds.
+function applyRangeFilters<T extends FlaggedMedia>(
+  source: T[],
+  query: MediaQuery,
+  mode: ScoringMode,
+): T[] {
+  const scoreOf = SCORE_FOR[mode];
+  let out = source;
+  if (query.minScore !== undefined) {
+    const min = query.minScore;
+    out = out.filter((m) => scoreOf(m) >= min);
+  }
+  if (query.maxScore !== undefined) {
+    const max = query.maxScore;
+    out = out.filter((m) => scoreOf(m) <= max);
+  }
+  if (query.minSize !== undefined) {
+    const min = query.minSize;
+    out = out.filter((m) => m.sizeOnDisk >= min);
+  }
+  if (query.maxSize !== undefined) {
+    const max = query.maxSize;
+    out = out.filter((m) => m.sizeOnDisk <= max);
+  }
+  if (query.severities && query.severities.length > 0) {
+    const wanted = new Set(query.severities);
+    out = out.filter((m) =>
+      wanted.has(
+        getSeverity(scoreOf(m), m.minProfileScore, mode, itemHasFile(m)),
+      ),
+    );
+  }
+  return out;
+}
+
+// Identity / set-membership filters: query string, profile ids, CF lists.
+function applyMatchFilters<T extends FlaggedMedia>(
+  source: T[],
+  query: MediaQuery,
+): T[] {
+  let out = source;
+  if (query.q) {
+    const q = query.q.toLowerCase();
+    out = out.filter(
+      (m) =>
+        m.title.toLowerCase().includes(q) ||
+        m.missingFormats.some((cf) => cf.name.toLowerCase().includes(q)),
+    );
+  }
+  if (query.profileIds && query.profileIds.length > 0) {
+    const wanted = new Set(query.profileIds);
+    out = out.filter((m) => wanted.has(m.qualityProfileId));
+  }
+  if (query.missingCfIds && query.missingCfIds.length > 0) {
+    out = filterByCfList(
+      out,
+      query.missingCfIds,
+      query.missingCfMatch ?? "all",
+      (m) => m.missingFormats,
+    );
+  }
+  if (query.hasNegativeCfIds && query.hasNegativeCfIds.length > 0) {
+    out = filterByCfList(
+      out,
+      query.hasNegativeCfIds,
+      query.hasNegativeCfMatch ?? "all",
+      (m) => m.unwantedFormats,
+    );
+  }
+  return out;
+}
+
+// Predicate matching a MediaQuery `monitorStatus` value against an item's
+// monitor + file-count state. "missing" means monitored AND at least one
+// expected file is absent.
+function matchesMonitor(
+  item: FlaggedMedia,
+  status: NonNullable<MediaQuery["monitorStatus"]>,
+): boolean {
+  switch (status) {
+    case "all":
+      return true;
+    case "monitored":
+      return item.monitored;
+    case "unmonitored":
+      return !item.monitored;
+    case "missing":
+      return item.monitored && item.existingFileCount < item.totalFileCount;
+  }
 }
 
 export abstract class MediaService<TFlagged extends FlaggedMedia> {
@@ -201,83 +353,12 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
     source: T[],
     query: MediaQuery,
     mode: ScoringMode,
-    hasFile: (item: T) => boolean,
   ): { items: T[]; total: number } {
-    let flagged = source;
-
-    if (query.onlyMissing) {
-      flagged = flagged.filter((m) => !hasFile(m));
-    }
-
-    const scoreOf = SCORE_FOR[mode];
-    if (query.minScore !== undefined) {
-      const min = query.minScore;
-      flagged = flagged.filter((m) => scoreOf(m) >= min);
-    }
-    if (query.maxScore !== undefined) {
-      const max = query.maxScore;
-      flagged = flagged.filter((m) => scoreOf(m) <= max);
-    }
-
-    if (query.minSize !== undefined) {
-      const min = query.minSize;
-      flagged = flagged.filter((m) => m.sizeOnDisk >= min);
-    }
-    if (query.maxSize !== undefined) {
-      const max = query.maxSize;
-      flagged = flagged.filter((m) => m.sizeOnDisk <= max);
-    }
-
-    if (query.severities && query.severities.length > 0) {
-      const wanted = new Set(query.severities);
-      flagged = flagged.filter((m) =>
-        wanted.has(
-          getSeverity(scoreOf(m), m.minProfileScore, mode, hasFile(m)),
-        ),
-      );
-    }
-
-    if (query.q) {
-      const q = query.q.toLowerCase();
-      flagged = flagged.filter(
-        (m) =>
-          m.title.toLowerCase().includes(q) ||
-          m.missingFormats.some((cf) => cf.name.toLowerCase().includes(q)),
-      );
-    }
-
-    if (query.profileIds && query.profileIds.length > 0) {
-      const wanted = new Set(query.profileIds);
-      flagged = flagged.filter((m) => wanted.has(m.qualityProfileId));
-    }
-
-    if (query.missingCfIds && query.missingCfIds.length > 0) {
-      const wanted = query.missingCfIds;
-      const matchAll = (query.missingCfMatch ?? "all") === "all";
-      flagged = flagged.filter((m) => {
-        const have = new Set(m.missingFormats.map((cf) => cf.id));
-        return matchAll
-          ? wanted.every((id) => have.has(id))
-          : wanted.some((id) => have.has(id));
-      });
-    }
-
-    if (query.hasNegativeCfIds && query.hasNegativeCfIds.length > 0) {
-      const wanted = query.hasNegativeCfIds;
-      const matchAll = (query.hasNegativeCfMatch ?? "all") === "all";
-      flagged = flagged.filter((m) => {
-        const have = new Set(m.unwantedFormats.map((cf) => cf.id));
-        return matchAll
-          ? wanted.every((id) => have.has(id))
-          : wanted.some((id) => have.has(id));
-      });
-    }
-
+    const filtered = filterMedia(source, query, mode);
     const dir = query.order === "asc" ? 1 : -1;
-    const sorted = [...flagged].sort((a, b) =>
-      compareMedia(a, b, query.sortBy, mode, dir, hasFile),
+    const sorted = [...filtered].sort((a, b) =>
+      compareMedia(a, b, query.sortBy, mode, dir),
     );
-
     const total = sorted.length;
     const start = (query.page - 1) * query.limit;
     return { items: sorted.slice(start, start + query.limit), total };

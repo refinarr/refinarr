@@ -17,6 +17,10 @@ const movie: FlaggedMovie = {
   missingFormats: [],
   unwantedFormats: [],
   sizeOnDisk: 1024 * 1024 * 1024,
+  monitored: true,
+  existingFileCount: 1,
+  totalFileCount: 1,
+  flagged: true,
 };
 
 const profiles: QualityProfile[] = [

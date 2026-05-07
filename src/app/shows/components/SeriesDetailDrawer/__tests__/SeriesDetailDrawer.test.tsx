@@ -18,6 +18,10 @@ const series: FlaggedSeries = {
   totalEpisodeCount: 10,
   episodeFiles: [],
   sizeOnDisk: 1024 * 1024 * 1024,
+  monitored: true,
+  existingFileCount: 7,
+  totalFileCount: 10,
+  flagged: true,
 };
 
 const profiles: QualityProfile[] = [

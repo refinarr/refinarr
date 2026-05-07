@@ -36,6 +36,12 @@ export interface QualityProfile {
   formatItems: Array<{ format: number; name: string; score: number }>;
 }
 
+// Item state in the *arr-monitor / file-presence axis. Composes
+// orthogonally with the CF-flagging filter so the user can ask for
+// "monitored items only", "items with at least one missing file",
+// etc. — independent of whether they're CF-flagged.
+export type MonitorStatus = "all" | "monitored" | "unmonitored" | "missing";
+
 export interface MediaQuery {
   page: number;
   limit: number;
@@ -56,6 +62,11 @@ export interface MediaQuery {
   hasNegativeCfIds?: number[];
   hasNegativeCfMatch?: "any" | "all";
   onlyMissing?: boolean;
+  // Default `true` (preserves the original "flagged items only"
+  // contract). Set `false` for the "Show all" library view.
+  flaggedOnly?: boolean;
+  // Default `"all"` — no monitor filter.
+  monitorStatus?: MonitorStatus;
 }
 
 export interface FlaggedMedia {
@@ -70,6 +81,23 @@ export interface FlaggedMedia {
   unwantedFormats: CustomFormat[];
   minProfileScore?: number;
   sizeOnDisk: number;
+  // Whether the *arr is tracking this item for new releases. Surfaced
+  // upstream by every *arr fork; we pass it through verbatim so the UI
+  // can render the monitor indicator and the user can filter by it.
+  monitored: boolean;
+  // File counts derived from the upstream payload. For movies this is
+  // 0/1 from `hasFile`. For series it's `sum(seasons[].statistics.
+  // episodeFileCount)` and `sum(seasons[].statistics.episodeCount)`.
+  // An item is considered "missing" when monitored && existingFileCount
+  // < totalFileCount.
+  existingFileCount: number;
+  totalFileCount: number;
+  // True when the item satisfies the mode-appropriate flagging predicate
+  // (manual: missing wanted CFs; profile: below cutoff). Computed once
+  // at build time so the cache holds every visible item and the
+  // `flaggedOnly` query filter can include or exclude non-flagged rows
+  // without rebuilding.
+  flagged: boolean;
 }
 
 export interface FlaggedMovie extends FlaggedMedia {

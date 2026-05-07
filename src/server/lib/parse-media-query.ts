@@ -1,4 +1,8 @@
-import type { MediaQuery, Severity } from "@/shared/types/models";
+import type {
+  MediaQuery,
+  MonitorStatus,
+  Severity,
+} from "@/shared/types/models";
 
 const VALID_SEVERITIES: ReadonlySet<string> = new Set<Severity>([
   "critical",
@@ -17,6 +21,12 @@ const VALID_ORDER: ReadonlySet<string> = new Set<"asc" | "desc">([
   "asc",
   "desc",
 ]);
+const VALID_MONITOR_STATUS: ReadonlySet<string> = new Set<MonitorStatus>([
+  "all",
+  "monitored",
+  "unmonitored",
+  "missing",
+]);
 
 function isSeverity(v: string): v is Severity {
   return VALID_SEVERITIES.has(v);
@@ -28,6 +38,10 @@ function isSortBy(v: string): v is MediaQuery["sortBy"] {
 
 function isOrder(v: string): v is "asc" | "desc" {
   return VALID_ORDER.has(v);
+}
+
+function isMonitorStatus(v: string): v is MonitorStatus {
+  return VALID_MONITOR_STATUS.has(v);
 }
 
 function parseIdList(raw: string | null): number[] | undefined {
@@ -87,5 +101,12 @@ export function parseMediaQuery(
     hasNegativeCfIds: parseIdList(s.get("hasNegativeCfIds")),
     hasNegativeCfMatch: parseMatchMode(s.get("hasNegativeCfMatch")),
     onlyMissing: s.get("onlyMissing") === "true",
+    // Default true (preserves the legacy "flagged items only" contract).
+    // Only an explicit `?flaggedOnly=false` opens the "Show all" view.
+    flaggedOnly: s.get("flaggedOnly") !== "false",
+    monitorStatus: (() => {
+      const raw = s.get("monitorStatus");
+      return raw !== null && isMonitorStatus(raw) ? raw : "all";
+    })(),
   };
 }

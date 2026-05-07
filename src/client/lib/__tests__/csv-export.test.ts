@@ -52,6 +52,10 @@ const movie: FlaggedMovie = {
   ],
   unwantedFormats: [],
   sizeOnDisk: 1024,
+  monitored: true,
+  existingFileCount: 1,
+  totalFileCount: 1,
+  flagged: true,
 };
 
 const series: FlaggedSeries = {

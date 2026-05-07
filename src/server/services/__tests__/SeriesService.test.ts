@@ -34,6 +34,14 @@ interface SonarrSeries {
   title: string;
   year: number;
   qualityProfileId: number;
+  // Optional in test fixtures — defaulted in `setupSonarrMocks` so
+  // existing seeds don't need to be touched.
+  monitored?: boolean;
+  seasons?: Array<{
+    seasonNumber: number;
+    monitored: boolean;
+    statistics?: { episodeCount: number; episodeFileCount: number };
+  }>;
 }
 interface SonarrFile {
   id: number;
@@ -70,8 +78,25 @@ function setupSonarrMocks(opts: {
     episodeNumber: number;
   }>;
 }) {
+  // Default `monitored: true` and a single fully-downloaded season per
+  // seeded series. Tests that need different counts (e.g. partially
+  // missing episodes) can pass `seasons` explicitly on the seed.
+  const seriesWithDefaults = opts.series.map((s) => ({
+    monitored: true,
+    seasons: [
+      {
+        seasonNumber: 1,
+        monitored: true,
+        statistics: {
+          episodeCount: opts.files.get(s.id)?.length ?? 0,
+          episodeFileCount: opts.files.get(s.id)?.length ?? 0,
+        },
+      },
+    ],
+    ...s,
+  }));
   fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
-    if (url.endsWith("/api/v3/series")) return jsonResponse(opts.series);
+    if (url.endsWith("/api/v3/series")) return jsonResponse(seriesWithDefaults);
     if (url.endsWith("/api/v3/qualityprofile"))
       return jsonResponse(opts.profiles);
     if (url.includes("/api/v3/episodefile?seriesId=")) {

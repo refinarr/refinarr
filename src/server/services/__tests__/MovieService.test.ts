@@ -39,6 +39,9 @@ interface RadarrMovie {
   qualityProfileId: number;
   hasFile: boolean;
   movieFileId: number;
+  // Optional in test fixtures — defaulted to `true` by `setupRadarrMocks`
+  // so existing seeds don't need to be touched.
+  monitored?: boolean;
 }
 
 interface RadarrFile {
@@ -69,8 +72,15 @@ function setupRadarrMocks(opts: {
   files: RadarrFile[];
   profiles: RadarrProfile[];
 }) {
+  // Default `monitored: true` for every seeded movie so existing tests
+  // don't need to spell it out. Tests that need an unmonitored movie
+  // can set `monitored: false` explicitly on the seed.
+  const moviesWithDefaults = opts.movies.map((m) => ({
+    monitored: true,
+    ...m,
+  }));
   fetchMock.mockImplementation(async (url: string) => {
-    if (url.endsWith("/api/v3/movie")) return jsonResponse(opts.movies);
+    if (url.endsWith("/api/v3/movie")) return jsonResponse(moviesWithDefaults);
     if (url.includes("/api/v3/qualityprofile"))
       return jsonResponse(opts.profiles);
     if (url.includes("/api/v3/moviefile?")) {

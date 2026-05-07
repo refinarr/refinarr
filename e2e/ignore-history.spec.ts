@@ -18,6 +18,10 @@ const FAKE_MOVIE: FlaggedMovie = {
   missingFormats: [{ id: 99, name: "HDR" }],
   unwantedFormats: [],
   sizeOnDisk: 1_000_000_000,
+  monitored: true,
+  existingFileCount: 1,
+  totalFileCount: 1,
+  flagged: true,
 };
 
 const FAKE_INSTANCE = {
