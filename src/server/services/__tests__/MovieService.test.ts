@@ -290,6 +290,46 @@ describe("MovieService.getFlaggedMovies — profile mode", () => {
     expect(result.items[0].minProfileScore).toBe(100);
   });
 
+  test("missingFormats carry their profile score (matches the CustomFormat type)", async () => {
+    const instance = await createInstance("profile");
+    setupRadarrMocks({
+      movies: [
+        {
+          id: 1,
+          title: "M",
+          year: 2024,
+          qualityProfileId: 1,
+          hasFile: true,
+          movieFileId: 100,
+        },
+      ],
+      // File has none of the profile's positive CFs → both HDR (50) and
+      // Atmos (30) should land in missingFormats with their scores.
+      files: [
+        {
+          id: 100,
+          movieId: 1,
+          size: 1024,
+          customFormats: [],
+          customFormatScore: 0,
+        },
+      ],
+      profiles: [profile],
+    });
+    const result = await movieService.getFlaggedMovies(instance.id, {
+      page: 1,
+      limit: 50,
+      sortBy: "score",
+      order: "asc",
+    });
+    expect(result.items[0].missingFormats).toEqual(
+      expect.arrayContaining([
+        { id: 10, name: "HDR", score: 50 },
+        { id: 11, name: "Atmos", score: 30 },
+      ]),
+    );
+  });
+
   test("populates unwantedFormats from negative-scoring CFs in the file", async () => {
     const instance = await createInstance("profile");
     setupRadarrMocks({

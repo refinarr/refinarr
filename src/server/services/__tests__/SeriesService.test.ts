@@ -261,6 +261,45 @@ describe("SeriesService.getFlaggedSeries — profile mode", () => {
     expect(result.items).toHaveLength(1);
   });
 
+  test("missingFormats carry their profile score (matches the CustomFormat type)", async () => {
+    const instance = await createInstance("profile");
+    setupSonarrMocks({
+      series: [{ id: 1, title: "S", year: 2024, qualityProfileId: 1 }],
+      files: new Map([
+        [
+          1,
+          [
+            {
+              id: 100,
+              seriesId: 1,
+              seasonNumber: 1,
+              relativePath: "S01E01.mkv",
+              size: 1024,
+              // File missing every positive CF → both HDR (50) and Atmos
+              // (30) should aggregate into the series-level missingFormats
+              // with their scores.
+              customFormats: [],
+              customFormatScore: 0,
+            },
+          ],
+        ],
+      ]),
+      profiles: [profile],
+    });
+    const result = await seriesService.getFlaggedSeries(instance.id, {
+      page: 1,
+      limit: 50,
+      sortBy: "score",
+      order: "asc",
+    });
+    expect(result.items[0].missingFormats).toEqual(
+      expect.arrayContaining([
+        { id: 10, name: "HDR", score: 50 },
+        { id: 11, name: "Atmos", score: 30 },
+      ]),
+    );
+  });
+
   test("populates unwantedFormats from negative-score CFs in episode files", async () => {
     const instance = await createInstance("profile");
     setupSonarrMocks({

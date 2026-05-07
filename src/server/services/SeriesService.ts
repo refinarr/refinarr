@@ -16,6 +16,7 @@ import {
 import { isProfileMode } from "@/shared/scoring-mode";
 import { seriesRetryPayloadSchema } from "@/shared/types/schemas";
 import type {
+  CustomFormat,
   FlaggedSeries,
   EpisodeFileEntry,
   ActionLog,
@@ -94,10 +95,12 @@ export class SeriesService extends MediaService<FlaggedSeries> {
 
     const profileMap = new Map(profiles.map((p) => [p.id, p]));
     const profileScoreMap = new Map<number, Map<number, number>>();
-    const profileFormatMap = new Map<
-      number,
-      Array<{ id: number; name: string }>
-    >();
+    // Profile-rewarded ("positive") CFs per profile. Typed as CustomFormat[]
+    // so downstream `missingFormats` carries score (matches the declared
+    // FlaggedMedia.missingFormats type — previously the score was silently
+    // dropped because TypeScript accepted the narrower {id, name} via the
+    // optional score field).
+    const profileFormatMap = new Map<number, CustomFormat[]>();
     for (const p of profiles) {
       const cfMap = new Map<number, number>();
       for (const item of p.formatItems) cfMap.set(item.format, item.score);
@@ -106,7 +109,11 @@ export class SeriesService extends MediaService<FlaggedSeries> {
         p.id,
         p.formatItems
           .filter((item) => item.score > 0)
-          .map((item) => ({ id: item.format, name: item.name })),
+          .map((item) => ({
+            id: item.format,
+            name: item.name,
+            score: item.score,
+          })),
       );
     }
 
