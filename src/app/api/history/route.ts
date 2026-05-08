@@ -39,6 +39,7 @@ function syntheticFromQueue(row: SearchQueueEntry): ActionLog {
     payload: null,
     groupId: row.groupId,
     commandId: null,
+    completionMessage: null,
     createdAt: row.createdAt,
     lastRetriedAt: null,
   };

@@ -80,7 +80,7 @@ describe("SearchWorker", () => {
     const ours = logs.filter((l) => l.instanceId === inst.id);
     expect(ours).toHaveLength(1);
     expect(ours[0].action).toBe("search");
-    expect(ours[0].status).toBe("success");
+    expect(ours[0].status).toBe("searched");
     expect(ours[0].title).toBe("X");
   });
 

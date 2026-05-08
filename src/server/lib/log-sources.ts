@@ -13,6 +13,7 @@ export const LogSource = {
   MediaAction: "media-action",
   SearchQueue: "search-queue",
   SearchWorker: "search-worker",
+  StatusPoller: "status-poller",
 } as const;
 
 export type LogSource = (typeof LogSource)[keyof typeof LogSource];

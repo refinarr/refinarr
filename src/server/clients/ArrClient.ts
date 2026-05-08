@@ -9,7 +9,13 @@ import type { Instance } from "@/shared/types/models";
 // "fetch failed" message. The real diagnostic (ECONNREFUSED / ENOTFOUND /
 // ETIMEDOUT / TLS errors) is on `error.cause`. Pull it forward so the user
 // sees something actionable in the log context.
-function describeFetchError(e: unknown): string {
+//
+// Exported for any caller that runs ArrClient methods inside its own
+// try/catch and wants the same human-readable rendering — e.g. the
+// statusPoller worker, which logs per-instance fetch failures and
+// would otherwise just record "fetch failed" with no clue what
+// actually went wrong upstream.
+export function describeFetchError(e: unknown): string {
   if (!(e instanceof Error)) return String(e);
   const cause = (e as Error & { cause?: unknown }).cause;
   if (cause instanceof Error) {
@@ -17,6 +23,61 @@ function describeFetchError(e: unknown): string {
     return code ? `${cause.message} (${code})` : cause.message;
   }
   return e.message;
+}
+
+// Bounded fetch — pageSize 200, single page only. Stale event windows
+// resolve via `since` filtering; we never paginate the upstream's full
+// history (avoids unbounded memory + wall-clock).
+const HISTORY_PAGE_SIZE = 200;
+
+// The /history endpoint has an awkward asymmetry: query params accept
+// `eventType` as integer enum codes ONLY, but the response body
+// serializes the same enum as its string name. The mapper below is
+// the one place that knows both sides — Object.keys gives the strings
+// the response uses, Object.values gives the codes the query needs.
+//
+// Codes from Servarr's HistoryEventType.cs (stable + identical across
+// Radarr and Sonarr). Adding a new lifecycle event = add one line here
+// and one branch in `nextStatusFor`.
+export const LIFECYCLE_EVENT_TYPES = {
+  grabbed: 1,
+  downloadFolderImported: 3,
+  downloadFailed: 4,
+} as const;
+
+export type LifecycleEventType = keyof typeof LIFECYCLE_EVENT_TYPES;
+
+// Built from the mapper so the URL and the state machine can never
+// drift — change a code or add an event in one place and both update.
+const HISTORY_EVENT_FILTER = Object.values(LIFECYCLE_EVENT_TYPES)
+  .map((code) => `&eventType=${code}`)
+  .join("");
+
+// Servarr's CommandResource is shared across Radarr/Sonarr/etc. — same
+// shape, same fields. The narrow projection below covers everything
+// statusPoller's command sync needs. Field reference:
+//   https://radarr.video/docs/api/#/Command
+interface UpstreamCommandRecord {
+  id: number;
+  name: string;
+  status: "queued" | "started" | "completed" | "failed" | "aborted";
+  started?: string | null;
+  ended?: string | null;
+  body?: { completionMessage?: string | null; message?: string | null };
+}
+
+// Universal fields every Servarr HistoryResource carries. The per-arr
+// id fields (movieId / seriesId / episodeId) are typed loosely here
+// because the base loop only needs the universal set; subclasses read
+// the right id field in `projectHistoryRecord`.
+export interface UpstreamHistoryRecord {
+  id: number;
+  eventType: string;
+  date: string;
+  sourceTitle: string | null;
+  movieId?: number;
+  seriesId?: number;
+  episodeId?: number;
 }
 
 export abstract class ArrClient {
@@ -98,4 +159,95 @@ export abstract class ArrClient {
   // etc.). Returns once the upstream confirms the delete; a follow-up
   // search (if requested) is the caller's job.
   abstract deleteFile(fileId: number): Promise<void>;
+
+  // Command sync: snapshot of the upstream command queue. The shape
+  // is shared across every Servarr fork so the projection lives here;
+  // statusPoller matches by `id` against `ActionLog.commandId`
+  // (composite-indexed (instanceId, commandId)) so we can surface the
+  // search outcome ("0 releases found", "Sent 1 release(s)...") without
+  // per-action polling.
+  async getRecentCommands(): Promise<UpstreamCommand[]> {
+    const records = await this.fetch<UpstreamCommandRecord[]>("/command");
+    return records.map((r) => ({
+      id: r.id,
+      name: r.name,
+      status: r.status,
+      started: r.started ?? null,
+      ended: r.ended ?? null,
+      body: r.body
+        ? {
+            completionMessage: r.body.completionMessage ?? null,
+            message: r.body.message ?? null,
+          }
+        : undefined,
+    }));
+  }
+
+  // History sync: media-event history bounded by `since` so we don't
+  // reprocess the same events tick-after-tick. The fetch + filter loop
+  // lives here; subclasses only own the per-arr `mediaId/scope`
+  // projection via `projectHistoryRecord`.
+  async getRecentHistory(since: Date): Promise<UpstreamHistoryEvent[]> {
+    const sinceMs = since.getTime();
+    const page = await this.fetch<{ records: UpstreamHistoryRecord[] }>(
+      `/history?page=1&pageSize=${HISTORY_PAGE_SIZE}&sortKey=date&sortDirection=descending${HISTORY_EVENT_FILTER}`,
+    );
+    const out: UpstreamHistoryEvent[] = [];
+    for (const r of page.records ?? []) {
+      const d = Date.parse(r.date);
+      if (Number.isFinite(d) && d < sinceMs) continue;
+      const tag = this.projectHistoryRecord(r);
+      if (!tag) continue;
+      out.push({
+        id: r.id,
+        mediaId: tag.mediaId,
+        scope: tag.scope,
+        eventType: r.eventType,
+        date: r.date,
+        sourceTitle: r.sourceTitle,
+      });
+    }
+    return out;
+  }
+
+  // Subclass hook: project the per-arr id field(s) into the uniform
+  // `mediaId + scope` shape statusPoller correlates against. Return
+  // null to skip a record (e.g. one with no id field populated).
+  protected abstract projectHistoryRecord(
+    record: UpstreamHistoryRecord,
+  ): { mediaId: number; scope: UpstreamHistoryEvent["scope"] } | null;
+}
+
+// Command-sync response shape — narrow projection of Radarr/Sonarr's
+// CommandResource. We only care about the fields that drive status
+// transitions; QualityModel / Language / etc. are dropped. `started`
+// is the upstream-side timestamp the command actually began executing
+// (per the Servarr API: https://radarr.video/docs/api/#/Command); we
+// use it to bound history-event correlation when synthesizing a
+// completionMessage.
+export interface UpstreamCommand {
+  id: number;
+  name: string;
+  status: "queued" | "started" | "completed" | "failed" | "aborted";
+  started?: string | null;
+  ended?: string | null;
+  body?: { completionMessage?: string | null; message?: string | null };
+}
+
+// History-sync response shape — narrow projection of HistoryResource. We
+// normalize the upstream's varied id fields into a single mediaId +
+// `scope` discriminator so the service-side correlation logic stays
+// per-arr-agnostic.
+export interface UpstreamHistoryEvent {
+  id: number;
+  mediaId: number;
+  scope: "movie" | "series" | "episode";
+  eventType:
+    | "grabbed"
+    | "downloadFolderImported"
+    | "downloadFailed"
+    | "downloadIgnored"
+    | string;
+  date: string;
+  sourceTitle: string | null;
 }

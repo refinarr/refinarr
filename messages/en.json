@@ -316,9 +316,12 @@
     },
     "statusLabels": {
       "success": "Success",
+      "searched": "Searched",
       "dryRun": "Dry Run",
       "failed": "Failed",
-      "pending": "Pending"
+      "pending": "Pending",
+      "grabbed": "Grabbed",
+      "downloaded": "Downloaded"
     },
     "actionLabels": {
       "search": "Search",

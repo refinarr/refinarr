@@ -483,14 +483,14 @@ describe("SeriesService — query application", () => {
 });
 
 describe("SeriesService — actions", () => {
-  test("triggerSearch creates a success log", async () => {
+  test("triggerSearch creates a searched log", async () => {
     const instance = await instanceService.create(baseInstance);
     setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
     const log = await seriesService.triggerSearch(instance.id, 1, "Show");
-    expect(log.status).toBe("success");
+    expect(log.status).toBe("searched");
   });
 
-  test("triggerSeasonSearch creates a success log", async () => {
+  test("triggerSeasonSearch creates a searched log", async () => {
     const instance = await instanceService.create(baseInstance);
     setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
     const log = await seriesService.triggerSeasonSearch(
@@ -499,7 +499,7 @@ describe("SeriesService — actions", () => {
       2,
       "Show",
     );
-    expect(log.status).toBe("success");
+    expect(log.status).toBe("searched");
   });
 
   test("triggerEpisodeFileSearch resolves episodes for the given file", async () => {
@@ -519,7 +519,7 @@ describe("SeriesService — actions", () => {
       999,
       "Show",
     );
-    expect(log.status).toBe("success");
+    expect(log.status).toBe("searched");
   });
 
   test("triggerEpisodeFileSearch fails when no matching episode exists", async () => {
@@ -562,8 +562,14 @@ describe("SeriesService — actions", () => {
     const instance = await instanceService.create(baseInstance);
     setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
     await seriesService.deleteFiles(instance.id, 1, [10], "Show");
-    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((u) => u.includes("/command"))).toBe(false);
+    // Filter POSTs only — GET /command from statusPoller's refresh
+    // tick is unrelated. Contract: no search command was POSTed.
+    const commandPosts = fetchMock.mock.calls.filter(
+      ([url, init]) =>
+        (url as string).includes("/command") &&
+        (init as RequestInit | undefined)?.method === "POST",
+    );
+    expect(commandPosts).toHaveLength(0);
   });
 
   test("triggerSearch throws when instance is missing", async () => {
@@ -828,7 +834,7 @@ describe("SeriesService.retryFromPayload", () => {
       title: "S",
     });
     expect(log.action).toBe("search");
-    expect(log.status).toBe("success");
+    expect(log.status).toBe("searched");
   });
 
   test("dispatches delete payloads to deleteFiles with triggerSearch=true", async () => {

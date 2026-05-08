@@ -29,10 +29,16 @@ type Group =
   | { kind: "flat"; row: ActionLog }
   | { kind: "batch"; rows: ActionLog[] };
 
-// Bucket consecutive rows with the same non-null groupId. Logs come in
-// already sorted descending by createdAt (most recent first), so a
-// linear scan keeps each batch's rows together. Rows with `groupId ===
-// null` are passed through as flat groups regardless of position.
+// Bucket rows by groupId — NOT by adjacency. Logs come in createdAt-desc
+// order, but the search worker drains queues round-robin across
+// instances, so two batches submitted close together can produce
+// interleaved ActionLog rows by createdAt. A linear adjacency scan
+// would shatter each batch into solo flat rows. Bucketing by groupId
+// keeps siblings together regardless of where their createdAt lands.
+//
+// The display position of a batch is anchored to its FIRST-encountered
+// row (the most recent child), so batches and flat rows still
+// interleave chronologically by their head-row timestamp.
 //
 // A 1-row "group" renders flat — the bulk client only stamps a groupId
 // on submissions of >1 items, and pending queue rows are synthesized
@@ -40,39 +46,65 @@ type Group =
 // are visible from the moment of submit. By the time a 1-row group
 // reaches us, it's a genuinely solo entry.
 function groupLogs(logs: ActionLog[]): Group[] {
+  // First pass: emit Groups in input order. Same-groupId rows pile
+  // into a shared `rows` array reference; subsequent encounters skip
+  // pushing a new Group and just append to the existing array.
   const out: Group[] = [];
-  let i = 0;
-  while (i < logs.length) {
-    const row = logs[i];
+  const seen = new Map<string, ActionLog[]>();
+  for (const row of logs) {
     if (!row.groupId) {
       out.push({ kind: "flat", row });
-      i += 1;
       continue;
     }
-    const groupId = row.groupId;
-    const rows: ActionLog[] = [];
-    while (i < logs.length && logs[i].groupId === groupId) {
-      rows.push(logs[i]);
-      i += 1;
+    const existing = seen.get(row.groupId);
+    if (existing) {
+      existing.push(row);
+      continue;
     }
-    out.push(
-      rows.length === 1
-        ? { kind: "flat", row: rows[0] }
-        : { kind: "batch", rows },
-    );
+    const rows: ActionLog[] = [row];
+    seen.set(row.groupId, rows);
+    out.push({ kind: "batch", rows });
   }
-  return out;
+  // Collapse any 1-row "batch" to flat now that all rows have landed.
+  return out.map((g) =>
+    g.kind === "batch" && g.rows.length === 1
+      ? { kind: "flat", row: g.rows[0] }
+      : g,
+  );
 }
 
-// Aggregate child statuses into one summary the parent row pill renders.
-// Priority: pending > failed > success/dry_run/grabbed/etc. (the worst
-// outstanding state wins so the user sees "still working" or "needs
-// attention" first).
-function summaryStatus(rows: ActionLog[]): ActionStatus {
-  if (rows.some((r) => r.status === "pending")) return "pending";
-  if (rows.some((r) => r.status === "failed")) return "failed";
-  if (rows.every((r) => r.status === "dry_run")) return "dry_run";
-  return "success";
+// Display order for the per-status count badges on batch parent rows.
+// Reads as the lifecycle from "needs attention / still working" on the
+// left to "done" on the right, so a glance left-to-right tells the
+// user "what's outstanding, what's complete." Mirrors the conceptual
+// ordering used in /history's status filter dropdown.
+const STATUS_DISPLAY_ORDER: ActionStatus[] = [
+  "pending",
+  "failed",
+  "dry_run",
+  "searched",
+  "grabbed",
+  "downloaded",
+  "success",
+];
+
+// Aggregate child statuses into a count-per-status array used by the
+// batch-parent row to render one mini-badge per state present, e.g.
+// [1 Failed] [2 Searched] [1 Downloaded]. Replaces the old
+// "single-summary-badge" approach which had to compromise between
+// "show worst" (hid progress) and "show most-advanced" (hid problems);
+// the count list shows BOTH at the cost of a few extra pixels.
+function statusCounts(
+  rows: ActionLog[],
+): Array<{ status: ActionStatus; count: number }> {
+  const counts = new Map<ActionStatus, number>();
+  for (const r of rows) {
+    counts.set(r.status, (counts.get(r.status) ?? 0) + 1);
+  }
+  return STATUS_DISPLAY_ORDER.filter((s) => counts.has(s)).map((status) => ({
+    status,
+    count: counts.get(status) as number,
+  }));
 }
 
 export function HistoryTable({ logs }: Props) {
@@ -146,7 +178,14 @@ function renderFlat(log: ActionLog, tRetry: T) {
       <TableCell>
         <ActionTypeBadge action={log.action} />
       </TableCell>
-      <TableCell className="text-sm">{log.title}</TableCell>
+      <TableCell className="text-sm">
+        {log.title}
+        {log.completionMessage && (
+          <span className="text-muted-foreground/80 ml-1.5 text-xs italic">
+            · {log.completionMessage}
+          </span>
+        )}
+      </TableCell>
       <TableCell>
         <ActionStatusBadge status={log.status} />
       </TableCell>
@@ -213,7 +252,11 @@ function renderBatch(
         })}
       </TableCell>
       <TableCell>
-        <ActionStatusBadge status={summaryStatus(rows)} />
+        <div className="flex flex-wrap gap-1">
+          {statusCounts(rows).map(({ status, count }) => (
+            <ActionStatusBadge key={status} status={status} count={count} />
+          ))}
+        </div>
       </TableCell>
       <TableCell />
     </TableRow>,
@@ -245,7 +288,14 @@ function renderBatch(
           <TableCell>
             <ActionTypeBadge action={r.action} />
           </TableCell>
-          <TableCell className="text-sm">{r.title}</TableCell>
+          <TableCell className="text-sm">
+            {r.title}
+            {r.completionMessage && (
+              <span className="text-muted-foreground/80 ml-1.5 text-xs italic">
+                · {r.completionMessage}
+              </span>
+            )}
+          </TableCell>
           <TableCell>
             <ActionStatusBadge status={r.status} />
           </TableCell>
