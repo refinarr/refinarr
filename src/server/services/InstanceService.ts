@@ -38,8 +38,11 @@ export class InstanceService {
     // Start a worker tick for the new instance — bootstrap already ran with
     // the previous (smaller) set of enabled instances, so without this the
     // queue would never drain for instances added after first request.
+    // statusPoller skips its immediate-tick on create: a brand-new instance
+    // has no ActionLog rows to update yet, so the upstream fetch would be
+    // wasted I/O. The recurring timer still arms normally.
     void searchWorker.refresh(created.id);
-    void statusPoller.refresh(created.id);
+    void statusPoller.refresh(created.id, { immediate: false });
     appLogger.info("Instance created", {
       source: LogSource.InstanceService,
       context: { id: created.id, name: created.name, type: created.type },

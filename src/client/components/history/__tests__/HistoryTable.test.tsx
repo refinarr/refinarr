@@ -114,31 +114,47 @@ describe("HistoryTable grouping", () => {
 
   // Regression: when the search worker round-robins between instances,
   // two batches submitted around the same time produce ActionLog rows
-  // whose createdAt timestamps interleave. The old adjacency-based
-  // bucketer collapsed each into solo flat rows; the fix buckets by
-  // groupId regardless of where the rows land in the createdAt order.
+  // whose createdAt timestamps interleave between groups. The old
+  // adjacency-based bucketer collapsed each into solo flat rows.
+  // Fixture timestamps are deliberately interleaved B→A→B→A in
+  // createdAt-desc order so the input mirrors what the API emits.
   it("groups non-adjacent rows of the same batch (interleaved createdAt order)", () => {
     const groupA = "11111111-1111-1111-1111-111111111111";
     const groupB = "22222222-2222-2222-2222-222222222222";
     const logs = [
-      makeLog({ id: 1, title: "B-newer", groupId: groupB }),
-      makeLog({ id: 2, title: "A-newer", groupId: groupA }),
-      makeLog({ id: 3, title: "B-older", groupId: groupB }),
-      makeLog({ id: 4, title: "A-older", groupId: groupA }),
+      makeLog({
+        id: 1,
+        title: "B-newer",
+        groupId: groupB,
+        createdAt: new Date("2026-05-08T12:00:04Z"),
+      }),
+      makeLog({
+        id: 2,
+        title: "A-newer",
+        groupId: groupA,
+        createdAt: new Date("2026-05-08T12:00:03Z"),
+      }),
+      makeLog({
+        id: 3,
+        title: "B-older",
+        groupId: groupB,
+        createdAt: new Date("2026-05-08T12:00:02Z"),
+      }),
+      makeLog({
+        id: 4,
+        title: "A-older",
+        groupId: groupA,
+        createdAt: new Date("2026-05-08T12:00:01Z"),
+      }),
     ];
     renderWithProviders(<HistoryTable logs={logs} />);
-    // Two batch parents — NOT four flat rows.
     expect(screen.getAllByRole("button")).toHaveLength(2);
-    // Children hidden until expanded; titles must not leak to flat rows.
     expect(screen.queryByText("A-newer")).toBeNull();
     expect(screen.queryByText("B-newer")).toBeNull();
-    // Each parent declares its own count.
     const counts = screen.getAllByText(/2 items/);
     expect(counts).toHaveLength(2);
   });
 
-  // Mixed list: a batch parent for the grouped rows + flat rows for
-  // the rest. Order is preserved (logs come in createdAt-desc).
   it("interleaves batch and flat groups", () => {
     const groupId = "11111111-2222-3333-4444-555555555555";
     const logs = [
@@ -151,14 +167,12 @@ describe("HistoryTable grouping", () => {
     expect(screen.getByText("Recent flat")).toBeTruthy();
     expect(screen.getByText("Older flat")).toBeTruthy();
     expect(screen.getByText(/2 items/)).toBeTruthy();
-    // Batch children remain hidden.
     expect(screen.queryByText("Batch A")).toBeNull();
   });
 
-  // Parent renders one mini-badge per status present, prefixed with
-  // the count. Replaces the old single-summary-badge approach which
-  // had to compromise between "show worst" and "show most-advanced";
-  // the count list shows both. Display order is fixed:
+  // The count-per-status approach replaces a single summary badge that
+  // had to compromise between "show worst" (hid progress) and "show
+  // most-advanced" (hid problems). Display order stays fixed:
   //   pending → failed → dry_run → searched → grabbed → downloaded → success
   it("parent renders a count badge per status present (mixed batch)", () => {
     const groupId = "11111111-2222-3333-4444-555555555555";

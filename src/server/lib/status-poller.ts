@@ -153,14 +153,18 @@ class StatusPoller {
    * `searchWorker.refresh`. Bumps the instance's generation token so
    * any in-flight tick closure aborts before scheduling another timer.
    *
-   * Fires an IMMEDIATE tick (in addition to scheduling the recurring
-   * one) so a user who just fixed a broken instance sees lifecycle
-   * status update inside seconds rather than waiting up to one full
-   * poll interval. The bootstrap path (`startInternal`) skips the
-   * immediate tick to avoid stampeding the upstream with N parallel
-   * fetches when the worker comes up.
+   * `immediate` defaults to true: most refresh callers (URL edit,
+   * Test button) signal "user thinks it works now, check it" — they
+   * want lifecycle updates within seconds rather than waiting up to
+   * one full poll interval. Pass `immediate: false` for callers that
+   * just need the schedule registered (e.g. brand-new instance with
+   * zero ActionLog rows — the tick would be wasted I/O).
    */
-  async refresh(instanceId: number): Promise<void> {
+  async refresh(
+    instanceId: number,
+    options: { immediate?: boolean } = {},
+  ): Promise<void> {
+    const { immediate = true } = options;
     const handle = this.timers.get(instanceId);
     if (handle) clearTimeout(handle);
     this.timers.delete(instanceId);
@@ -173,7 +177,7 @@ class StatusPoller {
     this.lastCommandFailureCause.delete(instanceId);
     const instance = await instanceRepository.findById(instanceId);
     if (instance && instance.enabled) {
-      this.startForInstance(instance, true);
+      this.startForInstance(instance, immediate);
     } else {
       // Instance deleted or disabled — drop in-memory state so it
       // doesn't linger.

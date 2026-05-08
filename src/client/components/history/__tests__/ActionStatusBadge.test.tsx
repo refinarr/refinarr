@@ -4,23 +4,23 @@ import type { ActionStatus } from "@/shared/types/models";
 import { renderWithProviders, screen } from "@/test/render";
 import { ActionStatusBadge } from "../ActionStatusBadge";
 
-// Every value in the ActionStatus union should produce a label and a
-// styled badge — no fall-through. If a future status is added without
-// updating ActionStatusBadge, this exhaustive test is the safety net
-// (TS will also catch it via Record<ActionStatus, ...> but the
-// rendered label is what users actually see).
+// Record<ActionStatus, string> forces the compiler to flag a missing
+// status if the union grows — so this stays a real exhaustive check
+// instead of a list someone could forget to extend.
 describe("ActionStatusBadge — exhaustive ActionStatus coverage", () => {
-  const cases: Array<{ status: ActionStatus; label: string }> = [
-    { status: "success", label: "Success" },
-    { status: "searched", label: "Searched" },
-    { status: "failed", label: "Failed" },
-    { status: "dry_run", label: "Dry Run" },
-    { status: "pending", label: "Pending" },
-    { status: "grabbed", label: "Grabbed" },
-    { status: "downloaded", label: "Downloaded" },
-  ];
+  const labels: Record<ActionStatus, string> = {
+    success: "Success",
+    searched: "Searched",
+    failed: "Failed",
+    dry_run: "Dry Run",
+    pending: "Pending",
+    grabbed: "Grabbed",
+    downloaded: "Downloaded",
+  };
 
-  for (const { status, label } of cases) {
+  for (const [status, label] of Object.entries(labels) as Array<
+    [ActionStatus, string]
+  >) {
     it(`renders label for status="${status}"`, () => {
       renderWithProviders(<ActionStatusBadge status={status} />);
       expect(screen.getByText(label)).toBeTruthy();

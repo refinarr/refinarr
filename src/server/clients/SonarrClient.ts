@@ -140,7 +140,7 @@ export class SonarrClient extends ArrClient {
     if (typeof r.episodeId === "number" && r.episodeId > 0) {
       return { mediaId: r.episodeId, scope: "episode" };
     }
-    if (typeof r.seriesId === "number") {
+    if (typeof r.seriesId === "number" && r.seriesId > 0) {
       return { mediaId: r.seriesId, scope: "series" };
     }
     return null;

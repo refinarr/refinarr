@@ -31,20 +31,39 @@ afterEach(() => {
 });
 
 describe("statusPoller — lifecycle", () => {
-  test("start() is idempotent (calling twice doesn't double-register timers)", async () => {
+  test("start() is idempotent — second call doesn't double-register timers", async () => {
     await instanceService.create(baseInstance);
+    // Count upstream hits per tick. If start() accidentally registered
+    // two timers for the instance, advancing one interval would fire
+    // both and we'd see N=2 hits per endpoint.
+    let commandHits = 0;
+    let historyHits = 0;
     mswServer.use(
+      http.get(`${radarrBase}/api/v3/command`, () => {
+        commandHits += 1;
+        return HttpResponse.json([]);
+      }),
+      http.get(`${radarrBase}/api/v3/history`, () => {
+        historyHits += 1;
+        return HttpResponse.json({ records: [] });
+      }),
       ...radarrHandlers(
         { baseUrl: radarrBase },
         { movies: [], movieFiles: [], qualityProfiles: [] },
       ),
     );
+    vi.useFakeTimers();
     await statusPoller.start();
     await statusPoller.start();
-    // No assertion on internal state shape — the contract is "the
-    // start path doesn't throw and doesn't leak timers." stop() in
-    // afterEach proves the latter (would otherwise hang the test
-    // process if a ghost timer existed).
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS + 100);
+    vi.useRealTimers();
+    await vi.waitFor(
+      () => {
+        expect(commandHits).toBe(1);
+        expect(historyHits).toBe(1);
+      },
+      { timeout: 2000 },
+    );
   });
 
   test("refresh() drops timer when instance is disabled", async () => {
@@ -56,15 +75,12 @@ describe("statusPoller — lifecycle", () => {
       ),
     );
     await statusPoller.start();
-    // Disable the instance and refresh — the timer should be cleared.
     await instanceService.update(inst.id, { enabled: false });
     await statusPoller.refresh(inst.id);
-    // Trigger another refresh on a disabled instance — should be a no-op.
     await statusPoller.refresh(inst.id);
-    // No timer leak: stop() in afterEach + vitest's no-pending-timers
-    // guard catches a ghost; an explicit vi.useFakeTimers() here would
-    // also work but we keep it real-time to avoid masking unintended
-    // setIntervals.
+    // No fake timers here — we want vitest's no-pending-timers guard
+    // to fail the run if a disabled-instance refresh accidentally
+    // leaves a timer registered.
   });
 
   test("refresh() with non-existent instance is a no-op (doesn't throw)", async () => {
@@ -82,7 +98,6 @@ describe("statusPoller — lifecycle", () => {
     );
     await statusPoller.start();
     statusPoller.stop();
-    // Calling start() after stop() should re-register cleanly.
     await statusPoller.start();
   });
 });
@@ -134,7 +149,6 @@ describe("computeBackoffMs", () => {
 describe("statusPoller — failure dedupe + recovery", () => {
   test("identical fetch failures across ticks log only once until cause changes", async () => {
     const inst = await instanceService.create(baseInstance);
-    // Both branches will throw the same network error every tick.
     mswServer.use(
       http.get(`${radarrBase}/api/v3/command`, () => HttpResponse.error()),
       http.get(`${radarrBase}/api/v3/history`, () => HttpResponse.error()),
@@ -166,11 +180,15 @@ describe("statusPoller — failure dedupe + recovery", () => {
     );
     expect(historyWarns).toHaveLength(1);
     expect(commandWarns).toHaveLength(1);
-    // Dedupe keys on cause — payload should include the unwrapped
-    // diagnostic (not the bare "fetch failed" wrapper).
-    const ctx = historyWarns[0][1] as { context: { cause: string } };
-    expect(typeof ctx.context.cause).toBe("string");
-    expect(ctx.context.cause.length).toBeGreaterThan(0);
+    // Dedupe keys on cause — payload must include the unwrapped
+    // diagnostic, not the bare "fetch failed" wrapper.
+    expect(historyWarns[0][1]).toEqual(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          cause: expect.stringMatching(/.+/),
+        }),
+      }),
+    );
 
     warn.mockRestore();
     void inst;
@@ -199,9 +217,10 @@ describe("statusPoller — failure dedupe + recovery", () => {
 
     vi.useFakeTimers();
     await statusPoller.start();
-    // First tick: both branches fail (warn entries).
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS + 100);
-    // Now flip the response to OK and advance another (backed-off) interval.
+    // Flip to OK and advance past the BACKED-OFF interval (2x base
+    // after one consecutive failure), not just base, or the next tick
+    // wouldn't fire in time.
     nextResponse = "ok";
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 4);
     vi.useRealTimers();
@@ -211,16 +230,19 @@ describe("statusPoller — failure dedupe + recovery", () => {
         msg === "Status poller history sync recovered" ||
         msg === "Status poller command sync recovered",
     );
-    // Both branches recovered, both logged once.
     expect(recoveries.map(([msg]) => msg).sort()).toEqual([
       "Status poller command sync recovered",
       "Status poller history sync recovered",
     ]);
-    // Recovery context preserves the previousCause so users can trace
+    // Recovery context preserves previousCause so users can trace
     // "what was wrong" back to the original warn entry.
-    const sample = recoveries[0][1] as { context: { previousCause: string } };
-    expect(typeof sample.context.previousCause).toBe("string");
-    expect(sample.context.previousCause.length).toBeGreaterThan(0);
+    expect(recoveries[0][1]).toEqual(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          previousCause: expect.stringMatching(/.+/),
+        }),
+      }),
+    );
 
     info.mockRestore();
     void inst;
@@ -345,7 +367,7 @@ describe("statusPoller — search lifecycle scenarios", () => {
   ) {
     vi.useFakeTimers();
     await statusPoller.start();
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 100);
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS + 100);
     vi.useRealTimers();
     await vi.waitFor(
       async () => {
@@ -675,7 +697,7 @@ describe("statusPoller — command-sync end-to-end via MSW", () => {
     // tick completes.
     vi.useFakeTimers();
     await statusPoller.start();
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 100);
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS + 100);
     vi.useRealTimers();
 
     // The tick fired exactly once at the interval boundary; allow async

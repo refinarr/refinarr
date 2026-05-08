@@ -3,6 +3,8 @@ import { createApiHandler } from "@/server/lib/handler";
 import { positiveInt } from "@/server/lib/api-errors";
 import { instanceService } from "@/server/services/InstanceService";
 import { statusPoller } from "@/server/lib/status-poller";
+import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/server/lib/log-sources";
 
 export const POST = createApiHandler(async (_req, ctx) => {
   const id = positiveInt(ctx.params.id, "id");
@@ -13,6 +15,18 @@ export const POST = createApiHandler(async (_req, ctx) => {
   // Failed tests don't trigger refresh: there's no upstream state
   // worth fetching, and refresh() would just re-arm the same broken
   // poll cadence.
-  if (ok) void statusPoller.refresh(id);
+  if (ok) {
+    // Fire-and-forget by design (we don't want the response blocked
+    // on the poller). Attach a catch so a rejection inside refresh()
+    // becomes a /logs entry instead of an unhandled rejection that
+    // could crash the process under strict Node settings.
+    statusPoller.refresh(id).catch((err: unknown) => {
+      appLogger.warn("statusPoller.refresh failed after instance test", {
+        source: LogSource.Api,
+        err,
+        context: { instanceId: id },
+      });
+    });
+  }
   return NextResponse.json({ ok });
 });
