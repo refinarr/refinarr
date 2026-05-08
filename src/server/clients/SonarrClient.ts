@@ -67,28 +67,33 @@ export class SonarrClient extends ArrClient {
     return map;
   }
 
-  async triggerSearch(seriesId: number): Promise<void> {
-    await this.fetch("/command", {
+  async triggerSearch(seriesId: number): Promise<{ commandId: number }> {
+    const res = await this.fetch<{ id: number }>("/command", {
       method: "POST",
       body: JSON.stringify({ name: "SeriesSearch", seriesId }),
     });
+    return { commandId: res.id };
   }
 
   async triggerSeasonSearch(
     seriesId: number,
     seasonNumber: number,
-  ): Promise<void> {
-    await this.fetch("/command", {
+  ): Promise<{ commandId: number }> {
+    const res = await this.fetch<{ id: number }>("/command", {
       method: "POST",
       body: JSON.stringify({ name: "SeasonSearch", seriesId, seasonNumber }),
     });
+    return { commandId: res.id };
   }
 
-  async triggerEpisodeSearch(episodeIds: number[]): Promise<void> {
-    await this.fetch("/command", {
+  async triggerEpisodeSearch(
+    episodeIds: number[],
+  ): Promise<{ commandId: number }> {
+    const res = await this.fetch<{ id: number }>("/command", {
       method: "POST",
       body: JSON.stringify({ name: "EpisodeSearch", episodeIds }),
     });
+    return { commandId: res.id };
   }
 
   async getEpisodes(seriesId: number): Promise<

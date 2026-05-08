@@ -140,6 +140,13 @@ export interface ActionLog {
   status: ActionStatus;
   error?: string | null;
   payload?: string | null;
+  // Hex UUID linking sibling rows from one bulk action. Null for
+  // single-item actions (renders flat in history).
+  groupId?: string | null;
+  // Upstream Radarr/Sonarr command id captured from the dispatch
+  // response. Per-item; used as the join key for future lifecycle
+  // status updates (webhook / polling).
+  commandId?: number | null;
   createdAt: Date;
   lastRetriedAt?: Date | null;
 }
@@ -183,6 +190,9 @@ export interface SearchQueueEntry {
   title: string;
   status: SearchQueueStatus;
   error: string | null;
+  // Propagated to ActionLog.groupId on drain. Null for single-item
+  // searches.
+  groupId: string | null;
   createdAt: Date;
   processedAt: Date | null;
   seasonNumber: number;

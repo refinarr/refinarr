@@ -44,6 +44,10 @@ export type MediaRouteService = MediaCacheService & RetryableMediaService;
 
 export interface RetryActionOptions {
   actionLogId?: number;
+  // Hex UUID linking sibling rows from one bulk submission. Persisted
+  // on the resulting ActionLog.groupId so the History UI can collapse
+  // them. Single-item invocations / retries leave this undefined.
+  groupId?: string;
 }
 
 // Type-keyed registry of arr type → media service. Mirrors the established

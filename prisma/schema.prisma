@@ -54,11 +54,23 @@ model ActionLog {
   status        String
   error         String?
   payload       String?
+  // Hex UUID linking sibling rows that came from one bulk action. Null for
+  // single-item searches (renders flat in history). All N rows from a bulk
+  // submission share the same value so the History UI can collapse them
+  // under one "Batch search · N items" parent.
+  groupId       String?
+  // Upstream Radarr/Sonarr command id captured from the POST /command
+  // response. Per-item: each ActionLog row has its own commandId. Used
+  // as the join key for future lifecycle status updates from webhooks
+  // or per-instance history polling.
+  commandId     Int?
   createdAt     DateTime  @default(now())
   lastRetriedAt DateTime?
 
   @@index([lastRetriedAt])
   @@index([instanceId, lastRetriedAt])
+  @@index([groupId])
+  @@index([commandId])
 }
 
 model AppLog {
@@ -98,6 +110,9 @@ model SearchQueue {
   title        String
   status       String    @default("pending")
   error        String?
+  // Hex UUID propagated to the ActionLog row when this entry drains.
+  // Same value across every queue row that came from one bulk action.
+  groupId      String?
   createdAt    DateTime  @default(now())
   processedAt  DateTime?
   seasonNumber Int       @default(0)

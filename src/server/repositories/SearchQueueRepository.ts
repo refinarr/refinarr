@@ -31,6 +31,9 @@ interface CreateInput {
   title: string;
   seasonNumber: number;
   fileId: number;
+  // Optional — defaults to null for ad-hoc / test fixtures that don't
+  // care about grouping. The bulk-action client supplies a UUID.
+  groupId?: string | null;
 }
 
 export interface CreateResult {

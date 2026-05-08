@@ -14,6 +14,7 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     fileIds,
     title,
     search = false,
+    groupId,
   } = await parseJson(req, sonarrDeleteSchema, "Invalid delete payload");
 
   const result = await seriesService.deleteFiles(
@@ -22,16 +23,20 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     fileIds,
     title,
     false,
+    { groupId },
   );
   if (search && result.status !== "failed") {
     if (await dryRunService.isDryRun()) {
-      await seriesService.triggerSearch(instanceId, mediaId, title);
+      await seriesService.triggerSearch(instanceId, mediaId, title, {
+        groupId,
+      });
     } else {
       await searchQueueService.enqueue({
         instanceId,
         action: "series",
         mediaId,
         title,
+        groupId,
       });
     }
   }

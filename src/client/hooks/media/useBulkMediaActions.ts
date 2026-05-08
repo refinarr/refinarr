@@ -84,31 +84,44 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
   const deleteFailed =
     mediaType === "movie" ? tDelete("fileFailed") : tDelete("filesFailed");
 
+  // Generate a groupId only when the bulk submission actually fires
+  // multiple items. A 1-item "bulk" is functionally identical to a
+  // single-item ad-hoc action — grouping it under a "Batch · 1 item"
+  // parent in history would be visual noise. The threshold is the
+  // post-filter count for delete (where non-deletable items get
+  // dropped) and the raw items length for search/ignore.
+  const groupIdForBulk = (isBulk: boolean, count: number) =>
+    isBulk && count > 1 ? crypto.randomUUID() : undefined;
+
   const searchMutation = useMutation({
-    mutationFn: ({ items, isBulk, signal }: BulkVars<T>) =>
-      runBulk(
+    mutationFn: ({ items, isBulk, signal }: BulkVars<T>) => {
+      const groupId = groupIdForBulk(isBulk, items.length);
+      return runBulk(
         items,
         (item) =>
-          api.post<ActionLog>(
-            config.search.endpoint,
-            config.search.body(item, instanceId),
-          ),
+          api.post<ActionLog>(config.search.endpoint, {
+            ...config.search.body(item, instanceId),
+            ...(groupId ? { groupId } : {}),
+          }),
         { isBulk, signal, action: "search", setProgress },
-      ),
+      );
+    },
     onSettled: () => setProgress(null),
   });
 
   const ignoreMutation = useMutation({
-    mutationFn: ({ items, isBulk, signal }: BulkVars<T>) =>
-      runBulk(
+    mutationFn: ({ items, isBulk, signal }: BulkVars<T>) => {
+      const groupId = groupIdForBulk(isBulk, items.length);
+      return runBulk(
         items,
         (item) =>
-          api.post(
-            config.ignore.endpoint,
-            config.ignore.body(item, instanceId),
-          ),
+          api.post(config.ignore.endpoint, {
+            ...config.ignore.body(item, instanceId),
+            ...(groupId ? { groupId } : {}),
+          }),
         { isBulk, signal, action: "ignore", setProgress },
-      ),
+      );
+    },
     onSuccess: () => refetch(),
     onSettled: () => setProgress(null),
   });
@@ -116,13 +129,14 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
   const deleteMutation = useMutation({
     mutationFn: async ({ items, search, isBulk, signal }: DeleteVars<T>) => {
       const deletable = items.filter(config.delete.isDeletable);
+      const groupId = groupIdForBulk(isBulk, deletable.length);
       const results = await runBulk(
         deletable,
         (item) =>
-          api.post<ActionLog>(
-            config.delete.endpoint,
-            config.delete.body(item, instanceId, search),
-          ),
+          api.post<ActionLog>(config.delete.endpoint, {
+            ...config.delete.body(item, instanceId, search),
+            ...(groupId ? { groupId } : {}),
+          }),
         { isBulk, signal, action: "delete", setProgress },
       );
       return { results, search };

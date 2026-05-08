@@ -15,6 +15,10 @@ interface EnqueueInput {
   mediaId: number;
   title: string;
   payload?: Record<string, unknown>;
+  // Hex UUID linking sibling rows from one bulk submission. Persisted
+  // on the queue row, propagated to the resulting ActionLog row when
+  // the worker drains. Single-item enqueues leave undefined.
+  groupId?: string;
 }
 
 export interface QueueStatus {
@@ -49,6 +53,7 @@ export class SearchQueueService {
       payload: JSON.stringify(input.payload ?? {}),
       seasonNumber,
       fileId,
+      groupId: input.groupId ?? null,
     });
 
     if (!created) {

@@ -69,6 +69,8 @@ class TestMediaService extends MediaService<MediaItem> {
     instanceId: number;
     instanceName: string;
     withPayload: boolean;
+    groupId?: string;
+    commandId?: number;
   }) {
     return this.executeAction({
       instanceName: opts.instanceName,
@@ -77,7 +79,11 @@ class TestMediaService extends MediaService<MediaItem> {
       mediaId: 42,
       title: "test-title",
       ...(opts.withPayload ? { payload: { ok: true } } : {}),
-      run: async () => {},
+      ...(opts.groupId ? { groupId: opts.groupId } : {}),
+      run: async () =>
+        opts.commandId !== undefined
+          ? { commandId: opts.commandId }
+          : undefined,
     });
   }
 }
@@ -130,6 +136,54 @@ describe("MediaService.executeAction", () => {
       withPayload: true,
     });
     expect(log.payload).toBe(JSON.stringify({ ok: true }));
+  });
+
+  // Foundation for the History UI's parent/child grouping. The bulk
+  // client generates one UUID for the whole submission, sends it on
+  // every per-item POST, and the server stamps it on each ActionLog
+  // row. Same value across siblings → collapsible parent.
+  test("stamps groupId on the ActionLog row when caller provides one", async () => {
+    const inst = await instanceService.create(baseInstance);
+    const groupId = "11111111-2222-3333-4444-555555555555";
+    const log = await testService.runAction({
+      instanceId: inst.id,
+      instanceName: inst.name,
+      withPayload: false,
+      groupId,
+    });
+    expect(log.groupId).toBe(groupId);
+    expect(log.commandId).toBeNull();
+  });
+
+  // Foundation for the future webhook / polling status update PR — the
+  // upstream Radarr/Sonarr command id captured from the response feeds
+  // the join key for "this grab event matches that ActionLog row."
+  test("stamps commandId on the ActionLog row when run() returns one", async () => {
+    const inst = await instanceService.create(baseInstance);
+    const log = await testService.runAction({
+      instanceId: inst.id,
+      instanceName: inst.name,
+      withPayload: false,
+      commandId: 7777,
+    });
+    expect(log.commandId).toBe(7777);
+    expect(log.status).toBe("success");
+  });
+
+  // Both stamps coexist — they're orthogonal. groupId clusters siblings
+  // for UI; commandId joins each row to its upstream task.
+  test("stamps both groupId and commandId together when both supplied", async () => {
+    const inst = await instanceService.create(baseInstance);
+    const groupId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    const log = await testService.runAction({
+      instanceId: inst.id,
+      instanceName: inst.name,
+      withPayload: false,
+      groupId,
+      commandId: 9999,
+    });
+    expect(log.groupId).toBe(groupId);
+    expect(log.commandId).toBe(9999);
   });
 });
 

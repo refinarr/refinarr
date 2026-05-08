@@ -59,10 +59,18 @@ export const preferencesSchema = z.object({
     .max(500),
 });
 
+// Optional UUID linking sibling rows from one bulk submission. Generated
+// client-side via crypto.randomUUID(); the same value is sent on every
+// per-item POST in the bulk loop. Persisted on SearchQueue.groupId and
+// later on ActionLog.groupId so the History UI can collapse them under
+// one "Batch search · N items" parent. Single-item invocations omit it.
+const groupIdField = z.string().uuid().optional();
+
 export const radarrSearchSchema = z.object({
   instanceId: z.number().int().positive(),
   mediaId: z.number().int().positive(),
   title: z.string().min(1).max(512),
+  groupId: groupIdField,
 });
 
 export const radarrDeleteSchema = z.object({
@@ -71,12 +79,14 @@ export const radarrDeleteSchema = z.object({
   fileId: z.number().int().positive(),
   title: z.string().min(1).max(512),
   search: z.boolean().optional(),
+  groupId: groupIdField,
 });
 
 export const sonarrSearchSchema = z.object({
   instanceId: z.number().int().positive(),
   mediaId: z.number().int().positive(),
   title: z.string().min(1).max(512),
+  groupId: groupIdField,
 });
 
 export const sonarrSeasonSearchSchema = z.object({
@@ -84,6 +94,7 @@ export const sonarrSeasonSearchSchema = z.object({
   mediaId: z.number().int().positive(),
   seasonNumber: z.number().int().nonnegative(),
   title: z.string().min(1).max(512),
+  groupId: groupIdField,
 });
 
 export const sonarrEpisodeSearchSchema = z.object({
@@ -91,6 +102,7 @@ export const sonarrEpisodeSearchSchema = z.object({
   mediaId: z.number().int().positive(),
   fileId: z.number().int().positive(),
   title: z.string().min(1).max(512),
+  groupId: groupIdField,
 });
 
 export const sonarrDeleteSchema = z.object({
@@ -99,6 +111,7 @@ export const sonarrDeleteSchema = z.object({
   fileIds: z.array(z.number().int().positive()).min(1).max(2000),
   title: z.string().min(1).max(512),
   search: z.boolean().optional(),
+  groupId: groupIdField,
 });
 
 export const configUpdateSchema = z.record(

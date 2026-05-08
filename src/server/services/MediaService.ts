@@ -92,7 +92,14 @@ interface ExecuteActionOptions {
   title: string;
   actionLogId?: number;
   payload?: Record<string, unknown>;
-  run: () => Promise<void>;
+  // UUID linking sibling rows from one bulk submission. Stamped on the
+  // ActionLog row at write time. Undefined for single-item dispatches.
+  groupId?: string;
+  // Run the upstream effect. Optionally returns { commandId } from the
+  // *arr response — when present, it's stamped on the ActionLog row
+  // alongside the success transition. Non-search actions (delete,
+  // ignore) keep returning void.
+  run: () => Promise<void | { commandId: number }>;
 }
 
 interface ReadWithSwrOptions<TCached> {
@@ -600,6 +607,8 @@ export abstract class MediaService<TItem extends MediaItem> {
       status: isDryRun ? "dry_run" : "pending",
       error: null,
       payload: opts.payload ? JSON.stringify(opts.payload) : null,
+      groupId: opts.groupId ?? null,
+      commandId: null,
     } satisfies Omit<ActionLog, "id" | "createdAt" | "lastRetriedAt">;
 
     // Retry path keeps the original createdAt so the History UI can show
@@ -622,7 +631,7 @@ export abstract class MediaService<TItem extends MediaItem> {
     }
 
     try {
-      await opts.run();
+      const result = await opts.run();
       // Bust the flagged-media cache so the UI sees the post-action state on
       // the next read (deleted/searched item gone) instead of the previous
       // 5-minute snapshot. Dry runs and failed actions don't invalidate —
@@ -632,7 +641,13 @@ export abstract class MediaService<TItem extends MediaItem> {
         source: LogSource.MediaAction,
         context: logContext(opts, false),
       });
-      return logRepository.update(logEntry.id, { status: "success" });
+      // Stamp the upstream commandId when the run returned one (search
+      // actions). Delete/ignore return void and leave commandId null.
+      const successUpdate: Partial<ActionLog> = { status: "success" };
+      if (result && "commandId" in result) {
+        successUpdate.commandId = result.commandId;
+      }
+      return logRepository.update(logEntry.id, successUpdate);
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       appLogger.error(`Media action failed: ${describe(opts)}`, {

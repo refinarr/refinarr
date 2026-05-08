@@ -14,6 +14,7 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     fileId,
     title,
     search = false,
+    groupId,
   } = await parseJson(req, radarrDeleteSchema, "Invalid delete payload");
 
   // Delete fires inline; the optional follow-up search goes through the
@@ -24,16 +25,18 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     fileId,
     title,
     false,
+    { groupId },
   );
   if (search && result.status !== "failed") {
     if (await dryRunService.isDryRun()) {
-      await movieService.triggerSearch(instanceId, mediaId, title);
+      await movieService.triggerSearch(instanceId, mediaId, title, { groupId });
     } else {
       await searchQueueService.enqueue({
         instanceId,
         action: "movie",
         mediaId,
         title,
+        groupId,
       });
     }
   }

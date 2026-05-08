@@ -7,7 +7,7 @@ import { dryRunService } from "@/server/services/DryRunService";
 import { sonarrEpisodeSearchSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
-  const { instanceId, mediaId, fileId, title } = await parseJson(
+  const { instanceId, mediaId, fileId, title, groupId } = await parseJson(
     req,
     sonarrEpisodeSearchSchema,
     "Invalid search payload",
@@ -19,6 +19,7 @@ export const POST = createApiHandler(async (req: NextRequest) => {
       mediaId,
       fileId,
       title,
+      { groupId },
     );
     return NextResponse.json(result);
   }
@@ -28,6 +29,7 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     mediaId,
     title,
     payload: { fileId },
+    groupId,
   });
   return NextResponse.json(
     { queued: true, queueId: entry.id },

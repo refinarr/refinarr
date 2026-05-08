@@ -263,6 +263,7 @@ export class MovieService extends MediaService<MovieItem> {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
+      groupId: opts.groupId,
       payload: { instanceId, action: "search", mediaId, title },
       run: () => client.triggerSearch(mediaId),
     });
@@ -285,6 +286,7 @@ export class MovieService extends MediaService<MovieItem> {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
+      groupId: opts.groupId,
       payload: {
         instanceId,
         action: "delete",

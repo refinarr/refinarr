@@ -32,9 +32,13 @@ type SearchHandler = (
 // "unknown action" branch needed.
 const SEARCH_HANDLERS: Record<SearchQueueAction, SearchHandler> = {
   movie: (instance, entry) =>
-    movieService.triggerSearch(instance.id, entry.mediaId, entry.title),
+    movieService.triggerSearch(instance.id, entry.mediaId, entry.title, {
+      groupId: entry.groupId ?? undefined,
+    }),
   series: (instance, entry) =>
-    seriesService.triggerSearch(instance.id, entry.mediaId, entry.title),
+    seriesService.triggerSearch(instance.id, entry.mediaId, entry.title, {
+      groupId: entry.groupId ?? undefined,
+    }),
   season: (instance, entry, payload) => {
     const { seasonNumber } = seasonPayload.parse(payload);
     return seriesService.triggerSeasonSearch(
@@ -42,6 +46,7 @@ const SEARCH_HANDLERS: Record<SearchQueueAction, SearchHandler> = {
       entry.mediaId,
       seasonNumber,
       entry.title,
+      { groupId: entry.groupId ?? undefined },
     );
   },
   episode: (instance, entry, payload) => {
@@ -51,6 +56,7 @@ const SEARCH_HANDLERS: Record<SearchQueueAction, SearchHandler> = {
       entry.mediaId,
       fileId,
       entry.title,
+      { groupId: entry.groupId ?? undefined },
     );
   },
 };

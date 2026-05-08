@@ -392,6 +392,7 @@ export class SeriesService extends MediaService<SeriesItem> {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
+      groupId: opts.groupId,
       payload: {
         instanceId,
         action: "delete",
@@ -424,6 +425,7 @@ export class SeriesService extends MediaService<SeriesItem> {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
+      groupId: opts.groupId,
       payload: { instanceId, action: "search", mediaId, title },
       run: () => client.triggerSearch(mediaId),
     });
@@ -446,6 +448,7 @@ export class SeriesService extends MediaService<SeriesItem> {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
+      groupId: opts.groupId,
       payload: {
         instanceId,
         action: "search_season",
@@ -475,6 +478,7 @@ export class SeriesService extends MediaService<SeriesItem> {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
+      groupId: opts.groupId,
       payload: { instanceId, action: "search_episode", mediaId, fileId, title },
       run: async () => {
         const episodes = await client.getEpisodes(mediaId);
@@ -483,7 +487,7 @@ export class SeriesService extends MediaService<SeriesItem> {
           .map((e) => e.id);
         if (episodeIds.length === 0)
           throw new Error("Episode not found for file");
-        await client.triggerEpisodeSearch(episodeIds);
+        return client.triggerEpisodeSearch(episodeIds);
       },
     });
   }

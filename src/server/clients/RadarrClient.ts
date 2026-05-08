@@ -55,11 +55,12 @@ export class RadarrClient extends ArrClient {
     return results.flat();
   }
 
-  async triggerSearch(movieId: number): Promise<void> {
-    await this.fetch("/command", {
+  async triggerSearch(movieId: number): Promise<{ commandId: number }> {
+    const res = await this.fetch<{ id: number }>("/command", {
       method: "POST",
       body: JSON.stringify({ name: "MoviesSearch", movieIds: [movieId] }),
     });
+    return { commandId: res.id };
   }
 
   async deleteFile(fileId: number): Promise<void> {

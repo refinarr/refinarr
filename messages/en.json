@@ -337,6 +337,11 @@
       "retry": "Retry",
       "retried": "Retried {time}"
     },
+    "batch": {
+      "header": "Batch · {action} · {count, plural, one {# item} other {# items}}",
+      "expand": "Expand batch",
+      "collapse": "Collapse batch"
+    },
     "clear": "Clear history"
   },
   "logs": {

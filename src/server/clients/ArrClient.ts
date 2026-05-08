@@ -88,7 +88,10 @@ export abstract class ArrClient {
   // primary unit — movie / series / album / scene. Each subclass posts the
   // appropriate command to /command. Service action methods can call this
   // through an `ArrClient`-typed reference (no `as RadarrClient` cast).
-  abstract triggerSearch(itemId: number): Promise<void>;
+  // Returns the upstream command id parsed from the /command response,
+  // which the service stamps onto the ActionLog row as the join key for
+  // future lifecycle status updates (webhook / polling).
+  abstract triggerSearch(itemId: number): Promise<{ commandId: number }>;
 
   // Delete a file from the *arr's library. Each subclass routes to the
   // right endpoint (Radarr's /moviefile/{id}, Sonarr's /episodefile/{id},
