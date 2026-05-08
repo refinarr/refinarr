@@ -305,6 +305,16 @@ describe("statusPoller — HMR singleton", () => {
 // grabbed → downloaded, searched → failed, batch outcomes, synthesis
 // of "No releases grabbed", and healing of stale messages.
 describe("statusPoller — search lifecycle scenarios", () => {
+  // The worker filters /history events older than `since = Date.now() -
+  // 1hr` at the ArrClient boundary. Absolute test dates would slip
+  // outside that window depending on wall-clock when the suite runs
+  // — fine on a Mac one minute after a freshly-baked timestamp,
+  // failing on CI hours later. These helpers anchor every event
+  // relative to the moment the handler is registered, so the worker
+  // always sees them as recent.
+  const isoSecondsAgo = (secs: number): string =>
+    new Date(Date.now() - secs * 1000).toISOString();
+
   // Seed a search row in a known state. Defaults match what
   // MediaService.executeAction writes for a fresh dispatched search.
   async function seedSearchRow(
@@ -364,14 +374,14 @@ describe("statusPoller — search lifecycle scenarios", () => {
             {
               id: 1,
               eventType: "grabbed",
-              date: "2026-05-08T10:00:00Z",
+              date: isoSecondsAgo(60),
               sourceTitle: "rls.1",
               movieId: 42,
             },
             {
               id: 2,
               eventType: "downloadFolderImported",
-              date: "2026-05-08T10:05:00Z",
+              date: isoSecondsAgo(30),
               sourceTitle: "rls.1",
               movieId: 42,
             },
@@ -403,7 +413,7 @@ describe("statusPoller — search lifecycle scenarios", () => {
             id: 7777,
             name: "MoviesSearch",
             status: "completed",
-            started: "2026-05-08T09:00:00Z",
+            started: isoSecondsAgo(120),
           },
         ]),
       ),
@@ -470,14 +480,14 @@ describe("statusPoller — search lifecycle scenarios", () => {
             {
               id: 1,
               eventType: "grabbed",
-              date: "2026-05-08T10:00:00Z",
+              date: isoSecondsAgo(60),
               sourceTitle: "rls.1",
               movieId: 42,
             },
             {
               id: 2,
               eventType: "downloadFailed",
-              date: "2026-05-08T10:05:00Z",
+              date: isoSecondsAgo(30),
               sourceTitle: "rls.1",
               movieId: 42,
             },
@@ -527,13 +537,13 @@ describe("statusPoller — search lifecycle scenarios", () => {
             id: 9001,
             name: "MoviesSearch",
             status: "completed",
-            started: "2026-05-08T09:00:00Z",
+            started: isoSecondsAgo(120),
           },
           {
             id: 9002,
             name: "MoviesSearch",
             status: "completed",
-            started: "2026-05-08T09:00:00Z",
+            started: isoSecondsAgo(120),
           },
           {
             id: 9003,
@@ -549,14 +559,14 @@ describe("statusPoller — search lifecycle scenarios", () => {
             {
               id: 1,
               eventType: "grabbed",
-              date: "2026-05-08T10:00:00Z",
+              date: isoSecondsAgo(60),
               sourceTitle: "A.rls",
               movieId: 100,
             },
             {
               id: 2,
               eventType: "downloadFolderImported",
-              date: "2026-05-08T10:05:00Z",
+              date: isoSecondsAgo(30),
               sourceTitle: "A.rls",
               movieId: 100,
             },

@@ -200,8 +200,12 @@ describe("HistoryTable grouping", () => {
     ];
     renderWithProviders(<HistoryTable logs={logs} />);
     const parent = screen.getByRole("button", { expanded: false });
+    // Match only count-prefixed status badges. The bare `^[0-9]+\s/`
+    // regex would also catch the date column's "3 hours ago" text.
     const labels = within(parent)
-      .getAllByText(/^[0-9]+\s/)
+      .getAllByText(
+        /^\d+ (Pending|Failed|Dry Run|Searched|Grabbed|Downloaded|Success)$/,
+      )
       .map((el) => el.textContent);
     expect(labels).toEqual([
       "1 Pending",
