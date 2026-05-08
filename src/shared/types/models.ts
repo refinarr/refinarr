@@ -7,7 +7,28 @@ export type ActionType =
   | "search_episode"
   | "delete"
   | "ignore";
-export type ActionStatus = "success" | "failed" | "dry_run" | "pending";
+// Forward-only status flow.
+//
+// Search-type actions (search / search_season / search_episode):
+//   pending → searched → grabbed → downloaded
+// "searched" means the search command was queued upstream (POST
+// /command returned 2xx) — NOT that the indexer found anything. The
+// later lifecycle states are populated by the statusPoller once it
+// observes the corresponding /history events upstream.
+//
+// Non-search actions (delete / ignore):
+//   pending → success
+// These have no post-dispatch lifecycle, so "success" stays accurate.
+//
+// dry_run / failed are terminal for both flows.
+export type ActionStatus =
+  | "success"
+  | "searched"
+  | "failed"
+  | "dry_run"
+  | "pending"
+  | "grabbed"
+  | "downloaded";
 export type MediaType = "movie" | "series";
 
 export interface Instance {
@@ -147,6 +168,13 @@ export interface ActionLog {
   // response. Per-item; used as the join key for future lifecycle
   // status updates (webhook / polling).
   commandId?: number | null;
+  // Command-sync poll result — the upstream command's
+  // body.completionMessage (e.g. "0 releases found", "Sent 1
+  // release(s)..."). On current Servarr versions that leave the field
+  // null, statusPoller falls back to synthesizing "No releases
+  // grabbed" from the absence of a grab event. Null until either
+  // path observes the command finishing.
+  completionMessage?: string | null;
   createdAt: Date;
   lastRetriedAt?: Date | null;
 }

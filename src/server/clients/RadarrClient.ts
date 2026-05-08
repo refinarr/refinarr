@@ -1,5 +1,9 @@
 import type { Instance } from "@/shared/types/models";
-import { ArrClient } from "./ArrClient";
+import {
+  ArrClient,
+  type UpstreamHistoryEvent,
+  type UpstreamHistoryRecord,
+} from "./ArrClient";
 
 interface RadarrMovie {
   id: number;
@@ -69,5 +73,14 @@ export class RadarrClient extends ArrClient {
 
   async getQualityProfiles(): Promise<RadarrQualityProfile[]> {
     return this.fetch<RadarrQualityProfile[]>("/qualityprofile");
+  }
+
+  // Per-arr projection — Radarr history records carry `movieId` as the
+  // sole id field. ArrClient owns the fetch + filter loop.
+  protected projectHistoryRecord(
+    r: UpstreamHistoryRecord,
+  ): { mediaId: number; scope: UpstreamHistoryEvent["scope"] } | null {
+    if (typeof r.movieId !== "number") return null;
+    return { mediaId: r.movieId, scope: "movie" };
   }
 }

@@ -5,6 +5,7 @@ import { ConfigKey } from "@/server/config/keys";
 import { LogSource } from "./log-sources";
 import { appLogger } from "./app-logger";
 import { searchWorker } from "./search-worker";
+import { statusPoller } from "./status-poller";
 
 let seeded = false;
 let seedPromise: Promise<void> | null = null;
@@ -28,6 +29,11 @@ export async function seedDefaults(): Promise<void> {
   }
 
   await searchWorker.start();
+  // Per-instance lifecycle status polling. Both workers share the
+  // findAllEnabled() snapshot above (each is idempotent on its own),
+  // so they run independently — one feeding queue drains, the other
+  // observing upstream lifecycle for already-dispatched commands.
+  await statusPoller.start();
 }
 
 export async function ensureSeeded(): Promise<void> {

@@ -64,6 +64,17 @@ model ActionLog {
   // as the join key for future lifecycle status updates from webhooks
   // or per-instance history polling.
   commandId     Int?
+  // Command-sync poll captures upstream `body.completionMessage` from
+  // the /command record once the search task finishes. Older Servarr
+  // populated it with "0 releases found" / "Sent 1 release(s) to
+  // download client" / "No indexers available" — the answer to
+  // "did anything actually happen". Current Servarr leaves it null on
+  // search commands; statusPoller falls back to synthesizing
+  // "No releases grabbed" from the absence of a grab event in the
+  // same /history window. Status stays at "searched" for the
+  // queued-upstream semantic; this field disambiguates "still
+  // pending" from "completed but found nothing".
+  completionMessage String?
   createdAt     DateTime  @default(now())
   lastRetriedAt DateTime?
 

@@ -72,6 +72,12 @@ function HistoryContent() {
     switch (key) {
       case "success":
         return tStatus("success");
+      case "searched":
+        return tStatus("searched");
+      case "grabbed":
+        return tStatus("grabbed");
+      case "downloaded":
+        return tStatus("downloaded");
       case "failed":
         return tStatus("failed");
       case "dry_run":
@@ -135,6 +141,11 @@ function HistoryContent() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">{tCommon("all")}</SelectItem>
+              <SelectItem value="searched">{tStatus("searched")}</SelectItem>
+              <SelectItem value="grabbed">{tStatus("grabbed")}</SelectItem>
+              <SelectItem value="downloaded">
+                {tStatus("downloaded")}
+              </SelectItem>
               <SelectItem value="success">{tStatus("success")}</SelectItem>
               <SelectItem value="failed">{tStatus("failed")}</SelectItem>
               <SelectItem value="dry_run">{tStatus("dryRun")}</SelectItem>

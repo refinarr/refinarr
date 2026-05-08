@@ -642,11 +642,15 @@ export abstract class MediaService<TItem extends MediaItem> {
         context: logContext(opts, false),
       });
       // Stamp the upstream commandId when the run returned one (search
-      // actions). Delete/ignore return void and leave commandId null.
-      const successUpdate: Partial<ActionLog> = { status: "success" };
-      if (result && "commandId" in result) {
-        successUpdate.commandId = result.commandId;
-      }
+      // actions) and use the "searched" status so the row reads as
+      // "search command queued upstream" rather than the misleading
+      // "success" — actual outcome lands later via statusPoller. For
+      // delete/ignore (no commandId), "success" remains accurate
+      // because there's no post-dispatch lifecycle to wait on.
+      const successUpdate: Partial<ActionLog> =
+        result && "commandId" in result
+          ? { status: "searched", commandId: result.commandId }
+          : { status: "success" };
       return logRepository.update(logEntry.id, successUpdate);
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);

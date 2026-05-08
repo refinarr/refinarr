@@ -13,7 +13,7 @@ function makeLog(overrides: Partial<ActionLog>): ActionLog {
     mediaId: 1,
     title: "Movie 1",
     isDryRun: false,
-    status: "success",
+    status: "searched",
     error: null,
     payload: null,
     groupId: null,
@@ -112,6 +112,31 @@ describe("HistoryTable grouping", () => {
     expect(screen.queryByText(/items/)).toBeNull();
   });
 
+  // Regression: when the search worker round-robins between instances,
+  // two batches submitted around the same time produce ActionLog rows
+  // whose createdAt timestamps interleave. The old adjacency-based
+  // bucketer collapsed each into solo flat rows; the fix buckets by
+  // groupId regardless of where the rows land in the createdAt order.
+  it("groups non-adjacent rows of the same batch (interleaved createdAt order)", () => {
+    const groupA = "11111111-1111-1111-1111-111111111111";
+    const groupB = "22222222-2222-2222-2222-222222222222";
+    const logs = [
+      makeLog({ id: 1, title: "B-newer", groupId: groupB }),
+      makeLog({ id: 2, title: "A-newer", groupId: groupA }),
+      makeLog({ id: 3, title: "B-older", groupId: groupB }),
+      makeLog({ id: 4, title: "A-older", groupId: groupA }),
+    ];
+    renderWithProviders(<HistoryTable logs={logs} />);
+    // Two batch parents — NOT four flat rows.
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+    // Children hidden until expanded; titles must not leak to flat rows.
+    expect(screen.queryByText("A-newer")).toBeNull();
+    expect(screen.queryByText("B-newer")).toBeNull();
+    // Each parent declares its own count.
+    const counts = screen.getAllByText(/2 items/);
+    expect(counts).toHaveLength(2);
+  });
+
   // Mixed list: a batch parent for the grouped rows + flat rows for
   // the rest. Order is preserved (logs come in createdAt-desc).
   it("interleaves batch and flat groups", () => {
@@ -130,19 +155,117 @@ describe("HistoryTable grouping", () => {
     expect(screen.queryByText("Batch A")).toBeNull();
   });
 
-  // Status pill on the parent surfaces the worst outstanding state so
-  // partially-failed batches stand out in the list.
-  it("summarizes child statuses on the parent row (failed wins over success)", () => {
+  // Parent renders one mini-badge per status present, prefixed with
+  // the count. Replaces the old single-summary-badge approach which
+  // had to compromise between "show worst" and "show most-advanced";
+  // the count list shows both. Display order is fixed:
+  //   pending → failed → dry_run → searched → grabbed → downloaded → success
+  it("parent renders a count badge per status present (mixed batch)", () => {
     const groupId = "11111111-2222-3333-4444-555555555555";
     const logs = [
-      makeLog({ id: 1, status: "success", groupId }),
-      makeLog({ id: 2, status: "failed", error: "boom", groupId }),
-      makeLog({ id: 3, status: "success", groupId }),
+      makeLog({ id: 1, status: "searched", groupId }),
+      makeLog({ id: 2, status: "downloaded", groupId }),
+      makeLog({ id: 3, status: "failed", error: "boom", groupId }),
+      makeLog({ id: 4, status: "searched", groupId }),
     ];
     renderWithProviders(<HistoryTable logs={logs} />);
     const parent = screen.getByRole("button", { expanded: false });
-    // The aggregate badge inside the parent row should reflect the
-    // worst child status.
-    expect(within(parent).getByText(/Failed/i)).toBeTruthy();
+    expect(within(parent).getByText("1 Failed")).toBeTruthy();
+    expect(within(parent).getByText("2 Searched")).toBeTruthy();
+    expect(within(parent).getByText("1 Downloaded")).toBeTruthy();
+  });
+
+  it("parent shows the count even for a homogeneous batch (e.g. 3 Downloaded)", () => {
+    const groupId = "11111111-2222-3333-4444-555555555555";
+    const logs = [
+      makeLog({ id: 1, status: "downloaded", groupId }),
+      makeLog({ id: 2, status: "downloaded", groupId }),
+      makeLog({ id: 3, status: "downloaded", groupId }),
+    ];
+    renderWithProviders(<HistoryTable logs={logs} />);
+    const parent = screen.getByRole("button", { expanded: false });
+    expect(within(parent).getByText("3 Downloaded")).toBeTruthy();
+  });
+
+  it("parent counts render in fixed display order regardless of input order", () => {
+    // Children supplied in createdAt-desc order: downloaded, searched,
+    // failed, pending. Display order should still read pending →
+    // failed → searched → downloaded.
+    const groupId = "11111111-2222-3333-4444-555555555555";
+    const logs = [
+      makeLog({ id: 1, status: "downloaded", groupId }),
+      makeLog({ id: 2, status: "searched", groupId }),
+      makeLog({ id: 3, status: "failed", error: "boom", groupId }),
+      makeLog({ id: 4, status: "pending", groupId }),
+    ];
+    renderWithProviders(<HistoryTable logs={logs} />);
+    const parent = screen.getByRole("button", { expanded: false });
+    const labels = within(parent)
+      .getAllByText(/^[0-9]+\s/)
+      .map((el) => el.textContent);
+    expect(labels).toEqual([
+      "1 Pending",
+      "1 Failed",
+      "1 Searched",
+      "1 Downloaded",
+    ]);
+  });
+});
+
+// Flat (single, ungrouped) rows still render the bare badge with no
+// count — the row IS the item, count is implicit.
+describe("ActionStatusBadge — flat-row rendering (no count prefix)", () => {
+  it("flat row badge has no leading number", () => {
+    const logs = [makeLog({ id: 1, status: "downloaded", title: "Solo" })];
+    renderWithProviders(<HistoryTable logs={logs} />);
+    expect(screen.getByText("Downloaded")).toBeTruthy();
+    expect(screen.queryByText("1 Downloaded")).toBeNull();
+  });
+});
+
+// Command-sync poll captures the upstream `body.completionMessage` (e.g.
+// "0 releases found"). It renders as a small italic subscript next to
+// the title — the user-visible payoff of statusPoller. Cover both row
+// shapes so neither path silently regresses.
+describe("HistoryTable completionMessage", () => {
+  it("renders completionMessage as a subscript on flat rows", () => {
+    const logs = [
+      makeLog({
+        id: 1,
+        title: "Movie X",
+        completionMessage: "0 releases found",
+      }),
+    ];
+    renderWithProviders(<HistoryTable logs={logs} />);
+    expect(screen.getByText(/0 releases found/)).toBeTruthy();
+  });
+
+  it("renders completionMessage on expanded batch children", async () => {
+    const user = userEvent.setup();
+    const groupId = "11111111-2222-3333-4444-555555555555";
+    const logs = [
+      makeLog({
+        id: 1,
+        title: "Alpha",
+        groupId,
+        completionMessage: "Sent 1 release(s) to download client",
+      }),
+      makeLog({ id: 2, title: "Bravo", groupId }),
+    ];
+    renderWithProviders(<HistoryTable logs={logs} />);
+    // Children hidden until expanded — message must not leak to the
+    // parent header.
+    expect(screen.queryByText(/Sent 1 release/)).toBeNull();
+    await user.click(screen.getByRole("button", { expanded: false }));
+    expect(screen.getByText(/Sent 1 release/)).toBeTruthy();
+  });
+
+  it("does not render the · separator when completionMessage is null", () => {
+    const logs = [
+      makeLog({ id: 1, title: "Movie Y", completionMessage: null }),
+    ];
+    renderWithProviders(<HistoryTable logs={logs} />);
+    // No subscript text node alongside the title.
+    expect(screen.queryByText(/^· /)).toBeNull();
   });
 });

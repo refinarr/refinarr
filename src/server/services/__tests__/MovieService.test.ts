@@ -865,11 +865,11 @@ describe("MovieService.getCachedFlaggedCount", () => {
 });
 
 describe("MovieService.triggerSearch", () => {
-  test("creates a successful action log when live", async () => {
+  test("creates a searched action log when live", async () => {
     const instance = await instanceService.create(baseInstance);
     setupRadarrMocks({ movies: [], files: [], profiles: [] });
     const log = await movieService.triggerSearch(instance.id, 1, "A");
-    expect(log.status).toBe("success");
+    expect(log.status).toBe("searched");
     expect(log.action).toBe("search");
   });
 
@@ -957,7 +957,7 @@ describe("MovieService.retryFromPayload", () => {
       title: "A",
     });
     expect(log.action).toBe("search");
-    expect(log.status).toBe("success");
+    expect(log.status).toBe("searched");
   });
 
   test("dispatches delete payloads to deleteFile (default triggerSearch=true)", async () => {
@@ -987,8 +987,15 @@ describe("MovieService.retryFromPayload", () => {
       triggerSearch: false,
     });
     expect(log.action).toBe("delete");
-    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((u) => u.includes("/command"))).toBe(false);
+    // Filter POSTs only — GET /command also fires from statusPoller's
+    // command-sync tick on instance refresh, which we don't care about
+    // here. The contract under test is "no search command was POSTed."
+    const commandPosts = fetchMock.mock.calls.filter(
+      ([url, init]) =>
+        (url as string).includes("/command") &&
+        (init as RequestInit | undefined)?.method === "POST",
+    );
+    expect(commandPosts).toHaveLength(0);
   });
 
   test("throws on unknown action", async () => {
@@ -1020,8 +1027,14 @@ describe("MovieService.deleteFile", () => {
     const instance = await instanceService.create(baseInstance);
     setupRadarrMocks({ movies: [], files: [], profiles: [] });
     await movieService.deleteFile(instance.id, 1, 100, "A", false);
-    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((u) => u.includes("/command"))).toBe(false);
+    // Filter POSTs only — GET /command from statusPoller's refresh
+    // tick is unrelated. Contract: no search command was POSTed.
+    const commandPosts = fetchMock.mock.calls.filter(
+      ([url, init]) =>
+        (url as string).includes("/command") &&
+        (init as RequestInit | undefined)?.method === "POST",
+    );
+    expect(commandPosts).toHaveLength(0);
   });
 
   test("throws when instance is missing", async () => {

@@ -4,6 +4,7 @@ import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { searchWorker } from "@/server/lib/search-worker";
+import { statusPoller } from "@/server/lib/status-poller";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { arrRateLimiter } from "@/server/lib/ArrRateLimiter";
 import { eventBus } from "@/server/lib/event-bus";
@@ -38,6 +39,7 @@ export class InstanceService {
     // the previous (smaller) set of enabled instances, so without this the
     // queue would never drain for instances added after first request.
     void searchWorker.refresh(created.id);
+    void statusPoller.refresh(created.id);
     appLogger.info("Instance created", {
       source: LogSource.InstanceService,
       context: { id: created.id, name: created.name, type: created.type },
@@ -51,6 +53,7 @@ export class InstanceService {
     // Restart the worker loop for this instance so a new searchesPerHour
     // (or enabled flag) takes effect immediately rather than after restart.
     void searchWorker.refresh(id);
+    void statusPoller.refresh(id);
     appLogger.info("Instance updated", {
       source: LogSource.InstanceService,
       context: { id: updated.id, name: updated.name, type: updated.type },
@@ -64,6 +67,7 @@ export class InstanceService {
     await instanceRepository.delete(id);
     arrRateLimiter.evict(id);
     void searchWorker.refresh(id);
+    void statusPoller.refresh(id);
     eventBus.emit({ type: "queue-changed", instanceId: id });
     appLogger.info("Instance deleted", {
       source: LogSource.InstanceService,

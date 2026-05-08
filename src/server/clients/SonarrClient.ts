@@ -1,5 +1,9 @@
 import type { Instance } from "@/shared/types/models";
-import { ArrClient } from "./ArrClient";
+import {
+  ArrClient,
+  type UpstreamHistoryEvent,
+  type UpstreamHistoryRecord,
+} from "./ArrClient";
 
 interface SonarrSeries {
   id: number;
@@ -120,5 +124,25 @@ export class SonarrClient extends ArrClient {
 
   async getQualityProfiles(): Promise<SonarrQualityProfile[]> {
     return this.fetch<SonarrQualityProfile[]>("/qualityprofile");
+  }
+
+  // Per-arr projection — Sonarr history records carry both `episodeId`
+  // and `seriesId`. We tag each record at the granularity that matches
+  // how refinarr triggered the search:
+  //   - episodeId > 0 → scope="episode" (triggerEpisodeFileSearch)
+  //   - else          → scope="series"  (triggerSearch / Season)
+  // The service-side correlator picks the right ActionLog row by
+  // (instanceId, mediaId, action) so the scope tag prevents an episode
+  // event from updating a series-level action row by accident.
+  protected projectHistoryRecord(
+    r: UpstreamHistoryRecord,
+  ): { mediaId: number; scope: UpstreamHistoryEvent["scope"] } | null {
+    if (typeof r.episodeId === "number" && r.episodeId > 0) {
+      return { mediaId: r.episodeId, scope: "episode" };
+    }
+    if (typeof r.seriesId === "number") {
+      return { mediaId: r.seriesId, scope: "series" };
+    }
+    return null;
   }
 }

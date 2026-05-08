@@ -167,7 +167,7 @@ describe("MediaService.executeAction", () => {
       commandId: 7777,
     });
     expect(log.commandId).toBe(7777);
-    expect(log.status).toBe("success");
+    expect(log.status).toBe("searched");
   });
 
   // Both stamps coexist — they're orthogonal. groupId clusters siblings

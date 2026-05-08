@@ -85,8 +85,13 @@ export class LogRepository extends BaseRepository<ActionLog> {
   /**
    * Per-instance summary used by the "Searched Xm ago" badge: for each
    * mediaId that had a successful search action within `windowMs`, the
-   * timestamp of its most recent success. Returned ordered by most recent
-   * first so callers that build a Map<mediaId, Date> get the latest entry.
+   * timestamp of its most recent search. Returned ordered by most
+   * recent first so callers that build a Map<mediaId, Date> get the
+   * latest entry.
+   *
+   * Status floor accepts every post-dispatch state — the badge is about
+   * "you sent a search recently", not "did anything come of it." A row
+   * that has progressed to grabbed/downloaded was still searched.
    */
   async findRecentSearches(
     instanceId: number,
@@ -97,7 +102,7 @@ export class LogRepository extends BaseRepository<ActionLog> {
       where: {
         instanceId,
         action: "search",
-        status: "success",
+        status: { in: ["searched", "grabbed", "downloaded"] },
         isDryRun: false,
         // A retry that succeeded counts as a recent search even if the
         // original row was created outside the window.
@@ -118,6 +123,59 @@ export class LogRepository extends BaseRepository<ActionLog> {
     return [...seen.entries()]
       .map(([mediaId, lastSearchedAt]) => ({ mediaId, lastSearchedAt }))
       .sort((a, b) => b.lastSearchedAt.getTime() - a.lastSearchedAt.getTime());
+  }
+
+  /**
+   * Command sync — rows with a non-null commandId that the
+   * statusPoller might still need to update. Filter to a rolling time
+   * window so an instance that's been quiet for days doesn't return a
+   * huge backlog. Status floor is "searched" or "grabbed" — terminal
+   * states (failed, downloaded, dry_run) are excluded so we don't
+   * re-process completed work.
+   */
+  async findOpenCommandsByInstance(
+    instanceId: number,
+    sinceMs: number,
+  ): Promise<ActionLog[]> {
+    const since = new Date(Date.now() - sinceMs);
+    return this.db.actionLog.findMany({
+      where: {
+        instanceId,
+        commandId: { not: null },
+        status: { in: ["searched", "grabbed"] },
+        createdAt: { gte: since },
+      },
+      orderBy: { createdAt: "desc" },
+    }) as Promise<ActionLog[]>;
+  }
+
+  /**
+   * History sync — most-recent ActionLog row matching a media event
+   * coming in from /history. Fuzzy match (instance, mediaId, action,
+   * status floor, time window) since upstream history doesn't carry
+   * commandId. ORDER BY createdAt DESC LIMIT 1 means the freshest
+   * matching row wins; older rows at the same media/action only get
+   * touched if the freshest is missing for some reason.
+   */
+  async findCorrelatableByMedia(args: {
+    instanceId: number;
+    mediaId: number;
+    actions: ActionType[];
+    statusFloor: ActionStatus[];
+    sinceMs: number;
+  }): Promise<ActionLog | null> {
+    const since = new Date(Date.now() - args.sinceMs);
+    return this.db.actionLog.findFirst({
+      where: {
+        instanceId: args.instanceId,
+        mediaId: args.mediaId,
+        action: { in: args.actions },
+        status: { in: args.statusFloor },
+        isDryRun: false,
+        createdAt: { gte: since },
+      },
+      orderBy: { createdAt: "desc" },
+    }) as Promise<ActionLog | null>;
   }
 
   async create(data: Omit<ActionLog, "id" | "createdAt">): Promise<ActionLog> {

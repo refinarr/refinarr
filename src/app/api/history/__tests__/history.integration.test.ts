@@ -14,7 +14,7 @@ const baseLog = {
   mediaId: 100,
   title: "Movie",
   isDryRun: false,
-  status: "success" as const,
+  status: "searched" as const,
   error: null,
   payload: null,
 };
@@ -57,7 +57,7 @@ describe("GET /api/history", () => {
   });
 
   test("filter by status returns only matching rows", async () => {
-    await logRepository.create({ ...baseLog, status: "success" });
+    await logRepository.create({ ...baseLog, status: "searched" });
     await logRepository.create({ ...baseLog, status: "failed", error: "boom" });
     const res = await GET(getReq("status=failed"), ctxNone);
     const body = await res.json();
