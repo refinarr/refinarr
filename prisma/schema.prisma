@@ -70,7 +70,12 @@ model ActionLog {
   @@index([lastRetriedAt])
   @@index([instanceId, lastRetriedAt])
   @@index([groupId])
-  @@index([commandId])
+  // Composite (instanceId, commandId) — Radarr/Sonarr command ids are
+  // unique per-instance only, not globally. The future webhook /
+  // polling lifecycle update path looks up rows by commandId; pairing
+  // with instanceId prevents cross-instance false matches when two
+  // instances happen to issue the same id.
+  @@index([instanceId, commandId])
 }
 
 model AppLog {

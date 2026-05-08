@@ -148,7 +148,7 @@ function renderFlat(log: ActionLog, tRetry: T) {
       </TableCell>
       <TableCell className="text-sm">{log.title}</TableCell>
       <TableCell>
-        <ActionStatusBadge status={log.status as ActionStatus} />
+        <ActionStatusBadge status={log.status} />
       </TableCell>
       <TableCell>
         {log.status === "failed" && log.payload && (
@@ -173,10 +173,23 @@ function renderBatch(
   const groupId = rows[0].groupId!;
   const head = rows[0];
   const Chevron = isExpanded ? ChevronDown : ChevronRight;
+  // Keyboard activation mirrors the click handler so non-mouse users
+  // (Tab + Enter / Space) can toggle the batch open. role="button" +
+  // tabIndex=0 expose the row to assistive tech as the actionable
+  // element it is.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTableRowElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onToggle();
+    }
+  };
   const out: ReactElement[] = [
     <TableRow
       key={`batch-${groupId}`}
       onClick={onToggle}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
       aria-expanded={isExpanded}
       aria-label={tBatch(isExpanded ? "collapse" : "expand")}
       className="bg-muted/30 hover:bg-muted/50 cursor-pointer"
@@ -234,7 +247,7 @@ function renderBatch(
           </TableCell>
           <TableCell className="text-sm">{r.title}</TableCell>
           <TableCell>
-            <ActionStatusBadge status={r.status as ActionStatus} />
+            <ActionStatusBadge status={r.status} />
           </TableCell>
           <TableCell>
             {r.status === "failed" && r.payload && (

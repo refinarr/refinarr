@@ -69,11 +69,31 @@ describe("HistoryTable grouping", () => {
       makeLog({ id: 2, title: "Bravo", groupId }),
     ];
     renderWithProviders(<HistoryTable logs={logs} />);
-    const parent = screen.getByRole("row", { expanded: false });
+    // Parent row exposes role="button" (with aria-expanded) so keyboard
+    // users can Tab into it; click handler fires the toggle either way.
+    const parent = screen.getByRole("button", { expanded: false });
     await user.click(parent);
     expect(screen.getByText("Alpha")).toBeTruthy();
     expect(screen.getByText("Bravo")).toBeTruthy();
-    await user.click(screen.getByRole("row", { expanded: true }));
+    await user.click(screen.getByRole("button", { expanded: true }));
+    expect(screen.queryByText("Alpha")).toBeNull();
+  });
+
+  // Keyboard activation: Enter and Space both trigger the toggle, same
+  // as click. role="button" + tabIndex=0 + onKeyDown handler.
+  it("expands children on Enter / Space (keyboard accessibility)", async () => {
+    const user = userEvent.setup();
+    const groupId = "11111111-2222-3333-4444-555555555555";
+    const logs = [
+      makeLog({ id: 1, title: "Alpha", groupId }),
+      makeLog({ id: 2, title: "Bravo", groupId }),
+    ];
+    renderWithProviders(<HistoryTable logs={logs} />);
+    const parent = screen.getByRole("button", { expanded: false });
+    parent.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByText("Alpha")).toBeTruthy();
+    await user.keyboard(" ");
     expect(screen.queryByText("Alpha")).toBeNull();
   });
 
@@ -120,7 +140,7 @@ describe("HistoryTable grouping", () => {
       makeLog({ id: 3, status: "success", groupId }),
     ];
     renderWithProviders(<HistoryTable logs={logs} />);
-    const parent = screen.getByRole("row", { expanded: false });
+    const parent = screen.getByRole("button", { expanded: false });
     // The aggregate badge inside the parent row should reflect the
     // worst child status.
     expect(within(parent).getByText(/Failed/i)).toBeTruthy();
