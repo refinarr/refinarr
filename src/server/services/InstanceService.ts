@@ -11,6 +11,20 @@ import { eventBus } from "@/server/lib/event-bus";
 import { DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
 import type { Instance, ArrType, ScoringMode } from "@/shared/types/models";
 
+// Catch helper for fire-and-forget worker refreshes. The instance
+// repository / worker rescheduling can throw (DB blip, transient
+// state) and a bare `void worker.refresh(id)` would surface as an
+// unhandled promise rejection, which Node 18+ treats as fatal. We
+// keep the call non-blocking but route any failure into /logs.
+function logRefreshError(worker: string, instanceId: number) {
+  return (err: unknown) =>
+    appLogger.warn(`${worker}.refresh failed`, {
+      source: LogSource.InstanceService,
+      err,
+      context: { instanceId },
+    });
+}
+
 export class InstanceService {
   async getAll(): Promise<Instance[]> {
     return instanceRepository.findAll();
@@ -41,8 +55,12 @@ export class InstanceService {
     // statusPoller skips its immediate-tick on create: a brand-new instance
     // has no ActionLog rows to update yet, so the upstream fetch would be
     // wasted I/O. The recurring timer still arms normally.
-    void searchWorker.refresh(created.id);
-    void statusPoller.refresh(created.id, { immediate: false });
+    searchWorker
+      .refresh(created.id)
+      .catch(logRefreshError("searchWorker", created.id));
+    statusPoller
+      .refresh(created.id, { immediate: false })
+      .catch(logRefreshError("statusPoller", created.id));
     appLogger.info("Instance created", {
       source: LogSource.InstanceService,
       context: { id: created.id, name: created.name, type: created.type },
@@ -55,8 +73,8 @@ export class InstanceService {
     const updated = await instanceRepository.update(id, data);
     // Restart the worker loop for this instance so a new searchesPerHour
     // (or enabled flag) takes effect immediately rather than after restart.
-    void searchWorker.refresh(id);
-    void statusPoller.refresh(id);
+    searchWorker.refresh(id).catch(logRefreshError("searchWorker", id));
+    statusPoller.refresh(id).catch(logRefreshError("statusPoller", id));
     appLogger.info("Instance updated", {
       source: LogSource.InstanceService,
       context: { id: updated.id, name: updated.name, type: updated.type },
@@ -69,8 +87,8 @@ export class InstanceService {
     await searchQueueService.clearPending(id);
     await instanceRepository.delete(id);
     arrRateLimiter.evict(id);
-    void searchWorker.refresh(id);
-    void statusPoller.refresh(id);
+    searchWorker.refresh(id).catch(logRefreshError("searchWorker", id));
+    statusPoller.refresh(id).catch(logRefreshError("statusPoller", id));
     eventBus.emit({ type: "queue-changed", instanceId: id });
     appLogger.info("Instance deleted", {
       source: LogSource.InstanceService,
