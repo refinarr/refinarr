@@ -1,7 +1,6 @@
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { searchWorker } from "@/server/lib/search-worker";
 import { statusPoller } from "@/server/lib/status-poller";
@@ -9,6 +8,7 @@ import { autoRunner } from "@/server/lib/auto-runner";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { arrRateLimiter } from "@/server/lib/arr-rate-limiter";
 import { eventBus } from "@/server/lib/event-bus";
+import { LogSource } from "@/shared/types/models";
 import { DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
 import type {
   AutoSearchPickStrategy,

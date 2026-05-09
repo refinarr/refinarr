@@ -5,8 +5,8 @@ import type {
   RadarrMovieFile,
 } from "@/server/clients/RadarrClient";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 import { badRequest } from "@/server/lib/api-errors";
+import { LogSource } from "@/shared/types/models";
 import {
   isMissingWantedFormats,
   getMissingFormats,

@@ -3,7 +3,7 @@ import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { searchWorker } from "@/server/lib/search-worker";
 import { eventBus } from "@/server/lib/event-bus";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
+import { LogSource } from "@/shared/types/models";
 import type {
   SearchQueueAction,
   SearchQueueEntry,

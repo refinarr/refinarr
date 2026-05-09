@@ -9,8 +9,8 @@ import {
   type UpstreamHistoryEvent,
 } from "@/server/clients/ArrClient";
 import type { Instance } from "@/shared/types/models";
+import { LogSource } from "@/shared/types/models";
 import { appLogger } from "./app-logger";
-import { LogSource } from "./log-sources";
 
 // Single global cadence — every enabled instance ticks at this rate
 // when healthy. 5 minutes is the sweet spot between "fast enough that

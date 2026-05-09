@@ -9,8 +9,8 @@ import type {
   SonarrEpisodeFile,
 } from "@/server/clients/SonarrClient";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 import { badRequest } from "@/server/lib/api-errors";
+import { LogSource } from "@/shared/types/models";
 import {
   isMissingWantedFormats,
   getMissingFormats,

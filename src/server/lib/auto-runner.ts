@@ -12,8 +12,8 @@ import type {
   MediaItem,
   ScoringMode,
 } from "@/shared/types/models";
+import { LogSource } from "@/shared/types/models";
 import { appLogger } from "./app-logger";
-import { LogSource } from "./log-sources";
 
 const AUTO_SEARCH_SCORING_OVERRIDE: Record<
   AutoSearchScoringMode,

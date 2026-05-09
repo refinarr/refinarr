@@ -7,7 +7,7 @@ import { CACHE_TTL_MS } from "@/server/lib/data-cache";
 // "subclasses constructed only via ArrClientFactory" rule intact.
 import { RadarrClient } from "@/server/clients/RadarrClient";
 import { SonarrClient } from "@/server/clients/SonarrClient";
-import { LogSource } from "@/server/lib/log-sources";
+import { LogSource } from "@/shared/types/models";
 import type {
   ArrType,
   MediaItem,

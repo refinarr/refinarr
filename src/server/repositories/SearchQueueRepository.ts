@@ -1,5 +1,5 @@
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
+import { LogSource } from "@/shared/types/models";
 import type {
   SearchQueueAction,
   SearchQueueEntry,

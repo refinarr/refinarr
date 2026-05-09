@@ -8,12 +8,12 @@ import {
 } from "@/server/clients/ArrClientFactory";
 import type { ArrClient } from "@/server/clients/ArrClient";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 import {
   dataCache,
   CACHE_STALE_MS,
   CACHE_TTL_MS,
 } from "@/server/lib/data-cache";
+import { LogSource } from "@/shared/types/models";
 import { isProfileMode, SCORE_FOR } from "@/shared/scoring-mode";
 import { getSeverity } from "@/shared/severity";
 import type {

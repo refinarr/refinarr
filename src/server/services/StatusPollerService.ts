@@ -1,6 +1,5 @@
 import { logRepository } from "@/server/repositories/LogRepository";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 import { LIFECYCLE_EVENT_TYPES } from "@/server/clients/ArrClient";
 import type {
   ArrClient,
@@ -8,6 +7,7 @@ import type {
   UpstreamCommand,
   UpstreamHistoryEvent,
 } from "@/server/clients/ArrClient";
+import { LogSource } from "@/shared/types/models";
 import type {
   ActionLog,
   ActionStatus,
