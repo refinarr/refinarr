@@ -14,6 +14,7 @@ import type {
   AutoSearchPickStrategy,
   AutoSearchScheduleMode,
   AutoSearchScope,
+  AutoSearchScoringMode,
   Instance,
   ArrType,
   ScoringMode,
@@ -60,6 +61,8 @@ export class InstanceService {
     autoSearchMonitoredOnly?: boolean;
     autoSearchScope?: AutoSearchScope;
     autoSearchPickStrategy?: AutoSearchPickStrategy;
+    autoSearchCooldownHours?: number;
+    autoSearchScoringMode?: AutoSearchScoringMode;
   }): Promise<Instance> {
     assertSafeArrUrl(data.url);
     const created = await instanceRepository.create({

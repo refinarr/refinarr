@@ -15,6 +15,7 @@ import {
 } from "@/client/components/settings/AutoSearchFormFields";
 import {
   useAutoSearchStatus,
+  useCronPreview,
   useTriggerAutoSearch,
 } from "@/client/hooks/data/useAutoSearch";
 import { useUpdateInstance } from "@/client/hooks/data/useInstances";
@@ -73,12 +74,28 @@ export function AutoSearchSection({ instance }: Props) {
   const trigger = useTriggerAutoSearch(instance.id);
   const update = useUpdateInstance();
 
+  // useCronPreview is also called inside AutoSearchFormFields with the same key —
+  // TanStack Query deduplicates the network request. We call it here so we can
+  // guard auto-save without waiting for the form to surface the error.
+  const cronPreview = useCronPreview(localFields.autoSearchCronExpression);
+  const isCronMode = debouncedFields.autoSearchScheduleMode === "cron";
+  const trimmedCronExpr = debouncedFields.autoSearchCronExpression.trim();
+  const cronFieldCount = trimmedCronExpr.split(/\s+/).length;
+  const isAtAlias = /^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(
+    trimmedCronExpr,
+  );
+  const isCronValid =
+    !isCronMode ||
+    ((isAtAlias || cronFieldCount === 5) && !cronPreview.isError);
+
   // Auto-save whenever debouncedFields change (skip on mount).
+  // Skip save when the cron expression is known-invalid to avoid storing bad data.
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
+    if (!isCronValid) return;
     void update.mutateAsync({ id: instance.id, data: debouncedFields });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedFields]);
@@ -189,7 +206,6 @@ export function AutoSearchSection({ instance }: Props) {
             onChange={(next) =>
               setLocalFields((prev) => ({ ...prev, ...next }))
             }
-            disabled={update.isPending}
           />
 
           {localFields.autoSearchEnabled && !isLoading && (
@@ -219,7 +235,7 @@ export function AutoSearchSection({ instance }: Props) {
                       {PAUSE_DURATIONS_MS.map(({ labelKey, ms }) => (
                         <DropdownMenuItem
                           key={labelKey}
-                          onSelect={() => setPause(ms)}
+                          onClick={() => setPause(ms)}
                         >
                           {t(labelKey)}
                         </DropdownMenuItem>
@@ -231,7 +247,9 @@ export function AutoSearchSection({ instance }: Props) {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={paused || running || trigger.isPending}
+                  disabled={
+                    paused || running || trigger.isPending || !isCronValid
+                  }
                   onClick={() => runTrigger()}
                 >
                   {trigger.isPending && (

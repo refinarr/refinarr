@@ -6,9 +6,15 @@ import type { CronPreviewResponse } from "@/shared/types/api";
 
 export const GET = createApiHandler(async (req: NextRequest) => {
   const expr = req.nextUrl.searchParams.get("expr") ?? "";
-  const fields = expr.trim().split(/\s+/);
-  if (fields.length !== 5)
-    throw badRequest("Invalid cron expression", "INVALID_CRON");
+  const trimmed = expr.trim();
+  const isAtAlias = /^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(
+    trimmed,
+  );
+  if (!isAtAlias) {
+    const fields = trimmed.split(/\s+/);
+    if (fields.length !== 5)
+      throw badRequest("Invalid cron expression", "INVALID_CRON");
+  }
 
   try {
     const interval = CronExpressionParser.parse(expr, {

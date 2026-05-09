@@ -54,7 +54,13 @@ export function useCronPreview(expr: string) {
       api.get<CronPreviewResponse>(
         `/auto-search/cron-preview?expr=${encodeURIComponent(debounced)}`,
       ),
-    enabled: debounced.trim().split(/\s+/).length === 5,
+    enabled: (() => {
+      const t = debounced.trim();
+      return (
+        /^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(t) ||
+        t.split(/\s+/).length === 5
+      );
+    })(),
     retry: false,
   });
 }

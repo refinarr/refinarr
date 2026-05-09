@@ -1,4 +1,5 @@
 "use client";
+import { useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Switch } from "@/client/components/ui/switch";
 import { Label } from "@/client/components/ui/label";
@@ -18,6 +19,7 @@ import {
   TabsContent,
 } from "@/client/components/ui/tabs";
 import { useCronPreview } from "@/client/hooks/data/useAutoSearch";
+import { useDebouncedValue } from "@/client/hooks/ui/useDebouncedValue";
 import { formatCronTime } from "@/client/lib/format";
 import type {
   AutoSearchPickStrategy,
@@ -85,6 +87,30 @@ const UNIT_DIVISOR: Record<IntervalDisplayUnit["key"], number> = {
   days: 1440,
 };
 
+function autoFormatCron(raw: string, prev: string): string {
+  if (raw.length <= prev.length) return raw;
+  // Paste of exactly 5 simple chars (digits + *): treat each as its own field
+  if (
+    raw.length - prev.length > 1 &&
+    !raw.includes(" ") &&
+    raw.length === 5 &&
+    /^[\d*]+$/.test(raw)
+  ) {
+    return raw.split("").join(" ");
+  }
+  let result = raw;
+  for (let i = 0; i < 10; i++) {
+    const before = result;
+    // Space before * when not already preceded by space/comma/slash/dash
+    result = result.replace(/([^ ,/\-])\*/g, "$1 *");
+    // Split leading-zero digit pair e.g. "03" → "0 3" (not 00, not inside ranges/steps)
+    result = result.replace(/(?<!\d)0([1-9])(?![/\-,])/g, "0 $1");
+    result = result.replace(/ {2,}/g, " ");
+    if (result === before) break;
+  }
+  return result;
+}
+
 function minutesToDisplay(minutes: number): {
   value: number;
   unit: IntervalDisplayUnit["key"];
@@ -109,11 +135,20 @@ interface Props {
 
 export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
   const t = useTranslations("settings.autoSearch");
+  const prevCronRef = useRef(value.autoSearchCronExpression);
   const { value: intervalValue, unit: intervalUnit } = minutesToDisplay(
     value.autoSearchIntervalMinutes,
   );
   const cronPreview = useCronPreview(value.autoSearchCronExpression);
-  const cronError = cronPreview.isError;
+  const debouncedCron = useDebouncedValue(value.autoSearchCronExpression, 400);
+  const trimmedCron = debouncedCron.trim();
+  const cronFieldCount = trimmedCron.split(/\s+/).length;
+  const isAtAlias = /^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(
+    trimmedCron,
+  );
+  const cronError =
+    (trimmedCron !== "" && !isAtAlias && cronFieldCount !== 5) ||
+    cronPreview.isError;
 
   const scopeLabel: Record<AutoSearchScope, string> = {
     missing: t("scopeMissing"),
@@ -193,6 +228,7 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
                       inputMode="numeric"
                       value={intervalValue}
                       disabled={disabled}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const v = Math.max(
                           1,
@@ -254,21 +290,31 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
                 ))}
               </div>
               <div className="space-y-1.5">
-                <FormField id="auto-search-cron" label={t("cronLabel")}>
+                <FormField
+                  id="auto-search-cron"
+                  label={t("cronLabel")}
+                  error={cronError ? t("cronInvalid") : undefined}
+                >
                   <Input
                     id="auto-search-cron"
                     value={value.autoSearchCronExpression}
                     placeholder={t("cronPlaceholder")}
+                    maxLength={80}
                     disabled={disabled}
-                    className={cronError ? "border-destructive" : ""}
-                    onChange={(e) =>
-                      onChange({ autoSearchCronExpression: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const sanitized = e.target.value.replace(
+                        /[^0-9A-Za-z*/?\-,#@\s]/g,
+                        "",
+                      );
+                      const formatted = autoFormatCron(
+                        sanitized,
+                        prevCronRef.current,
+                      );
+                      prevCronRef.current = formatted;
+                      onChange({ autoSearchCronExpression: formatted });
+                    }}
                   />
                 </FormField>
-                {cronError && (
-                  <p className="text-destructive text-xs">{t("cronInvalid")}</p>
-                )}
                 {!cronError && cronPreview.data && (
                   <p className="text-muted-foreground text-xs">
                     {t("cronNextPreview", {
@@ -278,6 +324,17 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
                     })}
                   </p>
                 )}
+                <p className="text-muted-foreground text-xs">
+                  {t("cronHint")}{" "}
+                  <a
+                    href="https://crontab.guru"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    crontab.guru
+                  </a>
+                </p>
               </div>
             </TabsContent>
           </Tabs>
@@ -285,9 +342,11 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
           <FormField
             id="auto-search-batch"
             label={t("batchLimitLabel")}
-            description={t("batchLimitHelper", {
-              count: value.autoSearchBatchLimit,
-            })}
+            description={
+              value.autoSearchBatchLimit === 0
+                ? t("batchLimitHelperZero")
+                : t("batchLimitHelper", { count: value.autoSearchBatchLimit })
+            }
           >
             <Input
               id="auto-search-batch"
@@ -297,6 +356,7 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
               inputMode="numeric"
               value={value.autoSearchBatchLimit}
               disabled={disabled}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => {
                 const v = Math.max(
                   0,
@@ -393,6 +453,7 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
               inputMode="numeric"
               value={value.autoSearchCooldownHours}
               disabled={disabled}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => {
                 const v = Math.max(
                   0,

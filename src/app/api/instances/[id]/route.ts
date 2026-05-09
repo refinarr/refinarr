@@ -57,9 +57,15 @@ export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
     update.autoSearchScheduleMode === "cron" &&
     update.autoSearchCronExpression
   ) {
-    const fields = update.autoSearchCronExpression.trim().split(/\s+/);
-    if (fields.length !== 5)
-      throw badRequest("Invalid cron expression", "INVALID_CRON");
+    const trimmedExpr = update.autoSearchCronExpression.trim();
+    const isAtAlias = /^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(
+      trimmedExpr,
+    );
+    if (!isAtAlias) {
+      const fields = trimmedExpr.split(/\s+/);
+      if (fields.length !== 5)
+        throw badRequest("Invalid cron expression", "INVALID_CRON");
+    }
     try {
       CronExpressionParser.parse(update.autoSearchCronExpression);
     } catch {
