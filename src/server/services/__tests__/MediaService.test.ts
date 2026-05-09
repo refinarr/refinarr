@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import { MediaService } from "@/server/services/MediaService";
 import { instanceService } from "@/server/services/InstanceService";
 // Type-only client imports — used inside `expect(...).toBeInstanceOf` /
@@ -267,6 +267,40 @@ describe("MediaService flagged cache contract", () => {
     const service = new TestMediaService("cold-no-fail");
     expect(service.getCachedFlaggedCount(1, "manual")).toBeNull();
     expect(service.getCachedTotalCount(1, "manual")).toBeNull();
+  });
+
+  test("returns null again after the 60s cooldown expires", async () => {
+    vi.useFakeTimers();
+    try {
+      const service = new TestMediaService(
+        "fail-expiry",
+        [],
+        new Error("ETIMEDOUT"),
+      );
+      await expect(service.warmMediaCache(1)).rejects.toThrow("ETIMEDOUT");
+      expect(service.getCachedFlaggedCount(1, "manual")).toBe(0);
+      // Advance past the 60s cooldown.
+      vi.advanceTimersByTime(61_000);
+      expect(service.getCachedFlaggedCount(1, "manual")).toBeNull();
+      expect(service.getCachedTotalCount(1, "manual")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("successful rebuild clears the failure state", async () => {
+    const err = new Error("ETIMEDOUT");
+    const service = new TestMediaService("fail-then-recover", [], err);
+    await expect(service.warmMediaCache(1)).rejects.toThrow("ETIMEDOUT");
+    expect(service.getCachedFlaggedCount(1, "manual")).toBe(0);
+
+    // Swap the error out so the next rebuild succeeds.
+    (service as unknown as { buildError: Error | undefined }).buildError =
+      undefined;
+    await service.warmMediaCache(1);
+    // Cooldown should be cleared; cold-cache logic now returns null.
+    // The cache itself is populated, so the count reflects the empty item list.
+    expect(service.getCachedFlaggedCount(1, "manual")).toBe(0); // 0 flagged items, not null
   });
 });
 

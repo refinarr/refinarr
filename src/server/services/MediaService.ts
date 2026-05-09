@@ -370,6 +370,14 @@ export abstract class MediaService<TItem extends MediaItem> {
     return null;
   }
 
+  private markBuildFailure(key: string): void {
+    this.buildFailures.set(key, Date.now());
+  }
+
+  private clearBuildFailure(key: string): void {
+    this.buildFailures.delete(key);
+  }
+
   warmMediaCache(instanceId: number): Promise<unknown> {
     return this.getForWarm(instanceId, {
       page: 1,
@@ -412,13 +420,17 @@ export abstract class MediaService<TItem extends MediaItem> {
       // dataCache.rebuild guard ensures concurrent stale reads share one
       // rebuild rather than firing parallel upstream calls.
       if (!dataCache.isRebuilding(cacheKey)) {
-        void dataCache.rebuild(cacheKey, build).catch((err) => {
-          appLogger.error(backgroundErrorMessage, {
-            source: logSource,
-            err,
-            context: { instanceId, cacheKey },
-          });
-        });
+        void dataCache.rebuild(cacheKey, build).then(
+          () => { this.clearBuildFailure(cacheKey); },
+          (err) => {
+            this.markBuildFailure(cacheKey);
+            appLogger.error(backgroundErrorMessage, {
+              source: logSource,
+              err,
+              context: { instanceId, cacheKey },
+            });
+          },
+        );
       }
       return result.value;
     }
@@ -426,9 +438,11 @@ export abstract class MediaService<TItem extends MediaItem> {
     // Miss — block on rebuild. Concurrent miss callers share the same
     // promise via dataCache.rebuild.
     try {
-      return await dataCache.rebuild(cacheKey, build);
+      const value = await dataCache.rebuild(cacheKey, build);
+      this.clearBuildFailure(cacheKey);
+      return value;
     } catch (err) {
-      this.buildFailures.set(cacheKey, Date.now());
+      this.markBuildFailure(cacheKey);
       throw err;
     }
   }

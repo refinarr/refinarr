@@ -105,15 +105,46 @@ export abstract class ArrClient {
   protected async fetch<T>(path: string, init?: RequestInit): Promise<T> {
     await arrRateLimiter.acquire(this.instanceId);
     const url = `${this.baseUrl}/api/v3${path}`;
-    const res = await globalThis.fetch(url, {
-      ...init,
-      signal: init?.signal ?? AbortSignal.timeout(ARR_FETCH_TIMEOUT_MS),
-      headers: {
-        "X-Api-Key": this.apiKey,
-        "Content-Type": "application/json",
-        ...init?.headers,
-      },
-    });
+
+    // Always enforce the 10s ceiling even when the caller passes its own signal.
+    // AbortSignal.any() isn't available until Node 22; for broader compatibility
+    // we compose manually: the timeout fires after ARR_FETCH_TIMEOUT_MS and a
+    // caller abort propagates immediately, with the timeout cleared either way.
+    const ac = new AbortController();
+    const timeoutId = setTimeout(
+      () => ac.abort(new DOMException("TimeoutError", "TimeoutError")),
+      ARR_FETCH_TIMEOUT_MS,
+    );
+    if (init?.signal) {
+      if (init.signal.aborted) {
+        clearTimeout(timeoutId);
+        ac.abort(init.signal.reason);
+      } else {
+        init.signal.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timeoutId);
+            ac.abort(init.signal!.reason);
+          },
+          { once: true },
+        );
+      }
+    }
+
+    let res: Response;
+    try {
+      res = await globalThis.fetch(url, {
+        ...init,
+        signal: ac.signal,
+        headers: {
+          "X-Api-Key": this.apiKey,
+          "Content-Type": "application/json",
+          ...init?.headers,
+        },
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");

@@ -70,12 +70,16 @@ describe("ArrClient.fetch timeout", () => {
     expect(init?.signal).toBeInstanceOf(AbortSignal);
   });
 
-  test("respects a caller-supplied signal over the default timeout", async () => {
+  test("propagates a caller-supplied abort to the composed signal", async () => {
     const client = new TestClient(stubInstance);
-    const callerSignal = AbortSignal.timeout(60_000);
-    await client.callFetch("/system/status", { signal: callerSignal });
+    const ac = new AbortController();
+    await client.callFetch("/system/status", { signal: ac.signal });
     const [, init] = fetchSpy.mock.calls[0];
-    expect(init?.signal).toBe(callerSignal);
+    const composedSignal = init?.signal as AbortSignal;
+    expect(composedSignal).toBeInstanceOf(AbortSignal);
+    expect(composedSignal.aborted).toBe(false);
+    ac.abort();
+    expect(composedSignal.aborted).toBe(true);
   });
 });
 
