@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Settings } from "lucide-react";
+import { ArrowRight, RefreshCw, Settings } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { Skeleton } from "@/client/components/ui/skeleton";
 import { InstanceErrorSummary } from "@/client/components/history/InstanceErrorSummary";
 import { useInstanceHealth } from "@/client/hooks/data/useInstances";
+import { formatRelative } from "@/client/lib/format-relative";
 import type { DashboardInstanceSummary } from "@/shared/types/api";
 import type { ArrType } from "@/shared/types/models";
 import { ARR_LIBRARY_ROUTE } from "@/shared/arr-type";
@@ -57,6 +58,7 @@ function getHealthState(
 
 export function InstanceSummaryCard({ instance }: Props) {
   const t = useTranslations("dashboard.instanceCard");
+  const tTime = useTranslations("time");
   const {
     data: health,
     isLoading: healthLoading,
@@ -129,12 +131,24 @@ export function InstanceSummaryCard({ instance }: Props) {
 
         <div className="flex items-center text-xs">
           <InstanceErrorSummary instanceId={instance.id} />
-          <Link
-            href="/settings"
-            className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-1"
-          >
-            <Settings className="size-3" /> {t("settings")}
-          </Link>
+          <div className="ml-auto flex items-center gap-3">
+            {instance.autoSearchEnabled && (
+              <span className="text-muted-foreground flex items-center gap-1">
+                <RefreshCw className="size-3" />
+                {instance.autoSearchLastRunAt
+                  ? t("autoSearchLastRun", {
+                      time: formatRelative(instance.autoSearchLastRunAt, tTime),
+                    })
+                  : t("autoSearchNeverRun")}
+              </span>
+            )}
+            <Link
+              href="/settings"
+              className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
+              <Settings className="size-3" /> {t("settings")}
+            </Link>
+          </div>
         </div>
       </CardContent>
     </Card>

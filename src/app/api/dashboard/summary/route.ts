@@ -47,6 +47,7 @@ export const GET = createApiHandler(async () => {
         name: inst.name,
         enabled: inst.enabled,
         autoSearchEnabled: inst.autoSearchEnabled,
+        autoSearchLastRunAt: inst.autoSearchLastRunAt?.toISOString() ?? null,
         flaggedCount,
         totalCount,
         failedActionsCount: failed.length,

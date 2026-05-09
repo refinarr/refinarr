@@ -5,6 +5,7 @@ import { KeyRound, Palette, Plus, Server, Settings, User } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { AddInstanceDialog } from "@/client/components/settings/AddInstanceDialog";
 import { ApiKeyCard } from "@/client/components/settings/ApiKeyCard";
+import { DebugModeToggle } from "@/client/components/settings/DebugModeToggle";
 import { DryRunToggle } from "@/client/components/settings/DryRunToggle";
 import { InstanceCard } from "@/client/components/settings/InstanceCard";
 import { PasswordChangeCard } from "@/client/components/settings/PasswordChangeCard";
@@ -159,6 +160,7 @@ export default function SettingsPage() {
                 {t("sections.general")}
               </h2>
               <DryRunToggle prominent />
+              <DebugModeToggle />
             </section>
 
             <section id="appearance" className={sectionClass("appearance")}>

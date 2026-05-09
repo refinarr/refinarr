@@ -142,6 +142,7 @@ export interface DashboardInstanceSummary {
   name: string;
   enabled: boolean;
   autoSearchEnabled: boolean;
+  autoSearchLastRunAt: string | null;
   // null when the media cache is cold for this instance — the dashboard
   // avoids triggering an expensive build inline. The route fires a
   // background warm; counts appear on the next dashboard refetch.

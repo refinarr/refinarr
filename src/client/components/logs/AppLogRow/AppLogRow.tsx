@@ -11,10 +11,28 @@ interface Props {
   entry: AppLogEntry;
 }
 
+interface ApiContext {
+  method?: string;
+  path?: string;
+  status?: number;
+}
+
+function parseApiContext(ctx: string | null): ApiContext | null {
+  if (!ctx) return null;
+  try {
+    const parsed = JSON.parse(ctx) as ApiContext;
+    if (parsed.method || parsed.path || parsed.status) return parsed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function AppLogRow({ entry }: Props) {
   const [expanded, setExpanded] = useState(false);
   const formatted = formatContext(entry.context);
   const hasContext = formatted !== null;
+  const apiCtx = parseApiContext(entry.context);
   const toggleExpanded = () => {
     if (hasContext) setExpanded((v) => !v);
   };
@@ -59,8 +77,26 @@ export function AppLogRow({ entry }: Props) {
             </Badge>
           )}
         </td>
-        <td className="px-3 py-2 align-middle text-sm font-medium">
-          {entry.message}
+        <td className="px-3 py-2 align-middle text-sm">
+          <span className="font-medium">{entry.message}</span>
+          {apiCtx?.method && apiCtx?.path && (
+            <span className="text-muted-foreground ml-2 font-mono text-xs">
+              {apiCtx.method} {apiCtx.path}
+              {apiCtx.status && (
+                <span
+                  className={
+                    apiCtx.status >= 500
+                      ? "text-critical ml-1"
+                      : apiCtx.status >= 400
+                        ? "text-warning ml-1"
+                        : "ml-1"
+                  }
+                >
+                  {apiCtx.status}
+                </span>
+              )}
+            </span>
+          )}
         </td>
       </tr>
       {expanded && formatted && (

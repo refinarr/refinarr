@@ -6,6 +6,7 @@ const RETENTION_CAP = Number(process.env.LOG_RETENTION_CAP) || 5000;
 interface AppLogFilter {
   level?: LogLevel;
   q?: string;
+  source?: string;
 }
 
 export class AppLogRepository extends BaseRepository<AppLogEntry> {
@@ -28,6 +29,7 @@ export class AppLogRepository extends BaseRepository<AppLogEntry> {
   ): Promise<{ items: AppLogEntry[]; total: number }> {
     const where = {
       ...(filter.level ? { level: filter.level } : {}),
+      ...(filter.source ? { source: filter.source } : {}),
       ...(filter.q ? { message: { contains: filter.q } } : {}),
     };
 
@@ -46,11 +48,12 @@ export class AppLogRepository extends BaseRepository<AppLogEntry> {
 
   async findSince(
     lastId: number,
-    filter?: { level?: LogLevel | null; q?: string },
+    filter?: { level?: LogLevel | null; q?: string; source?: string },
   ): Promise<AppLogEntry[]> {
     const where = {
       id: { gt: lastId },
       ...(filter?.level ? { level: filter.level } : {}),
+      ...(filter?.source ? { source: filter.source } : {}),
       ...(filter?.q ? { message: { contains: filter.q } } : {}),
     };
     return this.db.appLog.findMany({
@@ -62,10 +65,11 @@ export class AppLogRepository extends BaseRepository<AppLogEntry> {
 
   async findLatest(
     limit: number,
-    filter?: { level?: LogLevel | null; q?: string },
+    filter?: { level?: LogLevel | null; q?: string; source?: string },
   ): Promise<AppLogEntry[]> {
     const where = {
       ...(filter?.level ? { level: filter.level } : {}),
+      ...(filter?.source ? { source: filter.source } : {}),
       ...(filter?.q ? { message: { contains: filter.q } } : {}),
     };
     const rows = await this.db.appLog.findMany({

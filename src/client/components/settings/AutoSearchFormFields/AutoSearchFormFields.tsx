@@ -221,29 +221,55 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
               </div>
             </TabsContent>
 
-            <TabsContent value="cron" className="mt-3 space-y-1.5">
-              <FormField id="auto-search-cron" label={t("cronLabel")}>
-                <Input
-                  id="auto-search-cron"
-                  value={value.autoSearchCronExpression}
-                  placeholder={t("cronPlaceholder")}
-                  disabled={disabled}
-                  className={cronError ? "border-destructive" : ""}
-                  onChange={(e) =>
-                    onChange({ autoSearchCronExpression: e.target.value })
-                  }
-                />
-              </FormField>
-              {cronError && (
-                <p className="text-destructive text-xs">{t("cronInvalid")}</p>
-              )}
-              {!cronError && cronPreview.data && (
-                <p className="text-muted-foreground text-xs">
-                  {t("cronNextPreview", {
-                    next: cronPreview.data.next.map(formatCronTime).join(" · "),
-                  })}
-                </p>
-              )}
+            <TabsContent value="cron" className="mt-3 space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    "cronPresetNightly",
+                    "cronPresetTwiceDaily",
+                    "cronPresetWeekends",
+                    "cronPresetHourly",
+                  ] as const
+                ).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() =>
+                      onChange({ autoSearchCronExpression: t(`${key}Expr`) })
+                    }
+                    className="border-input hover:bg-accent rounded-md border px-2 py-0.5 text-xs disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    {t(key)}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <FormField id="auto-search-cron" label={t("cronLabel")}>
+                  <Input
+                    id="auto-search-cron"
+                    value={value.autoSearchCronExpression}
+                    placeholder={t("cronPlaceholder")}
+                    disabled={disabled}
+                    className={cronError ? "border-destructive" : ""}
+                    onChange={(e) =>
+                      onChange({ autoSearchCronExpression: e.target.value })
+                    }
+                  />
+                </FormField>
+                {cronError && (
+                  <p className="text-destructive text-xs">{t("cronInvalid")}</p>
+                )}
+                {!cronError && cronPreview.data && (
+                  <p className="text-muted-foreground text-xs">
+                    {t("cronNextPreview", {
+                      next: cronPreview.data.next
+                        .map(formatCronTime)
+                        .join(" · "),
+                    })}
+                  </p>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
 

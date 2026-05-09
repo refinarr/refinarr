@@ -150,7 +150,9 @@
       "flaggedSeriesNoun": "{count, plural, one {flagged series} other {flagged series}}",
       "flaggedOfTotal": "{flagged} of {total}",
       "flaggedOfTotalUnavailable": "Counts unavailable",
-      "settings": "Settings"
+      "settings": "Settings",
+      "autoSearchLastRun": "auto {time}",
+      "autoSearchNeverRun": "auto never run"
     },
     "fleet": {
       "title": "Auto-search",
@@ -379,7 +381,23 @@
       "source": "Source",
       "message": "Message"
     },
-    "empty": "No logs recorded yet — application logs will appear here as the app runs."
+    "empty": "No logs recorded yet — application logs will appear here as the app runs.",
+    "sourceAll": "All sources",
+    "source": {
+      "api": "API",
+      "client": "Client",
+      "auth": "Auth",
+      "db": "Database",
+      "arr-client": "Arr client",
+      "instance-service": "Instance",
+      "movie-service": "Movies",
+      "series-service": "Series",
+      "media-action": "Actions",
+      "search-queue": "Search queue",
+      "search-worker": "Search worker",
+      "status-poller": "Status poller",
+      "auto-run": "Auto-search"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -461,6 +479,14 @@
       "cronPlaceholder": "0 3 * * *",
       "cronInvalid": "Invalid cron expression (5-field only, e.g. \"0 3 * * *\")",
       "cronNextPreview": "Next: {next}",
+      "cronPresetNightly": "Nightly",
+      "cronPresetNightlyExpr": "0 3 * * *",
+      "cronPresetTwiceDaily": "Twice daily",
+      "cronPresetTwiceDailyExpr": "0 6,18 * * *",
+      "cronPresetWeekends": "Weekends",
+      "cronPresetWeekendsExpr": "0 3 * * 0,6",
+      "cronPresetHourly": "Hourly",
+      "cronPresetHourlyExpr": "0 * * * *",
       "batchLimitLabel": "Items per cycle",
       "batchLimitHelper": "Up to {count} items searched per run",
       "monitoredOnlyLabel": "Monitored items only",
@@ -532,6 +558,10 @@
       "loading": "Loading Custom Formats…",
       "empty": "No Custom Formats found in {name}.",
       "selectedCount": "{count} selected"
+    },
+    "debugMode": {
+      "label": "Debug mode",
+      "helper": "Shows extra filters on the Logs page and verbose source information."
     },
     "dryRun": {
       "label": "Dry Run Mode",
@@ -643,6 +673,10 @@
     "logs": {
       "cleared": "Logs cleared",
       "clearFailed": "Couldn't clear logs"
+    },
+    "debugMode": {
+      "enabled": "Debug mode on",
+      "disabled": "Debug mode off"
     },
     "dryRun": {
       "enabled": "Dry Run mode enabled",
