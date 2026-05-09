@@ -4,7 +4,7 @@ import { parseJson } from "@/server/lib/api-errors";
 import { seriesService } from "@/server/services/SeriesService";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { dryRunService } from "@/server/services/DryRunService";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 import { sonarrDeleteSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {

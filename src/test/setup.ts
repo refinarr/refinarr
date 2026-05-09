@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 import { cleanup } from "@testing-library/react";
 import { prisma } from "@/server/lib/db";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 import { mswServer } from "@/test/msw";
 
 beforeAll(() => {

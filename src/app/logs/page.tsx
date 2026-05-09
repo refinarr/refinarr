@@ -52,7 +52,7 @@ export default function LogsPage() {
       destructive: true,
     });
     if (!ok) return;
-    await runClear(undefined as unknown as void);
+    await runClear();
     reconnect();
   };
 

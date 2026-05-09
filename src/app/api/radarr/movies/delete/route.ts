@@ -4,7 +4,7 @@ import { parseJson } from "@/server/lib/api-errors";
 import { movieService } from "@/server/services/MovieService";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { dryRunService } from "@/server/services/DryRunService";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 import { radarrDeleteSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {

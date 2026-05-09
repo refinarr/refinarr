@@ -2,7 +2,7 @@ import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { redactString } from "@/server/lib/redact";
-import { arrRateLimiter } from "@/server/lib/ArrRateLimiter";
+import { arrRateLimiter } from "@/server/lib/arr-rate-limiter";
 import type { Instance } from "@/shared/types/models";
 
 // Node's fetch wraps the underlying network error and surfaces a generic
@@ -24,6 +24,12 @@ export function describeFetchError(e: unknown): string {
   }
   return e.message;
 }
+
+// 10 s is generous for a LAN-hosted *arr instance. Without a bound,
+// an unreachable instance causes fetch() to hang until the OS-level TCP
+// timeout fires (minutes), which blocks DataCache.rebuild() and makes
+// the dashboard skeleton spin forever.
+const ARR_FETCH_TIMEOUT_MS = 10_000;
 
 // Bounded fetch — pageSize 200, single page only. Stale event windows
 // resolve via `since` filtering; we never paginate the upstream's full
@@ -97,16 +103,48 @@ export abstract class ArrClient {
   }
 
   protected async fetch<T>(path: string, init?: RequestInit): Promise<T> {
-    await arrRateLimiter.acquire(this.instanceId);
+    await arrRateLimiter.acquire(this.instanceId, init?.signal ?? undefined);
     const url = `${this.baseUrl}/api/v3${path}`;
-    const res = await globalThis.fetch(url, {
-      ...init,
-      headers: {
-        "X-Api-Key": this.apiKey,
-        "Content-Type": "application/json",
-        ...init?.headers,
-      },
-    });
+
+    // Always enforce the 10s ceiling even when the caller passes its own signal.
+    // AbortSignal.any() isn't available until Node 22; for broader compatibility
+    // we compose manually: the timeout fires after ARR_FETCH_TIMEOUT_MS and a
+    // caller abort propagates immediately, with the timeout cleared either way.
+    const ac = new AbortController();
+    const timeoutId = setTimeout(
+      () => ac.abort(new DOMException("TimeoutError", "TimeoutError")),
+      ARR_FETCH_TIMEOUT_MS,
+    );
+    let onCallerAbort: (() => void) | undefined;
+    if (init?.signal) {
+      if (init.signal.aborted) {
+        clearTimeout(timeoutId);
+        ac.abort(init.signal.reason);
+      } else {
+        onCallerAbort = () => {
+          clearTimeout(timeoutId);
+          ac.abort(init.signal!.reason);
+        };
+        init.signal.addEventListener("abort", onCallerAbort, { once: true });
+      }
+    }
+
+    let res: Response;
+    try {
+      res = await globalThis.fetch(url, {
+        ...init,
+        signal: ac.signal,
+        headers: {
+          "X-Api-Key": this.apiKey,
+          "Content-Type": "application/json",
+          ...init?.headers,
+        },
+      });
+    } finally {
+      clearTimeout(timeoutId);
+      if (onCallerAbort)
+        init?.signal?.removeEventListener("abort", onCallerAbort);
+    }
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");

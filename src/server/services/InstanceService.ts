@@ -7,7 +7,7 @@ import { searchWorker } from "@/server/lib/search-worker";
 import { statusPoller } from "@/server/lib/status-poller";
 import { autoRunner } from "@/server/lib/auto-runner";
 import { searchQueueService } from "@/server/services/SearchQueueService";
-import { arrRateLimiter } from "@/server/lib/ArrRateLimiter";
+import { arrRateLimiter } from "@/server/lib/arr-rate-limiter";
 import { eventBus } from "@/server/lib/event-bus";
 import { DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
 import type {

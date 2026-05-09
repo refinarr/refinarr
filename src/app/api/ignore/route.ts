@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { parseJson, positiveInt } from "@/server/lib/api-errors";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 import { ignoreCreateSchema } from "@/shared/types/schemas";
 
 export const GET = createApiHandler(async (req: NextRequest) => {

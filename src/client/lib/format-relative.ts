@@ -27,6 +27,7 @@ export function formatRelative(date: Date | string | number, t: T): string {
   return t("daysAgo", { n: days });
 }
 
+/** Milliseconds until an ISO timestamp; 0 if it's already past or invalid. */
 export function msUntil(isoString: string): number {
   const t = new Date(isoString).getTime();
   return Number.isFinite(t) ? Math.max(0, t - Date.now()) : 0;

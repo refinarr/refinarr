@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { CronExpressionParser } from "cron-parser";
 import { createApiHandler } from "@/server/lib/handler";
 import { instanceService } from "@/server/services/InstanceService";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 import {
   badRequest,
   notFound,

@@ -11,10 +11,12 @@ class TokenBucket {
     this.lastRefillMs = Date.now();
   }
 
-  async acquire(): Promise<void> {
+  async acquire(signal?: AbortSignal): Promise<void> {
     // Chain callers into a FIFO queue via promise tail — each caller waits
     // for the previous to finish before entering its own timing loop, so no
     // two callers race to consume the same refilled token.
+    signal?.throwIfAborted();
+
     let release!: () => void;
     const prev = this.tail;
     this.tail = new Promise<void>((resolve) => {
@@ -23,7 +25,11 @@ class TokenBucket {
 
     await prev;
     try {
-      while (true) {
+      // Cap at 3 iterations — correct waitMs math guarantees a token after
+      // one sleep; a second is insurance against sub-ms clock skew. Exhausting
+      // all three means something is structurally broken (bug, not wait).
+      for (let i = 0; i < 3; i++) {
+        signal?.throwIfAborted();
         this.refill();
         if (this.tokens >= 1) {
           this.tokens -= 1;
@@ -33,8 +39,21 @@ class TokenBucket {
           1,
           Math.ceil((1 - this.tokens) / this.refillPerMs),
         );
-        await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
+        await new Promise<void>((resolve, reject) => {
+          const onAbort = () => {
+            clearTimeout(t);
+            reject(signal!.reason);
+          };
+          const t = setTimeout(() => {
+            signal?.removeEventListener("abort", onAbort);
+            resolve();
+          }, waitMs);
+          signal?.addEventListener("abort", onAbort, { once: true });
+        });
       }
+      throw new Error(
+        "ArrRateLimiter: token not acquired after 3 iterations — this is a bug",
+      );
     } finally {
       release();
     }
@@ -74,13 +93,13 @@ export class ArrRateLimiter {
     this.capacity = ratePerSec * 2;
   }
 
-  async acquire(instanceId: number): Promise<void> {
+  async acquire(instanceId: number, signal?: AbortSignal): Promise<void> {
     let bucket = this.buckets.get(instanceId);
     if (!bucket) {
       bucket = new TokenBucket(this.capacity, this.refillPerMs);
       this.buckets.set(instanceId, bucket);
     }
-    await bucket.acquire();
+    await bucket.acquire(signal);
   }
 
   /** Remove the bucket when an instance is deleted — frees memory. */

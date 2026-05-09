@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, vi, afterEach } from "vitest";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 
 beforeEach(() => {
   dataCache.clear();
