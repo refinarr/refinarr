@@ -25,6 +25,12 @@ export function describeFetchError(e: unknown): string {
   return e.message;
 }
 
+// 10 s is generous for a LAN-hosted *arr instance. Without a bound,
+// an unreachable instance causes fetch() to hang until the OS-level TCP
+// timeout fires (minutes), which blocks DataCache.rebuild() and makes
+// the dashboard skeleton spin forever.
+const ARR_FETCH_TIMEOUT_MS = 10_000;
+
 // Bounded fetch — pageSize 200, single page only. Stale event windows
 // resolve via `since` filtering; we never paginate the upstream's full
 // history (avoids unbounded memory + wall-clock).
@@ -101,6 +107,7 @@ export abstract class ArrClient {
     const url = `${this.baseUrl}/api/v3${path}`;
     const res = await globalThis.fetch(url, {
       ...init,
+      signal: init?.signal ?? AbortSignal.timeout(ARR_FETCH_TIMEOUT_MS),
       headers: {
         "X-Api-Key": this.apiKey,
         "Content-Type": "application/json",
