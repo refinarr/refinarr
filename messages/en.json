@@ -152,7 +152,7 @@
       "flaggedOfTotalUnavailable": "Counts unavailable",
       "settings": "Settings",
       "autoSearchLastRun": "auto {time}",
-      "autoSearchNeverRun": "auto never run"
+      "autoSearchNeverRun": "auto never ran"
     },
     "fleet": {
       "title": "Auto-search",

@@ -1,4 +1,5 @@
 import { encryptSecret, decryptSecret, isEncrypted } from "@/server/lib/crypto";
+import { isAutoSearchScoringMode } from "@/shared/scoring-mode";
 import type {
   ArrType,
   AutoSearchPickStrategy,
@@ -35,11 +36,8 @@ interface RawInstanceRow {
   autoSearchScoringMode: string;
 }
 
-const VALID_AUTO_SEARCH_SCORING_MODES = new Set<string>(["inherit", "profile"]);
 function toAutoSearchScoringMode(v: string): AutoSearchScoringMode {
-  return VALID_AUTO_SEARCH_SCORING_MODES.has(v)
-    ? (v as AutoSearchScoringMode)
-    : "inherit";
+  return isAutoSearchScoringMode(v) ? v : "inherit";
 }
 
 function toInstance(row: RawInstanceRow): Instance {

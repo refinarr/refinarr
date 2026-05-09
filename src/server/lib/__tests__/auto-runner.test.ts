@@ -727,7 +727,8 @@ describe("buildAutoSearchStatus", () => {
   });
 
   test("interval mode: nextRunAt = lastRunAt + intervalMinutes (exact ms)", () => {
-    const lastRunAt = new Date("2025-06-01T10:00:00Z");
+    // Use a recent lastRunAt so nextRunAt (lastRunAt + 120 min) is in the future.
+    const lastRunAt = new Date(Date.now() - 30 * 60 * 1000);
     const status = buildAutoSearchStatus(
       {
         ...baseInst,
@@ -741,12 +742,12 @@ describe("buildAutoSearchStatus", () => {
     expect(new Date(status.nextRunAt!).getTime()).toBe(expected);
   });
 
-  test("interval mode + lastRunAt=null: nextRunAt is in the past (fires immediately)", () => {
+  test("interval mode + lastRunAt=null: nextRunAt is null (fires immediately, sentinel hidden)", () => {
     const status = buildAutoSearchStatus(
       { ...baseInst, autoSearchLastRunAt: null },
       false,
     );
-    expect(new Date(status.nextRunAt!).getTime()).toBeLessThan(Date.now());
+    expect(status.nextRunAt).toBeNull();
   });
 
   test("running flag is passed through — true and false both work", () => {

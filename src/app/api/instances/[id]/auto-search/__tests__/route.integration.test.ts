@@ -55,7 +55,7 @@ describe("GET /api/instances/[id]/auto-search", () => {
 
   // ── interval mode ────────────────────────────────────────────────────────
 
-  test("enabled interval mode + lastRunAt=null: nextRunAt is ISO string (epoch + interval)", async () => {
+  test("enabled interval mode + lastRunAt=null: nextRunAt is null (fires immediately, epoch sentinel hidden)", async () => {
     const created = await postInstance(
       postReq({
         ...baseInstance,
@@ -71,8 +71,7 @@ describe("GET /api/instances/[id]/auto-search", () => {
     const body = await res.json();
     expect(body.enabled).toBe(true);
     expect(body.scheduleMode).toBe("interval");
-    expect(typeof body.nextRunAt).toBe("string");
-    expect(body.nextRunAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(body.nextRunAt).toBeNull();
     await instanceService.delete(id);
   });
 

@@ -100,7 +100,7 @@ export function buildAutoSearchStatus(
     }
   })();
 
-  const nextRunAt = instance.autoSearchEnabled
+  const rawNextRunAt = instance.autoSearchEnabled
     ? computeNextRun({
         mode: instance.autoSearchScheduleMode,
         intervalMinutes: instance.autoSearchIntervalMinutes,
@@ -108,6 +108,11 @@ export function buildAutoSearchStatus(
         lastRunAt: instance.autoSearchLastRunAt,
       })
     : null;
+  // Interval mode with no lastRunAt returns an epoch-based timestamp that is
+  // already in the past (fires immediately). Expose null so the client doesn't
+  // display a 1970 date.
+  const nextRunAt =
+    rawNextRunAt && rawNextRunAt.getTime() > Date.now() ? rawNextRunAt : null;
 
   const pausedUntil = instance.autoSearchPausedUntil
     ? new Date(instance.autoSearchPausedUntil)
