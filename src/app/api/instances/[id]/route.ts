@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CronExpressionParser } from "cron-parser";
 import { createApiHandler } from "@/server/lib/handler";
 import { instanceService } from "@/server/services/InstanceService";
 import { dataCache } from "@/server/lib/DataCache";
-import { notFound, parseJson, positiveInt } from "@/server/lib/api-errors";
+import {
+  badRequest,
+  notFound,
+  parseJson,
+  positiveInt,
+} from "@/server/lib/api-errors";
 import { instanceUpdateSchema } from "@/shared/types/schemas";
 import type { Instance } from "@/shared/types/models";
-import type { InstanceListItem } from "@/shared/types/api";
+import type { PublicInstance } from "@/shared/types/api";
 
-function publicView(i: Instance): InstanceListItem {
+function publicView(i: Instance): PublicInstance {
   return {
     id: i.id,
     type: i.type,
@@ -18,6 +24,15 @@ function publicView(i: Instance): InstanceListItem {
     searchesPerHour: i.searchesPerHour,
     showAllMedia: i.showAllMedia,
     createdAt: i.createdAt,
+    autoSearchEnabled: i.autoSearchEnabled,
+    autoSearchScheduleMode: i.autoSearchScheduleMode,
+    autoSearchIntervalMinutes: i.autoSearchIntervalMinutes,
+    autoSearchCronExpression: i.autoSearchCronExpression,
+    autoSearchBatchLimit: i.autoSearchBatchLimit,
+    autoSearchLastRunAt: i.autoSearchLastRunAt,
+    autoSearchMonitoredOnly: i.autoSearchMonitoredOnly,
+    autoSearchScope: i.autoSearchScope,
+    autoSearchPickStrategy: i.autoSearchPickStrategy,
   };
 }
 
@@ -35,6 +50,19 @@ export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
     instanceUpdateSchema,
     "Invalid instance update",
   );
+  if (
+    update.autoSearchScheduleMode === "cron" &&
+    update.autoSearchCronExpression
+  ) {
+    const fields = update.autoSearchCronExpression.trim().split(/\s+/);
+    if (fields.length !== 5)
+      throw badRequest("Invalid cron expression", "INVALID_CRON");
+    try {
+      CronExpressionParser.parse(update.autoSearchCronExpression);
+    } catch {
+      throw badRequest("Invalid cron expression", "INVALID_CRON");
+    }
+  }
   const instance = await instanceService.update(id, update);
   // URL / API key / enabled changes mean the cached movies/series snapshot
   // points at the old upstream (or stale disabled state). Drop it so the

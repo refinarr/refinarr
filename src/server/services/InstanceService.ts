@@ -5,11 +5,19 @@ import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { searchWorker } from "@/server/lib/search-worker";
 import { statusPoller } from "@/server/lib/status-poller";
+import { autoRunner } from "@/server/lib/auto-runner";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { arrRateLimiter } from "@/server/lib/ArrRateLimiter";
 import { eventBus } from "@/server/lib/event-bus";
 import { DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
-import type { Instance, ArrType, ScoringMode } from "@/shared/types/models";
+import type {
+  AutoSearchPickStrategy,
+  AutoSearchScheduleMode,
+  AutoSearchScope,
+  Instance,
+  ArrType,
+  ScoringMode,
+} from "@/shared/types/models";
 
 export class InstanceService {
   // Catch helper for fire-and-forget worker refreshes. The instance
@@ -43,6 +51,15 @@ export class InstanceService {
     scoringMode?: ScoringMode;
     searchesPerHour?: number;
     showAllMedia?: boolean;
+    autoSearchEnabled?: boolean;
+    autoSearchScheduleMode?: AutoSearchScheduleMode;
+    autoSearchIntervalMinutes?: number;
+    autoSearchCronExpression?: string;
+    autoSearchBatchLimit?: number;
+    autoSearchLastRunAt?: Date | null;
+    autoSearchMonitoredOnly?: boolean;
+    autoSearchScope?: AutoSearchScope;
+    autoSearchPickStrategy?: AutoSearchPickStrategy;
   }): Promise<Instance> {
     assertSafeArrUrl(data.url);
     const created = await instanceRepository.create({
@@ -61,6 +78,9 @@ export class InstanceService {
     statusPoller
       .refresh(created.id, { immediate: false })
       .catch(this.logRefreshError("statusPoller", created.id));
+    autoRunner
+      .refresh(created.id)
+      .catch(this.logRefreshError("autoRunner", created.id));
     appLogger.info("Instance created", {
       source: LogSource.InstanceService,
       context: { id: created.id, name: created.name, type: created.type },
@@ -75,6 +95,7 @@ export class InstanceService {
     // (or enabled flag) takes effect immediately rather than after restart.
     searchWorker.refresh(id).catch(this.logRefreshError("searchWorker", id));
     statusPoller.refresh(id).catch(this.logRefreshError("statusPoller", id));
+    autoRunner.refresh(id).catch(this.logRefreshError("autoRunner", id));
     appLogger.info("Instance updated", {
       source: LogSource.InstanceService,
       context: { id: updated.id, name: updated.name, type: updated.type },
@@ -89,6 +110,7 @@ export class InstanceService {
     arrRateLimiter.evict(id);
     searchWorker.refresh(id).catch(this.logRefreshError("searchWorker", id));
     statusPoller.refresh(id).catch(this.logRefreshError("statusPoller", id));
+    autoRunner.refresh(id).catch(this.logRefreshError("autoRunner", id));
     eventBus.emit({ type: "queue-changed", instanceId: id });
     appLogger.info("Instance deleted", {
       source: LogSource.InstanceService,
@@ -133,6 +155,15 @@ export class InstanceService {
       searchesPerHour: 20,
       showAllMedia: false,
       createdAt: new Date(),
+      autoSearchEnabled: false,
+      autoSearchScheduleMode: "interval",
+      autoSearchIntervalMinutes: 1440,
+      autoSearchCronExpression: "0 3 * * *",
+      autoSearchBatchLimit: 5,
+      autoSearchLastRunAt: null,
+      autoSearchMonitoredOnly: true,
+      autoSearchScope: "flagged",
+      autoSearchPickStrategy: "balanced",
     };
     const client = ArrClientFactory.createArrClient(transient);
     const result = await client.testConnection();

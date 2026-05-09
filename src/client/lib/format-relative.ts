@@ -1,4 +1,6 @@
-type T = (key: string, values?: Record<string, string | number>) => string;
+import type { useTranslations } from "next-intl";
+
+type T = ReturnType<typeof useTranslations<"time">>;
 
 function toMs(date: Date | string | number): number {
   if (typeof date === "number") return date;

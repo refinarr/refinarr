@@ -117,8 +117,8 @@ interface InternalShellContext {
   clearActiveFilters: () => void;
   noCfsConfigured: boolean;
   askConfirm: ReturnType<typeof useConfirm>["confirm"];
-  i18nNamespace: string;
-  confirmDeleteBulkKey: string;
+  i18nNamespace: "movies" | "shows";
+  confirmDeleteBulkKey: "confirm.deleteMovies" | "confirm.deleteSeries";
 }
 
 const ShellContext = createContext<InternalShellContext | null>(null);
@@ -147,6 +147,14 @@ function useShellContext<T extends MediaItem>(): Omit<
 // Root
 // ─────────────────────────────────────────────────────────────────────────
 
+const COLUMNS_NS: Record<
+  "movies" | "shows",
+  "movies.columns" | "shows.columns"
+> = {
+  movies: "movies.columns",
+  shows: "shows.columns",
+};
+
 interface RootProps<T extends MediaItem> {
   arrType: ArrType;
   bulkConfig: Pick<
@@ -154,8 +162,8 @@ interface RootProps<T extends MediaItem> {
     "mediaType" | "search" | "ignore" | "delete"
   >;
   useQuery: MediaDataQueryHook<T>;
-  i18nNamespace: string;
-  confirmDeleteBulkKey: string;
+  i18nNamespace: "movies" | "shows";
+  confirmDeleteBulkKey: "confirm.deleteMovies" | "confirm.deleteSeries";
   children: ReactNode;
 }
 
@@ -168,7 +176,7 @@ function Root<T extends MediaItem>({
   children,
 }: RootProps<T>) {
   const t = useTranslations(i18nNamespace);
-  const tCols = useTranslations(`${i18nNamespace}.columns`);
+  const tCols = useTranslations(COLUMNS_NS[i18nNamespace]);
   const tTime = useTranslations("time");
   const router = useRouter();
 

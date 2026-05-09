@@ -1,5 +1,12 @@
 import { encryptSecret, decryptSecret, isEncrypted } from "@/server/lib/crypto";
-import type { Instance, ScoringMode } from "@/shared/types/models";
+import type {
+  ArrType,
+  AutoSearchPickStrategy,
+  AutoSearchScheduleMode,
+  AutoSearchScope,
+  Instance,
+  ScoringMode,
+} from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
 
 interface RawInstanceRow {
@@ -13,21 +20,62 @@ interface RawInstanceRow {
   searchesPerHour: number;
   showAllMedia: boolean;
   createdAt: Date;
+  autoSearchEnabled: boolean;
+  autoSearchScheduleMode: string;
+  autoSearchIntervalMinutes: number;
+  autoSearchCronExpression: string;
+  autoSearchBatchLimit: number;
+  autoSearchLastRunAt: Date | null;
+  autoSearchMonitoredOnly: boolean;
+  autoSearchScope: string;
+  autoSearchPickStrategy: string;
 }
 
 function toInstance(row: RawInstanceRow): Instance {
-  return { ...row, apiKey: decryptSecret(row.apiKey) } as Instance;
+  return {
+    ...row,
+    apiKey: decryptSecret(row.apiKey),
+    type: row.type as ArrType,
+    scoringMode: row.scoringMode as ScoringMode,
+    autoSearchScheduleMode:
+      row.autoSearchScheduleMode as AutoSearchScheduleMode,
+    autoSearchScope: row.autoSearchScope as AutoSearchScope,
+    autoSearchPickStrategy:
+      row.autoSearchPickStrategy as AutoSearchPickStrategy,
+  };
 }
 
 // Columns with DB-level defaults are optional on create — Prisma fills
 // them in. Keeps test fixtures from having to spell them out.
 type CreateInstanceInput = Omit<
   Instance,
-  "id" | "createdAt" | "scoringMode" | "searchesPerHour" | "showAllMedia"
+  | "id"
+  | "createdAt"
+  | "scoringMode"
+  | "searchesPerHour"
+  | "showAllMedia"
+  | "autoSearchEnabled"
+  | "autoSearchScheduleMode"
+  | "autoSearchIntervalMinutes"
+  | "autoSearchCronExpression"
+  | "autoSearchBatchLimit"
+  | "autoSearchLastRunAt"
+  | "autoSearchMonitoredOnly"
+  | "autoSearchScope"
+  | "autoSearchPickStrategy"
 > & {
   scoringMode?: ScoringMode;
   searchesPerHour?: number;
   showAllMedia?: boolean;
+  autoSearchEnabled?: boolean;
+  autoSearchScheduleMode?: AutoSearchScheduleMode;
+  autoSearchIntervalMinutes?: number;
+  autoSearchCronExpression?: string;
+  autoSearchBatchLimit?: number;
+  autoSearchLastRunAt?: Date | null;
+  autoSearchMonitoredOnly?: boolean;
+  autoSearchScope?: AutoSearchScope;
+  autoSearchPickStrategy?: AutoSearchPickStrategy;
 };
 
 export class InstanceRepository extends BaseRepository<Instance> {
@@ -74,6 +122,13 @@ export class InstanceRepository extends BaseRepository<Instance> {
 
   async delete(id: number): Promise<void> {
     await this.db.instance.delete({ where: { id } });
+  }
+
+  async stampLastRunAt(id: number, when: Date): Promise<void> {
+    await this.db.instance.update({
+      where: { id },
+      data: { autoSearchLastRunAt: when },
+    });
   }
 
   async migrateUnencrypted(): Promise<number> {

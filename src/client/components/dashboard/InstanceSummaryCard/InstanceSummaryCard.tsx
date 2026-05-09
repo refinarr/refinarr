@@ -34,7 +34,11 @@ const DOT_CLASS: Record<HealthState, string> = {
 };
 
 // Translation key suffix under `dashboard.instanceCard.*`.
-const LABEL_KEY: Record<HealthState, string> = {
+type DashboardCardKey = Parameters<
+  ReturnType<typeof useTranslations<"dashboard.instanceCard">>
+>[0];
+
+const LABEL_KEY: Record<HealthState, DashboardCardKey> = {
   disabled: "disabled",
   checking: "checking",
   connected: "connected",

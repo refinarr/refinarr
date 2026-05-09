@@ -14,7 +14,8 @@ import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSel
 import { InstanceConnectionDot } from "@/client/components/common/InstanceConnectionDot";
 import { cn } from "@/client/lib/utils";
 import { DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
-import type { Instance, ScoringMode } from "@/shared/types/models";
+import type { PublicInstance } from "@/shared/types/api";
+import type { ScoringMode } from "@/shared/types/models";
 
 interface Props {
   title: string;
@@ -22,7 +23,7 @@ interface Props {
   selected: number;
   activeInstance: number;
   activeInstanceName: string | null;
-  typedInstances: Instance[];
+  typedInstances: PublicInstance[];
   onSetInstance: (id: number) => void;
   onRefresh: () => void;
   refreshPending: boolean;

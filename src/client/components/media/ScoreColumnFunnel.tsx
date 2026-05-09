@@ -9,7 +9,14 @@ import { FilterChipButton } from "./FilterChipButton";
 interface Bucket {
   id: string;
   // Translation key suffix under "filters.scoreBuckets.*".
-  labelKey: string;
+  labelKey:
+    | "manualLt30"
+    | "manual30to60"
+    | "manual60to85"
+    | "manualGt85"
+    | "profileNegative"
+    | "profileZero"
+    | "profilePositive";
   // Half-open semantically: items match when score ≥ min AND score ≤ max.
   // Manual-mode upper bounds are shifted just below the next bucket's
   // floor (e.g. <30% → 0.2999) so the server's inclusive ≤ comparison

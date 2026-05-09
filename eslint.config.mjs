@@ -8,6 +8,23 @@ import sonarjs from "eslint-plugin-sonarjs";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // react-hooks rules. `rules-of-hooks` and `exhaustive-deps` are already
+  // active via eslint-config-next/core-web-vitals; these additions surface
+  // React 19 purity / state-mutation anti-patterns that the preset omits.
+  {
+    rules: {
+      // Components and hooks must be idempotent: no Date.now(), Math.random(),
+      // crypto.randomUUID() etc. during render. Catch it early before Strict
+      // Mode double-invocation exposes the bug in production.
+      "react-hooks/purity": "warn",
+      // setState called synchronously inside an effect body causes a second
+      // render before the browser paints. Derive the value from existing state
+      // instead, or subscribe to an external store.
+      // setState called during render (not in an event handler or effect) runs
+      // synchronously and causes an immediate re-render loop.
+      "react-hooks/set-state-in-render": "warn",
+    },
+  },
   // Cherry-picked sonarjs rules for finding real code smells (complexity,
   // duplication, likely bugs). The recommended preset bundles many style
   // rules that don't fit this codebase — those are intentionally omitted.

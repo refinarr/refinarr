@@ -11,20 +11,17 @@ import {
 } from "@/client/hooks/data/useInstances";
 import { withToast } from "@/client/lib/with-toast";
 import { DEFAULT_ARR_TYPE } from "@/shared/arr-type";
-import type { ArrType, Instance } from "@/shared/types/models";
+import type { PublicInstance } from "@/shared/types/api";
+import type { ArrType } from "@/shared/types/models";
 
 interface Args {
-  editing?: Instance | null;
+  editing?: PublicInstance | null;
   onSuccess: () => void;
 }
 
 const normalizeUrl = (url: string) =>
   /^https?:\/\//i.test(url) ? url : `http://${url}`;
 
-// Owns the AddInstanceDialog form state: schema, react-hook-form wiring,
-// create/update/test mutations wrapped with toasts, the test-connection
-// helper, and the radarr/sonarr type toggle. The parent component is left
-// as pure JSX over this hook's return values.
 export function useAddInstanceForm({ editing, onSuccess }: Args) {
   const t = useTranslations("settings.instanceForm");
   const tToast = useTranslations("toast.instance");

@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
 import { ShowAllMediaToggle } from "@/client/components/settings/ShowAllMediaToggle";
+import { ScoringModeSection } from "@/client/components/settings/InstanceCard/ScoringModeSection";
+import { AutoSearchSection } from "@/client/components/settings/InstanceCard/AutoSearchSection";
 import {
   useDeleteInstance,
   useTestConnection,
@@ -13,10 +15,11 @@ import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { useSearchQueue } from "@/client/hooks/data/useSearchQueue";
 import { withToast } from "@/client/lib/with-toast";
 import { formatEta } from "@/client/lib/format-relative";
-import type { Instance } from "@/shared/types/models";
+import { isProfileMode } from "@/shared/scoring-mode";
+import type { PublicInstance } from "@/shared/types/api";
 
 interface Props {
-  instance: Instance;
+  instance: PublicInstance;
   failedCount?: number;
   onEdit: () => void;
 }
@@ -24,6 +27,7 @@ interface Props {
 export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
   const t = useTranslations("settings");
   const tForm = useTranslations("settings.instanceForm");
+  const tAutoSearch = useTranslations("settings.autoSearch");
   const tToast = useTranslations("toast.instance");
   const tCommon = useTranslations("common");
   const tTime = useTranslations("time");
@@ -46,6 +50,15 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
   const handleTest = () => runTest(instance.id);
   const handleDelete = () => runDelete(instance.id);
 
+  const MAX_CF_DISPLAY = 3;
+  const cfTags = prefs ?? [];
+  const visibleCfs = cfTags.slice(0, MAX_CF_DISPLAY);
+  const overflowCfs = cfTags.length - MAX_CF_DISPLAY;
+
+  const scoringModeLabel = isProfileMode(instance.scoringMode)
+    ? tAutoSearch("scoringModeProfile")
+    : tAutoSearch("scoringModeManual");
+
   return (
     <Card>
       <CardContent className="space-y-3 py-4">
@@ -57,6 +70,19 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
             <p className="font-medium">{instance.name}</p>
             <p className="text-muted-foreground truncate text-xs">
               {instance.url}
+            </p>
+            <p className="text-muted-foreground text-xs">
+              {scoringModeLabel} · {instance.searchesPerHour}
+              {tForm("searchesPerHourSuffix")}
+              {visibleCfs.length > 0 && (
+                <>
+                  {" · "}
+                  {visibleCfs.map((cf) => cf.cfName).join(" · ")}
+                  {overflowCfs > 0 && (
+                    <> · {tCommon("moreCount", { count: overflowCfs })}</>
+                  )}
+                </>
+              )}
             </p>
             {noCfs && (
               <p className="text-warning mt-0.5 text-xs">
@@ -111,8 +137,14 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
             </Button>
           </div>
         </div>
-        <div className="border-t pt-3">
+        <div className="pt-subgroup border-t">
           <ShowAllMediaToggle instanceId={instance.id} />
+        </div>
+        <div className="pt-subgroup border-t">
+          <ScoringModeSection instance={instance} />
+        </div>
+        <div className="pt-subgroup border-t">
+          <AutoSearchSection instance={instance} />
         </div>
       </CardContent>
     </Card>

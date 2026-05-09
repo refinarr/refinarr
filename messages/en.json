@@ -55,7 +55,9 @@
     "yes": "Yes",
     "no": "No",
     "viewAll": "View all",
-    "moreCount": "+{count} more"
+    "moreCount": "+{count} more",
+    "on": "On",
+    "off": "Off"
   },
   "dialog": {
     "close": "Close"
@@ -383,6 +385,7 @@
     "instances": "Instances",
     "addInstance": "Add Instance",
     "scoringMode": "Scoring Mode",
+    "profileMode": "Profile Mode",
     "scoringModeOptions": {
       "manual": "Manual",
       "profile": "Profile"
@@ -431,6 +434,51 @@
       "rotated": "API key rotated",
       "rotateFailed": "Couldn't rotate API key"
     },
+    "autoSearch": {
+      "sectionTitle": "Auto-search",
+      "optionalLabel": "Optional",
+      "enableLabel": "Enable auto-search",
+      "modeIntervalTab": "Interval",
+      "modeCronTab": "Cron",
+      "intervalLabel": "Run every",
+      "intervalUnit": {
+        "minutes": "Minutes",
+        "hours": "Hours",
+        "days": "Days"
+      },
+      "intervalHelper": "Runs every {value} {unit}",
+      "cronLabel": "Cron expression",
+      "cronPlaceholder": "0 3 * * *",
+      "cronInvalid": "Invalid cron expression (5-field only, e.g. \"0 3 * * *\")",
+      "cronNextPreview": "Next: {next}",
+      "batchLimitLabel": "Items per cycle",
+      "batchLimitHelper": "Up to {count} items searched per run",
+      "monitoredOnlyLabel": "Monitored items only",
+      "monitoredOnlyHelper": "Skip items marked as unmonitored in Radarr / Sonarr",
+      "scopeLabel": "Search scope",
+      "scopeMissing": "Missing",
+      "scopeMissingDesc": "No file on disk",
+      "scopeUpgrade": "Upgrade",
+      "scopeUpgradeDesc": "Has file, below cutoff",
+      "scopeFlagged": "Flagged",
+      "scopeFlaggedDesc": "Any flagged item",
+      "scopeAll": "All",
+      "scopeAllDesc": "Every item regardless of score",
+      "lastRun": "Last run",
+      "lastRunNever": "Never",
+      "nextRun": "Next",
+      "runningNow": "Running now…",
+      "runNow": "Run now",
+      "pickStrategyLabel": "Pick strategy",
+      "pickStrategyBalanced": "Balanced",
+      "pickStrategyRandom": "Random",
+      "pickStrategyBalancedDesc": "Prioritises items searched longest ago, then worst score",
+      "pickStrategyRandomDesc": "Picks items at random from the candidate pool",
+      "helperText": "Auto-search only triggers Search commands. It never deletes files or removes items.",
+      "scoringModeLabel": "Scoring mode",
+      "scoringModeManual": "Manual",
+      "scoringModeProfile": "Profile mode"
+    },
     "instanceForm": {
       "addTitle": "Add Instance",
       "editTitle": "Edit Instance",
@@ -449,6 +497,7 @@
       "apiKeyPlaceholderEdit": "•••••••• (leave blank to keep current)",
       "apiKeyPlaceholderNew": "••••••••",
       "searchesPerHour": "Max searches per hour",
+      "searchesPerHourSuffix": "/hr",
       "searchesPerHourHelp": "Caps how often refinarr triggers searches on this instance. Searches fan out to your indexers and trackers — too many in a short window can cause them to rate-limit or ban you. 20/hour is safe for most private trackers.",
       "queuedBadge": "{count, plural, one {# queued} other {# queued}}",
       "queuedBadgeTooltip": "{count, plural, one {# search pending. ETA ~{eta}.} other {# searches pending. ETA ~{eta}.}}",

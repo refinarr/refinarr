@@ -29,4 +29,7 @@ export const queryKeys = {
   searchQueueAll: () => ["search-queue", "all"] as const,
   recentSearches: (instanceId: number) =>
     ["recent-searches", instanceId] as const,
+  autoSearchStatus: (instanceId: number) =>
+    ["auto-search-status", instanceId] as const,
+  cronPreview: (expr: string) => ["cron-preview", expr] as const,
 };
