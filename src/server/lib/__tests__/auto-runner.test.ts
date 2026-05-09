@@ -2,11 +2,13 @@ import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   computeNextRun,
   pickAutoSearchBatch,
+  buildAutoSearchStatus,
   autoRunner,
 } from "@/server/lib/auto-runner";
 import { instanceService } from "@/server/services/InstanceService";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
+import type { Instance } from "@/shared/types/models";
 import { mswServer, http, HttpResponse, radarrHandlers } from "@/test/msw";
 
 const radarrBase = "http://192.168.1.10:7878";
@@ -126,6 +128,115 @@ describe("computeNextRun — cron mode", () => {
         lastRunAt: null,
       }),
     ).toBeNull();
+  });
+});
+
+// ─── pickAutoSearchBatch — cooldown ────────────────────────────────────────
+
+describe("pickAutoSearchBatch — cooldown filtering", () => {
+  const item = (id: number, cfScore: number) => ({ id, cfScore });
+  const entry = (at: Date, failed = false) => ({ at, failed });
+  const cooldown2h = 2 * 60 * 60 * 1000;
+
+  test("cooldownMs=0 disables filtering — recently-searched items remain eligible", () => {
+    const justNow = new Date(Date.now() - 10);
+    const map = new Map([
+      [1, entry(justNow)],
+      [2, entry(justNow)],
+    ]);
+    const result = pickAutoSearchBatch(
+      [item(1, 0), item(2, 0)],
+      map,
+      10,
+      "balanced",
+      0,
+    );
+    expect(result.map((i) => i.id)).toEqual(expect.arrayContaining([1, 2]));
+  });
+
+  test("item searched 30 min ago with 2h cooldown → excluded; unsearched item → included", () => {
+    const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const map = new Map([[1, entry(thirtyMinsAgo)]]);
+    const result = pickAutoSearchBatch(
+      [item(1, 0), item(2, 0)],
+      map,
+      10,
+      "balanced",
+      cooldown2h,
+    );
+    expect(result.map((i) => i.id)).not.toContain(1);
+    expect(result.map((i) => i.id)).toContain(2);
+  });
+
+  test("item searched 3h ago with 2h cooldown → eligible again", () => {
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const map = new Map([[1, entry(threeHoursAgo)]]);
+    const result = pickAutoSearchBatch(
+      [item(1, 0)],
+      map,
+      10,
+      "balanced",
+      cooldown2h,
+    );
+    expect(result.map((i) => i.id)).toContain(1);
+  });
+
+  test("boundary: searched at exactly cooldownMs ago → excluded (not yet elapsed)", () => {
+    // Subtract 1ms so it's inside the window, not past it.
+    const exactBoundary = new Date(Date.now() - cooldown2h + 1);
+    const map = new Map([[1, entry(exactBoundary)]]);
+    const result = pickAutoSearchBatch(
+      [item(1, 0)],
+      map,
+      10,
+      "balanced",
+      cooldown2h,
+    );
+    expect(result.map((i) => i.id)).not.toContain(1);
+  });
+
+  test("failed items bypass cooldown — re-eligible regardless of recency", () => {
+    const oneMinAgo = new Date(Date.now() - 60 * 1000);
+    const map = new Map([[1, entry(oneMinAgo, true)]]);
+    const result = pickAutoSearchBatch(
+      [item(1, 0)],
+      map,
+      10,
+      "balanced",
+      cooldown2h,
+    );
+    expect(result.map((i) => i.id)).toContain(1);
+  });
+
+  test("all items within cooldown → empty result even with batchLimit > 0", () => {
+    const justNow = new Date(Date.now() - 5 * 60 * 1000);
+    const map = new Map([
+      [1, entry(justNow)],
+      [2, entry(justNow)],
+      [3, entry(justNow)],
+    ]);
+    const result = pickAutoSearchBatch(
+      [item(1, 0), item(2, 0), item(3, 0)],
+      map,
+      10,
+      "balanced",
+      cooldown2h,
+    );
+    expect(result).toHaveLength(0);
+  });
+
+  test("cooldown only removes from candidate pool — batchLimit still applies to remaining", () => {
+    const recent = new Date(Date.now() - 10 * 60 * 1000);
+    // Items 1–3 are in cooldown; items 4–8 are eligible.
+    const map = new Map([
+      [1, entry(recent)],
+      [2, entry(recent)],
+      [3, entry(recent)],
+    ]);
+    const items = [1, 2, 3, 4, 5, 6, 7, 8].map((id) => item(id, id * 10));
+    const result = pickAutoSearchBatch(items, map, 3, "balanced", cooldown2h);
+    expect(result).toHaveLength(3);
+    result.forEach((r) => expect(r.id).toBeGreaterThan(3));
   });
 });
 
@@ -574,5 +685,162 @@ describe("autoRunner — enqueue deduplication", () => {
     expect(result.enqueued).toBe(0); // deduped
 
     await instanceService.delete(inst.id);
+  });
+});
+
+// ─── buildAutoSearchStatus ──────────────────────────────────────────────────
+
+describe("buildAutoSearchStatus", () => {
+  const baseInst: Instance = {
+    id: 1,
+    type: "radarr",
+    name: "Test",
+    url: "http://localhost:7878",
+    apiKey: "key",
+    enabled: true,
+    scoringMode: "profile",
+    searchesPerHour: 20,
+    showAllMedia: false,
+    createdAt: new Date(),
+    autoSearchEnabled: true,
+    autoSearchScheduleMode: "interval",
+    autoSearchIntervalMinutes: 60,
+    autoSearchCronExpression: "0 3 * * *",
+    autoSearchBatchLimit: 5,
+    autoSearchLastRunAt: null,
+    autoSearchMonitoredOnly: true,
+    autoSearchScope: "flagged",
+    autoSearchPickStrategy: "balanced",
+    autoSearchCooldownHours: 0,
+    autoSearchPausedUntil: null,
+    autoSearchScoringMode: "inherit",
+  };
+
+  test("disabled instance: enabled=false suppresses nextRunAt regardless of lastRunAt", () => {
+    const lastRunAt = new Date(Date.now() - 30 * 60 * 1000);
+    const status = buildAutoSearchStatus(
+      { ...baseInst, autoSearchEnabled: false, autoSearchLastRunAt: lastRunAt },
+      false,
+    );
+    expect(status.enabled).toBe(false);
+    expect(status.nextRunAt).toBeNull();
+  });
+
+  test("interval mode: nextRunAt = lastRunAt + intervalMinutes (exact ms)", () => {
+    const lastRunAt = new Date("2025-06-01T10:00:00Z");
+    const status = buildAutoSearchStatus(
+      {
+        ...baseInst,
+        autoSearchScheduleMode: "interval",
+        autoSearchIntervalMinutes: 120,
+        autoSearchLastRunAt: lastRunAt,
+      },
+      false,
+    );
+    const expected = lastRunAt.getTime() + 120 * 60 * 1000;
+    expect(new Date(status.nextRunAt!).getTime()).toBe(expected);
+  });
+
+  test("interval mode + lastRunAt=null: nextRunAt is in the past (fires immediately)", () => {
+    const status = buildAutoSearchStatus(
+      { ...baseInst, autoSearchLastRunAt: null },
+      false,
+    );
+    expect(new Date(status.nextRunAt!).getTime()).toBeLessThan(Date.now());
+  });
+
+  test("running flag is passed through — true and false both work", () => {
+    expect(buildAutoSearchStatus(baseInst, true).running).toBe(true);
+    expect(buildAutoSearchStatus(baseInst, false).running).toBe(false);
+  });
+
+  test("no pause: paused=false, pausedUntil=null", () => {
+    const status = buildAutoSearchStatus(
+      { ...baseInst, autoSearchPausedUntil: null },
+      false,
+    );
+    expect(status.paused).toBe(false);
+    expect(status.pausedUntil).toBeNull();
+  });
+
+  test("pausedUntil in future: paused=true, pausedUntil matches the ISO timestamp", () => {
+    const future = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const status = buildAutoSearchStatus(
+      { ...baseInst, autoSearchPausedUntil: future },
+      false,
+    );
+    expect(status.paused).toBe(true);
+    expect(status.pausedUntil).toBe(future.toISOString());
+  });
+
+  test("pausedUntil expired (past): paused=false, pausedUntil=null — runner ignores expired pause", () => {
+    const past = new Date(Date.now() - 60 * 1000);
+    const status = buildAutoSearchStatus(
+      { ...baseInst, autoSearchPausedUntil: past },
+      false,
+    );
+    expect(status.paused).toBe(false);
+    expect(status.pausedUntil).toBeNull();
+  });
+
+  test("6-field cron (seconds) → cronValid=false, nextRunAt=null (strict 5-field policy)", () => {
+    const status = buildAutoSearchStatus(
+      {
+        ...baseInst,
+        autoSearchScheduleMode: "cron",
+        autoSearchCronExpression: "0 0 3 * * *",
+      },
+      false,
+    );
+    expect(status.cronValid).toBe(false);
+    expect(status.nextRunAt).toBeNull();
+  });
+
+  test("garbage cron → cronValid=false, nextRunAt=null", () => {
+    const status = buildAutoSearchStatus(
+      {
+        ...baseInst,
+        autoSearchScheduleMode: "cron",
+        autoSearchCronExpression: "not-a-cron",
+      },
+      false,
+    );
+    expect(status.cronValid).toBe(false);
+    expect(status.nextRunAt).toBeNull();
+  });
+
+  test("valid cron: cronValid=true, nextRunAt is a future ISO timestamp", () => {
+    const status = buildAutoSearchStatus(
+      {
+        ...baseInst,
+        autoSearchScheduleMode: "cron",
+        autoSearchCronExpression: "0 3 * * *",
+      },
+      false,
+    );
+    expect(status.cronValid).toBe(true);
+    expect(new Date(status.nextRunAt!).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  test("all instance fields are mapped to the correct output fields", () => {
+    const future = new Date(Date.now() + 60 * 60 * 1000);
+    const status = buildAutoSearchStatus(
+      {
+        ...baseInst,
+        autoSearchBatchLimit: 10,
+        autoSearchMonitoredOnly: false,
+        autoSearchScope: "missing",
+        autoSearchCooldownHours: 4,
+        autoSearchScoringMode: "profile",
+        autoSearchPausedUntil: future,
+      },
+      false,
+    );
+    expect(status.batchLimit).toBe(10);
+    expect(status.monitoredOnly).toBe(false);
+    expect(status.scope).toBe("missing");
+    expect(status.cooldownHours).toBe(4);
+    expect(status.scoringMode).toBe("profile");
+    expect(status.paused).toBe(true);
   });
 });
