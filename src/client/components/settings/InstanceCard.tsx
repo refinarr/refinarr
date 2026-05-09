@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
 import { ShowAllMediaToggle } from "@/client/components/settings/ShowAllMediaToggle";
+import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { AutoSearchSection } from "@/client/components/settings/InstanceCard/AutoSearchSection";
 import {
   useDeleteInstance,
@@ -136,6 +137,9 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
         </div>
         <div className="border-t pt-3">
           <ShowAllMediaToggle instanceId={instance.id} />
+        </div>
+        <div className="border-t pt-3">
+          <ScoringModeSelector instanceId={instance.id} />
         </div>
         <div className="border-t pt-1">
           <AutoSearchSection instance={instance} />
