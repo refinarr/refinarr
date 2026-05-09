@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/client/components/ui/select";
-import { CfPreferencePicker } from "@/client/components/settings/CfPreferencePicker";
 import type { PublicInstance } from "@/shared/types/api";
 import type { ArrType } from "@/shared/types/models";
 import { ALL_ARR_TYPES, isArrType } from "@/shared/arr-type";
@@ -38,7 +37,6 @@ interface Props {
 
 export function AddInstanceDialog({ open, onClose, editing }: Props) {
   const t = useTranslations("settings.instanceForm");
-  const tSettings = useTranslations("settings");
   const tCommon = useTranslations("common");
 
   const {
@@ -133,16 +131,6 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
               />
             </FormField>
           </div>
-
-          {/* Wanted Custom Formats — Edit only */}
-          {isEdit && editing && (
-            <div className="border-t pt-3">
-              <p className="mb-2 text-sm font-medium">
-                {tSettings("wantedCfs")}
-              </p>
-              <CfPreferencePicker instance={editing} />
-            </div>
-          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

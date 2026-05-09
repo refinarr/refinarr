@@ -93,7 +93,7 @@ export function AutoSearchSection({ instance }: Props) {
         )}
         {t("sectionTitle")}
         {!open && !instance.autoSearchEnabled && (
-          <span className="text-muted-foreground font-normal">Off</span>
+          <span className="text-muted-foreground ml-auto font-normal">Off</span>
         )}
       </button>
 
