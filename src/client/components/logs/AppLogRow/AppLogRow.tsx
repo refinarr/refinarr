@@ -4,20 +4,11 @@ import type { KeyboardEvent } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/client/components/ui/badge";
 import { LogLevelBadge } from "@/client/components/logs/LogLevelBadge";
-import { formatRelative } from "@/client/lib/format";
+import { formatContext, formatRelative } from "@/client/lib/format";
 import type { AppLogEntry } from "@/shared/types/models";
 
 interface Props {
   entry: AppLogEntry;
-}
-
-function formatContext(ctx: string | null): string | null {
-  if (!ctx) return null;
-  try {
-    return JSON.stringify(JSON.parse(ctx), null, 2);
-  } catch {
-    return ctx;
-  }
 }
 
 export function AppLogRow({ entry }: Props) {

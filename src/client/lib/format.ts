@@ -1,3 +1,12 @@
+export function formatContext(ctx: string | null): string | null {
+  if (!ctx) return null;
+  try {
+    return JSON.stringify(JSON.parse(ctx), null, 2);
+  } catch {
+    return ctx;
+  }
+}
+
 export function formatCronTime(isoString: string): string {
   const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) return "—";
