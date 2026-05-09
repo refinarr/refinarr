@@ -46,37 +46,40 @@ function FleetRow({ instance }: RowProps) {
   const lastRunAt = status?.lastRunAt ?? null;
   const nextRunAt = status?.nextRunAt ?? null;
 
+  let statusContent;
+  if (paused && pausedUntil) {
+    statusContent = (
+      <span className="text-warning inline-flex items-center gap-1">
+        <PauseCircle className="size-3" />
+        {t("pausedUntil", { time: formatRelative(pausedUntil, tTime) })}
+      </span>
+    );
+  } else if (running) {
+    statusContent = (
+      <span className="text-brand inline-flex items-center gap-1">
+        <Loader2 className="size-3 animate-spin" />
+        {t("running")}
+      </span>
+    );
+  } else {
+    statusContent = (
+      <>
+        {lastRunAt
+          ? t("lastRun", { time: formatRelative(lastRunAt, tTime) })
+          : t("neverRun")}
+        {nextRunAt && !paused && (
+          <> · {t("nextRun", { eta: formatEta(msUntil(nextRunAt), tTime) })}</>
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="flex items-center gap-3 py-2 text-sm">
       <div className="min-w-0 flex-1">
         <span className="font-medium">{instance.name}</span>
         <span className="text-muted-foreground ml-2 text-xs">
-          {paused && pausedUntil ? (
-            <span className="text-warning inline-flex items-center gap-1">
-              <PauseCircle className="size-3" />
-              {t("pausedUntil", {
-                time: formatRelative(pausedUntil, tTime),
-              })}
-            </span>
-          ) : running ? (
-            <span className="text-brand inline-flex items-center gap-1">
-              <Loader2 className="size-3 animate-spin" />
-              {t("running")}
-            </span>
-          ) : (
-            <>
-              {lastRunAt
-                ? t("lastRun", { time: formatRelative(lastRunAt, tTime) })
-                : t("neverRun")}
-              {nextRunAt && !paused && (
-                <>
-                  {" "}
-                  ·{" "}
-                  {t("nextRun", { eta: formatEta(msUntil(nextRunAt), tTime) })}
-                </>
-              )}
-            </>
-          )}
+          {statusContent}
         </span>
       </div>
 

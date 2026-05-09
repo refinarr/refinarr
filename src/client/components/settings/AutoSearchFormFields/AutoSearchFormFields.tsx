@@ -51,8 +51,9 @@ function isPickStrategy(v: string | null): v is AutoSearchPickStrategy {
   return v === "balanced" || v === "random";
 }
 
+const AUTO_SEARCH_SCORING_MODE_SET = new Set<string>(["inherit", "profile"]);
 function isScoringMode(v: string | null): v is AutoSearchScoringMode {
-  return v === "inherit" || v === "profile";
+  return v !== null && AUTO_SEARCH_SCORING_MODE_SET.has(v);
 }
 
 function isAutoSearchScope(v: string | null): v is AutoSearchScope {
@@ -127,6 +128,14 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
   const pickDesc: Record<AutoSearchPickStrategy, string> = {
     balanced: t("pickStrategyBalancedDesc"),
     random: t("pickStrategyRandomDesc"),
+  };
+  const scoringModeLabel: Record<AutoSearchScoringMode, string> = {
+    inherit: t("scoringModeInherit"),
+    profile: t("scoringModeProfile"),
+  };
+  const scoringModeDesc: Record<AutoSearchScoringMode, string> = {
+    inherit: t("scoringModeInheritDesc"),
+    profile: t("scoringModeProfileDesc"),
   };
 
   return (
@@ -397,9 +406,7 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
           <FormField
             id="auto-search-scoring-mode"
             label={t("scoringModeLabel")}
-            description={t(
-              `scoringMode${value.autoSearchScoringMode === "profile" ? "Profile" : "Inherit"}Desc`,
-            )}
+            description={scoringModeDesc[value.autoSearchScoringMode]}
           >
             <Select
               value={value.autoSearchScoringMode}
@@ -410,9 +417,7 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
             >
               <SelectTrigger id="auto-search-scoring-mode">
                 <SelectValue>
-                  {t(
-                    `scoringMode${value.autoSearchScoringMode === "profile" ? "Profile" : "Inherit"}`,
-                  )}
+                  {scoringModeLabel[value.autoSearchScoringMode]}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="w-max">

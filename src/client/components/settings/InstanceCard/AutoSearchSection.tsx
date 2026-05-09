@@ -31,6 +31,10 @@ interface Props {
   instance: PublicInstance;
 }
 
+function nowPlusDuration(durationMs: number): string {
+  return new Date(Date.now() + durationMs).toISOString();
+}
+
 const PAUSE_DURATIONS_MS = [
   { labelKey: "pause1h" as const, ms: 60 * 60 * 1000 },
   { labelKey: "pause6h" as const, ms: 6 * 60 * 60 * 1000 },
@@ -85,10 +89,9 @@ export function AutoSearchSection({ instance }: Props) {
   });
 
   const setPause = (durationMs: number) => {
-    const until = new Date(Date.now() + durationMs).toISOString();
     void update.mutateAsync({
       id: instance.id,
-      data: { autoSearchPausedUntil: until },
+      data: { autoSearchPausedUntil: nowPlusDuration(durationMs) },
     });
   };
 
@@ -117,6 +120,44 @@ export function AutoSearchSection({ instance }: Props) {
     [pausedUntil, tTime],
   );
 
+  let closedSummary: string;
+  if (paused) {
+    closedSummary = t("pausedLabel");
+  } else if (localFields.autoSearchEnabled) {
+    closedSummary = tCommon("on");
+  } else {
+    closedSummary = tCommon("off");
+  }
+
+  let runStatus;
+  if (paused) {
+    runStatus = (
+      <span className="text-warning flex items-center gap-1">
+        <PauseCircle className="size-3" />
+        {t("pausedUntil", { time: pausedUntilDisplay ?? "…" })}
+      </span>
+    );
+  } else if (running) {
+    runStatus = (
+      <span className="text-brand flex items-center gap-1">
+        <Loader2 className="size-3 animate-spin" />
+        {t("runningNow")}
+      </span>
+    );
+  } else {
+    runStatus = (
+      <span>
+        {t("lastRun")}: {lastRunDisplay}
+        {nextRunDisplay && (
+          <>
+            {" "}
+            · {t("nextRun")}: in {nextRunDisplay}
+          </>
+        )}
+      </span>
+    );
+  }
+
   return (
     <div>
       <button
@@ -132,11 +173,7 @@ export function AutoSearchSection({ instance }: Props) {
         {t("sectionTitle")}
         {!open && (
           <span className="text-muted-foreground ml-auto font-normal">
-            {paused
-              ? t("pausedLabel")
-              : localFields.autoSearchEnabled
-                ? tCommon("on")
-                : tCommon("off")}
+            {closedSummary}
           </span>
         )}
       </button>
@@ -153,29 +190,7 @@ export function AutoSearchSection({ instance }: Props) {
 
           {localFields.autoSearchEnabled && !isLoading && (
             <div className="flex items-center justify-between gap-2">
-              <div className="text-muted-foreground text-xs">
-                {paused ? (
-                  <span className="text-warning flex items-center gap-1">
-                    <PauseCircle className="size-3" />
-                    {t("pausedUntil", { time: pausedUntilDisplay ?? "…" })}
-                  </span>
-                ) : running ? (
-                  <span className="text-brand flex items-center gap-1">
-                    <Loader2 className="size-3 animate-spin" />
-                    {t("runningNow")}
-                  </span>
-                ) : (
-                  <span>
-                    {t("lastRun")}: {lastRunDisplay}
-                    {nextRunDisplay && (
-                      <>
-                        {" "}
-                        · {t("nextRun")}: in {nextRunDisplay}
-                      </>
-                    )}
-                  </span>
-                )}
-              </div>
+              <div className="text-muted-foreground text-xs">{runStatus}</div>
 
               <div className="flex items-center gap-2">
                 {paused ? (

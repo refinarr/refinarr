@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, Trash2, Search, Wifi, WifiOff } from "lucide-react";
+import { LogSource } from "@/server/lib/log-sources";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import { AppLogRow } from "@/client/components/logs/AppLogRow";
@@ -19,7 +20,6 @@ import { useDebouncedValue } from "@/client/hooks/ui/useDebouncedValue";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import { useConfig } from "@/client/hooks/data/useConfig";
 import { withToast } from "@/client/lib/with-toast";
-import { LogSource } from "@/server/lib/log-sources";
 import type { LogLevel } from "@/shared/types/models";
 
 const ALL = "__all__";

@@ -17,6 +17,12 @@ interface ApiContext {
   status?: number;
 }
 
+function apiStatusClass(status: number): string {
+  if (status >= 500) return "text-critical ml-1";
+  if (status >= 400) return "text-warning ml-1";
+  return "ml-1";
+}
+
 function parseApiContext(ctx: string | null): ApiContext | null {
   if (!ctx) return null;
   try {
@@ -83,15 +89,7 @@ export function AppLogRow({ entry }: Props) {
             <span className="text-muted-foreground ml-2 font-mono text-xs">
               {apiCtx.method} {apiCtx.path}
               {apiCtx.status && (
-                <span
-                  className={
-                    apiCtx.status >= 500
-                      ? "text-critical ml-1"
-                      : apiCtx.status >= 400
-                        ? "text-warning ml-1"
-                        : "ml-1"
-                  }
-                >
+                <span className={apiStatusClass(apiCtx.status)}>
                   {apiCtx.status}
                 </span>
               )}

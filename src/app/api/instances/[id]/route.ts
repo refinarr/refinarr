@@ -67,14 +67,15 @@ export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
     }
   }
   const { autoSearchPausedUntil, ...rest } = update;
+  let parsedPausedUntil: Date | null | undefined;
+  if (autoSearchPausedUntil !== undefined) {
+    parsedPausedUntil = autoSearchPausedUntil
+      ? new Date(autoSearchPausedUntil)
+      : null;
+  }
   const instance = await instanceService.update(id, {
     ...rest,
-    autoSearchPausedUntil:
-      autoSearchPausedUntil !== undefined
-        ? autoSearchPausedUntil
-          ? new Date(autoSearchPausedUntil)
-          : null
-        : undefined,
+    autoSearchPausedUntil: parsedPausedUntil,
   });
   // URL / API key / enabled changes mean the cached movies/series snapshot
   // points at the old upstream (or stale disabled state). Drop it so the
