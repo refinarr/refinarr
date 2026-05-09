@@ -306,6 +306,13 @@ function matchesMonitor(
 export abstract class MediaService<TItem extends MediaItem> {
   protected abstract readonly cacheNamespace: string;
 
+  // Tracks the timestamp of the most recent failed cache rebuild per key.
+  // getCachedFlaggedCount / getCachedTotalCount return 0 (not null) for
+  // BUILD_FAILURE_COOLDOWN_MS after a failure so the dashboard stops the
+  // 5-second skeleton-poll loop while the instance is unreachable.
+  private readonly buildFailures = new Map<string, number>();
+  private static readonly BUILD_FAILURE_COOLDOWN_MS = 60_000;
+
   protected abstract getForWarm(
     instanceId: number,
     query: MediaQuery,
@@ -327,22 +334,40 @@ export abstract class MediaService<TItem extends MediaItem> {
   // instance's KPI to flip to skeleton even though its endpoint still
   // returns data from the SWR stale window.
   getCachedFlaggedCount(instanceId: number, mode: ScoringMode): number | null {
+    const key = this.mediaCacheKey(instanceId, mode);
     const cached = dataCache.get<{ items: TItem[] }>(
-      this.mediaCacheKey(instanceId, mode),
+      key,
       CACHE_TTL_MS + CACHE_STALE_MS,
     );
-    return cached?.items.filter((m) => m.flagged).length ?? null;
+    if (cached !== null) return cached.items.filter((m) => m.flagged).length;
+    return this.failureFallback(key);
   }
 
   // Visible-library size (cache row count). Used as the denominator
   // in the dashboard's "X / Y" KPI. Same TTL+STALE window as
   // `getCachedFlaggedCount` so both counts surface or skeleton in lockstep.
   getCachedTotalCount(instanceId: number, mode: ScoringMode): number | null {
+    const key = this.mediaCacheKey(instanceId, mode);
     const cached = dataCache.get<{ items: TItem[] }>(
-      this.mediaCacheKey(instanceId, mode),
+      key,
       CACHE_TTL_MS + CACHE_STALE_MS,
     );
-    return cached?.items.length ?? null;
+    if (cached !== null) return cached.items.length;
+    return this.failureFallback(key);
+  }
+
+  // Returns 0 while a rebuild failure cooldown is active, null otherwise.
+  // 0 signals "data unavailable" to the dashboard without triggering the
+  // fast 5s polling loop that null causes.
+  private failureFallback(key: string): number | null {
+    const failedAt = this.buildFailures.get(key);
+    if (
+      failedAt !== undefined &&
+      Date.now() - failedAt < MediaService.BUILD_FAILURE_COOLDOWN_MS
+    ) {
+      return 0;
+    }
+    return null;
   }
 
   warmMediaCache(instanceId: number): Promise<unknown> {
@@ -400,7 +425,12 @@ export abstract class MediaService<TItem extends MediaItem> {
 
     // Miss — block on rebuild. Concurrent miss callers share the same
     // promise via dataCache.rebuild.
-    return dataCache.rebuild(cacheKey, build);
+    try {
+      return await dataCache.rebuild(cacheKey, build);
+    } catch (err) {
+      this.buildFailures.set(cacheKey, Date.now());
+      throw err;
+    }
   }
 
   // Resolves an instance + creates its ArrClient, the boilerplate every

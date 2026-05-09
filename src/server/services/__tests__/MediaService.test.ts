@@ -25,6 +25,7 @@ class TestMediaService extends MediaService<MediaItem> {
   constructor(
     cacheNamespace = "test",
     private readonly items: MediaItem[] = [],
+    private readonly buildError?: Error,
   ) {
     super();
     this.cacheNamespace = cacheNamespace;
@@ -40,7 +41,10 @@ class TestMediaService extends MediaService<MediaItem> {
       instanceId,
       logSource: LogSource.MovieService,
       backgroundErrorMessage: "Test media rebuild failed",
-      build: async () => ({ items: this.items }),
+      build: async () => {
+        if (this.buildError) throw this.buildError;
+        return { items: this.items };
+      },
     });
     return this.applyQuery(cached.items, query, "manual");
   }
@@ -242,6 +246,25 @@ describe("MediaService flagged cache contract", () => {
 
   test("getCachedTotalCount is null on cold cache, matching getCachedFlaggedCount", () => {
     const service = new TestMediaService("cold");
+    expect(service.getCachedFlaggedCount(1, "manual")).toBeNull();
+    expect(service.getCachedTotalCount(1, "manual")).toBeNull();
+  });
+
+  test("returns 0 (not null) within failure cooldown after a rebuild error", async () => {
+    const service = new TestMediaService(
+      "fail-cooldown",
+      [],
+      new Error("ETIMEDOUT"),
+    );
+    await expect(service.warmMediaCache(1)).rejects.toThrow("ETIMEDOUT");
+    // Within the 60s cooldown window, return 0 so the dashboard stops
+    // the 5-second skeleton-poll loop.
+    expect(service.getCachedFlaggedCount(1, "manual")).toBe(0);
+    expect(service.getCachedTotalCount(1, "manual")).toBe(0);
+  });
+
+  test("cold cache without a prior failure still returns null", () => {
+    const service = new TestMediaService("cold-no-fail");
     expect(service.getCachedFlaggedCount(1, "manual")).toBeNull();
     expect(service.getCachedTotalCount(1, "manual")).toBeNull();
   });
