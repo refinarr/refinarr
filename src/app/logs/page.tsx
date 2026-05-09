@@ -37,9 +37,14 @@ export default function LogsPage() {
   const [q, setQ] = useState("");
   const debouncedQ = useDebouncedValue(q, 300);
 
+  // Clamp debug-only filters to safe defaults when debug mode is off, without
+  // resetting state (which would break if config is still loading).
+  const activeLevel: LogLevel = !isDebug && level === "debug" ? "info" : level;
+  const activeSource = isDebug ? source : null;
+
   const { entries, total, isLoading, isConnected, reconnect } = useAppLogs({
-    level: level,
-    source: source ?? undefined,
+    level: activeLevel,
+    source: activeSource ?? undefined,
     q: debouncedQ || undefined,
   });
 
@@ -62,7 +67,7 @@ export default function LogsPage() {
     reconnect();
   };
 
-  const levelLabel = tLevel(level);
+  const levelLabel = tLevel(activeLevel);
   const SOURCE_LABELS: Record<string, string> = {
     [LogSource.Api]: t("source.api"),
     [LogSource.Client]: t("source.client"),
@@ -79,7 +84,9 @@ export default function LogsPage() {
     [LogSource.AutoRun]: t("source.auto-run"),
   };
   const sourceLabel =
-    source === null ? t("sourceAll") : (SOURCE_LABELS[source] ?? source);
+    activeSource === null
+      ? t("sourceAll")
+      : (SOURCE_LABELS[activeSource] ?? activeSource);
 
   return (
     <AppShell>
@@ -126,7 +133,7 @@ export default function LogsPage() {
               />
             </div>
             <Select
-              value={level}
+              value={activeLevel}
               onValueChange={(v) => setLevel(v as LogLevel)}
             >
               <SelectTrigger className="w-32">
@@ -143,7 +150,7 @@ export default function LogsPage() {
             </Select>
             {isDebug && (
               <Select
-                value={source ?? ALL}
+                value={activeSource ?? ALL}
                 onValueChange={(v) => setSource(v === ALL ? null : v)}
               >
                 <SelectTrigger className="w-36">

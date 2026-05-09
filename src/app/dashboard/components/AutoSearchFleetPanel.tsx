@@ -32,12 +32,13 @@ function FleetRow({ instance }: RowProps) {
     success: tToast("updated"),
     error: tToast("updateFailed"),
   });
+  const resume = withToast(update, {
+    success: tToast("updated"),
+    error: tToast("updateFailed"),
+  });
 
   const clearPause = () => {
-    void update.mutateAsync({
-      id: instance.id,
-      data: { autoSearchPausedUntil: null },
-    });
+    void resume({ id: instance.id, data: { autoSearchPausedUntil: null } });
   };
 
   const running = status?.running ?? false;
@@ -88,7 +89,7 @@ function FleetRow({ instance }: RowProps) {
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 px-2 text-xs"
+            className="px-2 text-xs"
             disabled={update.isPending}
             onClick={clearPause}
           >
@@ -98,7 +99,7 @@ function FleetRow({ instance }: RowProps) {
         <Button
           size="sm"
           variant="ghost"
-          className="h-7 px-2"
+          className="px-2"
           disabled={paused || running || trigger.isPending}
           onClick={() => runTrigger()}
           title={t("runNow")}

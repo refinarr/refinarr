@@ -66,6 +66,13 @@ interface IntervalDisplayUnit {
   max: number;
 }
 
+const CRON_PRESETS = [
+  { labelKey: "cronPresetNightly" as const, expression: "0 3 * * *" },
+  { labelKey: "cronPresetTwiceDaily" as const, expression: "0 6,18 * * *" },
+  { labelKey: "cronPresetWeekends" as const, expression: "0 3 * * 0,6" },
+  { labelKey: "cronPresetHourly" as const, expression: "0 * * * *" },
+] as const;
+
 const UNITS: IntervalDisplayUnit[] = [
   { key: "minutes", divisor: 1, max: 59 },
   { key: "hours", divisor: 60, max: 23 },
@@ -232,24 +239,17 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
 
             <TabsContent value="cron" className="mt-3 space-y-2">
               <div className="flex flex-wrap gap-1.5">
-                {(
-                  [
-                    "cronPresetNightly",
-                    "cronPresetTwiceDaily",
-                    "cronPresetWeekends",
-                    "cronPresetHourly",
-                  ] as const
-                ).map((key) => (
+                {CRON_PRESETS.map(({ labelKey, expression }) => (
                   <button
-                    key={key}
+                    key={labelKey}
                     type="button"
                     disabled={disabled}
                     onClick={() =>
-                      onChange({ autoSearchCronExpression: t(`${key}Expr`) })
+                      onChange({ autoSearchCronExpression: expression })
                     }
                     className="border-input hover:bg-accent rounded-md border px-2 py-0.5 text-xs disabled:pointer-events-none disabled:opacity-50"
                   >
-                    {t(key)}
+                    {t(labelKey)}
                   </button>
                 ))}
               </div>

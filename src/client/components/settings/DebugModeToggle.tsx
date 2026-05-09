@@ -20,9 +20,9 @@ export function DebugModeToggle() {
 
   return (
     <div className="flex items-center gap-4">
-      <Switch checked={isDebug} onCheckedChange={toggle} />
+      <Switch id="debug-mode" checked={isDebug} onCheckedChange={toggle} />
       <div>
-        <Label>{t("label")}</Label>
+        <Label htmlFor="debug-mode">{t("label")}</Label>
         <p className="text-muted-foreground text-xs">{t("helper")}</p>
       </div>
     </div>

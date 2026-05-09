@@ -87,16 +87,20 @@ export function AutoSearchSection({ instance }: Props) {
     success: tToast("updated"),
     error: tToast("updateFailed"),
   });
+  const pauseUpdate = withToast(update, {
+    success: tToast("updated"),
+    error: tToast("updateFailed"),
+  });
 
   const setPause = (durationMs: number) => {
-    void update.mutateAsync({
+    void pauseUpdate({
       id: instance.id,
       data: { autoSearchPausedUntil: nowPlusDuration(durationMs) },
     });
   };
 
   const clearPause = () => {
-    void update.mutateAsync({
+    void pauseUpdate({
       id: instance.id,
       data: { autoSearchPausedUntil: null },
     });

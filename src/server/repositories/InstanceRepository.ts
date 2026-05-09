@@ -35,6 +35,13 @@ interface RawInstanceRow {
   autoSearchScoringMode: string;
 }
 
+const VALID_AUTO_SEARCH_SCORING_MODES = new Set<string>(["inherit", "profile"]);
+function toAutoSearchScoringMode(v: string): AutoSearchScoringMode {
+  return VALID_AUTO_SEARCH_SCORING_MODES.has(v)
+    ? (v as AutoSearchScoringMode)
+    : "inherit";
+}
+
 function toInstance(row: RawInstanceRow): Instance {
   return {
     ...row,
@@ -46,7 +53,7 @@ function toInstance(row: RawInstanceRow): Instance {
     autoSearchScope: row.autoSearchScope as AutoSearchScope,
     autoSearchPickStrategy:
       row.autoSearchPickStrategy as AutoSearchPickStrategy,
-    autoSearchScoringMode: row.autoSearchScoringMode as AutoSearchScoringMode,
+    autoSearchScoringMode: toAutoSearchScoringMode(row.autoSearchScoringMode),
   };
 }
 
