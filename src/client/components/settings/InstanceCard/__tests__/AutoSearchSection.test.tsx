@@ -1,10 +1,18 @@
 // @vitest-environment happy-dom
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
-import type { PublicInstance } from "@/shared/types/api";
-import type { useAutoSearchStatus } from "@/client/hooks/data/useAutoSearch";
+import type { UseQueryResult } from "@tanstack/react-query";
+import type { AutoSearchStatus, PublicInstance } from "@/shared/types/api";
 import { renderWithProviders } from "@/test/render";
 import { AutoSearchSection } from "../AutoSearchSection";
+
+// UseQueryResult requires ~24 fields; this helper casts a minimal stub for tests.
+function stubQuery(data: AutoSearchStatus | null, isLoading = false) {
+  return { data, isLoading } as unknown as UseQueryResult<
+    AutoSearchStatus,
+    Error
+  >;
+}
 
 const { mockTriggerMutateAsync, mockUpdateMutateAsync } = vi.hoisted(() => ({
   mockTriggerMutateAsync: vi.fn().mockResolvedValue({ enqueued: 3 }),
@@ -60,19 +68,19 @@ const baseInstance: PublicInstance = {
 };
 
 // Shared status shape used across tests that need enabled status.
-const enabledStatus = {
+const enabledStatus: AutoSearchStatus = {
   enabled: true,
-  scheduleMode: "interval" as const,
+  scheduleMode: "interval",
   intervalMinutes: 1440,
   cronExpression: "0 3 * * *",
   cronValid: true,
   batchLimit: 5,
   monitoredOnly: true,
-  scope: "flagged" as const,
+  scope: "flagged",
   lastRunAt: null,
   nextRunAt: null,
   running: false,
-} satisfies ReturnType<typeof useAutoSearchStatus>["data"] & object;
+};
 
 describe("AutoSearchSection", () => {
   beforeEach(async () => {
@@ -80,10 +88,9 @@ describe("AutoSearchSection", () => {
     // Reset useAutoSearchStatus to the default null state so tests that
     // override it don't bleed into the next test (clearAllMocks resets call
     // counts but not mockReturnValue implementations).
-    const { useAutoSearchStatus: mockStatus } = await import(
-      "@/client/hooks/data/useAutoSearch"
-    );
-    vi.mocked(mockStatus).mockReturnValue({ data: null, isLoading: false });
+    const { useAutoSearchStatus: mockStatus } =
+      await import("@/client/hooks/data/useAutoSearch");
+    vi.mocked(mockStatus).mockReturnValue(stubQuery(null));
     mockTriggerMutateAsync.mockResolvedValue({ enqueued: 3 });
     mockUpdateMutateAsync.mockResolvedValue({});
   });
@@ -131,13 +138,9 @@ describe("AutoSearchSection", () => {
   });
 
   test("status panel shows Run now button when enabled", async () => {
-    const { useAutoSearchStatus } = await import(
-      "@/client/hooks/data/useAutoSearch"
-    );
-    vi.mocked(useAutoSearchStatus).mockReturnValue({
-      data: enabledStatus,
-      isLoading: false,
-    });
+    const { useAutoSearchStatus } =
+      await import("@/client/hooks/data/useAutoSearch");
+    vi.mocked(useAutoSearchStatus).mockReturnValue(stubQuery(enabledStatus));
 
     renderWithProviders(
       <AutoSearchSection
@@ -151,15 +154,13 @@ describe("AutoSearchSection", () => {
   });
 
   test("status panel shows last run and next run from GET response", async () => {
-    const { useAutoSearchStatus } = await import(
-      "@/client/hooks/data/useAutoSearch"
-    );
+    const { useAutoSearchStatus } =
+      await import("@/client/hooks/data/useAutoSearch");
     const past = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const future = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-    vi.mocked(useAutoSearchStatus).mockReturnValue({
-      data: { ...enabledStatus, lastRunAt: past, nextRunAt: future },
-      isLoading: false,
-    });
+    vi.mocked(useAutoSearchStatus).mockReturnValue(
+      stubQuery({ ...enabledStatus, lastRunAt: past, nextRunAt: future }),
+    );
 
     renderWithProviders(
       <AutoSearchSection
@@ -175,13 +176,11 @@ describe("AutoSearchSection", () => {
   });
 
   test("shows 'Running now' indicator when status.running is true", async () => {
-    const { useAutoSearchStatus } = await import(
-      "@/client/hooks/data/useAutoSearch"
+    const { useAutoSearchStatus } =
+      await import("@/client/hooks/data/useAutoSearch");
+    vi.mocked(useAutoSearchStatus).mockReturnValue(
+      stubQuery({ ...enabledStatus, running: true }),
     );
-    vi.mocked(useAutoSearchStatus).mockReturnValue({
-      data: { ...enabledStatus, running: true },
-      isLoading: false,
-    });
 
     renderWithProviders(
       <AutoSearchSection
@@ -193,13 +192,9 @@ describe("AutoSearchSection", () => {
   });
 
   test("Run now button calls trigger mutation", async () => {
-    const { useAutoSearchStatus } = await import(
-      "@/client/hooks/data/useAutoSearch"
-    );
-    vi.mocked(useAutoSearchStatus).mockReturnValue({
-      data: enabledStatus,
-      isLoading: false,
-    });
+    const { useAutoSearchStatus } =
+      await import("@/client/hooks/data/useAutoSearch");
+    vi.mocked(useAutoSearchStatus).mockReturnValue(stubQuery(enabledStatus));
 
     renderWithProviders(
       <AutoSearchSection
