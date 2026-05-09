@@ -31,5 +31,6 @@ export const queryKeys = {
     ["recent-searches", instanceId] as const,
   autoSearchStatus: (instanceId: number) =>
     ["auto-search-status", instanceId] as const,
+  autoSearchStatuses: () => ["auto-search-statuses"] as const,
   cronPreview: (expr: string) => ["cron-preview", expr] as const,
 };

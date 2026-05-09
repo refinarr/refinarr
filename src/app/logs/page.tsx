@@ -21,6 +21,7 @@ import { useConfig } from "@/client/hooks/data/useConfig";
 import { withToast } from "@/client/lib/with-toast";
 import { LogSource } from "@/shared/types/models";
 import type { LogLevel } from "@/shared/types/models";
+import { isLogLevel } from "@/shared/log-level";
 
 const ALL = "__all__";
 
@@ -134,7 +135,9 @@ export default function LogsPage() {
             </div>
             <Select
               value={activeLevel}
-              onValueChange={(v) => setLevel(v as LogLevel)}
+              onValueChange={(v) => {
+                if (v !== null && isLogLevel(v)) setLevel(v);
+              }}
             >
               <SelectTrigger className="w-32">
                 <SelectValue>{levelLabel}</SelectValue>

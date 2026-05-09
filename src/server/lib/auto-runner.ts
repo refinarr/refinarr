@@ -13,6 +13,7 @@ import type {
   ScoringMode,
 } from "@/shared/types/models";
 import { LogSource } from "@/shared/types/models";
+import type { AutoSearchStatus } from "@/shared/types/api";
 import { appLogger } from "./app-logger";
 
 const AUTO_SEARCH_SCORING_OVERRIDE: Record<
@@ -78,6 +79,58 @@ export function computeNextRun({
   } catch {
     return null;
   }
+}
+
+// Builds the derived status payload for a single instance. Used by both the
+// per-instance GET route and the bulk statuses route so the shape is always
+// consistent. Reads live running state from the singleton autoRunner — must
+// be called server-side only.
+export function buildAutoSearchStatus(
+  instance: Instance,
+  running: boolean,
+): AutoSearchStatus {
+  const cronValid = (() => {
+    const fields = instance.autoSearchCronExpression.trim().split(/\s+/);
+    if (fields.length !== 5) return false;
+    try {
+      CronExpressionParser.parse(instance.autoSearchCronExpression);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  const nextRunAt = instance.autoSearchEnabled
+    ? computeNextRun({
+        mode: instance.autoSearchScheduleMode,
+        intervalMinutes: instance.autoSearchIntervalMinutes,
+        cronExpression: instance.autoSearchCronExpression,
+        lastRunAt: instance.autoSearchLastRunAt,
+      })
+    : null;
+
+  const pausedUntil = instance.autoSearchPausedUntil
+    ? new Date(instance.autoSearchPausedUntil)
+    : null;
+  const paused = pausedUntil !== null && Date.now() < pausedUntil.getTime();
+
+  return {
+    enabled: instance.autoSearchEnabled,
+    scheduleMode: instance.autoSearchScheduleMode,
+    intervalMinutes: instance.autoSearchIntervalMinutes,
+    cronExpression: instance.autoSearchCronExpression,
+    cronValid,
+    batchLimit: instance.autoSearchBatchLimit,
+    monitoredOnly: instance.autoSearchMonitoredOnly,
+    scope: instance.autoSearchScope,
+    lastRunAt: instance.autoSearchLastRunAt?.toISOString() ?? null,
+    nextRunAt: nextRunAt?.toISOString() ?? null,
+    running,
+    paused,
+    pausedUntil: paused ? pausedUntil!.toISOString() : null,
+    cooldownHours: instance.autoSearchCooldownHours,
+    scoringMode: instance.autoSearchScoringMode,
+  };
 }
 
 // Pure picker — exported for unit tests.

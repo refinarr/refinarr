@@ -26,6 +26,22 @@ export function useTriggerAutoSearch(instanceId: number) {
       void qc.invalidateQueries({
         queryKey: queryKeys.autoSearchStatus(instanceId),
       });
+      void qc.invalidateQueries({
+        queryKey: queryKeys.autoSearchStatuses(),
+      });
+    },
+  });
+}
+
+export function useAutoSearchStatuses() {
+  return useQuery({
+    queryKey: queryKeys.autoSearchStatuses(),
+    queryFn: () =>
+      api.get<Record<number, AutoSearchStatus>>(`/auto-search/statuses`),
+    refetchInterval: (query) => {
+      const statuses = query.state.data;
+      if (!statuses) return 30_000;
+      return Object.values(statuses).some((s) => s.running) ? 5_000 : 30_000;
     },
   });
 }

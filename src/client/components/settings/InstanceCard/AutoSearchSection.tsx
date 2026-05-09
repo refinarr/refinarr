@@ -155,7 +155,7 @@ export function AutoSearchSection({ instance }: Props) {
         {nextRunDisplay && (
           <>
             {" "}
-            · {t("nextRun")}: in {nextRunDisplay}
+            · {t("nextRun")}: {t("nextRunIn", { eta: nextRunDisplay })}
           </>
         )}
       </span>
@@ -211,6 +211,7 @@ export function AutoSearchSection({ instance }: Props) {
                     <DropdownMenuTrigger
                       className="hover:bg-accent inline-flex size-7 items-center justify-center rounded-md text-sm disabled:pointer-events-none disabled:opacity-50"
                       disabled={running || update.isPending}
+                      aria-label={t("pauseMenu")}
                     >
                       <PauseCircle className="size-3.5" />
                     </DropdownMenuTrigger>

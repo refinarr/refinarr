@@ -499,6 +499,7 @@
       "lastRun": "Last run",
       "lastRunNever": "Never",
       "nextRun": "Next",
+      "nextRunIn": "in {eta}",
       "runningNow": "Running now…",
       "runNow": "Run now",
       "pickStrategyLabel": "Pick strategy",
@@ -522,6 +523,7 @@
       "pause6h": "Pause for 6 hours",
       "pause24h": "Pause for 24 hours",
       "pause7d": "Pause for 7 days",
+      "pauseMenu": "Pause auto-search",
       "resume": "Resume"
     },
     "instanceForm": {

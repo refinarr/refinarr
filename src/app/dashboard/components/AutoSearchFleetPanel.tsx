@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import { Loader2, PauseCircle, Play } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
 import {
-  useAutoSearchStatus,
+  useAutoSearchStatuses,
   useTriggerAutoSearch,
 } from "@/client/hooks/data/useAutoSearch";
 import { useUpdateInstance } from "@/client/hooks/data/useInstances";
@@ -13,18 +13,21 @@ import {
   msUntil,
 } from "@/client/lib/format-relative";
 import { withToast } from "@/client/lib/with-toast";
-import type { DashboardInstanceSummary } from "@/shared/types/api";
+import type {
+  AutoSearchStatus,
+  DashboardInstanceSummary,
+} from "@/shared/types/api";
 
 interface RowProps {
   instance: DashboardInstanceSummary;
+  status: AutoSearchStatus | undefined;
 }
 
-function FleetRow({ instance }: RowProps) {
+function FleetRow({ instance, status }: RowProps) {
   const tTime = useTranslations("time");
   const tToast = useTranslations("toast.instance");
   const t = useTranslations("dashboard.fleet");
 
-  const { data: status } = useAutoSearchStatus(instance.id);
   const trigger = useTriggerAutoSearch(instance.id);
   const update = useUpdateInstance();
 
@@ -102,6 +105,7 @@ function FleetRow({ instance }: RowProps) {
           className="px-2"
           disabled={paused || running || trigger.isPending}
           onClick={() => runTrigger()}
+          aria-label={t("runNow")}
           title={t("runNow")}
         >
           {trigger.isPending ? (
@@ -121,6 +125,7 @@ interface Props {
 
 export function AutoSearchFleetPanel({ instances }: Props) {
   const t = useTranslations("dashboard.fleet");
+  const { data: statuses } = useAutoSearchStatuses();
   const autoSearchInstances = instances.filter((i) => i.autoSearchEnabled);
   if (autoSearchInstances.length === 0) return null;
 
@@ -129,7 +134,11 @@ export function AutoSearchFleetPanel({ instances }: Props) {
       <h2 className="mb-2 text-lg font-semibold">{t("title")}</h2>
       <div className="bg-card divide-border divide-y rounded-lg border px-4">
         {autoSearchInstances.map((inst) => (
-          <FleetRow key={inst.id} instance={inst} />
+          <FleetRow
+            key={inst.id}
+            instance={inst}
+            status={statuses?.[inst.id]}
+          />
         ))}
       </div>
     </div>
