@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 import { PUT } from "@/app/api/config/route";
 
 const ctxNone = { params: Promise.resolve({}) };

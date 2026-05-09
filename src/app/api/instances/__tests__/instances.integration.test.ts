@@ -2,7 +2,7 @@ import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/server/lib/db";
 import { isEncrypted } from "@/server/lib/crypto";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 import { GET as getOne, PUT, DELETE } from "@/app/api/instances/[id]/route";
 import { GET, POST } from "@/app/api/instances/route";
 

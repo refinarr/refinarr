@@ -1,7 +1,7 @@
 import { describe, test, expect, vi } from "vitest";
 import { MediaService } from "@/server/services/MediaService";
 import { instanceService } from "@/server/services/InstanceService";
-import { CACHE_TTL_MS } from "@/server/lib/DataCache";
+import { CACHE_TTL_MS } from "@/server/lib/data-cache";
 // Type-only client imports — used inside `expect(...).toBeInstanceOf` /
 // runtime-result checks but not constructed directly. Keeps the
 // "subclasses constructed only via ArrClientFactory" rule intact.

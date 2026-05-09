@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import { ArrRateLimiter } from "../ArrRateLimiter";
+import { ArrRateLimiter } from "../arr-rate-limiter";
 
 describe("ArrRateLimiter", () => {
   beforeEach(() => {

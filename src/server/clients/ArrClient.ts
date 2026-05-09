@@ -2,7 +2,7 @@ import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { redactString } from "@/server/lib/redact";
-import { arrRateLimiter } from "@/server/lib/ArrRateLimiter";
+import { arrRateLimiter } from "@/server/lib/arr-rate-limiter";
 import type { Instance } from "@/shared/types/models";
 
 // Node's fetch wraps the underlying network error and surfaces a generic
@@ -103,7 +103,7 @@ export abstract class ArrClient {
   }
 
   protected async fetch<T>(path: string, init?: RequestInit): Promise<T> {
-    await arrRateLimiter.acquire(this.instanceId, init?.signal);
+    await arrRateLimiter.acquire(this.instanceId, init?.signal ?? undefined);
     const url = `${this.baseUrl}/api/v3${path}`;
 
     // Always enforce the 10s ceiling even when the caller passes its own signal.

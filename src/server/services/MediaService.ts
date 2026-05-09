@@ -13,7 +13,7 @@ import {
   dataCache,
   CACHE_STALE_MS,
   CACHE_TTL_MS,
-} from "@/server/lib/DataCache";
+} from "@/server/lib/data-cache";
 import { isProfileMode, SCORE_FOR } from "@/shared/scoring-mode";
 import { getSeverity } from "@/shared/severity";
 import type {

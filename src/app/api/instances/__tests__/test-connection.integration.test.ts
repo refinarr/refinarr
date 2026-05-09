@@ -1,6 +1,6 @@
 import { describe, test, expect, vi, afterEach } from "vitest";
 import { NextRequest } from "next/server";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 import { statusPoller } from "@/server/lib/status-poller";
 import { POST as createInstance } from "@/app/api/instances/route";
 import { POST as testConnection } from "@/app/api/instances/[id]/test/route";
