@@ -28,7 +28,8 @@ export function formatRelative(date: Date | string | number, t: T): string {
 }
 
 export function msUntil(isoString: string): number {
-  return Math.max(0, new Date(isoString).getTime() - Date.now());
+  const t = new Date(isoString).getTime();
+  return Number.isFinite(t) ? Math.max(0, t - Date.now()) : 0;
 }
 
 /**

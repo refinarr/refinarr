@@ -194,10 +194,10 @@ describe("AddInstanceDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
 
     await waitFor(() => {
-      const call = mockUpdateMutateAsync.mock.calls[0][0] as {
-        data: Record<string, unknown>;
-      };
-      expect(call.data).not.toHaveProperty("apiKey");
+      expect(mockUpdateMutateAsync).toHaveBeenCalled();
+      expect(mockUpdateMutateAsync.mock.calls[0][0]).not.toHaveProperty(
+        "data.apiKey",
+      );
     });
   });
 
