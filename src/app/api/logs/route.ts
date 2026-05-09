@@ -9,6 +9,7 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const s = req.nextUrl.searchParams;
   const level = s.get("level");
   const q = s.get("q") ?? undefined;
+  const source = s.get("source") ?? undefined;
   const page = Number(s.get("page") ?? "1");
   const limit = Number(s.get("limit") ?? "50");
 
@@ -17,6 +18,7 @@ export const GET = createApiHandler(async (req: NextRequest) => {
       ? (level as LogLevel)
       : undefined,
     q,
+    source,
   };
 
   const { items, total } = await appLogRepository.findPaginated(

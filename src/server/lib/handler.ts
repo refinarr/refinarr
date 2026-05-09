@@ -2,10 +2,10 @@ import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import type { ApiErrorResponse } from "@/shared/types/api";
+import { LogSource } from "@/shared/types/models";
 import { ensureSeeded } from "./bootstrap";
 import { appLogger } from "./app-logger";
 import { HttpError, ZodPayloadError } from "./api-errors";
-import { LogSource } from "./log-sources";
 import { UnsafeUrlError } from "./url-guard";
 
 export type RouteContext = { params: Promise<Record<string, string>> };

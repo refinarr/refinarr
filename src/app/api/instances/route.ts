@@ -27,6 +27,9 @@ function publicView(i: Instance): PublicInstance {
     autoSearchMonitoredOnly: i.autoSearchMonitoredOnly,
     autoSearchScope: i.autoSearchScope,
     autoSearchPickStrategy: i.autoSearchPickStrategy,
+    autoSearchCooldownHours: i.autoSearchCooldownHours,
+    autoSearchPausedUntil: i.autoSearchPausedUntil,
+    autoSearchScoringMode: i.autoSearchScoringMode,
   };
 }
 

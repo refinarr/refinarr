@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { configRepository } from "@/server/repositories/ConfigRepository";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ConfigKey } from "@/server/config/keys";
-import { LogSource } from "./log-sources";
+import { LogSource } from "@/shared/types/models";
 import { appLogger } from "./app-logger";
 import { searchWorker } from "./search-worker";
 import { statusPoller } from "./status-poller";

@@ -7,6 +7,7 @@ import type { AppLogEntry, LogLevel } from "@/shared/types/models";
 export interface AppLogFilters {
   level?: LogLevel;
   q?: string;
+  source?: string;
 }
 
 const MAX_ENTRIES = 500;
@@ -28,6 +29,7 @@ export function useAppLogs(filters: AppLogFilters = {}) {
 
     const qs = new URLSearchParams();
     if (filters.level) qs.set("level", filters.level);
+    if (filters.source) qs.set("source", filters.source);
     if (filters.q) qs.set("q", filters.q);
 
     const es = new EventSource(`/api/logs/stream?${qs}`);
@@ -50,7 +52,7 @@ export function useAppLogs(filters: AppLogFilters = {}) {
         // malformed event — skip
       }
     };
-  }, [filters.level, filters.q]);
+  }, [filters.level, filters.q, filters.source]);
 
   useEffect(() => {
     // SSE subscribe-to-external-system pattern. connect() opens an EventSource

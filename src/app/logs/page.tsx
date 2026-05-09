@@ -17,8 +17,11 @@ import {
 import { useAppLogs, useClearAppLogs } from "@/client/hooks/data/useAppLogs";
 import { useDebouncedValue } from "@/client/hooks/ui/useDebouncedValue";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
+import { useConfig } from "@/client/hooks/data/useConfig";
 import { withToast } from "@/client/lib/with-toast";
+import { LogSource } from "@/shared/types/models";
 import type { LogLevel } from "@/shared/types/models";
+import { isLogLevel } from "@/shared/log-level";
 
 const ALL = "__all__";
 
@@ -28,12 +31,21 @@ export default function LogsPage() {
   const tCols = useTranslations("logs.columns");
   const tToast = useTranslations("toast.logs");
   const tConfirm = useTranslations("confirm.clearLogs");
-  const [level, setLevel] = useState<LogLevel | null>(null);
+  const { data: config } = useConfig();
+  const isDebug = config?.debugMode ?? false;
+  const [level, setLevel] = useState<LogLevel>("info");
+  const [source, setSource] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const debouncedQ = useDebouncedValue(q, 300);
 
+  // Clamp debug-only filters to safe defaults when debug mode is off, without
+  // resetting state (which would break if config is still loading).
+  const activeLevel: LogLevel = !isDebug && level === "debug" ? "info" : level;
+  const activeSource = isDebug ? source : null;
+
   const { entries, total, isLoading, isConnected, reconnect } = useAppLogs({
-    level: level ?? undefined,
+    level: activeLevel,
+    source: activeSource ?? undefined,
     q: debouncedQ || undefined,
   });
 
@@ -56,7 +68,26 @@ export default function LogsPage() {
     reconnect();
   };
 
-  const levelLabel = level === null ? tLevel("all") : tLevel(level);
+  const levelLabel = tLevel(activeLevel);
+  const SOURCE_LABELS: Record<string, string> = {
+    [LogSource.Api]: t("source.api"),
+    [LogSource.Client]: t("source.client"),
+    [LogSource.Auth]: t("source.auth"),
+    [LogSource.Db]: t("source.db"),
+    [LogSource.ArrClient]: t("source.arr-client"),
+    [LogSource.InstanceService]: t("source.instance-service"),
+    [LogSource.MovieService]: t("source.movie-service"),
+    [LogSource.SeriesService]: t("source.series-service"),
+    [LogSource.MediaAction]: t("source.media-action"),
+    [LogSource.SearchQueue]: t("source.search-queue"),
+    [LogSource.SearchWorker]: t("source.search-worker"),
+    [LogSource.StatusPoller]: t("source.status-poller"),
+    [LogSource.AutoRun]: t("source.auto-run"),
+  };
+  const sourceLabel =
+    activeSource === null
+      ? t("sourceAll")
+      : (SOURCE_LABELS[activeSource] ?? activeSource);
 
   return (
     <AppShell>
@@ -103,22 +134,41 @@ export default function LogsPage() {
               />
             </div>
             <Select
-              value={level ?? ALL}
-              onValueChange={(v) =>
-                setLevel(v === ALL ? null : (v as LogLevel))
-              }
+              value={activeLevel}
+              onValueChange={(v) => {
+                if (v !== null && isLogLevel(v)) setLevel(v);
+              }}
             >
               <SelectTrigger className="w-32">
                 <SelectValue>{levelLabel}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>{tLevel("all")}</SelectItem>
-                <SelectItem value="error">{tLevel("error")}</SelectItem>
-                <SelectItem value="warn">{tLevel("warn")}</SelectItem>
+                {isDebug && (
+                  <SelectItem value="debug">{tLevel("debug")}</SelectItem>
+                )}
                 <SelectItem value="info">{tLevel("info")}</SelectItem>
-                <SelectItem value="debug">{tLevel("debug")}</SelectItem>
+                <SelectItem value="warn">{tLevel("warn")}</SelectItem>
+                <SelectItem value="error">{tLevel("error")}</SelectItem>
               </SelectContent>
             </Select>
+            {isDebug && (
+              <Select
+                value={activeSource ?? ALL}
+                onValueChange={(v) => setSource(v === ALL ? null : v)}
+              >
+                <SelectTrigger className="w-36">
+                  <SelectValue>{sourceLabel}</SelectValue>
+                </SelectTrigger>
+                <SelectContent className="w-max">
+                  <SelectItem value={ALL}>{t("sourceAll")}</SelectItem>
+                  {Object.values(LogSource).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {SOURCE_LABELS[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {isLoading && (

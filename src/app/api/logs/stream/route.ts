@@ -14,9 +14,10 @@ let activeClients = 0;
 
 function matches(
   entry: AppLogEntry,
-  filter: { level?: LogLevel; q?: string },
+  filter: { level?: LogLevel; q?: string; source?: string },
 ): boolean {
   if (filter.level && entry.level !== filter.level) return false;
+  if (filter.source && entry.source !== filter.source) return false;
   if (filter.q && !entry.message.toLowerCase().includes(filter.q.toLowerCase()))
     return false;
   return true;
@@ -30,7 +31,8 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const resumeId = req.headers.get("last-event-id");
   const level = req.nextUrl.searchParams.get("level") as LogLevel | null;
   const q = req.nextUrl.searchParams.get("q") ?? undefined;
-  const filter = { level: level || undefined, q };
+  const source = req.nextUrl.searchParams.get("source") ?? undefined;
+  const filter = { level: level || undefined, q, source };
 
   // Validate the resume cursor before using it in DB calls and id-dedup.
   // An invalid (NaN / negative) value would silently poison findSince().

@@ -55,7 +55,7 @@ describe("GET /api/instances/[id]/auto-search", () => {
 
   // ── interval mode ────────────────────────────────────────────────────────
 
-  test("enabled interval mode + lastRunAt=null: nextRunAt is ISO string (epoch + interval)", async () => {
+  test("enabled interval mode + lastRunAt=null: nextRunAt is null (fires immediately, epoch sentinel hidden)", async () => {
     const created = await postInstance(
       postReq({
         ...baseInstance,
@@ -71,8 +71,7 @@ describe("GET /api/instances/[id]/auto-search", () => {
     const body = await res.json();
     expect(body.enabled).toBe(true);
     expect(body.scheduleMode).toBe("interval");
-    expect(typeof body.nextRunAt).toBe("string");
-    expect(body.nextRunAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(body.nextRunAt).toBeNull();
     await instanceService.delete(id);
   });
 
@@ -326,6 +325,140 @@ describe("GET /api/instances/[id]/auto-search", () => {
     const { id } = await created.json();
     const body = await (await GET(getReq(id), ctxFor(id))).json();
     expect(body.batchLimit).toBe(0);
+    await instanceService.delete(id);
+  });
+
+  // ── Phase 2 fields — pause, cooldown, scoring mode ───────────────────────
+
+  test("no pause set: paused=false, pausedUntil=null", async () => {
+    const created = await postInstance(
+      postReq({ ...baseInstance, autoSearchEnabled: true }),
+      { params: Promise.resolve({}) },
+    );
+    const { id } = await created.json();
+
+    const body = await (await GET(getReq(id), ctxFor(id))).json();
+    expect(body.paused).toBe(false);
+    expect(body.pausedUntil).toBeNull();
+    await instanceService.delete(id);
+  });
+
+  test("pause round-trip: PUT sets pausedUntil → GET returns paused=true with matching timestamp", async () => {
+    const created = await postInstance(
+      postReq({ ...baseInstance, autoSearchEnabled: true }),
+      { params: Promise.resolve({}) },
+    );
+    const { id } = await created.json();
+
+    const pausedUntil = new Date(Date.now() + 60 * 60 * 1000);
+    await instanceService.update(id, {
+      autoSearchPausedUntil: pausedUntil,
+    } as Parameters<typeof instanceService.update>[1]);
+
+    const body = await (await GET(getReq(id), ctxFor(id))).json();
+    expect(body.paused).toBe(true);
+    expect(body.pausedUntil).toBe(pausedUntil.toISOString());
+    await instanceService.delete(id);
+  });
+
+  test("clearing pause: PUT null → GET returns paused=false, pausedUntil=null", async () => {
+    const created = await postInstance(
+      postReq({ ...baseInstance, autoSearchEnabled: true }),
+      { params: Promise.resolve({}) },
+    );
+    const { id } = await created.json();
+
+    await instanceService.update(id, {
+      autoSearchPausedUntil: new Date(Date.now() + 60 * 60 * 1000),
+    } as Parameters<typeof instanceService.update>[1]);
+    await instanceService.update(id, {
+      autoSearchPausedUntil: null,
+    } as Parameters<typeof instanceService.update>[1]);
+
+    const body = await (await GET(getReq(id), ctxFor(id))).json();
+    expect(body.paused).toBe(false);
+    expect(body.pausedUntil).toBeNull();
+    await instanceService.delete(id);
+  });
+
+  test("expired pause: pausedUntil in past → paused=false, pausedUntil=null", async () => {
+    const created = await postInstance(
+      postReq({ ...baseInstance, autoSearchEnabled: true }),
+      { params: Promise.resolve({}) },
+    );
+    const { id } = await created.json();
+
+    await instanceService.update(id, {
+      autoSearchPausedUntil: new Date(Date.now() - 60 * 1000),
+    } as Parameters<typeof instanceService.update>[1]);
+
+    const body = await (await GET(getReq(id), ctxFor(id))).json();
+    expect(body.paused).toBe(false);
+    expect(body.pausedUntil).toBeNull();
+    await instanceService.delete(id);
+  });
+
+  test("cooldownHours round-trip: stored value is returned verbatim", async () => {
+    const created = await postInstance(
+      postReq({
+        ...baseInstance,
+        autoSearchEnabled: true,
+        autoSearchCooldownHours: 6,
+      }),
+      { params: Promise.resolve({}) },
+    );
+    const { id } = await created.json();
+
+    const body = await (await GET(getReq(id), ctxFor(id))).json();
+    expect(body.cooldownHours).toBe(6);
+    await instanceService.delete(id);
+  });
+
+  test("cooldownHours=0 (off) reflected correctly", async () => {
+    const created = await postInstance(
+      postReq({
+        ...baseInstance,
+        autoSearchEnabled: true,
+        autoSearchCooldownHours: 0,
+      }),
+      { params: Promise.resolve({}) },
+    );
+    const { id } = await created.json();
+
+    const body = await (await GET(getReq(id), ctxFor(id))).json();
+    expect(body.cooldownHours).toBe(0);
+    await instanceService.delete(id);
+  });
+
+  test("scoringMode=inherit reflected in response", async () => {
+    const created = await postInstance(
+      postReq({
+        ...baseInstance,
+        autoSearchEnabled: true,
+        autoSearchScoringMode: "inherit",
+      }),
+      { params: Promise.resolve({}) },
+    );
+    const { id } = await created.json();
+
+    const body = await (await GET(getReq(id), ctxFor(id))).json();
+    expect(body.scoringMode).toBe("inherit");
+    await instanceService.delete(id);
+  });
+
+  test("scoringMode=profile reflected in response", async () => {
+    const created = await postInstance(
+      postReq({
+        ...baseInstance,
+        autoSearchEnabled: true,
+        autoSearchScoringMode: "profile",
+      }),
+      { params: Promise.resolve({}) },
+    );
+    const { id } = await created.json();
+
+    const body = await (await GET(getReq(id), ctxFor(id))).json();
+    expect(body.scoringMode).toBe("profile");
     await instanceService.delete(id);
   });
 });

@@ -1,7 +1,6 @@
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { searchWorker } from "@/server/lib/search-worker";
 import { statusPoller } from "@/server/lib/status-poller";
@@ -9,11 +8,13 @@ import { autoRunner } from "@/server/lib/auto-runner";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { arrRateLimiter } from "@/server/lib/arr-rate-limiter";
 import { eventBus } from "@/server/lib/event-bus";
+import { LogSource } from "@/shared/types/models";
 import { DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
 import type {
   AutoSearchPickStrategy,
   AutoSearchScheduleMode,
   AutoSearchScope,
+  AutoSearchScoringMode,
   Instance,
   ArrType,
   ScoringMode,
@@ -60,6 +61,8 @@ export class InstanceService {
     autoSearchMonitoredOnly?: boolean;
     autoSearchScope?: AutoSearchScope;
     autoSearchPickStrategy?: AutoSearchPickStrategy;
+    autoSearchCooldownHours?: number;
+    autoSearchScoringMode?: AutoSearchScoringMode;
   }): Promise<Instance> {
     assertSafeArrUrl(data.url);
     const created = await instanceRepository.create({
@@ -164,6 +167,9 @@ export class InstanceService {
       autoSearchMonitoredOnly: true,
       autoSearchScope: "flagged",
       autoSearchPickStrategy: "balanced",
+      autoSearchCooldownHours: 0,
+      autoSearchPausedUntil: null,
+      autoSearchScoringMode: "inherit",
     };
     const client = ArrClientFactory.createArrClient(transient);
     const result = await client.testConnection();

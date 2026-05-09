@@ -1,9 +1,11 @@
 import { encryptSecret, decryptSecret, isEncrypted } from "@/server/lib/crypto";
+import { isAutoSearchScoringMode } from "@/shared/scoring-mode";
 import type {
   ArrType,
   AutoSearchPickStrategy,
   AutoSearchScheduleMode,
   AutoSearchScope,
+  AutoSearchScoringMode,
   Instance,
   ScoringMode,
 } from "@/shared/types/models";
@@ -29,6 +31,13 @@ interface RawInstanceRow {
   autoSearchMonitoredOnly: boolean;
   autoSearchScope: string;
   autoSearchPickStrategy: string;
+  autoSearchCooldownHours: number;
+  autoSearchPausedUntil: Date | null;
+  autoSearchScoringMode: string;
+}
+
+function toAutoSearchScoringMode(v: string): AutoSearchScoringMode {
+  return isAutoSearchScoringMode(v) ? v : "inherit";
 }
 
 function toInstance(row: RawInstanceRow): Instance {
@@ -42,6 +51,7 @@ function toInstance(row: RawInstanceRow): Instance {
     autoSearchScope: row.autoSearchScope as AutoSearchScope,
     autoSearchPickStrategy:
       row.autoSearchPickStrategy as AutoSearchPickStrategy,
+    autoSearchScoringMode: toAutoSearchScoringMode(row.autoSearchScoringMode),
   };
 }
 
@@ -63,6 +73,9 @@ type CreateInstanceInput = Omit<
   | "autoSearchMonitoredOnly"
   | "autoSearchScope"
   | "autoSearchPickStrategy"
+  | "autoSearchCooldownHours"
+  | "autoSearchPausedUntil"
+  | "autoSearchScoringMode"
 > & {
   scoringMode?: ScoringMode;
   searchesPerHour?: number;
@@ -76,6 +89,9 @@ type CreateInstanceInput = Omit<
   autoSearchMonitoredOnly?: boolean;
   autoSearchScope?: AutoSearchScope;
   autoSearchPickStrategy?: AutoSearchPickStrategy;
+  autoSearchCooldownHours?: number;
+  autoSearchPausedUntil?: Date | null;
+  autoSearchScoringMode?: AutoSearchScoringMode;
 };
 
 export class InstanceRepository extends BaseRepository<Instance> {

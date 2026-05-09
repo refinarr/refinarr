@@ -14,6 +14,7 @@ import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary"
 import { useInstances } from "@/client/hooks/data/useInstances";
 import { useDashboardSummary } from "@/client/hooks/data/useDashboardSummary";
 import { useConfig } from "@/client/hooks/data/useConfig";
+import { AutoSearchFleetPanel } from "@/app/dashboard/components/AutoSearchFleetPanel";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -126,6 +127,8 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
+
+          <AutoSearchFleetPanel instances={summary?.perInstance ?? []} />
 
           <RecentActivityList logs={summary?.recentActivity ?? []} />
         </div>

@@ -4,7 +4,7 @@ import { positiveInt } from "@/server/lib/api-errors";
 import { instanceService } from "@/server/services/InstanceService";
 import { statusPoller } from "@/server/lib/status-poller";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
+import { LogSource } from "@/shared/types/models";
 
 export const POST = createApiHandler(async (_req, ctx) => {
   const id = positiveInt(ctx.params.id, "id");

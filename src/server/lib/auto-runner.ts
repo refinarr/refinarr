@@ -5,9 +5,24 @@ import { logRepository } from "@/server/repositories/LogRepository";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { mediaServiceFor } from "@/server/services/media-services";
-import type { ArrType, Instance, MediaItem } from "@/shared/types/models";
+import type {
+  ArrType,
+  AutoSearchScoringMode,
+  Instance,
+  MediaItem,
+  ScoringMode,
+} from "@/shared/types/models";
+import { LogSource } from "@/shared/types/models";
+import type { AutoSearchStatus } from "@/shared/types/api";
 import { appLogger } from "./app-logger";
-import { LogSource } from "./log-sources";
+
+const AUTO_SEARCH_SCORING_OVERRIDE: Record<
+  AutoSearchScoringMode,
+  ScoringMode | undefined
+> = {
+  profile: "profile",
+  inherit: undefined,
+};
 
 const QUEUE_ACTIONS: Record<ArrType, "movie" | "series"> = {
   radarr: "movie",
@@ -66,6 +81,63 @@ export function computeNextRun({
   }
 }
 
+// Builds the derived status payload for a single instance. Used by both the
+// per-instance GET route and the bulk statuses route so the shape is always
+// consistent. Reads live running state from the singleton autoRunner — must
+// be called server-side only.
+export function buildAutoSearchStatus(
+  instance: Instance,
+  running: boolean,
+): AutoSearchStatus {
+  const cronValid = (() => {
+    const fields = instance.autoSearchCronExpression.trim().split(/\s+/);
+    if (fields.length !== 5) return false;
+    try {
+      CronExpressionParser.parse(instance.autoSearchCronExpression);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  const rawNextRunAt = instance.autoSearchEnabled
+    ? computeNextRun({
+        mode: instance.autoSearchScheduleMode,
+        intervalMinutes: instance.autoSearchIntervalMinutes,
+        cronExpression: instance.autoSearchCronExpression,
+        lastRunAt: instance.autoSearchLastRunAt,
+      })
+    : null;
+  // Interval mode with no lastRunAt returns an epoch-based timestamp that is
+  // already in the past (fires immediately). Expose null so the client doesn't
+  // display a 1970 date.
+  const nextRunAt =
+    rawNextRunAt && rawNextRunAt.getTime() > Date.now() ? rawNextRunAt : null;
+
+  const pausedUntil = instance.autoSearchPausedUntil
+    ? new Date(instance.autoSearchPausedUntil)
+    : null;
+  const paused = pausedUntil !== null && Date.now() < pausedUntil.getTime();
+
+  return {
+    enabled: instance.autoSearchEnabled,
+    scheduleMode: instance.autoSearchScheduleMode,
+    intervalMinutes: instance.autoSearchIntervalMinutes,
+    cronExpression: instance.autoSearchCronExpression,
+    cronValid,
+    batchLimit: instance.autoSearchBatchLimit,
+    monitoredOnly: instance.autoSearchMonitoredOnly,
+    scope: instance.autoSearchScope,
+    lastRunAt: instance.autoSearchLastRunAt?.toISOString() ?? null,
+    nextRunAt: nextRunAt?.toISOString() ?? null,
+    running,
+    paused,
+    pausedUntil: paused ? pausedUntil!.toISOString() : null,
+    cooldownHours: instance.autoSearchCooldownHours,
+    scoringMode: instance.autoSearchScoringMode,
+  };
+}
+
 // Pure picker — exported for unit tests.
 //
 // Backfill items (never searched OR last search failed) always come first,
@@ -77,10 +149,22 @@ export function pickAutoSearchBatch<T extends { id: number; cfScore: number }>(
   lastSearchedMap: Map<number, { at: Date; failed: boolean }>,
   batchLimit: number,
   strategy: "balanced" | "random" = "balanced",
+  cooldownMs: number = 0,
 ): T[] {
+  const now = Date.now();
+  const eligible =
+    cooldownMs > 0
+      ? items.filter((item) => {
+          const info = lastSearchedMap.get(item.id);
+          // Never searched or previously failed → always eligible.
+          if (!info || info.failed) return true;
+          return now - info.at.getTime() > cooldownMs;
+        })
+      : items;
+
   const backfill: T[] = [];
   const rest: T[] = [];
-  for (const item of items) {
+  for (const item of eligible) {
     const info = lastSearchedMap.get(item.id);
     if (!info || info.failed) backfill.push(item);
     else rest.push(item);
@@ -222,6 +306,15 @@ class AutoRunner {
       return;
     }
 
+    // Pause: schedule a wake-up at the resume time and skip the tick.
+    if (inst.autoSearchPausedUntil) {
+      const resumeAt = new Date(inst.autoSearchPausedUntil).getTime();
+      if (Date.now() < resumeAt) {
+        this.scheduleNext(instanceId, gen, resumeAt - Date.now() + 1000);
+        return;
+      }
+    }
+
     const now = new Date();
     const next = computeNextRun({
       mode: inst.autoSearchScheduleMode,
@@ -304,6 +397,9 @@ class AutoRunner {
 
   private async fanOut(inst: Instance): Promise<{ enqueued: number }> {
     const service = mediaServiceFor(inst.type);
+    const scoringModeOverride =
+      AUTO_SEARCH_SCORING_OVERRIDE[inst.autoSearchScoringMode];
+
     const { items: rawItems } = await service.getItems(inst.id, {
       page: 1,
       limit: 5000,
@@ -314,6 +410,7 @@ class AutoRunner {
         inst.autoSearchScope === "upgrade",
       monitorStatus: inst.autoSearchMonitoredOnly ? "monitored" : "all",
       onlyMissing: inst.autoSearchScope === "missing" ? true : undefined,
+      scoringModeOverride,
     });
 
     // "upgrade" = flagged items that already have a file. No query-layer
@@ -329,6 +426,7 @@ class AutoRunner {
       lastSearched,
       inst.autoSearchBatchLimit,
       inst.autoSearchPickStrategy,
+      inst.autoSearchCooldownHours * 60 * 60 * 1000,
     );
 
     if (picked.length === 0) {

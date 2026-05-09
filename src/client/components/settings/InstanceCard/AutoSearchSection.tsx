@@ -1,14 +1,21 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, PauseCircle } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/client/components/ui/dropdown-menu";
 import {
   AutoSearchFormFields,
   type AutoSearchFields,
 } from "@/client/components/settings/AutoSearchFormFields";
 import {
   useAutoSearchStatus,
+  useCronPreview,
   useTriggerAutoSearch,
 } from "@/client/hooks/data/useAutoSearch";
 import { useUpdateInstance } from "@/client/hooks/data/useInstances";
@@ -25,6 +32,17 @@ interface Props {
   instance: PublicInstance;
 }
 
+function nowPlusDuration(durationMs: number): string {
+  return new Date(Date.now() + durationMs).toISOString();
+}
+
+const PAUSE_DURATIONS_MS = [
+  { labelKey: "pause1h" as const, ms: 60 * 60 * 1000 },
+  { labelKey: "pause6h" as const, ms: 6 * 60 * 60 * 1000 },
+  { labelKey: "pause24h" as const, ms: 24 * 60 * 60 * 1000 },
+  { labelKey: "pause7d" as const, ms: 7 * 24 * 60 * 60 * 1000 },
+] as const;
+
 function fieldsFromInstance(i: PublicInstance): AutoSearchFields {
   return {
     autoSearchEnabled: i.autoSearchEnabled,
@@ -35,6 +53,8 @@ function fieldsFromInstance(i: PublicInstance): AutoSearchFields {
     autoSearchMonitoredOnly: i.autoSearchMonitoredOnly,
     autoSearchScope: i.autoSearchScope,
     autoSearchPickStrategy: i.autoSearchPickStrategy,
+    autoSearchCooldownHours: i.autoSearchCooldownHours,
+    autoSearchScoringMode: i.autoSearchScoringMode,
   };
 }
 
@@ -54,12 +74,28 @@ export function AutoSearchSection({ instance }: Props) {
   const trigger = useTriggerAutoSearch(instance.id);
   const update = useUpdateInstance();
 
+  // useCronPreview is also called inside AutoSearchFormFields with the same key —
+  // TanStack Query deduplicates the network request. We call it here so we can
+  // guard auto-save without waiting for the form to surface the error.
+  const cronPreview = useCronPreview(localFields.autoSearchCronExpression);
+  const isCronMode = debouncedFields.autoSearchScheduleMode === "cron";
+  const trimmedCronExpr = debouncedFields.autoSearchCronExpression.trim();
+  const cronFieldCount = trimmedCronExpr.split(/\s+/).length;
+  const isAtAlias = /^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(
+    trimmedCronExpr,
+  );
+  const isCronValid =
+    !isCronMode ||
+    ((isAtAlias || cronFieldCount === 5) && !cronPreview.isError);
+
   // Auto-save whenever debouncedFields change (skip on mount).
+  // Skip save when the cron expression is known-invalid to avoid storing bad data.
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
+    if (!isCronValid) return;
     void update.mutateAsync({ id: instance.id, data: debouncedFields });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedFields]);
@@ -68,10 +104,31 @@ export function AutoSearchSection({ instance }: Props) {
     success: tToast("updated"),
     error: tToast("updateFailed"),
   });
+  const pauseUpdate = withToast(update, {
+    success: tToast("updated"),
+    error: tToast("updateFailed"),
+  });
+
+  const setPause = (durationMs: number) => {
+    void pauseUpdate({
+      id: instance.id,
+      data: { autoSearchPausedUntil: nowPlusDuration(durationMs) },
+    });
+  };
+
+  const clearPause = () => {
+    void pauseUpdate({
+      id: instance.id,
+      data: { autoSearchPausedUntil: null },
+    });
+  };
 
   const lastRunAt = status?.lastRunAt ?? null;
   const nextRunAt = status?.nextRunAt ?? null;
   const running = status?.running ?? false;
+  const paused = status?.paused ?? false;
+  const pausedUntil = status?.pausedUntil ?? null;
+
   const lastRunDisplay = lastRunAt
     ? formatRelative(lastRunAt, tTime)
     : t("lastRunNever");
@@ -79,6 +136,48 @@ export function AutoSearchSection({ instance }: Props) {
     () => (nextRunAt ? formatEta(msUntil(nextRunAt), tTime) : null),
     [nextRunAt, tTime],
   );
+  const pausedUntilDisplay = useMemo(
+    () => (pausedUntil ? formatRelative(pausedUntil, tTime) : null),
+    [pausedUntil, tTime],
+  );
+
+  let closedSummary: string;
+  if (paused) {
+    closedSummary = t("pausedLabel");
+  } else if (localFields.autoSearchEnabled) {
+    closedSummary = tCommon("on");
+  } else {
+    closedSummary = tCommon("off");
+  }
+
+  let runStatus;
+  if (paused) {
+    runStatus = (
+      <span className="text-warning flex items-center gap-1">
+        <PauseCircle className="size-3" />
+        {t("pausedUntil", { time: pausedUntilDisplay ?? "…" })}
+      </span>
+    );
+  } else if (running) {
+    runStatus = (
+      <span className="text-brand flex items-center gap-1">
+        <Loader2 className="size-3 animate-spin" />
+        {t("runningNow")}
+      </span>
+    );
+  } else {
+    runStatus = (
+      <span>
+        {t("lastRun")}: {lastRunDisplay}
+        {nextRunDisplay && (
+          <>
+            {" "}
+            · {t("nextRun")}: {t("nextRunIn", { eta: nextRunDisplay })}
+          </>
+        )}
+      </span>
+    );
+  }
 
   return (
     <div>
@@ -95,7 +194,7 @@ export function AutoSearchSection({ instance }: Props) {
         {t("sectionTitle")}
         {!open && (
           <span className="text-muted-foreground ml-auto font-normal">
-            {localFields.autoSearchEnabled ? tCommon("on") : tCommon("off")}
+            {closedSummary}
           </span>
         )}
       </button>
@@ -107,40 +206,58 @@ export function AutoSearchSection({ instance }: Props) {
             onChange={(next) =>
               setLocalFields((prev) => ({ ...prev, ...next }))
             }
-            disabled={update.isPending}
           />
 
           {localFields.autoSearchEnabled && !isLoading && (
-            <div className="flex items-center justify-between">
-              <div className="text-muted-foreground text-xs">
-                {running ? (
-                  <span className="text-brand flex items-center gap-1">
-                    <Loader2 className="size-3 animate-spin" />
-                    {t("runningNow")}
-                  </span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-muted-foreground text-xs">{runStatus}</div>
+
+              <div className="flex items-center gap-2">
+                {paused ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={update.isPending}
+                    onClick={clearPause}
+                  >
+                    {t("resume")}
+                  </Button>
                 ) : (
-                  <span>
-                    {t("lastRun")}: {lastRunDisplay}
-                    {nextRunDisplay && (
-                      <>
-                        {" "}
-                        · {t("nextRun")}: in {nextRunDisplay}
-                      </>
-                    )}
-                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      className="hover:bg-accent inline-flex size-7 items-center justify-center rounded-md text-sm disabled:pointer-events-none disabled:opacity-50"
+                      disabled={running || update.isPending}
+                      aria-label={t("pauseMenu")}
+                    >
+                      <PauseCircle className="size-3.5" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {PAUSE_DURATIONS_MS.map(({ labelKey, ms }) => (
+                        <DropdownMenuItem
+                          key={labelKey}
+                          onClick={() => setPause(ms)}
+                        >
+                          {t(labelKey)}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={
+                    paused || running || trigger.isPending || !isCronValid
+                  }
+                  onClick={() => runTrigger()}
+                >
+                  {trigger.isPending && (
+                    <Loader2 className="mr-1 size-3 animate-spin" />
+                  )}
+                  {t("runNow")}
+                </Button>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={running || trigger.isPending}
-                onClick={() => runTrigger()}
-              >
-                {trigger.isPending && (
-                  <Loader2 className="mr-1 size-3 animate-spin" />
-                )}
-                {t("runNow")}
-              </Button>
             </div>
           )}
         </div>

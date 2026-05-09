@@ -9,8 +9,8 @@ import type {
   SearchQueueAction,
   SearchQueueEntry,
 } from "@/shared/types/models";
+import { LogSource } from "@/shared/types/models";
 import { appLogger } from "./app-logger";
-import { LogSource } from "./log-sources";
 
 function parsePayload(raw: string | null | undefined): unknown {
   return raw ? JSON.parse(raw) : {};

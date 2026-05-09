@@ -8,7 +8,6 @@ import {
 } from "@/server/lib/auth";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 import {
   badRequest,
   parseJson,
@@ -16,6 +15,7 @@ import {
   unauthorized,
 } from "@/server/lib/api-errors";
 import { createApiHandler } from "@/server/lib/handler";
+import { LogSource } from "@/shared/types/models";
 import { passwordChangeSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {

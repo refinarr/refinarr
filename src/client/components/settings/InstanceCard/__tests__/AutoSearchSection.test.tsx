@@ -39,7 +39,9 @@ vi.mock("@/client/hooks/data/useInstances", () => ({
 }));
 
 vi.mock("@/client/lib/with-toast", () => ({
-  withToast: vi.fn((mutation) => () => mutation.mutateAsync()),
+  withToast: vi.fn(
+    (mutation) => (variables: unknown) => mutation.mutateAsync(variables),
+  ),
 }));
 
 vi.mock("@/client/hooks/ui/useDebouncedValue", () => ({
@@ -65,6 +67,9 @@ const baseInstance: PublicInstance = {
   autoSearchMonitoredOnly: true,
   autoSearchScope: "flagged",
   autoSearchPickStrategy: "balanced",
+  autoSearchCooldownHours: 0,
+  autoSearchPausedUntil: null,
+  autoSearchScoringMode: "inherit",
 };
 
 // Shared status shape used across tests that need enabled status.
@@ -80,6 +85,10 @@ const enabledStatus: AutoSearchStatus = {
   lastRunAt: null,
   nextRunAt: null,
   running: false,
+  paused: false,
+  pausedUntil: null,
+  cooldownHours: 0,
+  scoringMode: "inherit",
 };
 
 describe("AutoSearchSection", () => {
@@ -227,5 +236,152 @@ describe("AutoSearchSection", () => {
         }),
       );
     });
+  });
+
+  // ── Pause / Resume ────────────────────────────────────────────────────────
+
+  test("paused state: shows 'Paused until' message and Resume button, hides pause trigger", async () => {
+    const { useAutoSearchStatus } =
+      await import("@/client/hooks/data/useAutoSearch");
+    const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    vi.mocked(useAutoSearchStatus).mockReturnValue(
+      stubQuery({
+        ...enabledStatus,
+        paused: true,
+        pausedUntil: future,
+        running: false,
+      }),
+    );
+
+    renderWithProviders(
+      <AutoSearchSection
+        instance={{ ...baseInstance, autoSearchEnabled: true }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/paused until/i)).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /resume/i })).toBeInTheDocument();
+    // Pause trigger (PauseCircle dropdown) should not be visible while paused.
+    expect(
+      screen.queryByRole("button", { name: /pause auto-search/i }),
+    ).toBeNull();
+  });
+
+  test("Resume button calls update mutation with autoSearchPausedUntil=null", async () => {
+    const { useAutoSearchStatus } =
+      await import("@/client/hooks/data/useAutoSearch");
+    vi.mocked(useAutoSearchStatus).mockReturnValue(
+      stubQuery({
+        ...enabledStatus,
+        paused: true,
+        pausedUntil: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }),
+    );
+
+    renderWithProviders(
+      <AutoSearchSection
+        instance={{ ...baseInstance, autoSearchEnabled: true }}
+      />,
+    );
+
+    const resumeBtn = await screen.findByRole("button", { name: /resume/i });
+    fireEvent.click(resumeBtn);
+
+    await waitFor(() => {
+      expect(mockUpdateMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: baseInstance.id,
+          data: { autoSearchPausedUntil: null },
+        }),
+      );
+    });
+  });
+
+  test("pause trigger visible when not paused and auto-search enabled", async () => {
+    const { useAutoSearchStatus } =
+      await import("@/client/hooks/data/useAutoSearch");
+    vi.mocked(useAutoSearchStatus).mockReturnValue(
+      stubQuery({ ...enabledStatus, paused: false }),
+    );
+
+    renderWithProviders(
+      <AutoSearchSection
+        instance={{ ...baseInstance, autoSearchEnabled: true }}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /pause auto-search/i }),
+    ).toBeInTheDocument();
+  });
+
+  test("selecting a pause duration calls update with autoSearchPausedUntil ~N ms in the future", async () => {
+    const { useAutoSearchStatus } =
+      await import("@/client/hooks/data/useAutoSearch");
+    vi.mocked(useAutoSearchStatus).mockReturnValue(
+      stubQuery({ ...enabledStatus, paused: false }),
+    );
+
+    renderWithProviders(
+      <AutoSearchSection
+        instance={{ ...baseInstance, autoSearchEnabled: true }}
+      />,
+    );
+
+    // Open the pause dropdown.
+    const pauseTrigger = await screen.findByRole("button", {
+      name: /pause auto-search/i,
+    });
+    fireEvent.click(pauseTrigger);
+
+    // Click "Pause for 1 hour".
+    const oneHourItem = await screen.findByText(/pause for 1 hour/i);
+    const before = Date.now();
+    fireEvent.click(oneHourItem);
+    const after = Date.now();
+
+    await waitFor(() => {
+      expect(mockUpdateMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: baseInstance.id,
+          data: expect.objectContaining({
+            autoSearchPausedUntil: expect.any(String),
+          }),
+        }),
+      );
+    });
+
+    // Verify the timestamp is ~1h from now (allow 5s tolerance for test execution).
+    const call = mockUpdateMutateAsync.mock.calls.find(
+      ([arg]) => arg?.data?.autoSearchPausedUntil,
+    );
+    const ts = new Date(call![0].data.autoSearchPausedUntil).getTime();
+    const oneHourMs = 60 * 60 * 1000;
+    expect(ts).toBeGreaterThanOrEqual(before + oneHourMs - 5000);
+    expect(ts).toBeLessThanOrEqual(after + oneHourMs + 5000);
+  });
+
+  test("Run now is disabled while paused", async () => {
+    const { useAutoSearchStatus } =
+      await import("@/client/hooks/data/useAutoSearch");
+    vi.mocked(useAutoSearchStatus).mockReturnValue(
+      stubQuery({
+        ...enabledStatus,
+        paused: true,
+        pausedUntil: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }),
+    );
+
+    renderWithProviders(
+      <AutoSearchSection
+        instance={{ ...baseInstance, autoSearchEnabled: true }}
+      />,
+    );
+
+    // Resume is present but Run now should be disabled (paused=true).
+    const runNow = await screen.findByRole("button", { name: /run now/i });
+    expect(runNow).toBeDisabled();
   });
 });

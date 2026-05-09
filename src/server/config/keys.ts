@@ -22,4 +22,10 @@ export const ConfigKey = {
     encode: (value) => value ?? "",
     default: null,
   }),
+  DebugMode: defineKey<boolean>({
+    key: "debugMode",
+    parse: (raw) => raw === "true",
+    encode: (value) => String(value),
+    default: false,
+  }),
 } as const;

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { ensureSeeded } from "@/server/lib/bootstrap";
 import { eventBus, type ServerEvent } from "@/server/lib/event-bus";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
+import { LogSource } from "@/shared/types/models";
 
 // Streaming responses must run on Node, never the Edge runtime, and must
 // not be cached or pre-rendered.

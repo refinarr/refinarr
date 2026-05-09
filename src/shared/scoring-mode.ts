@@ -1,4 +1,9 @@
-import type { CustomFormat, MediaItem, ScoringMode } from "./types/models";
+import type {
+  AutoSearchScoringMode,
+  CustomFormat,
+  MediaItem,
+  ScoringMode,
+} from "./types/models";
 
 // Centralized dispatch tables for the two scoring modes. Replaces the
 // scattered `mode === "profile" ? a : b` ternaries and matches the
@@ -55,6 +60,14 @@ export const isScoringMode = (value: string): value is ScoringMode =>
 // the safer default — it derives the target from the *arr's quality
 // profile cutoff and works without any per-instance CF preferences.
 export const DEFAULT_SCORING_MODE: ScoringMode = "profile";
+
+const AUTO_SEARCH_SCORING_MODE_SET: ReadonlySet<string> = new Set([
+  "inherit",
+  "profile",
+]);
+export const isAutoSearchScoringMode = (
+  v: string,
+): v is AutoSearchScoringMode => AUTO_SEARCH_SCORING_MODE_SET.has(v);
 
 // Stable iteration order over every supported scoring mode. Useful for UI
 // surfaces that need to render an option per mode (e.g. <SelectItem>).

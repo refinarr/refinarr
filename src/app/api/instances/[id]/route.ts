@@ -33,6 +33,9 @@ function publicView(i: Instance): PublicInstance {
     autoSearchMonitoredOnly: i.autoSearchMonitoredOnly,
     autoSearchScope: i.autoSearchScope,
     autoSearchPickStrategy: i.autoSearchPickStrategy,
+    autoSearchCooldownHours: i.autoSearchCooldownHours,
+    autoSearchPausedUntil: i.autoSearchPausedUntil,
+    autoSearchScoringMode: i.autoSearchScoringMode,
   };
 }
 
@@ -54,16 +57,32 @@ export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
     update.autoSearchScheduleMode === "cron" &&
     update.autoSearchCronExpression
   ) {
-    const fields = update.autoSearchCronExpression.trim().split(/\s+/);
-    if (fields.length !== 5)
-      throw badRequest("Invalid cron expression", "INVALID_CRON");
+    const trimmedExpr = update.autoSearchCronExpression.trim();
+    const isAtAlias = /^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(
+      trimmedExpr,
+    );
+    if (!isAtAlias) {
+      const fields = trimmedExpr.split(/\s+/);
+      if (fields.length !== 5)
+        throw badRequest("Invalid cron expression", "INVALID_CRON");
+    }
     try {
       CronExpressionParser.parse(update.autoSearchCronExpression);
     } catch {
       throw badRequest("Invalid cron expression", "INVALID_CRON");
     }
   }
-  const instance = await instanceService.update(id, update);
+  const { autoSearchPausedUntil, ...rest } = update;
+  const updateData =
+    autoSearchPausedUntil === undefined
+      ? rest
+      : {
+          ...rest,
+          autoSearchPausedUntil: autoSearchPausedUntil
+            ? new Date(autoSearchPausedUntil)
+            : null,
+        };
+  const instance = await instanceService.update(id, updateData);
   // URL / API key / enabled changes mean the cached movies/series snapshot
   // points at the old upstream (or stale disabled state). Drop it so the
   // next fetch refreshes from the new instance config.

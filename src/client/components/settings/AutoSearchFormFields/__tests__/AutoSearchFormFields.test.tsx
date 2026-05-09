@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent } from "@testing-library/react";
+import { useCronPreview } from "@/client/hooks/data/useAutoSearch";
 import { renderWithProviders } from "@/test/render";
 import {
   AutoSearchFormFields,
@@ -9,6 +10,10 @@ import {
 
 vi.mock("@/client/hooks/data/useAutoSearch", () => ({
   useCronPreview: vi.fn().mockReturnValue({ data: null, isError: false }),
+}));
+
+vi.mock("@/client/hooks/ui/useDebouncedValue", () => ({
+  useDebouncedValue: vi.fn((value: unknown) => value),
 }));
 
 const defaults: AutoSearchFields = {
@@ -20,6 +25,8 @@ const defaults: AutoSearchFields = {
   autoSearchMonitoredOnly: true,
   autoSearchScope: "flagged",
   autoSearchPickStrategy: "balanced",
+  autoSearchCooldownHours: 0,
+  autoSearchScoringMode: "inherit",
 };
 
 describe("AutoSearchFormFields", () => {
@@ -27,6 +34,10 @@ describe("AutoSearchFormFields", () => {
 
   beforeEach(() => {
     onChange = vi.fn() as unknown as typeof onChange;
+    vi.mocked(useCronPreview).mockReturnValue({
+      data: null,
+      isError: false,
+    } as unknown as ReturnType<typeof useCronPreview>);
   });
 
   test("renders enable toggle in off state", () => {
@@ -107,7 +118,7 @@ describe("AutoSearchFormFields", () => {
     expect(onChange).toHaveBeenCalledWith({ autoSearchMonitoredOnly: false });
   });
 
-  test("cron tab: shows invalid error when useCronPreview has error", async () => {
+  test("cron tab: shows aria-invalid when useCronPreview returns error", async () => {
     const { useCronPreview } =
       await import("@/client/hooks/data/useAutoSearch");
     vi.mocked(useCronPreview).mockReturnValue({
@@ -121,13 +132,63 @@ describe("AutoSearchFormFields", () => {
           ...defaults,
           autoSearchEnabled: true,
           autoSearchScheduleMode: "cron",
+          autoSearchCronExpression: "0 3 * * X",
         }}
         onChange={onChange}
       />,
     );
-    // The cron input has placeholder "0 3 * * *" (from messages)
     const cronInput = screen.getByPlaceholderText("0 3 * * *");
-    expect(cronInput.className).toContain("border-destructive");
+    expect(cronInput).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText(/invalid cron/i)).toBeInTheDocument();
+  });
+
+  test("cron tab: shows aria-invalid for partial expression (fewer than 5 fields)", () => {
+    renderWithProviders(
+      <AutoSearchFormFields
+        value={{
+          ...defaults,
+          autoSearchEnabled: true,
+          autoSearchScheduleMode: "cron",
+          autoSearchCronExpression: "0 3 * *",
+        }}
+        onChange={onChange}
+      />,
+    );
+    const cronInput = screen.getByPlaceholderText("0 3 * * *");
+    expect(cronInput).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText(/invalid cron/i)).toBeInTheDocument();
+  });
+
+  test("cron tab: no error for valid 5-field expression", () => {
+    renderWithProviders(
+      <AutoSearchFormFields
+        value={{
+          ...defaults,
+          autoSearchEnabled: true,
+          autoSearchScheduleMode: "cron",
+          autoSearchCronExpression: "0 3 * * *",
+        }}
+        onChange={onChange}
+      />,
+    );
+    const cronInput = screen.getByPlaceholderText("0 3 * * *");
+    expect(cronInput).not.toHaveAttribute("aria-invalid");
+  });
+
+  test("cron tab: no error for empty expression", () => {
+    renderWithProviders(
+      <AutoSearchFormFields
+        value={{
+          ...defaults,
+          autoSearchEnabled: true,
+          autoSearchScheduleMode: "cron",
+          autoSearchCronExpression: "",
+        }}
+        onChange={onChange}
+      />,
+    );
+    const cronInput = screen.getByPlaceholderText("0 3 * * *");
+    expect(cronInput).not.toHaveAttribute("aria-invalid");
   });
 
   test("scope select fires onChange with the selected scope", () => {

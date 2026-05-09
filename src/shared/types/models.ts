@@ -1,9 +1,27 @@
 export type Severity = "critical" | "low" | "warning" | "ok" | "missing";
 export type ArrType = "radarr" | "sonarr";
+
+export const LogSource = {
+  Api: "api",
+  Client: "client",
+  Auth: "auth",
+  Db: "db",
+  ArrClient: "arr-client",
+  InstanceService: "instance-service",
+  MovieService: "movie-service",
+  SeriesService: "series-service",
+  MediaAction: "media-action",
+  SearchQueue: "search-queue",
+  SearchWorker: "search-worker",
+  StatusPoller: "status-poller",
+  AutoRun: "auto-run",
+} as const;
+export type LogSource = (typeof LogSource)[keyof typeof LogSource];
 export type ScoringMode = "manual" | "profile";
 export type AutoSearchScheduleMode = "interval" | "cron";
 export type AutoSearchScope = "missing" | "upgrade" | "flagged" | "all";
 export type AutoSearchPickStrategy = "balanced" | "random";
+export type AutoSearchScoringMode = "inherit" | "profile";
 export type ActionType =
   | "search"
   | "search_season"
@@ -60,6 +78,9 @@ export interface Instance {
   autoSearchMonitoredOnly: boolean;
   autoSearchScope: AutoSearchScope;
   autoSearchPickStrategy: AutoSearchPickStrategy;
+  autoSearchCooldownHours: number;
+  autoSearchPausedUntil: Date | null;
+  autoSearchScoringMode: AutoSearchScoringMode;
 }
 
 export interface CustomFormat {
@@ -107,6 +128,10 @@ export interface MediaQuery {
   flaggedOnly?: boolean;
   // Default `"all"` — no monitor filter.
   monitorStatus?: MonitorStatus;
+  // When set, overrides the instance's own scoringMode for this query only.
+  // Used by auto-runner when autoSearchScoringMode = "profile" on a
+  // manual-mode instance so it picks candidates by cutoff, not CF coverage.
+  scoringModeOverride?: ScoringMode;
 }
 
 export interface MediaItem {

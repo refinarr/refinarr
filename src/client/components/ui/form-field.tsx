@@ -24,7 +24,7 @@ export function FormField({ id, label, description, error, children }: Props) {
     ? cloneElement(children as ReactElement<Record<string, unknown>>, {
         id,
         "aria-describedby": describedBy,
-        "aria-invalid": error ? "true" : undefined,
+        ...(error ? { "aria-invalid": "true" } : {}),
       })
     : children;
 
