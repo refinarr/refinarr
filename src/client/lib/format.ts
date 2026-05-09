@@ -19,7 +19,7 @@ export function formatCronTime(isoString: string): string {
   if (sameCalendarDay(d, tomorrow)) return `tomorrow ${time}`;
 
   const diffDays = Math.round((d.getTime() - now.getTime()) / 86_400_000);
-  if (diffDays < 7)
+  if (diffDays > 0 && diffDays < 7)
     return `${d.toLocaleDateString(undefined, { weekday: "short" })} ${time}`;
 
   return `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${time}`;

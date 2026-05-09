@@ -24,7 +24,14 @@ import type { ArrType } from "@/shared/types/models";
 import { ALL_ARR_TYPES, isArrType } from "@/shared/arr-type";
 import { useAddInstanceForm } from "./useAddInstanceForm";
 
-const PLACEHOLDER_KEYS: Record<ArrType, { name: string; url: string }> = {
+type InstanceFormKey = Parameters<
+  ReturnType<typeof useTranslations<"settings.instanceForm">>
+>[0];
+
+const PLACEHOLDER_KEYS: Record<
+  ArrType,
+  { name: InstanceFormKey; url: InstanceFormKey }
+> = {
   radarr: { name: "namePlaceholder", url: "urlPlaceholder" },
   sonarr: { name: "namePlaceholderSonarr", url: "urlPlaceholderSonarr" },
 };
@@ -115,7 +122,7 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
           </FormField>
 
           {/* Performance */}
-          <div className="border-t pt-3">
+          <div className="pt-subgroup border-t">
             <FormField
               id="instance-sph"
               label={t("searchesPerHour")}

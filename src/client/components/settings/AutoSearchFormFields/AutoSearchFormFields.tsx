@@ -1,4 +1,3 @@
-// @vitest-environment happy-dom
 "use client";
 import { useTranslations } from "next-intl";
 import { Switch } from "@/client/components/ui/switch";
@@ -49,6 +48,12 @@ const UNITS: IntervalDisplayUnit[] = [
   { key: "days", divisor: 1440, max: 365 },
 ];
 
+const UNIT_DIVISOR: Record<IntervalDisplayUnit["key"], number> = {
+  minutes: 1,
+  hours: 60,
+  days: 1440,
+};
+
 function minutesToDisplay(minutes: number): {
   value: number;
   unit: IntervalDisplayUnit["key"];
@@ -62,8 +67,7 @@ function displayToMinutes(
   value: number,
   unit: IntervalDisplayUnit["key"],
 ): number {
-  const u = UNITS.find((u) => u.key === unit)!;
-  return value * u.divisor;
+  return value * UNIT_DIVISOR[unit];
 }
 
 interface Props {
@@ -85,6 +89,12 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
     upgrade: t("scopeUpgrade"),
     flagged: t("scopeFlagged"),
     all: t("scopeAll"),
+  };
+  const scopeDesc: Record<AutoSearchScope, string> = {
+    missing: t("scopeMissingDesc"),
+    upgrade: t("scopeUpgradeDesc"),
+    flagged: t("scopeFlaggedDesc"),
+    all: t("scopeAllDesc"),
   };
   const strategy: AutoSearchPickStrategy = value.autoSearchPickStrategy;
   const pickLabel: Record<AutoSearchPickStrategy, string> = {
@@ -257,7 +267,11 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
             </div>
           </div>
 
-          <FormField id="auto-search-scope" label={t("scopeLabel")}>
+          <FormField
+            id="auto-search-scope"
+            label={t("scopeLabel")}
+            description={scopeDesc[value.autoSearchScope]}
+          >
             <Select
               value={value.autoSearchScope}
               onValueChange={(v) =>
@@ -269,9 +283,9 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
                 <SelectValue>{scopeLabel[value.autoSearchScope]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="missing">{t("scopeMissing")}</SelectItem>
-                <SelectItem value="upgrade">{t("scopeUpgrade")}</SelectItem>
                 <SelectItem value="flagged">{t("scopeFlagged")}</SelectItem>
+                <SelectItem value="upgrade">{t("scopeUpgrade")}</SelectItem>
+                <SelectItem value="missing">{t("scopeMissing")}</SelectItem>
                 <SelectItem value="all">{t("scopeAll")}</SelectItem>
               </SelectContent>
             </Select>

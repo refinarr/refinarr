@@ -36,6 +36,7 @@ function fieldsFromInstance(i: PublicInstance): AutoSearchFields {
 
 export function AutoSearchSection({ instance }: Props) {
   const t = useTranslations("settings.autoSearch");
+  const tCommon = useTranslations("common");
   const tTime = useTranslations("time");
   const tToast = useTranslations("toast.instance");
   const [open, setOpen] = useState(instance.autoSearchEnabled);
@@ -45,11 +46,7 @@ export function AutoSearchSection({ instance }: Props) {
   const debouncedFields = useDebouncedValue(localFields, 500);
   const isFirstRender = useRef(true);
 
-  const {
-    data: status,
-    isLoading,
-    dataUpdatedAt,
-  } = useAutoSearchStatus(instance.id);
+  const { data: status, isLoading } = useAutoSearchStatus(instance.id);
   const trigger = useTriggerAutoSearch(instance.id);
   const update = useUpdateInstance();
 
@@ -76,7 +73,7 @@ export function AutoSearchSection({ instance }: Props) {
     ? formatRelative(lastRunAt, tTime)
     : t("lastRunNever");
   const nextRunDisplay = nextRunAt
-    ? formatEta(new Date(nextRunAt).getTime() - dataUpdatedAt, tTime)
+    ? formatEta(Math.max(0, new Date(nextRunAt).getTime() - Date.now()), tTime)
     : null;
 
   return (
@@ -92,13 +89,15 @@ export function AutoSearchSection({ instance }: Props) {
           <ChevronRight className="size-4" />
         )}
         {t("sectionTitle")}
-        {!open && !instance.autoSearchEnabled && (
-          <span className="text-muted-foreground ml-auto font-normal">Off</span>
+        {!open && (
+          <span className="text-muted-foreground ml-auto font-normal">
+            {localFields.autoSearchEnabled ? tCommon("on") : tCommon("off")}
+          </span>
         )}
       </button>
 
       {open && (
-        <div className="space-y-4 pb-2">
+        <div className="flex flex-col gap-4 py-2">
           <AutoSearchFormFields
             value={localFields}
             onChange={(next) =>

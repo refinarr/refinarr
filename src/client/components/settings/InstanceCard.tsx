@@ -73,7 +73,8 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
               {instance.url}
             </p>
             <p className="text-muted-foreground text-xs">
-              {scoringModeLabel} · {instance.searchesPerHour}/hr
+              {scoringModeLabel} · {instance.searchesPerHour}
+              {tForm("searchesPerHourSuffix")}
               {visibleCfs.length > 0 && (
                 <>
                   {" · "}
@@ -135,13 +136,13 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
             </Button>
           </div>
         </div>
-        <div className="border-t pt-3">
+        <div className="pt-subgroup border-t">
           <ShowAllMediaToggle instanceId={instance.id} />
         </div>
-        <div className="border-t pt-1">
+        <div className="pt-subgroup border-t">
           <ScoringModeSection instance={instance} />
         </div>
-        <div className="border-t pt-1">
+        <div className="pt-subgroup border-t">
           <AutoSearchSection instance={instance} />
         </div>
       </CardContent>

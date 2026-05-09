@@ -71,7 +71,11 @@ export function pickAutoSearchBatch<T extends { id: number; cfScore: number }>(
 
   let sortedRest: T[];
   if (strategy === "random") {
-    sortedRest = [...rest].sort(() => Math.random() - 0.5);
+    sortedRest = [...rest];
+    for (let i = sortedRest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [sortedRest[i], sortedRest[j]] = [sortedRest[j], sortedRest[i]];
+    }
   } else {
     sortedRest = [...rest].sort((a, b) => {
       const aT = lastSearchedMap.get(a.id)!.at.getTime();

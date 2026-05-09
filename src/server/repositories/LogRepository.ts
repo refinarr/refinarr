@@ -186,13 +186,19 @@ export class LogRepository extends BaseRepository<ActionLog> {
         instanceId,
         action: { startsWith: "search" },
       },
-      select: { mediaId: true, createdAt: true, status: true },
-      orderBy: { createdAt: "desc" },
+      select: {
+        mediaId: true,
+        createdAt: true,
+        lastRetriedAt: true,
+        status: true,
+      },
     });
     const map = new Map<number, { at: Date; failed: boolean }>();
     for (const r of rows) {
-      if (!map.has(r.mediaId))
-        map.set(r.mediaId, { at: r.createdAt, failed: r.status === "failed" });
+      const at = r.lastRetriedAt ?? r.createdAt;
+      const prev = map.get(r.mediaId);
+      if (!prev || at.getTime() > prev.at.getTime())
+        map.set(r.mediaId, { at, failed: r.status === "failed" });
     }
     return map;
   }

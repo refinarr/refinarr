@@ -55,7 +55,9 @@
     "yes": "Yes",
     "no": "No",
     "viewAll": "View all",
-    "moreCount": "+{count} more"
+    "moreCount": "+{count} more",
+    "on": "On",
+    "off": "Off"
   },
   "dialog": {
     "close": "Close"
@@ -383,6 +385,7 @@
     "instances": "Instances",
     "addInstance": "Add Instance",
     "scoringMode": "Scoring Mode",
+    "profileMode": "Profile Mode",
     "scoringModeOptions": {
       "manual": "Manual",
       "profile": "Profile"
@@ -453,10 +456,14 @@
       "monitoredOnlyLabel": "Monitored items only",
       "monitoredOnlyHelper": "Skip items marked as unmonitored in Radarr / Sonarr",
       "scopeLabel": "Search scope",
-      "scopeMissing": "Missing (no file)",
-      "scopeUpgrade": "Needs upgrade (has file, below cutoff)",
-      "scopeFlagged": "Flagged only",
-      "scopeAll": "All items",
+      "scopeMissing": "Missing",
+      "scopeMissingDesc": "No file on disk",
+      "scopeUpgrade": "Upgrade",
+      "scopeUpgradeDesc": "Has file, below cutoff",
+      "scopeFlagged": "Flagged",
+      "scopeFlaggedDesc": "Any flagged item",
+      "scopeAll": "All",
+      "scopeAllDesc": "Every item regardless of score",
       "lastRun": "Last run",
       "lastRunNever": "Never",
       "nextRun": "Next",
@@ -490,6 +497,7 @@
       "apiKeyPlaceholderEdit": "•••••••• (leave blank to keep current)",
       "apiKeyPlaceholderNew": "••••••••",
       "searchesPerHour": "Max searches per hour",
+      "searchesPerHourSuffix": "/hr",
       "searchesPerHourHelp": "Caps how often refinarr triggers searches on this instance. Searches fan out to your indexers and trackers — too many in a short window can cause them to rate-limit or ban you. 20/hour is safe for most private trackers.",
       "queuedBadge": "{count, plural, one {# queued} other {# queued}}",
       "queuedBadgeTooltip": "{count, plural, one {# search pending. ETA ~{eta}.} other {# searches pending. ETA ~{eta}.}}",

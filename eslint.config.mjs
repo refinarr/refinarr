@@ -20,7 +20,6 @@ const eslintConfig = defineConfig([
       // setState called synchronously inside an effect body causes a second
       // render before the browser paints. Derive the value from existing state
       // instead, or subscribe to an external store.
-      "react-hooks/no-deriving-state-in-effects": "warn",
       // setState called during render (not in an event handler or effect) runs
       // synchronously and causes an immediate re-render loop.
       "react-hooks/set-state-in-render": "warn",

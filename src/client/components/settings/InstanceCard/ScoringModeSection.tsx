@@ -53,7 +53,7 @@ export function ScoringModeSection({ instance }: Props) {
         ) : (
           <ChevronRight className="size-4" />
         )}
-        {t("scoringMode")}
+        {t("profileMode")}
         {!open && (
           <span className="text-muted-foreground ml-auto font-normal">
             {t(`scoringModeOptions.${mode}`)}
@@ -62,7 +62,7 @@ export function ScoringModeSection({ instance }: Props) {
       </button>
 
       {open && (
-        <div className="space-y-4 pb-2">
+        <div className="flex flex-col gap-4 py-2">
           <Select value={mode} onValueChange={handleChange}>
             <SelectTrigger className="w-36">
               <SelectValue>{t(`scoringModeOptions.${mode}`)}</SelectValue>
