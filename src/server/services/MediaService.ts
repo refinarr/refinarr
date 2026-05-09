@@ -421,7 +421,9 @@ export abstract class MediaService<TItem extends MediaItem> {
       // rebuild rather than firing parallel upstream calls.
       if (!dataCache.isRebuilding(cacheKey)) {
         void dataCache.rebuild(cacheKey, build).then(
-          () => { this.clearBuildFailure(cacheKey); },
+          () => {
+            this.clearBuildFailure(cacheKey);
+          },
           (err) => {
             this.markBuildFailure(cacheKey);
             appLogger.error(backgroundErrorMessage, {
