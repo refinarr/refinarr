@@ -13,7 +13,11 @@ import {
 } from "@/client/hooks/data/useAutoSearch";
 import { useUpdateInstance } from "@/client/hooks/data/useInstances";
 import { useDebouncedValue } from "@/client/hooks/ui/useDebouncedValue";
-import { formatRelative, formatEta } from "@/client/lib/format-relative";
+import {
+  formatRelative,
+  formatEta,
+  msUntil,
+} from "@/client/lib/format-relative";
 import { withToast } from "@/client/lib/with-toast";
 import type { PublicInstance } from "@/shared/types/api";
 
@@ -68,12 +72,11 @@ export function AutoSearchSection({ instance }: Props) {
   const lastRunAt = status?.lastRunAt ?? null;
   const nextRunAt = status?.nextRunAt ?? null;
   const running = status?.running ?? false;
-
   const lastRunDisplay = lastRunAt
     ? formatRelative(lastRunAt, tTime)
     : t("lastRunNever");
   const nextRunDisplay = nextRunAt
-    ? formatEta(Math.max(0, new Date(nextRunAt).getTime() - Date.now()), tTime)
+    ? formatEta(msUntil(nextRunAt), tTime)
     : null;
 
   return (

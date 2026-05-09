@@ -27,6 +27,11 @@ export function formatRelative(date: Date | string | number, t: T): string {
   return t("daysAgo", { n: days });
 }
 
+export function msUntil(isoString: string): number {
+  const t = new Date(isoString).getTime();
+  return Number.isFinite(t) ? Math.max(0, t - Date.now()) : 0;
+}
+
 /**
  * Forward-looking variant — "in 12m", "in 2h". Returns "now" for past or
  * zero offsets. Used by the queue ETA tooltip.
