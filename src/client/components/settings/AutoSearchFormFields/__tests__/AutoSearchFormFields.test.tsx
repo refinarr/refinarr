@@ -20,6 +20,8 @@ const defaults: AutoSearchFields = {
   autoSearchMonitoredOnly: true,
   autoSearchScope: "flagged",
   autoSearchPickStrategy: "balanced",
+  autoSearchCooldownHours: 0,
+  autoSearchScoringMode: "inherit",
 };
 
 describe("AutoSearchFormFields", () => {

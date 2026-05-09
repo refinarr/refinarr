@@ -23,6 +23,7 @@ import type {
   AutoSearchPickStrategy,
   AutoSearchScope,
   AutoSearchScheduleMode,
+  AutoSearchScoringMode,
 } from "@/shared/types/models";
 
 export interface AutoSearchFields {
@@ -34,6 +35,8 @@ export interface AutoSearchFields {
   autoSearchMonitoredOnly: boolean;
   autoSearchScope: AutoSearchScope;
   autoSearchPickStrategy: AutoSearchPickStrategy;
+  autoSearchCooldownHours: number;
+  autoSearchScoringMode: AutoSearchScoringMode;
 }
 
 function isScheduleMode(v: string | null): v is AutoSearchScheduleMode {
@@ -46,6 +49,10 @@ function isIntervalUnit(v: string | null): v is IntervalDisplayUnit["key"] {
 
 function isPickStrategy(v: string | null): v is AutoSearchPickStrategy {
   return v === "balanced" || v === "random";
+}
+
+function isScoringMode(v: string | null): v is AutoSearchScoringMode {
+  return v === "inherit" || v === "profile";
 }
 
 function isAutoSearchScope(v: string | null): v is AutoSearchScope {
@@ -329,6 +336,65 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
                 </SelectItem>
                 <SelectItem value="random">
                   {t("pickStrategyRandom")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
+
+          <FormField
+            id="auto-search-cooldown"
+            label={t("cooldownLabel")}
+            description={
+              value.autoSearchCooldownHours === 0
+                ? t("cooldownHelperOff")
+                : t("cooldownHelper", { n: value.autoSearchCooldownHours })
+            }
+          >
+            <Input
+              id="auto-search-cooldown"
+              type="number"
+              min={0}
+              max={8760}
+              inputMode="numeric"
+              value={value.autoSearchCooldownHours}
+              disabled={disabled}
+              onChange={(e) => {
+                const v = Math.max(
+                  0,
+                  Math.min(8760, parseInt(e.target.value, 10) || 0),
+                );
+                onChange({ autoSearchCooldownHours: v });
+              }}
+            />
+          </FormField>
+
+          <FormField
+            id="auto-search-scoring-mode"
+            label={t("scoringModeLabel")}
+            description={t(
+              `scoringMode${value.autoSearchScoringMode === "profile" ? "Profile" : "Inherit"}Desc`,
+            )}
+          >
+            <Select
+              value={value.autoSearchScoringMode}
+              onValueChange={(v) => {
+                if (isScoringMode(v)) onChange({ autoSearchScoringMode: v });
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger id="auto-search-scoring-mode">
+                <SelectValue>
+                  {t(
+                    `scoringMode${value.autoSearchScoringMode === "profile" ? "Profile" : "Inherit"}`,
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="w-max">
+                <SelectItem value="inherit">
+                  {t("scoringModeInherit")}
+                </SelectItem>
+                <SelectItem value="profile">
+                  {t("scoringModeProfile")}
                 </SelectItem>
               </SelectContent>
             </Select>

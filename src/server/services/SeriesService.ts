@@ -80,7 +80,7 @@ export class SeriesService extends MediaService<SeriesItem> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
-    const mode = instance.scoringMode;
+    const mode = query.scoringModeOverride ?? instance.scoringMode;
     const cacheKey = this.mediaCacheKey(instanceId, mode);
     const cached = await this.readWithSwr<{ items: SeriesItem[] }>({
       cacheKey,

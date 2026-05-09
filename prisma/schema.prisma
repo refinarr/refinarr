@@ -28,6 +28,9 @@ model Instance {
   autoSearchMonitoredOnly   Boolean   @default(true)
   autoSearchScope           String    @default("flagged")
   autoSearchPickStrategy    String    @default("balanced")
+  autoSearchCooldownHours   Int       @default(0)
+  autoSearchPausedUntil     DateTime?
+  autoSearchScoringMode     String    @default("inherit")
 }
 
 model AppConfig {

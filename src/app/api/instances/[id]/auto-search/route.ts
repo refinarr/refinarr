@@ -32,6 +32,11 @@ export const GET = createApiHandler(async (_req, ctx) => {
       })
     : null;
 
+  const pausedUntil = instance.autoSearchPausedUntil
+    ? new Date(instance.autoSearchPausedUntil)
+    : null;
+  const paused = pausedUntil !== null && Date.now() < pausedUntil.getTime();
+
   const status: AutoSearchStatus = {
     enabled: instance.autoSearchEnabled,
     scheduleMode: instance.autoSearchScheduleMode,
@@ -44,6 +49,10 @@ export const GET = createApiHandler(async (_req, ctx) => {
     lastRunAt: instance.autoSearchLastRunAt?.toISOString() ?? null,
     nextRunAt: nextRunAt?.toISOString() ?? null,
     running: autoRunner.isRunning(id),
+    paused,
+    pausedUntil: paused ? pausedUntil!.toISOString() : null,
+    cooldownHours: instance.autoSearchCooldownHours,
+    scoringMode: instance.autoSearchScoringMode,
   };
 
   return NextResponse.json(status);

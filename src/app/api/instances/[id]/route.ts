@@ -33,6 +33,9 @@ function publicView(i: Instance): PublicInstance {
     autoSearchMonitoredOnly: i.autoSearchMonitoredOnly,
     autoSearchScope: i.autoSearchScope,
     autoSearchPickStrategy: i.autoSearchPickStrategy,
+    autoSearchCooldownHours: i.autoSearchCooldownHours,
+    autoSearchPausedUntil: i.autoSearchPausedUntil,
+    autoSearchScoringMode: i.autoSearchScoringMode,
   };
 }
 
@@ -63,7 +66,16 @@ export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
       throw badRequest("Invalid cron expression", "INVALID_CRON");
     }
   }
-  const instance = await instanceService.update(id, update);
+  const { autoSearchPausedUntil, ...rest } = update;
+  const instance = await instanceService.update(id, {
+    ...rest,
+    autoSearchPausedUntil:
+      autoSearchPausedUntil !== undefined
+        ? autoSearchPausedUntil
+          ? new Date(autoSearchPausedUntil)
+          : null
+        : undefined,
+  });
   // URL / API key / enabled changes mean the cached movies/series snapshot
   // points at the old upstream (or stale disabled state). Drop it so the
   // next fetch refreshes from the new instance config.

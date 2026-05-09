@@ -65,6 +65,9 @@ const baseInstance: PublicInstance = {
   autoSearchMonitoredOnly: true,
   autoSearchScope: "flagged",
   autoSearchPickStrategy: "balanced",
+  autoSearchCooldownHours: 0,
+  autoSearchPausedUntil: null,
+  autoSearchScoringMode: "inherit",
 };
 
 // Shared status shape used across tests that need enabled status.
@@ -80,6 +83,10 @@ const enabledStatus: AutoSearchStatus = {
   lastRunAt: null,
   nextRunAt: null,
   running: false,
+  paused: false,
+  pausedUntil: null,
+  cooldownHours: 0,
+  scoringMode: "inherit",
 };
 
 describe("AutoSearchSection", () => {

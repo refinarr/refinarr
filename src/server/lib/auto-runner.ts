@@ -5,9 +5,23 @@ import { logRepository } from "@/server/repositories/LogRepository";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { mediaServiceFor } from "@/server/services/media-services";
-import type { ArrType, Instance, MediaItem } from "@/shared/types/models";
+import type {
+  ArrType,
+  AutoSearchScoringMode,
+  Instance,
+  MediaItem,
+  ScoringMode,
+} from "@/shared/types/models";
 import { appLogger } from "./app-logger";
 import { LogSource } from "./log-sources";
+
+const AUTO_SEARCH_SCORING_OVERRIDE: Record<
+  AutoSearchScoringMode,
+  ScoringMode | undefined
+> = {
+  profile: "profile",
+  inherit: undefined,
+};
 
 const QUEUE_ACTIONS: Record<ArrType, "movie" | "series"> = {
   radarr: "movie",
@@ -77,10 +91,22 @@ export function pickAutoSearchBatch<T extends { id: number; cfScore: number }>(
   lastSearchedMap: Map<number, { at: Date; failed: boolean }>,
   batchLimit: number,
   strategy: "balanced" | "random" = "balanced",
+  cooldownMs: number = 0,
 ): T[] {
+  const now = Date.now();
+  const eligible =
+    cooldownMs > 0
+      ? items.filter((item) => {
+          const info = lastSearchedMap.get(item.id);
+          // Never searched or previously failed → always eligible.
+          if (!info || info.failed) return true;
+          return now - info.at.getTime() > cooldownMs;
+        })
+      : items;
+
   const backfill: T[] = [];
   const rest: T[] = [];
-  for (const item of items) {
+  for (const item of eligible) {
     const info = lastSearchedMap.get(item.id);
     if (!info || info.failed) backfill.push(item);
     else rest.push(item);
@@ -222,6 +248,15 @@ class AutoRunner {
       return;
     }
 
+    // Pause: schedule a wake-up at the resume time and skip the tick.
+    if (inst.autoSearchPausedUntil) {
+      const resumeAt = new Date(inst.autoSearchPausedUntil).getTime();
+      if (Date.now() < resumeAt) {
+        this.scheduleNext(instanceId, gen, resumeAt - Date.now() + 1000);
+        return;
+      }
+    }
+
     const now = new Date();
     const next = computeNextRun({
       mode: inst.autoSearchScheduleMode,
@@ -304,6 +339,9 @@ class AutoRunner {
 
   private async fanOut(inst: Instance): Promise<{ enqueued: number }> {
     const service = mediaServiceFor(inst.type);
+    const scoringModeOverride =
+      AUTO_SEARCH_SCORING_OVERRIDE[inst.autoSearchScoringMode];
+
     const { items: rawItems } = await service.getItems(inst.id, {
       page: 1,
       limit: 5000,
@@ -314,6 +352,7 @@ class AutoRunner {
         inst.autoSearchScope === "upgrade",
       monitorStatus: inst.autoSearchMonitoredOnly ? "monitored" : "all",
       onlyMissing: inst.autoSearchScope === "missing" ? true : undefined,
+      scoringModeOverride,
     });
 
     // "upgrade" = flagged items that already have a file. No query-layer
@@ -329,6 +368,7 @@ class AutoRunner {
       lastSearched,
       inst.autoSearchBatchLimit,
       inst.autoSearchPickStrategy,
+      inst.autoSearchCooldownHours * 60 * 60 * 1000,
     );
 
     if (picked.length === 0) {

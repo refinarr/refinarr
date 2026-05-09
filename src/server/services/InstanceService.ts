@@ -164,6 +164,9 @@ export class InstanceService {
       autoSearchMonitoredOnly: true,
       autoSearchScope: "flagged",
       autoSearchPickStrategy: "balanced",
+      autoSearchCooldownHours: 0,
+      autoSearchPausedUntil: null,
+      autoSearchScoringMode: "inherit",
     };
     const client = ArrClientFactory.createArrClient(transient);
     const result = await client.testConnection();

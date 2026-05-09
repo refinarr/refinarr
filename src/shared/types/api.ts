@@ -4,6 +4,7 @@ import type {
   AutoSearchPickStrategy,
   AutoSearchScheduleMode,
   AutoSearchScope,
+  AutoSearchScoringMode,
 } from "./models";
 
 export interface PaginatedResponse<T> {
@@ -57,6 +58,9 @@ export type UpdateInstanceDto = Partial<CreateInstanceDto> & {
   autoSearchMonitoredOnly?: boolean;
   autoSearchScope?: AutoSearchScope;
   autoSearchPickStrategy?: AutoSearchPickStrategy;
+  autoSearchCooldownHours?: number;
+  autoSearchPausedUntil?: string | null;
+  autoSearchScoringMode?: AutoSearchScoringMode;
 };
 
 /**
@@ -81,6 +85,9 @@ export interface PublicInstance {
   autoSearchMonitoredOnly: boolean;
   autoSearchScope: AutoSearchScope;
   autoSearchPickStrategy: AutoSearchPickStrategy;
+  autoSearchCooldownHours: number;
+  autoSearchPausedUntil: string | Date | null;
+  autoSearchScoringMode: AutoSearchScoringMode;
 }
 
 export interface AutoSearchStatus {
@@ -95,6 +102,10 @@ export interface AutoSearchStatus {
   lastRunAt: string | null;
   nextRunAt: string | null;
   running: boolean;
+  paused: boolean;
+  pausedUntil: string | null;
+  cooldownHours: number;
+  scoringMode: AutoSearchScoringMode;
 }
 
 export interface CronPreviewResponse {
@@ -130,6 +141,7 @@ export interface DashboardInstanceSummary {
   type: ArrType;
   name: string;
   enabled: boolean;
+  autoSearchEnabled: boolean;
   // null when the media cache is cold for this instance — the dashboard
   // avoids triggering an expensive build inline. The route fires a
   // background warm; counts appear on the next dashboard refetch.

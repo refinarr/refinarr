@@ -1,8 +1,14 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, PauseCircle } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/client/components/ui/dropdown-menu";
 import {
   AutoSearchFormFields,
   type AutoSearchFields,
@@ -25,6 +31,13 @@ interface Props {
   instance: PublicInstance;
 }
 
+const PAUSE_DURATIONS_MS = [
+  { labelKey: "pause1h" as const, ms: 60 * 60 * 1000 },
+  { labelKey: "pause6h" as const, ms: 6 * 60 * 60 * 1000 },
+  { labelKey: "pause24h" as const, ms: 24 * 60 * 60 * 1000 },
+  { labelKey: "pause7d" as const, ms: 7 * 24 * 60 * 60 * 1000 },
+] as const;
+
 function fieldsFromInstance(i: PublicInstance): AutoSearchFields {
   return {
     autoSearchEnabled: i.autoSearchEnabled,
@@ -35,6 +48,8 @@ function fieldsFromInstance(i: PublicInstance): AutoSearchFields {
     autoSearchMonitoredOnly: i.autoSearchMonitoredOnly,
     autoSearchScope: i.autoSearchScope,
     autoSearchPickStrategy: i.autoSearchPickStrategy,
+    autoSearchCooldownHours: i.autoSearchCooldownHours,
+    autoSearchScoringMode: i.autoSearchScoringMode,
   };
 }
 
@@ -69,15 +84,37 @@ export function AutoSearchSection({ instance }: Props) {
     error: tToast("updateFailed"),
   });
 
+  const setPause = (durationMs: number) => {
+    const until = new Date(Date.now() + durationMs).toISOString();
+    void update.mutateAsync({
+      id: instance.id,
+      data: { autoSearchPausedUntil: until },
+    });
+  };
+
+  const clearPause = () => {
+    void update.mutateAsync({
+      id: instance.id,
+      data: { autoSearchPausedUntil: null },
+    });
+  };
+
   const lastRunAt = status?.lastRunAt ?? null;
   const nextRunAt = status?.nextRunAt ?? null;
   const running = status?.running ?? false;
+  const paused = status?.paused ?? false;
+  const pausedUntil = status?.pausedUntil ?? null;
+
   const lastRunDisplay = lastRunAt
     ? formatRelative(lastRunAt, tTime)
     : t("lastRunNever");
   const nextRunDisplay = useMemo(
     () => (nextRunAt ? formatEta(msUntil(nextRunAt), tTime) : null),
     [nextRunAt, tTime],
+  );
+  const pausedUntilDisplay = useMemo(
+    () => (pausedUntil ? formatRelative(pausedUntil, tTime) : null),
+    [pausedUntil, tTime],
   );
 
   return (
@@ -95,7 +132,11 @@ export function AutoSearchSection({ instance }: Props) {
         {t("sectionTitle")}
         {!open && (
           <span className="text-muted-foreground ml-auto font-normal">
-            {localFields.autoSearchEnabled ? tCommon("on") : tCommon("off")}
+            {paused
+              ? t("pausedLabel")
+              : localFields.autoSearchEnabled
+                ? tCommon("on")
+                : tCommon("off")}
           </span>
         )}
       </button>
@@ -111,9 +152,14 @@ export function AutoSearchSection({ instance }: Props) {
           />
 
           {localFields.autoSearchEnabled && !isLoading && (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div className="text-muted-foreground text-xs">
-                {running ? (
+                {paused ? (
+                  <span className="text-warning flex items-center gap-1">
+                    <PauseCircle className="size-3" />
+                    {t("pausedUntil", { time: pausedUntilDisplay ?? "…" })}
+                  </span>
+                ) : running ? (
                   <span className="text-brand flex items-center gap-1">
                     <Loader2 className="size-3 animate-spin" />
                     {t("runningNow")}
@@ -130,17 +176,50 @@ export function AutoSearchSection({ instance }: Props) {
                   </span>
                 )}
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={running || trigger.isPending}
-                onClick={() => runTrigger()}
-              >
-                {trigger.isPending && (
-                  <Loader2 className="mr-1 size-3 animate-spin" />
+
+              <div className="flex items-center gap-2">
+                {paused ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={update.isPending}
+                    onClick={clearPause}
+                  >
+                    {t("resume")}
+                  </Button>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      className="hover:bg-accent inline-flex size-7 items-center justify-center rounded-md text-sm disabled:pointer-events-none disabled:opacity-50"
+                      disabled={running || update.isPending}
+                    >
+                      <PauseCircle className="size-3.5" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {PAUSE_DURATIONS_MS.map(({ labelKey, ms }) => (
+                        <DropdownMenuItem
+                          key={labelKey}
+                          onSelect={() => setPause(ms)}
+                        >
+                          {t(labelKey)}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
-                {t("runNow")}
-              </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={paused || running || trigger.isPending}
+                  onClick={() => runTrigger()}
+                >
+                  {trigger.isPending && (
+                    <Loader2 className="mr-1 size-3 animate-spin" />
+                  )}
+                  {t("runNow")}
+                </Button>
+              </div>
             </div>
           )}
         </div>

@@ -151,6 +151,16 @@
       "flaggedOfTotal": "{flagged} of {total}",
       "flaggedOfTotalUnavailable": "Counts unavailable",
       "settings": "Settings"
+    },
+    "fleet": {
+      "title": "Auto-search",
+      "running": "Running…",
+      "neverRun": "Never run",
+      "lastRun": "Last run {time}",
+      "nextRun": "Next in {eta}",
+      "pausedUntil": "Paused until {time}",
+      "resume": "Resume",
+      "runNow": "Run now"
     }
   },
   "movies": {
@@ -475,9 +485,22 @@
       "pickStrategyBalancedDesc": "Prioritises items searched longest ago, then worst score",
       "pickStrategyRandomDesc": "Picks items at random from the candidate pool",
       "helperText": "Auto-search only triggers Search commands. It never deletes files or removes items.",
+      "cooldownLabel": "Cooldown",
+      "cooldownHelperOff": "No cooldown — even already-searched items can be re-searched every cycle",
+      "cooldownHelper": "Skip items already searched within the last {n}h",
       "scoringModeLabel": "Scoring mode",
       "scoringModeManual": "Manual",
-      "scoringModeProfile": "Profile mode"
+      "scoringModeInherit": "Match display mode",
+      "scoringModeProfile": "Profile mode",
+      "scoringModeInheritDesc": "Use the same scoring mode as the instance's display setting",
+      "scoringModeProfileDesc": "Pick candidates by quality profile cutoff, even when display mode is Manual",
+      "pausedLabel": "Paused",
+      "pausedUntil": "Paused until {time}",
+      "pause1h": "Pause for 1 hour",
+      "pause6h": "Pause for 6 hours",
+      "pause24h": "Pause for 24 hours",
+      "pause7d": "Pause for 7 days",
+      "resume": "Resume"
     },
     "instanceForm": {
       "addTitle": "Add Instance",

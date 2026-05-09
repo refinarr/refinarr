@@ -26,6 +26,9 @@ const stubInstance: Instance = {
   autoSearchMonitoredOnly: true,
   autoSearchScope: "flagged",
   autoSearchPickStrategy: "balanced",
+  autoSearchCooldownHours: 0,
+  autoSearchPausedUntil: null,
+  autoSearchScoringMode: "inherit",
 };
 
 class TestClient extends ArrClient {

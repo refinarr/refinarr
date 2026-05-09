@@ -28,6 +28,9 @@ const autoSearchFields = {
   autoSearchMonitoredOnly: z.boolean().optional(),
   autoSearchScope: z.enum(["missing", "upgrade", "flagged", "all"]).optional(),
   autoSearchPickStrategy: z.enum(["balanced", "random"]).optional(),
+  autoSearchCooldownHours: z.number().int().min(0).max(8760).optional(),
+  autoSearchPausedUntil: z.iso.datetime().nullable().optional(),
+  autoSearchScoringMode: z.enum(["inherit", "profile"]).optional(),
 };
 
 export const instanceCreateSchema = z.object({

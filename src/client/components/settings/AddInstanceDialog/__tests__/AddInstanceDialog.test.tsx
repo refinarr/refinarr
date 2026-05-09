@@ -54,6 +54,9 @@ const baseInstance: PublicInstance = {
   autoSearchMonitoredOnly: true,
   autoSearchScope: "flagged",
   autoSearchPickStrategy: "balanced",
+  autoSearchCooldownHours: 0,
+  autoSearchPausedUntil: null,
+  autoSearchScoringMode: "inherit",
 };
 
 const noop = () => {};
