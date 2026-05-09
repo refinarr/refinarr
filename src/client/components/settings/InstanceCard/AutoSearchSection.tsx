@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
@@ -75,9 +75,10 @@ export function AutoSearchSection({ instance }: Props) {
   const lastRunDisplay = lastRunAt
     ? formatRelative(lastRunAt, tTime)
     : t("lastRunNever");
-  const nextRunDisplay = nextRunAt
-    ? formatEta(msUntil(nextRunAt), tTime)
-    : null;
+  const nextRunDisplay = useMemo(
+    () => (nextRunAt ? formatEta(msUntil(nextRunAt), tTime) : null),
+    [nextRunAt, tTime],
+  );
 
   return (
     <div>

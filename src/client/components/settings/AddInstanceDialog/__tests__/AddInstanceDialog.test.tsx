@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
-import { renderWithProviders } from "@/test/render";
 import type { PublicInstance } from "@/shared/types/api";
+import { renderWithProviders } from "@/test/render";
 import { AddInstanceDialog } from "../AddInstanceDialog";
 
 const { mockCreateMutateAsync, mockUpdateMutateAsync, mockTestMutateAsync } =
