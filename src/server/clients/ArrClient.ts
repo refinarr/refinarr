@@ -115,19 +115,17 @@ export abstract class ArrClient {
       () => ac.abort(new DOMException("TimeoutError", "TimeoutError")),
       ARR_FETCH_TIMEOUT_MS,
     );
+    let onCallerAbort: (() => void) | undefined;
     if (init?.signal) {
       if (init.signal.aborted) {
         clearTimeout(timeoutId);
         ac.abort(init.signal.reason);
       } else {
-        init.signal.addEventListener(
-          "abort",
-          () => {
-            clearTimeout(timeoutId);
-            ac.abort(init.signal!.reason);
-          },
-          { once: true },
-        );
+        onCallerAbort = () => {
+          clearTimeout(timeoutId);
+          ac.abort(init.signal!.reason);
+        };
+        init.signal.addEventListener("abort", onCallerAbort, { once: true });
       }
     }
 
@@ -144,6 +142,8 @@ export abstract class ArrClient {
       });
     } finally {
       clearTimeout(timeoutId);
+      if (onCallerAbort)
+        init?.signal?.removeEventListener("abort", onCallerAbort);
     }
 
     if (!res.ok) {

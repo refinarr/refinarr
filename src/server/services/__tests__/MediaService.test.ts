@@ -1,6 +1,7 @@
 import { describe, test, expect, vi } from "vitest";
 import { MediaService } from "@/server/services/MediaService";
 import { instanceService } from "@/server/services/InstanceService";
+import { CACHE_TTL_MS } from "@/server/lib/DataCache";
 // Type-only client imports — used inside `expect(...).toBeInstanceOf` /
 // runtime-result checks but not constructed directly. Keeps the
 // "subclasses constructed only via ArrClientFactory" rule intact.
@@ -25,10 +26,14 @@ class TestMediaService extends MediaService<MediaItem> {
   constructor(
     cacheNamespace = "test",
     private readonly items: MediaItem[] = [],
-    private readonly buildError?: Error,
+    private buildError?: Error,
   ) {
     super();
     this.cacheNamespace = cacheNamespace;
+  }
+
+  setBuildError(err: Error | undefined): void {
+    this.buildError = err;
   }
 
   protected async getForWarm(
@@ -295,12 +300,35 @@ describe("MediaService flagged cache contract", () => {
     expect(service.getCachedFlaggedCount(1, "manual")).toBe(0);
 
     // Swap the error out so the next rebuild succeeds.
-    (service as unknown as { buildError: Error | undefined }).buildError =
-      undefined;
+    service.setBuildError(undefined);
     await service.warmMediaCache(1);
     // Cooldown should be cleared; cold-cache logic now returns null.
     // The cache itself is populated, so the count reflects the empty item list.
     expect(service.getCachedFlaggedCount(1, "manual")).toBe(0); // 0 flagged items, not null
+  });
+
+  test("stale-path background rebuild failure serves stale data without throwing", async () => {
+    vi.useFakeTimers();
+    try {
+      const service = new TestMediaService("stale-bg-fail", []);
+      // Populate the cache with a successful build.
+      await service.warmMediaCache(1);
+      // Advance into the stale window (past TTL, before STALE expiry).
+      vi.advanceTimersByTime(CACHE_TTL_MS + 1);
+      // Make the next background rebuild fail.
+      service.setBuildError(new Error("ETIMEDOUT"));
+      // Stale read — should not throw; returns cached value immediately.
+      await expect(service.warmMediaCache(1)).resolves.toBeDefined();
+      // Drain microtasks so the background rebuild's rejection handler runs.
+      await Promise.resolve();
+      await Promise.resolve();
+      // getCachedFlaggedCount uses a TTL+STALE window; the cache is still within
+      // that window so it returns the stale count rather than the failure fallback.
+      expect(service.getCachedFlaggedCount(1, "manual")).toBe(0);
+      expect(service.getCachedTotalCount(1, "manual")).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
