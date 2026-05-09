@@ -5,19 +5,16 @@ import { KeyRound, Palette, Plus, Server, Settings, User } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { AddInstanceDialog } from "@/client/components/settings/AddInstanceDialog";
 import { ApiKeyCard } from "@/client/components/settings/ApiKeyCard";
-import { CfPreferencePicker } from "@/client/components/settings/CfPreferencePicker";
 import { DryRunToggle } from "@/client/components/settings/DryRunToggle";
 import { InstanceCard } from "@/client/components/settings/InstanceCard";
 import { PasswordChangeCard } from "@/client/components/settings/PasswordChangeCard";
-import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { ThemeSelector } from "@/client/components/settings/ThemeSelector";
 import { SettingsCardSkeleton } from "@/client/components/states/SettingsCardSkeleton";
 import { Button } from "@/client/components/ui/button";
 import { useInstances } from "@/client/hooks/data/useInstances";
 import { useMe } from "@/client/hooks/data/useMe";
 import { cn } from "@/client/lib/utils";
-import { isManualMode } from "@/shared/scoring-mode";
-import type { Instance } from "@/shared/types/models";
+import type { PublicInstance } from "@/shared/types/api";
 import { SettingsRail, type SettingsRailItem } from "./components/SettingsRail";
 import { SettingsPicker } from "./components/SettingsPicker";
 import { useActiveSection } from "./components/useActiveSection";
@@ -40,7 +37,7 @@ export default function SettingsPage() {
   const { data: instances, isLoading: loadingInstances } = useInstances();
   const { data: me } = useMe();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Instance | null>(null);
+  const [editing, setEditing] = useState<PublicInstance | null>(null);
 
   // Account section is only meaningful for password-bearing sessions.
   // X-Api-Key callers can't change a password, so the section + rail
@@ -118,10 +115,6 @@ export default function SettingsPage() {
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
-
-  const manualInstances = (instances ?? []).filter((i) =>
-    isManualMode(i.scoringMode),
-  );
 
   // Mobile renders only the active section (swap UX); desktop renders
   // every section so the scroll-spy can track them. The className
@@ -203,38 +196,6 @@ export default function SettingsPage() {
                         setDialogOpen(true);
                       }}
                     />
-                  ))}
-                </div>
-              )}
-
-              {(instances ?? []).length > 0 && (
-                <div className="space-y-subgroup pt-2">
-                  <h3 className="text-muted-foreground text-sm font-medium">
-                    {t("scoringMode")}
-                  </h3>
-                  {(instances ?? []).map((inst) => (
-                    <div key={inst.id} className="flex items-center gap-4">
-                      <span className="w-36 truncate text-sm font-medium">
-                        {inst.name}
-                      </span>
-                      <ScoringModeSelector instanceId={inst.id} />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {manualInstances.length > 0 && (
-                <div className="space-y-subgroup pt-2">
-                  <div>
-                    <h3 className="text-muted-foreground text-sm font-medium">
-                      {t("wantedCfs")}
-                    </h3>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {t("wantedCfsHelp")}
-                    </p>
-                  </div>
-                  {manualInstances.map((inst) => (
-                    <CfPreferencePicker key={inst.id} instance={inst} />
                   ))}
                 </div>
               )}

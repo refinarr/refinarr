@@ -1,6 +1,9 @@
 export type Severity = "critical" | "low" | "warning" | "ok" | "missing";
 export type ArrType = "radarr" | "sonarr";
 export type ScoringMode = "manual" | "profile";
+export type AutoSearchScheduleMode = "interval" | "cron";
+export type AutoSearchScope = "missing" | "upgrade" | "flagged" | "all";
+export type AutoSearchPickStrategy = "balanced" | "random";
 export type ActionType =
   | "search"
   | "search_season"
@@ -48,6 +51,15 @@ export interface Instance {
   // opt-in with a warning).
   showAllMedia: boolean;
   createdAt: Date;
+  autoSearchEnabled: boolean;
+  autoSearchScheduleMode: AutoSearchScheduleMode;
+  autoSearchIntervalMinutes: number;
+  autoSearchCronExpression: string;
+  autoSearchBatchLimit: number;
+  autoSearchLastRunAt: Date | null;
+  autoSearchMonitoredOnly: boolean;
+  autoSearchScope: AutoSearchScope;
+  autoSearchPickStrategy: AutoSearchPickStrategy;
 }
 
 export interface CustomFormat {

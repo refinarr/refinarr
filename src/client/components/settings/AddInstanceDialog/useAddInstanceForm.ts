@@ -11,20 +11,17 @@ import {
 } from "@/client/hooks/data/useInstances";
 import { withToast } from "@/client/lib/with-toast";
 import { DEFAULT_ARR_TYPE } from "@/shared/arr-type";
-import type { ArrType, Instance } from "@/shared/types/models";
+import type { PublicInstance } from "@/shared/types/api";
+import type { ArrType, ScoringMode } from "@/shared/types/models";
 
 interface Args {
-  editing?: Instance | null;
+  editing?: PublicInstance | null;
   onSuccess: () => void;
 }
 
 const normalizeUrl = (url: string) =>
   /^https?:\/\//i.test(url) ? url : `http://${url}`;
 
-// Owns the AddInstanceDialog form state: schema, react-hook-form wiring,
-// create/update/test mutations wrapped with toasts, the test-connection
-// helper, and the radarr/sonarr type toggle. The parent component is left
-// as pure JSX over this hook's return values.
 export function useAddInstanceForm({ editing, onSuccess }: Args) {
   const t = useTranslations("settings.instanceForm");
   const tToast = useTranslations("toast.instance");
@@ -50,6 +47,19 @@ export function useAddInstanceForm({ editing, onSuccess }: Args) {
           .pipe(z.url()),
         apiKey: isEdit ? z.string() : z.string().min(1),
         searchesPerHour: z.number().int().min(1).max(1000),
+        scoringMode: z.enum(["manual", "profile"]),
+        autoSearchEnabled: z.boolean(),
+        autoSearchScheduleMode: z.enum(["interval", "cron"]),
+        autoSearchIntervalMinutes: z
+          .number()
+          .int()
+          .min(1)
+          .max(60 * 24 * 365),
+        autoSearchCronExpression: z.string().max(128),
+        autoSearchBatchLimit: z.number().int().min(0).max(100),
+        autoSearchMonitoredOnly: z.boolean(),
+        autoSearchScope: z.enum(["missing", "upgrade", "flagged", "all"]),
+        autoSearchPickStrategy: z.enum(["balanced", "random"]),
       }),
     [isEdit],
   );
@@ -72,6 +82,15 @@ export function useAddInstanceForm({ editing, onSuccess }: Args) {
           url: editing.url,
           apiKey: "",
           searchesPerHour: editing.searchesPerHour,
+          scoringMode: editing.scoringMode,
+          autoSearchEnabled: editing.autoSearchEnabled,
+          autoSearchScheduleMode: editing.autoSearchScheduleMode,
+          autoSearchIntervalMinutes: editing.autoSearchIntervalMinutes,
+          autoSearchCronExpression: editing.autoSearchCronExpression,
+          autoSearchBatchLimit: editing.autoSearchBatchLimit,
+          autoSearchMonitoredOnly: editing.autoSearchMonitoredOnly,
+          autoSearchScope: editing.autoSearchScope,
+          autoSearchPickStrategy: editing.autoSearchPickStrategy,
         }
       : {
           type: DEFAULT_ARR_TYPE,
@@ -79,6 +98,15 @@ export function useAddInstanceForm({ editing, onSuccess }: Args) {
           url: "",
           apiKey: "",
           searchesPerHour: 20,
+          scoringMode: "profile" as ScoringMode,
+          autoSearchEnabled: false,
+          autoSearchScheduleMode: "interval" as const,
+          autoSearchIntervalMinutes: 1440,
+          autoSearchCronExpression: "0 3 * * *",
+          autoSearchBatchLimit: 5,
+          autoSearchMonitoredOnly: true,
+          autoSearchScope: "flagged" as const,
+          autoSearchPickStrategy: "balanced" as const,
         },
   });
 
@@ -124,6 +152,15 @@ export function useAddInstanceForm({ editing, onSuccess }: Args) {
             name: data.name,
             url: data.url,
             searchesPerHour: data.searchesPerHour,
+            scoringMode: data.scoringMode,
+            autoSearchEnabled: data.autoSearchEnabled,
+            autoSearchScheduleMode: data.autoSearchScheduleMode,
+            autoSearchIntervalMinutes: data.autoSearchIntervalMinutes,
+            autoSearchCronExpression: data.autoSearchCronExpression,
+            autoSearchBatchLimit: data.autoSearchBatchLimit,
+            autoSearchMonitoredOnly: data.autoSearchMonitoredOnly,
+            autoSearchScope: data.autoSearchScope,
+            autoSearchPickStrategy: data.autoSearchPickStrategy,
           };
       await runUpdate({ id: editing.id, data: payload });
     } else {
@@ -135,6 +172,7 @@ export function useAddInstanceForm({ editing, onSuccess }: Args) {
 
   return {
     register,
+    control,
     errors,
     selectedType,
     onChangeType,

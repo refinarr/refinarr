@@ -14,6 +14,22 @@ export const passwordChangeSchema = z.object({
   newPassword: z.string().min(12).max(256),
 });
 
+const autoSearchFields = {
+  autoSearchEnabled: z.boolean().optional(),
+  autoSearchScheduleMode: z.enum(["interval", "cron"]).optional(),
+  autoSearchIntervalMinutes: z
+    .number()
+    .int()
+    .min(1)
+    .max(60 * 24 * 365)
+    .optional(),
+  autoSearchCronExpression: z.string().max(128).optional(),
+  autoSearchBatchLimit: z.number().int().min(0).max(100).optional(),
+  autoSearchMonitoredOnly: z.boolean().optional(),
+  autoSearchScope: z.enum(["missing", "upgrade", "flagged", "all"]).optional(),
+  autoSearchPickStrategy: z.enum(["balanced", "random"]).optional(),
+};
+
 export const instanceCreateSchema = z.object({
   type: z.enum(["radarr", "sonarr"]),
   name: z.string().min(1).max(64),
@@ -21,6 +37,7 @@ export const instanceCreateSchema = z.object({
   apiKey: z.string().min(1).max(256),
   enabled: z.boolean().optional(),
   searchesPerHour: z.number().int().min(1).max(1000).optional(),
+  ...autoSearchFields,
 });
 
 export const instanceUpdateSchema = z.object({
@@ -32,6 +49,7 @@ export const instanceUpdateSchema = z.object({
   scoringMode: z.enum(["manual", "profile"]).optional(),
   searchesPerHour: z.number().int().min(1).max(1000).optional(),
   showAllMedia: z.boolean().optional(),
+  ...autoSearchFields,
 });
 
 export const instanceTestSchema = z.object({

@@ -1,4 +1,10 @@
-import type { ActionLog, ArrType, ScoringMode } from "@/shared/types/models";
+import type {
+  ActionLog,
+  ArrType,
+  MediaItem,
+  MediaQuery,
+  ScoringMode,
+} from "@/shared/types/models";
 import { movieService } from "./MovieService";
 import { seriesService } from "./SeriesService";
 
@@ -21,6 +27,16 @@ export interface MediaCacheService {
    * fire-and-forget by the dashboard route when the cache is cold.
    */
   warmMediaCache(instanceId: number): Promise<unknown>;
+
+  /**
+   * Fetches items through the service layer (cache + query). Callers that
+   * need arr-type-agnostic item access (e.g. auto-runner) use this instead
+   * of hard-coding getMovies / getSeries branches.
+   */
+  getItems(
+    instanceId: number,
+    query: MediaQuery,
+  ): Promise<{ items: MediaItem[]; total: number }>;
 }
 
 export interface RetryableMediaService {

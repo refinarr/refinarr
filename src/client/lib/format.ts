@@ -1,3 +1,30 @@
+export function formatCronTime(isoString: string): string {
+  const d = new Date(isoString);
+  const now = new Date();
+
+  const sameCalendarDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+
+  const time = d.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (sameCalendarDay(d, now)) return `today ${time}`;
+  if (sameCalendarDay(d, tomorrow)) return `tomorrow ${time}`;
+
+  const diffDays = Math.round((d.getTime() - now.getTime()) / 86_400_000);
+  if (diffDays < 7)
+    return `${d.toLocaleDateString(undefined, { weekday: "short" })} ${time}`;
+
+  return `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${time}`;
+}
+
 export function formatBytes(bytes: number): string {
   if (!bytes) return "—";
   const units = ["B", "KB", "MB", "GB", "TB"];

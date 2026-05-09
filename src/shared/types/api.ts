@@ -1,4 +1,10 @@
-import type { ActionLog, ArrType } from "./models";
+import type {
+  ActionLog,
+  ArrType,
+  AutoSearchPickStrategy,
+  AutoSearchScheduleMode,
+  AutoSearchScope,
+} from "./models";
 
 export interface PaginatedResponse<T> {
   items: T[];
@@ -43,12 +49,20 @@ export interface CreateInstanceDto {
 export type UpdateInstanceDto = Partial<CreateInstanceDto> & {
   scoringMode?: "manual" | "profile";
   showAllMedia?: boolean;
+  autoSearchEnabled?: boolean;
+  autoSearchScheduleMode?: AutoSearchScheduleMode;
+  autoSearchIntervalMinutes?: number;
+  autoSearchCronExpression?: string;
+  autoSearchBatchLimit?: number;
+  autoSearchMonitoredOnly?: boolean;
+  autoSearchScope?: AutoSearchScope;
+  autoSearchPickStrategy?: AutoSearchPickStrategy;
 };
 
 /**
  * Shape sent to the browser. Never includes apiKey — that's a server-only secret.
  */
-export interface InstanceListItem {
+export interface PublicInstance {
   id: number;
   type: ArrType;
   name: string;
@@ -58,6 +72,33 @@ export interface InstanceListItem {
   searchesPerHour: number;
   showAllMedia: boolean;
   createdAt: string | Date;
+  autoSearchEnabled: boolean;
+  autoSearchScheduleMode: AutoSearchScheduleMode;
+  autoSearchIntervalMinutes: number;
+  autoSearchCronExpression: string;
+  autoSearchBatchLimit: number;
+  autoSearchLastRunAt: string | Date | null;
+  autoSearchMonitoredOnly: boolean;
+  autoSearchScope: AutoSearchScope;
+  autoSearchPickStrategy: AutoSearchPickStrategy;
+}
+
+export interface AutoSearchStatus {
+  enabled: boolean;
+  scheduleMode: AutoSearchScheduleMode;
+  intervalMinutes: number;
+  cronExpression: string;
+  cronValid: boolean;
+  batchLimit: number;
+  monitoredOnly: boolean;
+  scope: AutoSearchScope;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  running: boolean;
+}
+
+export interface CronPreviewResponse {
+  next: string[];
 }
 
 export interface SetConfigDto {

@@ -354,6 +354,13 @@ export abstract class MediaService<TItem extends MediaItem> {
     });
   }
 
+  getItems(
+    instanceId: number,
+    query: MediaQuery,
+  ): Promise<{ items: TItem[]; total: number }> {
+    return this.getForWarm(instanceId, query);
+  }
+
   protected async readWithSwr<TCached>({
     cacheKey,
     instanceId,

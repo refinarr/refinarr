@@ -364,4 +364,122 @@ describe("LogRepository", () => {
       expect(found2?.instanceId).toBe(2);
     });
   });
+
+  describe("findLastSearchedAtByMedia", () => {
+    test("returns empty map when no search actions exist", async () => {
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      expect(result.size).toBe(0);
+    });
+
+    test("returns max createdAt per mediaId for search actions", async () => {
+      // Two search entries for mediaId=10; one older, one newer.
+      const older = await logRepository.create({
+        ...baseLog,
+        mediaId: 10,
+        action: "search",
+      });
+      await new Promise((r) => setTimeout(r, 5));
+      const newer = await logRepository.create({
+        ...baseLog,
+        mediaId: 10,
+        action: "search",
+      });
+
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      const entry = result.get(10)!;
+      expect(entry).toBeDefined();
+      // Should be the newer row's createdAt, not the older one.
+      expect(entry.at.getTime()).toBeGreaterThanOrEqual(
+        newer.createdAt.getTime(),
+      );
+      expect(entry.at.getTime()).toBeGreaterThan(older.createdAt.getTime());
+    });
+
+    test("scoped to instanceId — other instances excluded", async () => {
+      await logRepository.create({
+        ...baseLog,
+        instanceId: 1,
+        mediaId: 1,
+        action: "search",
+      });
+      await logRepository.create({
+        ...baseLog,
+        instanceId: 2,
+        mediaId: 2,
+        action: "search",
+      });
+
+      const result1 = await logRepository.findLastSearchedAtByMedia(1);
+      expect(result1.has(1)).toBe(true);
+      expect(result1.has(2)).toBe(false);
+
+      const result2 = await logRepository.findLastSearchedAtByMedia(2);
+      expect(result2.has(2)).toBe(true);
+      expect(result2.has(1)).toBe(false);
+    });
+
+    test("failed flag: most recent row failed → entry.failed=true", async () => {
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 7,
+        action: "search",
+        status: "searched",
+      });
+      await new Promise((r) => setTimeout(r, 5));
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 7,
+        action: "search",
+        status: "failed",
+        error: "no results",
+      });
+
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      const entry = result.get(7)!;
+      expect(entry).toBeDefined();
+      expect(entry.failed).toBe(true);
+    });
+
+    test("failed flag: most recent row succeeded → entry.failed=false", async () => {
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 8,
+        action: "search",
+        status: "failed",
+        error: "old failure",
+      });
+      await new Promise((r) => setTimeout(r, 5));
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 8,
+        action: "search",
+        status: "searched",
+      });
+
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      const entry = result.get(8)!;
+      expect(entry).toBeDefined();
+      expect(entry.failed).toBe(false);
+    });
+
+    test("non-search actions are excluded", async () => {
+      await logRepository.create({ ...baseLog, mediaId: 5, action: "delete" });
+      await logRepository.create({ ...baseLog, mediaId: 5, action: "ignore" });
+
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      expect(result.has(5)).toBe(false);
+    });
+
+    test("multiple mediaIds each get their own max timestamp", async () => {
+      await logRepository.create({ ...baseLog, mediaId: 1, action: "search" });
+      await new Promise((r) => setTimeout(r, 5));
+      await logRepository.create({ ...baseLog, mediaId: 2, action: "search" });
+
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      expect(result.size).toBe(2);
+      expect(result.get(1)!.at.getTime()).toBeLessThan(
+        result.get(2)!.at.getTime(),
+      );
+    });
+  });
 });

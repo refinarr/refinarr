@@ -6,6 +6,7 @@ import { LogSource } from "./log-sources";
 import { appLogger } from "./app-logger";
 import { searchWorker } from "./search-worker";
 import { statusPoller } from "./status-poller";
+import { autoRunner } from "./auto-runner";
 
 let seeded = false;
 let seedPromise: Promise<void> | null = null;
@@ -34,6 +35,7 @@ export async function seedDefaults(): Promise<void> {
   // so they run independently — one feeding queue drains, the other
   // observing upstream lifecycle for already-dispatched commands.
   await statusPoller.start();
+  await autoRunner.start();
 }
 
 export async function ensureSeeded(): Promise<void> {

@@ -14,6 +14,7 @@ export const LogSource = {
   SearchQueue: "search-queue",
   SearchWorker: "search-worker",
   StatusPoller: "status-poller",
+  AutoRun: "auto-run",
 } as const;
 
 export type LogSource = (typeof LogSource)[keyof typeof LogSource];

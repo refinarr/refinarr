@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { ArrType, Instance } from "@/shared/types/models";
+import type { PublicInstance } from "@/shared/types/api";
+import type { ArrType } from "@/shared/types/models";
 import { useInstances } from "../data/useInstances";
 
 export function parseUrlInstance(raw: string | null): number {
@@ -9,9 +10,9 @@ export function parseUrlInstance(raw: string | null): number {
 }
 
 export interface InstanceSelection {
-  instances: Instance[] | undefined;
+  instances: PublicInstance[] | undefined;
   loadingInstances: boolean;
-  typedInstances: Instance[];
+  typedInstances: PublicInstance[];
   typedInstanceIds: number[];
   instanceId: number;
   setInstanceId: (v: number) => void;

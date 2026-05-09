@@ -178,6 +178,25 @@ export class LogRepository extends BaseRepository<ActionLog> {
     }) as Promise<ActionLog | null>;
   }
 
+  async findLastSearchedAtByMedia(
+    instanceId: number,
+  ): Promise<Map<number, { at: Date; failed: boolean }>> {
+    const rows = await this.db.actionLog.findMany({
+      where: {
+        instanceId,
+        action: { startsWith: "search" },
+      },
+      select: { mediaId: true, createdAt: true, status: true },
+      orderBy: { createdAt: "desc" },
+    });
+    const map = new Map<number, { at: Date; failed: boolean }>();
+    for (const r of rows) {
+      if (!map.has(r.mediaId))
+        map.set(r.mediaId, { at: r.createdAt, failed: r.status === "failed" });
+    }
+    return map;
+  }
+
   async create(data: Omit<ActionLog, "id" | "createdAt">): Promise<ActionLog> {
     const created = (await this.db.actionLog.create({ data })) as ActionLog;
     void this.trim();

@@ -17,6 +17,17 @@ model Instance {
   searchesPerHour Int      @default(20)
   showAllMedia    Boolean  @default(false)
   createdAt       DateTime @default(now())
+
+  // Auto-search scheduler fields
+  autoSearchEnabled         Boolean   @default(false)
+  autoSearchScheduleMode    String    @default("interval")
+  autoSearchIntervalMinutes Int       @default(1440)
+  autoSearchCronExpression  String    @default("0 3 * * *")
+  autoSearchBatchLimit      Int       @default(5)
+  autoSearchLastRunAt       DateTime?
+  autoSearchMonitoredOnly   Boolean   @default(true)
+  autoSearchScope           String    @default("flagged")
+  autoSearchPickStrategy    String    @default("balanced")
 }
 
 model AppConfig {
