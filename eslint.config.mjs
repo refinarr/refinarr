@@ -119,6 +119,12 @@ const eslintConfig = defineConfig([
           message:
             'Do not compare against the "manual" scoring-mode literal. Use SCORE_FOR / ISSUES_FOR / ISSUES_HEADER_KEY from @/shared/scoring-mode.',
         },
+        {
+          selector:
+            "TSAsExpression > TSAsExpression[typeAnnotation.type='TSUnknownKeyword']:not([expression.type='Identifier'][expression.name='globalThis'])",
+          message:
+            "'as unknown as T' bypasses type safety. Expose a typed accessor or use a type guard instead. (Exception: 'globalThis as unknown as …' is allowed for HMR singleton wiring.)",
+        },
       ],
     },
   },
