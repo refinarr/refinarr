@@ -46,7 +46,7 @@ describe("AutoSearchFormFields", () => {
     expect(onChange).toHaveBeenCalledWith({ autoSearchEnabled: true });
   });
 
-  test("mode tabs not visible when disabled=false", () => {
+  test("mode tabs not visible when auto-search is disabled", () => {
     renderWithProviders(
       <AutoSearchFormFields value={defaults} onChange={onChange} />,
     );
@@ -101,9 +101,9 @@ describe("AutoSearchFormFields", () => {
         onChange={onChange}
       />,
     );
-    const switches = screen.getAllByRole("switch");
-    // Second switch is monitored-only
-    fireEvent.click(switches[1]);
+    fireEvent.click(
+      screen.getByRole("switch", { name: /monitored items only/i }),
+    );
     expect(onChange).toHaveBeenCalledWith({ autoSearchMonitoredOnly: false });
   });
 

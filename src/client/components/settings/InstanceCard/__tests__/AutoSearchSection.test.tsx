@@ -2,6 +2,7 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import type { PublicInstance } from "@/shared/types/api";
+import type { useAutoSearchStatus } from "@/client/hooks/data/useAutoSearch";
 import { renderWithProviders } from "@/test/render";
 import { AutoSearchSection } from "../AutoSearchSection";
 
@@ -58,9 +59,31 @@ const baseInstance: PublicInstance = {
   autoSearchPickStrategy: "balanced",
 };
 
+// Shared status shape used across tests that need enabled status.
+const enabledStatus = {
+  enabled: true,
+  scheduleMode: "interval" as const,
+  intervalMinutes: 1440,
+  cronExpression: "0 3 * * *",
+  cronValid: true,
+  batchLimit: 5,
+  monitoredOnly: true,
+  scope: "flagged" as const,
+  lastRunAt: null,
+  nextRunAt: null,
+  running: false,
+} satisfies ReturnType<typeof useAutoSearchStatus>["data"] & object;
+
 describe("AutoSearchSection", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    // Reset useAutoSearchStatus to the default null state so tests that
+    // override it don't bleed into the next test (clearAllMocks resets call
+    // counts but not mockReturnValue implementations).
+    const { useAutoSearchStatus: mockStatus } = await import(
+      "@/client/hooks/data/useAutoSearch"
+    );
+    vi.mocked(mockStatus).mockReturnValue({ data: null, isLoading: false });
     mockTriggerMutateAsync.mockResolvedValue({ enqueued: 3 });
     mockUpdateMutateAsync.mockResolvedValue({});
   });
@@ -104,29 +127,17 @@ describe("AutoSearchSection", () => {
   test("Run now button not shown when autoSearch toggle is off", () => {
     renderWithProviders(<AutoSearchSection instance={baseInstance} />);
     fireEvent.click(screen.getByRole("button"));
-    // Enable switch is off → status panel hidden
     expect(screen.queryByText(/run now/i)).toBeNull();
   });
 
   test("status panel shows Run now button when enabled", async () => {
-    const { useAutoSearchStatus } =
-      await import("@/client/hooks/data/useAutoSearch");
+    const { useAutoSearchStatus } = await import(
+      "@/client/hooks/data/useAutoSearch"
+    );
     vi.mocked(useAutoSearchStatus).mockReturnValue({
-      data: {
-        enabled: true,
-        scheduleMode: "interval",
-        intervalMinutes: 1440,
-        cronExpression: "0 3 * * *",
-        cronValid: true,
-        batchLimit: 5,
-        monitoredOnly: true,
-        scope: "flagged",
-        lastRunAt: null,
-        nextRunAt: null,
-        running: false,
-      },
+      data: enabledStatus,
       isLoading: false,
-    } as ReturnType<typeof useAutoSearchStatus>);
+    });
 
     renderWithProviders(
       <AutoSearchSection
@@ -140,26 +151,15 @@ describe("AutoSearchSection", () => {
   });
 
   test("status panel shows last run and next run from GET response", async () => {
-    const { useAutoSearchStatus } =
-      await import("@/client/hooks/data/useAutoSearch");
+    const { useAutoSearchStatus } = await import(
+      "@/client/hooks/data/useAutoSearch"
+    );
     const past = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const future = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
     vi.mocked(useAutoSearchStatus).mockReturnValue({
-      data: {
-        enabled: true,
-        scheduleMode: "interval",
-        intervalMinutes: 1440,
-        cronExpression: "0 3 * * *",
-        cronValid: true,
-        batchLimit: 5,
-        monitoredOnly: true,
-        scope: "flagged",
-        lastRunAt: past,
-        nextRunAt: future,
-        running: false,
-      },
+      data: { ...enabledStatus, lastRunAt: past, nextRunAt: future },
       isLoading: false,
-    } as ReturnType<typeof useAutoSearchStatus>);
+    });
 
     renderWithProviders(
       <AutoSearchSection
@@ -175,24 +175,13 @@ describe("AutoSearchSection", () => {
   });
 
   test("shows 'Running now' indicator when status.running is true", async () => {
-    const { useAutoSearchStatus } =
-      await import("@/client/hooks/data/useAutoSearch");
+    const { useAutoSearchStatus } = await import(
+      "@/client/hooks/data/useAutoSearch"
+    );
     vi.mocked(useAutoSearchStatus).mockReturnValue({
-      data: {
-        enabled: true,
-        scheduleMode: "interval",
-        intervalMinutes: 1440,
-        cronExpression: "0 3 * * *",
-        cronValid: true,
-        batchLimit: 5,
-        monitoredOnly: true,
-        scope: "flagged",
-        lastRunAt: null,
-        nextRunAt: null,
-        running: true,
-      },
+      data: { ...enabledStatus, running: true },
       isLoading: false,
-    } as ReturnType<typeof useAutoSearchStatus>);
+    });
 
     renderWithProviders(
       <AutoSearchSection
@@ -204,24 +193,13 @@ describe("AutoSearchSection", () => {
   });
 
   test("Run now button calls trigger mutation", async () => {
-    const { useAutoSearchStatus } =
-      await import("@/client/hooks/data/useAutoSearch");
+    const { useAutoSearchStatus } = await import(
+      "@/client/hooks/data/useAutoSearch"
+    );
     vi.mocked(useAutoSearchStatus).mockReturnValue({
-      data: {
-        enabled: true,
-        scheduleMode: "interval",
-        intervalMinutes: 1440,
-        cronExpression: "0 3 * * *",
-        cronValid: true,
-        batchLimit: 5,
-        monitoredOnly: true,
-        scope: "flagged",
-        lastRunAt: null,
-        nextRunAt: null,
-        running: false,
-      },
+      data: enabledStatus,
       isLoading: false,
-    } as ReturnType<typeof useAutoSearchStatus>);
+    });
 
     renderWithProviders(
       <AutoSearchSection
@@ -241,12 +219,9 @@ describe("AutoSearchSection", () => {
     // useDebouncedValue is mocked to pass through immediately (no real delay).
     renderWithProviders(<AutoSearchSection instance={baseInstance} />);
 
-    // Open the section
     fireEvent.click(screen.getByRole("button"));
 
     // Toggle the enable switch (autoSearchEnabled: false → true).
-    // useDebouncedValue returns the value immediately, so the useEffect
-    // fires on the next render and calls mutateAsync.
     fireEvent.click(screen.getByRole("switch"));
 
     await waitFor(() => {

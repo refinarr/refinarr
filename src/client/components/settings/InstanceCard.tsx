@@ -50,7 +50,6 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
   const handleTest = () => runTest(instance.id);
   const handleDelete = () => runDelete(instance.id);
 
-  // CF summary line — up to 3 tags then "+N more"
   const MAX_CF_DISPLAY = 3;
   const cfTags = prefs ?? [];
   const visibleCfs = cfTags.slice(0, MAX_CF_DISPLAY);
