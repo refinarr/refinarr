@@ -79,7 +79,9 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
                 <>
                   {" · "}
                   {visibleCfs.map((cf) => cf.cfName).join(" · ")}
-                  {overflowCfs > 0 && <> · +{overflowCfs}</>}
+                  {overflowCfs > 0 && (
+                    <> · {tCommon("moreCount", { count: overflowCfs })}</>
+                  )}
                 </>
               )}
             </p>

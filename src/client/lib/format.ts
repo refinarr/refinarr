@@ -1,5 +1,6 @@
 export function formatCronTime(isoString: string): string {
   const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return "—";
   const now = new Date();
 
   const sameCalendarDay = (a: Date, b: Date) =>

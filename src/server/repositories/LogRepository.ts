@@ -185,6 +185,7 @@ export class LogRepository extends BaseRepository<ActionLog> {
       where: {
         instanceId,
         action: { startsWith: "search" },
+        isDryRun: false,
       },
       select: {
         mediaId: true,

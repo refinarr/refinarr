@@ -36,6 +36,22 @@ export interface AutoSearchFields {
   autoSearchPickStrategy: AutoSearchPickStrategy;
 }
 
+function isScheduleMode(v: string | null): v is AutoSearchScheduleMode {
+  return v === "interval" || v === "cron";
+}
+
+function isIntervalUnit(v: string | null): v is IntervalDisplayUnit["key"] {
+  return v === "minutes" || v === "hours" || v === "days";
+}
+
+function isPickStrategy(v: string | null): v is AutoSearchPickStrategy {
+  return v === "balanced" || v === "random";
+}
+
+function isAutoSearchScope(v: string | null): v is AutoSearchScope {
+  return v === "missing" || v === "upgrade" || v === "flagged" || v === "all";
+}
+
 interface IntervalDisplayUnit {
   key: "minutes" | "hours" | "days";
   divisor: number;
@@ -126,9 +142,9 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
         <>
           <Tabs
             value={value.autoSearchScheduleMode}
-            onValueChange={(v) =>
-              onChange({ autoSearchScheduleMode: v as AutoSearchScheduleMode })
-            }
+            onValueChange={(v) => {
+              if (isScheduleMode(v)) onChange({ autoSearchScheduleMode: v });
+            }}
           >
             <TabsList>
               <TabsTrigger value="interval" disabled={disabled}>
@@ -171,14 +187,15 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
                 </div>
                 <Select
                   value={intervalUnit}
-                  onValueChange={(u) =>
-                    onChange({
-                      autoSearchIntervalMinutes: displayToMinutes(
-                        intervalValue,
-                        u as IntervalDisplayUnit["key"],
-                      ),
-                    })
-                  }
+                  onValueChange={(u) => {
+                    if (isIntervalUnit(u))
+                      onChange({
+                        autoSearchIntervalMinutes: displayToMinutes(
+                          intervalValue,
+                          u,
+                        ),
+                      });
+                  }}
                   disabled={disabled}
                 >
                   <SelectTrigger className="w-28">
@@ -274,9 +291,9 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
           >
             <Select
               value={value.autoSearchScope}
-              onValueChange={(v) =>
-                onChange({ autoSearchScope: v as AutoSearchScope })
-              }
+              onValueChange={(v) => {
+                if (isAutoSearchScope(v)) onChange({ autoSearchScope: v });
+              }}
               disabled={disabled}
             >
               <SelectTrigger id="auto-search-scope">
@@ -298,11 +315,9 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
           >
             <Select
               value={strategy}
-              onValueChange={(v) =>
-                onChange({
-                  autoSearchPickStrategy: v as AutoSearchPickStrategy,
-                })
-              }
+              onValueChange={(v) => {
+                if (isPickStrategy(v)) onChange({ autoSearchPickStrategy: v });
+              }}
               disabled={disabled}
             >
               <SelectTrigger id="auto-search-pick-strategy">

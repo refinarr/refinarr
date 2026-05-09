@@ -14,6 +14,24 @@ const QUEUE_ACTIONS: Record<ArrType, "movie" | "series"> = {
   sonarr: "series",
 };
 
+// Pure function — exported for unit tests. Returns the most recent cron
+// occurrence at or before `now`. Used in tick() to detect a due cron slot
+// without relying on computeNextRun, which always returns a future time.
+export function cronPrevFire(
+  cronExpression: string,
+  now = new Date(),
+): Date | null {
+  try {
+    const fields = cronExpression.trim().split(/\s+/);
+    if (fields.length !== 5) return null;
+    return CronExpressionParser.parse(cronExpression, { currentDate: now })
+      .prev()
+      .toDate();
+  } catch {
+    return null;
+  }
+}
+
 // Pure function — exported for unit tests. Returns the next scheduled fire
 // time given the instance's scheduling config. Returns null for invalid cron.
 //
@@ -228,9 +246,27 @@ class AutoRunner {
       return;
     }
 
-    const msUntilNext = next.getTime() - now.getTime();
-    if (msUntilNext > 0) {
-      this.scheduleNext(instanceId, gen, msUntilNext);
+    // For cron mode, computeNextRun always returns a future time (next
+    // calendar match), so msUntilNext is always positive — we'd never fire.
+    // Instead, check whether a cron slot has passed since the last run.
+    const overdue =
+      inst.autoSearchScheduleMode === "cron"
+        ? (() => {
+            const prev = cronPrevFire(inst.autoSearchCronExpression, now);
+            return (
+              prev !== null &&
+              (inst.autoSearchLastRunAt === null ||
+                prev.getTime() > inst.autoSearchLastRunAt.getTime())
+            );
+          })()
+        : next.getTime() <= now.getTime();
+
+    if (!overdue) {
+      this.scheduleNext(
+        instanceId,
+        gen,
+        Math.max(0, next.getTime() - now.getTime()),
+      );
       return;
     }
 
@@ -273,7 +309,9 @@ class AutoRunner {
       limit: 5000,
       sortBy: "score",
       order: "asc",
-      flaggedOnly: inst.autoSearchScope !== "all",
+      flaggedOnly:
+        inst.autoSearchScope === "flagged" ||
+        inst.autoSearchScope === "upgrade",
       monitorStatus: inst.autoSearchMonitoredOnly ? "monitored" : "all",
       onlyMissing: inst.autoSearchScope === "missing" ? true : undefined,
     });

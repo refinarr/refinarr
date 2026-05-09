@@ -44,9 +44,9 @@ export function ScoringModeSelector({ instanceId }: Props) {
 
   return (
     <div className="flex items-center gap-3">
-      <Label>{t("scoringMode")}</Label>
+      <Label htmlFor="scoring-mode">{t("scoringMode")}</Label>
       <Select value={mode} onValueChange={handleChange}>
-        <SelectTrigger className="w-36">
+        <SelectTrigger id="scoring-mode" className="w-36">
           <SelectValue>{t(`scoringModeOptions.${mode}`)}</SelectValue>
         </SelectTrigger>
         <SelectContent>
