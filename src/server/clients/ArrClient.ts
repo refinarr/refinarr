@@ -103,7 +103,7 @@ export abstract class ArrClient {
   }
 
   protected async fetch<T>(path: string, init?: RequestInit): Promise<T> {
-    await arrRateLimiter.acquire(this.instanceId);
+    await arrRateLimiter.acquire(this.instanceId, init?.signal);
     const url = `${this.baseUrl}/api/v3${path}`;
 
     // Always enforce the 10s ceiling even when the caller passes its own signal.

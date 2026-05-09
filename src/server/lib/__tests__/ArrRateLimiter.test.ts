@@ -86,4 +86,22 @@ describe("ArrRateLimiter", () => {
     await limiter.acquire(1); // fresh bucket
     expect(Date.now()).toBe(start);
   });
+
+  test("throws immediately if signal is already aborted", async () => {
+    const limiter = make(5);
+    const ac = new AbortController();
+    ac.abort();
+    await expect(limiter.acquire(1, ac.signal)).rejects.toThrow();
+  });
+
+  test("throws and clears timer when signal is aborted while waiting for a token", async () => {
+    const limiter = make(1); // capacity = 2
+    await limiter.acquire(1);
+    await limiter.acquire(1); // drained
+
+    const ac = new AbortController();
+    const p = limiter.acquire(1, ac.signal);
+    ac.abort(); // fires while sleeping for refill
+    await expect(p).rejects.toThrow();
+  });
 });
