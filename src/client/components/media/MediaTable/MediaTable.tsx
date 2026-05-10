@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useWindowVirtualizer } from "@tanstack/react-virtual";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Checkbox } from "@/client/components/ui/checkbox";
 import type { Density } from "@/client/hooks/ui/useDensity";
 import { cn } from "@/client/lib/utils";
@@ -99,17 +99,39 @@ export function MediaTable<T extends { id: number }>({
 }: Props<T>) {
   const { ref: tableRef, scrolled } = useScrolledPast(4);
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
   const rowHeight = ROW_HEIGHT_PX[density];
 
-  // Recompute scrollMargin whenever the body's offset within the page
-  // changes (e.g. window resize, sticky header height shift). useLayout-
-  // Effect avoids the one-frame flicker that would happen if we read
-  // offsetTop after paint.
+  // Find the nearest scrollable ancestor and recompute scrollMargin (the
+  // body's offset within that scroller) whenever the body shifts —
+  // density changes, sticky header height changes, window resize.
+  // useLayoutEffect avoids the one-frame flicker if we read offsetTop
+  // after paint. Falls back to AppShell's <main> when the walk doesn't
+  // find a scrollable parent (e.g. wrapping div with no overflow).
   useLayoutEffect(() => {
     const node = bodyRef.current;
     if (!node) return;
-    const measure = () => setScrollMargin(node.offsetTop);
+
+    let scroller: HTMLElement | null = null;
+    let parent = node.parentElement;
+    while (parent) {
+      const overflow = window.getComputedStyle(parent).overflowY;
+      if (overflow === "auto" || overflow === "scroll") {
+        scroller = parent;
+        break;
+      }
+      parent = parent.parentElement;
+    }
+    if (!scroller) scroller = document.getElementById("main");
+    setScrollElement(scroller);
+
+    const measure = () => {
+      if (!scroller) return;
+      const bodyTop = node.getBoundingClientRect().top;
+      const scrollerTop = scroller.getBoundingClientRect().top;
+      setScrollMargin(bodyTop - scrollerTop + scroller.scrollTop);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(node);
@@ -120,17 +142,20 @@ export function MediaTable<T extends { id: number }>({
     };
   }, []);
 
-  // Window-scoped virtualization: the page (not the table) is the scroll
-  // container, so we hand the virtualizer the body's offset within the
-  // viewport via scrollMargin. Result: only the visible rows + overscan
-  // are mounted, regardless of total count. Pairs naturally with
-  // useInfiniteScroll's sentinel (still visible to IntersectionObserver
-  // because the spacer keeps real document height).
-  const virtualizer = useWindowVirtualizer({
+  // Element-scoped virtualization. AppShell's <main> is the actual scroll
+  // container (its overflow-y-auto traps the document scroll), so window
+  // virtualization never picks up the events — that's why earlier only
+  // the initial slice rendered. Hand the virtualizer the real scroll
+  // element + the body's offset within it via scrollMargin. Result: only
+  // the visible rows + overscan are mounted, regardless of total count.
+  // Pairs naturally with useInfiniteScroll's sentinel (still visible to
+  // IntersectionObserver because the spacer keeps real document height).
+  const virtualizer = useVirtualizer({
     count: rows.length,
     estimateSize: () => rowHeight,
     overscan: 8,
     scrollMargin,
+    getScrollElement: () => scrollElement,
   });
 
   if (rows.length === 0 && emptyState) {
@@ -256,29 +281,52 @@ export function MediaTable<T extends { id: number }>({
             ref={bodyRef}
             role="rowgroup"
             data-testid="media-table-body"
-            style={{ height: virtualizer.getTotalSize(), position: "relative" }}
+            style={
+              scrollElement
+                ? {
+                    height: virtualizer.getTotalSize(),
+                    position: "relative",
+                  }
+                : undefined
+            }
           >
-            {virtualizer.getVirtualItems().map((vRow) => {
-              const row = rows[vRow.index];
+            {(scrollElement
+              ? virtualizer.getVirtualItems().map((vRow) => ({
+                  row: rows[vRow.index],
+                  index: vRow.index,
+                  offset: vRow.start - scrollMargin,
+                  virt: true as const,
+                }))
+              : rows.map((row, index) => ({
+                  row,
+                  index,
+                  offset: 0,
+                  virt: false as const,
+                }))
+            ).map(({ row, index, offset, virt }) => {
               if (!row) return null;
               return (
                 <div
                   key={row.id}
                   role="row"
-                  data-index={vRow.index}
+                  data-index={index}
                   className={cn(
                     "group hover:bg-muted/50 grid cursor-pointer items-center border-t transition-colors",
                     rowHeightClass,
                     selectedIds.has(row.id) && "bg-brand/10",
                   )}
-                  style={{
-                    gridTemplateColumns: gridTemplate,
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    transform: `translateY(${vRow.start - scrollMargin}px)`,
-                  }}
+                  style={
+                    virt
+                      ? {
+                          gridTemplateColumns: gridTemplate,
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          transform: `translateY(${offset}px)`,
+                        }
+                      : { gridTemplateColumns: gridTemplate }
+                  }
                   onClick={() => onRowClick(row.id)}
                 >
                   <div
