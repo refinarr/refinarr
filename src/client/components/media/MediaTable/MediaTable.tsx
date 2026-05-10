@@ -150,10 +150,17 @@ export function MediaTable<T extends { id: number }>({
   // the visible rows + overscan are mounted, regardless of total count.
   // Pairs naturally with useInfiniteScroll's sentinel (still visible to
   // IntersectionObserver because the spacer keeps real document height).
+  // overscan = how many rows above/below the viewport stay mounted to
+  // mask fast-scroll latency. 8 was too tight: on a flick scroll the
+  // user could outrun the buffer faster than the virtualizer's RAF
+  // could re-measure, leaving a blank gap for ~1 frame. 24 keeps
+  // ~2 viewports of rows mounted at cozy density (~12 rows on screen)
+  // — enough headroom for most flick gestures, still ~30 DOM nodes
+  // total versus thousands without virt.
   const virtualizer = useVirtualizer({
     count: rows.length,
     estimateSize: () => rowHeight,
-    overscan: 8,
+    overscan: 24,
     scrollMargin,
     getScrollElement: () => scrollElement,
   });
