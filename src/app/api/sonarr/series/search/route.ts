@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { parseJson } from "@/server/lib/api-errors";
-import { seriesService } from "@/server/services/SeriesService";
-import { searchQueueService } from "@/server/services/SearchQueueService";
-import { dryRunService } from "@/server/services/DryRunService";
+import { respondToSearchDispatch } from "@/server/lib/search-dispatch-response";
+import { searchDispatcher } from "@/server/services/SearchDispatcher";
 import { sonarrSearchSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
@@ -12,25 +11,13 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     sonarrSearchSchema,
     "Invalid search payload",
   );
-
-  if (await dryRunService.isDryRun()) {
-    const result = await seriesService.triggerSearch(
+  return respondToSearchDispatch(
+    await searchDispatcher.dispatch({
+      action: "series",
       instanceId,
       mediaId,
       title,
-      { groupId },
-    );
-    return NextResponse.json(result);
-  }
-  const entry = await searchQueueService.enqueue({
-    instanceId,
-    action: "series",
-    mediaId,
-    title,
-    groupId,
-  });
-  return NextResponse.json(
-    { queued: true, queueId: entry.id },
-    { status: 202 },
+      groupId,
+    }),
   );
 });
