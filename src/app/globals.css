@@ -101,6 +101,8 @@
   --spacing-control-lg: 3.25rem; /* primary CTA / hero pickers */
   --spacing-bottom-bar: 4rem; /* mobile bottom tab bar height (excludes safe-area inset) */
   --spacing-mobile-filter-bar: 3rem; /* mobile filter toolbar height (sits above the tab bar) */
+  --spacing-row-compact: 2.25rem; /* compact MediaTable row (~36px) */
+  --spacing-row-cozy: 3rem; /* cozy MediaTable row (~48px, default) */
 }
 
 /* First-paint safety: surface is keyed on the .dark class (toggled by

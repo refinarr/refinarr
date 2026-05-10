@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Checkbox } from "@/client/components/ui/checkbox";
 import { MediaCard } from "./MediaCard";
 
@@ -80,8 +81,7 @@ export function MediaTable<T extends { id: number }>({
                 if (col.sortKey && !isActiveSort) ariaSort = "none";
                 else if (isActiveSort)
                   ariaSort = order === "asc" ? "ascending" : "descending";
-                let arrow = "";
-                if (isActiveSort) arrow = order === "asc" ? " ↑" : " ↓";
+                const SortIcon = order === "asc" ? ChevronUp : ChevronDown;
                 return (
                   <th
                     key={col.key}
@@ -92,13 +92,16 @@ export function MediaTable<T extends { id: number }>({
                       {col.sortKey ? (
                         <button
                           type="button"
-                          className="hover:text-foreground cursor-pointer select-none"
+                          className="hover:text-foreground inline-flex cursor-pointer items-center gap-1 select-none"
                           onClick={() => onSortChange(col.sortKey!)}
                         >
                           {col.header}
-                          {arrow && (
-                            <span className="text-foreground">{arrow}</span>
-                          )}
+                          <SortIcon
+                            className={`text-foreground size-3.5 shrink-0 transition-opacity ${
+                              isActiveSort ? "opacity-100" : "opacity-0"
+                            }`}
+                            aria-hidden
+                          />
                         </button>
                       ) : (
                         col.header

@@ -1,3 +1,4 @@
+import { Eye, EyeOff } from "lucide-react";
 import { CfBadge } from "@/client/components/common/CfBadge";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { CfColumnFunnel } from "@/client/components/media/CfColumnFunnel";
@@ -98,6 +99,24 @@ export function seriesColumns(
           </div>
         );
       },
+    },
+    {
+      key: "monitored",
+      header: (
+        <span className="sr-only" title={tCols("monitored")}>
+          {tCols("monitored")}
+        </span>
+      ),
+      className: "w-8",
+      render: (s) =>
+        s.monitored ? (
+          <Eye className="text-ok size-3.5" aria-label={t("monitoredYes")} />
+        ) : (
+          <EyeOff
+            className="text-muted-foreground size-3.5"
+            aria-label={t("monitoredNo")}
+          />
+        ),
     },
     {
       key: "profile",

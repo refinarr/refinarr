@@ -171,6 +171,7 @@
     "refreshTitle": "Refresh from Radarr",
     "columns": {
       "title": "Title",
+      "monitored": "Monitored",
       "profile": "Profile",
       "score": "Score",
       "size": "Size",
@@ -178,6 +179,8 @@
       "missing": "Missing",
       "penalties": "Penalties"
     },
+    "monitoredYes": "Monitored",
+    "monitoredNo": "Unmonitored",
     "noFile": "No file",
     "drawer": {
       "score": "Score",
@@ -193,8 +196,11 @@
     "title": "Shows",
     "flaggedSummary": "{total} flagged{selected, select, 0 {} other { · {selected} selected}}",
     "refreshTitle": "Refresh from Sonarr",
+    "monitoredYes": "Monitored",
+    "monitoredNo": "Unmonitored",
     "columns": {
       "title": "Title",
+      "monitored": "Monitored",
       "profile": "Profile",
       "score": "Score",
       "size": "Size",
