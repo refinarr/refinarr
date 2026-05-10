@@ -110,8 +110,12 @@ export function seriesColumns(
     {
       key: "monitored",
       header: (
-        <span className="sr-only" title={tCols("monitored")}>
-          {tCols("monitored")}
+        <span
+          className="text-muted-foreground inline-flex"
+          title={tCols("monitored")}
+          aria-label={tCols("monitored")}
+        >
+          <Eye className="size-3.5" aria-hidden />
         </span>
       ),
       className: "w-8",
