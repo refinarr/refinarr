@@ -311,7 +311,6 @@ function Root<T extends MediaItem>({
             profiles={profiles}
             cfOptions={cfOptions}
             filters={filters.filters}
-            showAllEnabled={showAllEnabled}
             onChange={(patch) =>
               filters.setFilters((prev) => ({ ...prev, ...patch }))
             }
@@ -355,18 +354,11 @@ function Header() {
 }
 
 function SearchBar() {
-  const { filters, inst } = useShellContext();
-  // Per-instance default view mode. The "Show all" pill is reachable
-  // when Instance.showAllMedia is on; the server enforces flagged-only
-  // for disabled instances regardless of client state.
-  const showAllEnabled =
-    inst.typedInstances.find((i) => i.id === inst.activeInstance)
-      ?.showAllMedia ?? false;
+  const { filters } = useShellContext();
   return (
     <MediaSearchBar
       filters={filters.filters}
       onChange={(next) => filters.setFilters((prev) => ({ ...prev, ...next }))}
-      showAllEnabled={showAllEnabled}
     />
   );
 }
