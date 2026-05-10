@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { parseJson } from "@/server/lib/api-errors";
 import { seriesService } from "@/server/services/SeriesService";

@@ -4,41 +4,48 @@ import { seriesService } from "@/server/services/SeriesService";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import type { ActionLog } from "@/shared/types/models";
 
-export type SearchDispatchInput =
-  | {
-      action: "movie";
-      instanceId: number;
-      mediaId: number;
-      title: string;
-      groupId?: string;
-    }
-  | {
-      action: "series";
-      instanceId: number;
-      mediaId: number;
-      title: string;
-      groupId?: string;
-    }
-  | {
-      action: "season";
-      instanceId: number;
-      mediaId: number;
-      seasonNumber: number;
-      title: string;
-      groupId?: string;
-    }
-  | {
-      action: "episode";
-      instanceId: number;
-      mediaId: number;
-      fileId: number;
-      title: string;
-      groupId?: string;
-    };
+interface SearchDispatchBase {
+  instanceId: number;
+  mediaId: number;
+  title: string;
+  groupId?: string;
+}
 
-export type SearchDispatchResult =
-  | { kind: "dryRun"; actionLog: ActionLog }
-  | { kind: "queued"; queueId: number };
+export interface MovieDispatchInput extends SearchDispatchBase {
+  action: "movie";
+}
+
+export interface SeriesDispatchInput extends SearchDispatchBase {
+  action: "series";
+}
+
+export interface SeasonDispatchInput extends SearchDispatchBase {
+  action: "season";
+  seasonNumber: number;
+}
+
+export interface EpisodeDispatchInput extends SearchDispatchBase {
+  action: "episode";
+  fileId: number;
+}
+
+export type SearchDispatchInput =
+  | MovieDispatchInput
+  | SeriesDispatchInput
+  | SeasonDispatchInput
+  | EpisodeDispatchInput;
+
+export interface DryRunDispatchResult {
+  kind: "dryRun";
+  actionLog: ActionLog;
+}
+
+export interface QueuedDispatchResult {
+  kind: "queued";
+  queueId: number;
+}
+
+export type SearchDispatchResult = DryRunDispatchResult | QueuedDispatchResult;
 
 export class SearchDispatcher {
   async dispatch(input: SearchDispatchInput): Promise<SearchDispatchResult> {

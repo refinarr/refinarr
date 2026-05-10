@@ -112,6 +112,14 @@ export interface CronPreviewResponse {
   next: string[];
 }
 
+// Wire shape returned by the search/delete-with-search routes when an action
+// is queued for the search worker (live mode). Dry-run mode returns the
+// resulting ActionLog row instead — see SearchDispatchResult.
+export interface QueuedSearchResponse {
+  queued: true;
+  queueId: number;
+}
+
 export interface SetConfigDto {
   key: string;
   value: string;

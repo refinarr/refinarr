@@ -132,6 +132,24 @@ describe("SearchDispatcher", () => {
     expect(result.actionLog.isDryRun).toBe(true);
   });
 
+  test("dry-run mode: series action returns ActionLog with status=dry_run", async () => {
+    await setDryRun(true);
+    const inst = await instanceService.create(baseSonarr);
+    const result = await searchDispatcher.dispatch({
+      action: "series",
+      instanceId: inst.id,
+      mediaId: 7,
+      title: "Series Title",
+    });
+
+    expect(result.kind).toBe("dryRun");
+    if (result.kind !== "dryRun") return;
+    expect(result.actionLog.status).toBe("dry_run");
+    expect(result.actionLog.action).toBe("search");
+    expect(result.actionLog.mediaId).toBe(7);
+    expect(result.actionLog.isDryRun).toBe(true);
+  });
+
   test("dry-run mode: season action records search_season action", async () => {
     await setDryRun(true);
     const inst = await instanceService.create(baseSonarr);
