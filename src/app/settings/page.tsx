@@ -156,7 +156,7 @@ export default function SettingsPage() {
 
           <div className="space-y-page max-w-2xl flex-1">
             <section id="general" className={sectionClass("general")}>
-              <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
+              <h2 className="md:bg-background/85 sr-only text-lg font-semibold md:not-sr-only md:sticky md:top-0 md:z-10 md:block md:py-2 md:supports-backdrop-filter:backdrop-blur-sm">
                 {t("sections.general")}
               </h2>
               <DryRunToggle prominent />
@@ -164,7 +164,7 @@ export default function SettingsPage() {
             </section>
 
             <section id="appearance" className={sectionClass("appearance")}>
-              <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
+              <h2 className="md:bg-background/85 sr-only text-lg font-semibold md:not-sr-only md:sticky md:top-0 md:z-10 md:block md:py-2 md:supports-backdrop-filter:backdrop-blur-sm">
                 {t("sections.appearance")}
               </h2>
               <ThemeSelector />
@@ -172,7 +172,7 @@ export default function SettingsPage() {
 
             <section id="instances" className={sectionClass("instances")}>
               <div className="flex items-center justify-between">
-                <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
+                <h2 className="md:bg-background/85 sr-only text-lg font-semibold md:not-sr-only md:sticky md:top-0 md:z-10 md:block md:py-2 md:supports-backdrop-filter:backdrop-blur-sm">
                   {t("sections.instances")}
                 </h2>
                 <Button
@@ -204,7 +204,7 @@ export default function SettingsPage() {
             </section>
 
             <section id="api-access" className={sectionClass("api-access")}>
-              <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
+              <h2 className="md:bg-background/85 sr-only text-lg font-semibold md:not-sr-only md:sticky md:top-0 md:z-10 md:block md:py-2 md:supports-backdrop-filter:backdrop-blur-sm">
                 {t("sections.apiAccess")}
               </h2>
               <ApiKeyCard />
@@ -212,7 +212,7 @@ export default function SettingsPage() {
 
             {showAccount && (
               <section id="account" className={sectionClass("account")}>
-                <h2 className="sr-only text-lg font-semibold md:not-sr-only md:block">
+                <h2 className="md:bg-background/85 sr-only text-lg font-semibold md:not-sr-only md:sticky md:top-0 md:z-10 md:block md:py-2 md:supports-backdrop-filter:backdrop-blur-sm">
                   {t("sections.account")}
                 </h2>
                 <PasswordChangeCard />

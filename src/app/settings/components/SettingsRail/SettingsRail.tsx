@@ -32,13 +32,18 @@ export function SettingsRail({ items, active, onSelect, className }: Props) {
             aria-current={selected ? "true" : undefined}
             onClick={() => onSelect(id)}
             className={cn(
-              "focus-visible:ring-ring flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+              "focus-visible:ring-ring relative flex items-center gap-2 rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
               selected
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                ? "border-primary bg-primary/10 text-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground border-transparent",
             )}
           >
-            <Icon className="size-4" />
+            <Icon
+              className={cn(
+                "size-4 transition-colors",
+                selected && "text-primary",
+              )}
+            />
             <span>{label}</span>
           </button>
         );

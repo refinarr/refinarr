@@ -1,6 +1,13 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Edit2, Trash2, Plug, Hourglass } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Edit2,
+  Trash2,
+  Plug,
+  Hourglass,
+} from "lucide-react";
 import { Card, CardContent } from "@/client/components/ui/card";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
@@ -13,6 +20,7 @@ import {
 } from "@/client/hooks/data/useInstances";
 import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { useSearchQueue } from "@/client/hooks/data/useSearchQueue";
+import { useInstanceCardCollapsed } from "@/client/hooks/ui/useInstanceCardCollapsed";
 import { withToast } from "@/client/lib/with-toast";
 import { formatEta } from "@/client/lib/format-relative";
 import { isProfileMode } from "@/shared/scoring-mode";
@@ -35,6 +43,9 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
   const test = useTestConnection();
   const { data: prefs } = usePreferences(instance.id);
   const { data: queue } = useSearchQueue(instance.id);
+  const { collapsed, toggle: toggleCollapsed } = useInstanceCardCollapsed(
+    instance.id,
+  );
   const noCfs = (prefs?.length ?? 0) === 0 && instance.enabled;
   const pendingCount = queue?.pendingCount ?? 0;
 
@@ -63,6 +74,19 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
     <Card>
       <CardContent className="space-y-3 py-4">
         <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={tCommon(collapsed ? "expand" : "collapse")}
+            aria-expanded={!collapsed}
+            className="text-muted-foreground hover:text-foreground -ml-1 flex size-6 shrink-0 items-center justify-center rounded-sm transition-colors"
+          >
+            {collapsed ? (
+              <ChevronRight className="size-4" />
+            ) : (
+              <ChevronDown className="size-4" />
+            )}
+          </button>
           <Badge variant="outline" className="capitalize">
             {instance.type}
           </Badge>
@@ -137,15 +161,19 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
             </Button>
           </div>
         </div>
-        <div className="pt-subgroup border-t">
-          <ShowAllMediaToggle instanceId={instance.id} />
-        </div>
-        <div className="pt-subgroup border-t">
-          <ScoringModeSection instance={instance} />
-        </div>
-        <div className="pt-subgroup border-t">
-          <AutoSearchSection instance={instance} />
-        </div>
+        {!collapsed && (
+          <>
+            <div className="pt-subgroup border-t">
+              <ShowAllMediaToggle instanceId={instance.id} />
+            </div>
+            <div className="pt-subgroup border-t">
+              <ScoringModeSection instance={instance} />
+            </div>
+            <div className="pt-subgroup border-t">
+              <AutoSearchSection instance={instance} />
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

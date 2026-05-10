@@ -57,7 +57,9 @@
     "viewAll": "View all",
     "moreCount": "+{count} more",
     "on": "On",
-    "off": "Off"
+    "off": "Off",
+    "expand": "Expand",
+    "collapse": "Collapse"
   },
   "dialog": {
     "close": "Close"
