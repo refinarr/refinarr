@@ -92,8 +92,24 @@ describe("MediaTable", () => {
     render(<MediaTable {...baseProps} columns={columnsWithFilter} />);
     const funnel = screen.getByTestId("title-funnel");
     expect(funnel).toBeInTheDocument();
-    // The funnel should sit inside the same <th> as the sort button.
-    const th = funnel.closest("th")!;
-    expect(th.textContent).toMatch(/title/i);
+    // The funnel should sit inside the same columnheader as the sort button.
+    const header = funnel.closest('[role="columnheader"]')!;
+    expect(header.textContent).toMatch(/title/i);
+  });
+
+  it("applies density-driven row height (cozy default)", () => {
+    render(<MediaTable {...baseProps} />);
+    const rows = screen
+      .getByTestId("media-table-body")
+      .querySelectorAll('[role="row"]');
+    expect(rows[0].className).toContain("h-row-cozy");
+  });
+
+  it("applies compact row height when density='compact'", () => {
+    render(<MediaTable {...baseProps} density="compact" />);
+    const rows = screen
+      .getByTestId("media-table-body")
+      .querySelectorAll('[role="row"]');
+    expect(rows[0].className).toContain("h-row-compact");
   });
 });

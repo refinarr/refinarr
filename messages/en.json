@@ -250,6 +250,11 @@
     "onlyMissing": "Only missing",
     "showAll": "Show all",
     "clearAll": "Clear all",
+    "density": {
+      "groupLabel": "Row density",
+      "cozy": "Cozy",
+      "compact": "Compact"
+    },
     "toolbarAriaLabel": "Filter toolbar",
     "activeCountAriaLabel": "{count, plural, one {# active filter} other {# active filters}}",
     "sheetDescription": "Toggle filters that apply to the visible items.",

@@ -1,6 +1,9 @@
-import type { ReactNode } from "react";
+"use client";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Checkbox } from "@/client/components/ui/checkbox";
+import type { Density } from "@/client/hooks/ui/useDensity";
+import { cn } from "@/client/lib/utils";
 import { MediaCard } from "./MediaCard";
 
 export type SortDirection = "asc" | "desc";
@@ -29,6 +32,44 @@ interface Props<T extends { id: number }> {
   rowActions?: (row: T) => ReactNode;
   renderCard?: (row: T) => ReactNode;
   emptyState?: ReactNode;
+  // Active row density. "compact" = h-row-compact (~36px), "cozy" =
+  // h-row-cozy (~48px, default). Read from useDensity() in the shell.
+  density?: Density;
+}
+
+// Track scroll position on the nearest scroll container so the sticky
+// header gets a backdrop-blur once the user scrolls past the top.
+function useScrolledPast(threshold: number) {
+  const [scrolled, setScrolled] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    // Walk up until we find a scrollable ancestor; window scroll is
+    // the fallback so most pages get the effect even when the table
+    // itself isn't the scroll container.
+    let scroller: HTMLElement | Window = window;
+    let parent: HTMLElement | null = node.parentElement;
+    while (parent) {
+      const overflow = window.getComputedStyle(parent).overflowY;
+      if (overflow === "auto" || overflow === "scroll") {
+        scroller = parent;
+        break;
+      }
+      parent = parent.parentElement;
+    }
+    const onScroll = () => {
+      const top =
+        scroller === window
+          ? window.scrollY
+          : (scroller as HTMLElement).scrollTop;
+      setScrolled(top > threshold);
+    };
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => scroller.removeEventListener("scroll", onScroll);
+  }, [threshold]);
+  return { ref, scrolled };
 }
 
 export function MediaTable<T extends { id: number }>({
@@ -43,12 +84,34 @@ export function MediaTable<T extends { id: number }>({
   rowActions,
   renderCard,
   emptyState,
+  density = "cozy",
 }: Props<T>) {
+  const { ref: tableRef, scrolled } = useScrolledPast(4);
+
   if (rows.length === 0 && emptyState) {
     return <>{emptyState}</>;
   }
 
   const tableHidden = renderCard ? "hidden lg:block" : "";
+  const rowHeightClass = density === "compact" ? "h-row-compact" : "h-row-cozy";
+  // Grid template: checkbox column + one track per data column. Each
+  // column contributes `auto` width unless it has a `w-*` className,
+  // in which case CSS-grid gathers it from the cell. Title gets `1fr`
+  // so it absorbs spare space.
+  const gridTemplate = `2.5rem ${columns
+    .map((c) => {
+      if (c.key === "title") return "minmax(0,1fr)";
+      // Pull explicit widths out of className (w-N or w-Nrem) by
+      // reading the className text — keeps the contract simple
+      // without changing every column def.
+      const widthMatch = c.className?.match(/(?:^|\s)w-(\d+)(?:\s|$)/);
+      if (widthMatch) {
+        const n = Number(widthMatch[1]);
+        return `${n * 0.25}rem`;
+      }
+      return "auto";
+    })
+    .join(" ")}`;
 
   return (
     <>
@@ -70,11 +133,26 @@ export function MediaTable<T extends { id: number }>({
           ))}
         </ul>
       )}
-      <div className={`overflow-x-auto rounded-lg border ${tableHidden}`}>
-        <table className="w-full text-sm">
-          <thead className="bg-background sticky top-0 z-10 border-b">
-            <tr className="text-muted-foreground text-left text-xs tracking-wide uppercase">
-              <th className="w-10 px-3 py-2.5" />
+      <div
+        ref={tableRef}
+        className={cn("overflow-x-auto rounded-lg border", tableHidden)}
+      >
+        <div role="table" className="w-full text-sm">
+          <div
+            role="rowgroup"
+            className={cn(
+              "sticky top-0 z-10 border-b transition-colors",
+              scrolled
+                ? "bg-background/80 supports-backdrop-filter:backdrop-blur-sm"
+                : "bg-background",
+            )}
+          >
+            <div
+              role="row"
+              className="text-muted-foreground grid items-center text-left text-xs tracking-wide uppercase"
+              style={{ gridTemplateColumns: gridTemplate }}
+            >
+              <div role="columnheader" aria-hidden className="px-3 py-2.5" />
               {columns.map((col) => {
                 const isActiveSort = col.sortKey === sortBy;
                 let ariaSort: "ascending" | "descending" | "none" | undefined;
@@ -83,23 +161,25 @@ export function MediaTable<T extends { id: number }>({
                   ariaSort = order === "asc" ? "ascending" : "descending";
                 const SortIcon = order === "asc" ? ChevronUp : ChevronDown;
                 return (
-                  <th
+                  <div
                     key={col.key}
-                    className={`px-3 py-2.5 font-medium ${col.className ?? ""}`}
+                    role="columnheader"
+                    className={cn("px-3 py-2.5 font-medium", col.className)}
                     aria-sort={ariaSort}
                   >
-                    <span className="inline-flex items-center gap-1">
+                    <span className="inline-flex min-w-0 items-center gap-1">
                       {col.sortKey ? (
                         <button
                           type="button"
                           className="hover:text-foreground inline-flex cursor-pointer items-center gap-1 select-none"
                           onClick={() => onSortChange(col.sortKey!)}
                         >
-                          {col.header}
+                          <span className="truncate">{col.header}</span>
                           <SortIcon
-                            className={`text-foreground size-3.5 shrink-0 transition-opacity ${
-                              isActiveSort ? "opacity-100" : "opacity-0"
-                            }`}
+                            className={cn(
+                              "text-foreground size-3.5 shrink-0 transition-opacity",
+                              isActiveSort ? "opacity-100" : "opacity-0",
+                            )}
                             aria-hidden
                           />
                         </button>
@@ -108,20 +188,27 @@ export function MediaTable<T extends { id: number }>({
                       )}
                       {col.filter}
                     </span>
-                  </th>
+                  </div>
                 );
               })}
-            </tr>
-          </thead>
-          <tbody data-testid="media-table-body">
+            </div>
+          </div>
+          <div role="rowgroup" data-testid="media-table-body">
             {rows.map((row) => (
-              <tr
+              <div
                 key={row.id}
-                className="group hover:bg-muted/40 relative cursor-pointer border-t transition-colors"
+                role="row"
+                className={cn(
+                  "group hover:bg-muted/50 relative grid cursor-pointer items-center border-t transition-colors",
+                  rowHeightClass,
+                  selectedIds.has(row.id) && "bg-brand/10",
+                )}
+                style={{ gridTemplateColumns: gridTemplate }}
                 onClick={() => onRowClick(row.id)}
               >
-                <td
-                  className="px-3 py-2 align-middle"
+                <div
+                  role="cell"
+                  className="flex items-center px-3"
                   onClick={(e) => {
                     e.stopPropagation();
                     onToggleSelect(row.id);
@@ -131,27 +218,33 @@ export function MediaTable<T extends { id: number }>({
                     checked={selectedIds.has(row.id)}
                     onCheckedChange={() => onToggleSelect(row.id)}
                   />
-                </td>
+                </div>
                 {columns.map((col) => (
-                  <td
+                  <div
                     key={col.key}
-                    className={`px-3 py-2 align-middle ${col.className ?? ""}`}
+                    role="cell"
+                    className={cn(
+                      "min-w-0 px-3",
+                      col.className,
+                      col.key === "title" && "truncate",
+                    )}
                   >
                     {col.render(row)}
-                  </td>
+                  </div>
                 ))}
                 {rowActions && (
-                  <td
+                  <div
+                    role="cell"
                     className="bg-muted/60 absolute top-0 right-0 flex h-full items-center gap-1 px-3 opacity-0 transition-opacity group-hover:opacity-100"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {rowActions(row)}
-                  </td>
+                  </div>
                 )}
-              </tr>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </div>
       </div>
     </>
   );

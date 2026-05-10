@@ -1,5 +1,10 @@
 import { Eye, EyeOff } from "lucide-react";
 import { CfBadge } from "@/client/components/common/CfBadge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/client/components/ui/popover";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { CfColumnFunnel } from "@/client/components/media/CfColumnFunnel";
 import { ProfileColumnFunnel } from "@/client/components/media/ProfileColumnFunnel";
@@ -31,6 +36,7 @@ export function seriesColumns(
     queuedIds,
     recentMap,
     activeInstance,
+    density,
     filters,
     onFilterChange,
     cfOptions,
@@ -38,6 +44,7 @@ export function seriesColumns(
     tCols,
     tTime,
   } = ctx;
+  const issuesVisible = density === "compact" ? 1 : 2;
   const issuesHeaderLabel = tCols(ISSUES_HEADER_KEY[scoringMode]);
   const profileHeaderLabel = tCols("profile");
   const scoreHeaderLabel = tCols("score");
@@ -199,15 +206,33 @@ export function seriesColumns(
       render: (s) => {
         const items = ISSUES_FOR[scoringMode](s);
         if (!items.length) return null;
+        const visible = items.slice(0, issuesVisible);
+        const overflow = items.slice(issuesVisible);
         return (
-          <div className="flex flex-wrap gap-1">
-            {items.slice(0, 3).map((cf) => (
+          <div className="flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden">
+            {visible.map((cf) => (
               <CfBadge key={cf.id} name={cf.name} missing />
             ))}
-            {items.length > 3 && (
-              <span className="text-muted-foreground text-xs">
-                +{items.length - 3}
-              </span>
+            {overflow.length > 0 && (
+              <Popover>
+                <PopoverTrigger
+                  className="border-input hover:bg-accent text-muted-foreground inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  +{overflow.length}
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  className="w-auto max-w-sm"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex flex-wrap gap-1">
+                    {items.map((cf) => (
+                      <CfBadge key={cf.id} name={cf.name} missing />
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             )}
           </div>
         );

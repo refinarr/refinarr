@@ -2,6 +2,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ComponentType,
@@ -39,6 +40,7 @@ import { useQueuedMediaIds } from "@/client/hooks/data/useSearchQueue";
 import { useRecentSearchMap } from "@/client/hooks/data/useRecentSearches";
 import { withToast } from "@/client/lib/with-toast";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
+import { useDensity, type Density } from "@/client/hooks/ui/useDensity";
 import { useInfiniteScroll } from "@/client/hooks/ui/useInfiniteScroll";
 import { useInstanceSelection } from "@/client/hooks/media/useInstanceSelection";
 import {
@@ -78,6 +80,9 @@ export interface MediaListShellRenderCtx<T extends MediaItem> {
   activeInstance: number;
   queuedIds: Set<number>;
   recentMap: Map<number, Date>;
+  // Active row density. Read by column defs (e.g. issues cell shows
+  // 1 badge in compact, 2 in cozy) and by MediaTable for row height.
+  density: Density;
   refetch: () => unknown;
   runSearch: (item: T) => Promise<unknown>;
   runIgnore: (item: T) => Promise<unknown>;
@@ -237,6 +242,23 @@ function Root<T extends MediaItem>({
     return { missing, penalty };
   }, [prefs, profiles]);
 
+  const { density, toggle: toggleDensity } = useDensity();
+  // `,` keyboard shortcut toggles density. Skips when typing in inputs
+  // so search-bar text entry isn't hijacked.
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key !== ",") return;
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) {
+        return;
+      }
+      event.preventDefault();
+      toggleDensity();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [toggleDensity]);
   const ctx: MediaListShellRenderCtx<T> = {
     arrType,
     scoringMode,
@@ -244,6 +266,7 @@ function Root<T extends MediaItem>({
     activeInstance: inst.activeInstance,
     queuedIds,
     recentMap,
+    density,
     refetch: data.refetch,
     runSearch: (item) =>
       actions.searchMutation.mutateAsync({ items: [item], isBulk: false }),
@@ -452,6 +475,7 @@ function Body<T extends MediaItem>({ columns, Card }: BodyProps<T>) {
           <MediaTable
             rows={data.items}
             columns={columns(ctx)}
+            density={ctx.density}
             selectedIds={selection.selected}
             onToggleSelect={selection.toggle}
             onRowClick={drawer.setSelectedId}

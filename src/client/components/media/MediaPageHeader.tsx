@@ -1,6 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Rows3, Rows4 } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
 import {
   Select,
@@ -12,6 +12,7 @@ import {
 import { Label } from "@/client/components/ui/label";
 import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import { InstanceConnectionDot } from "@/client/components/common/InstanceConnectionDot";
+import { useDensity } from "@/client/hooks/ui/useDensity";
 import { cn } from "@/client/lib/utils";
 import { DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
 import type { PublicInstance } from "@/shared/types/api";
@@ -47,6 +48,8 @@ export function MediaPageHeader({
   const tInstSel = useTranslations("instanceSelector");
   const tCommon = useTranslations("common");
   const tScoringOpts = useTranslations("settings.scoringModeOptions");
+  const tDensity = useTranslations("filters.density");
+  const { density, setDensity } = useDensity();
 
   const showSwitcher = typedInstances.length > 1;
   const showInstanceContext = activeInstance > 0 && !!activeInstanceName;
@@ -123,6 +126,42 @@ export function MediaPageHeader({
           {showInstanceContext && (
             <ScoringModeSelector instanceId={activeInstance} />
           )}
+          <div
+            role="group"
+            aria-label={tDensity("groupLabel")}
+            className="border-input bg-background hidden rounded-md border md:inline-flex"
+          >
+            <button
+              type="button"
+              aria-pressed={density === "cozy"}
+              onClick={() => setDensity("cozy")}
+              title={tDensity("cozy")}
+              className={cn(
+                "h-control-sm inline-flex items-center px-2 transition-colors",
+                density === "cozy"
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent/50",
+              )}
+            >
+              <Rows3 className="size-4" aria-hidden />
+              <span className="sr-only">{tDensity("cozy")}</span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={density === "compact"}
+              onClick={() => setDensity("compact")}
+              title={tDensity("compact")}
+              className={cn(
+                "h-control-sm inline-flex items-center px-2 transition-colors",
+                density === "compact"
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent/50",
+              )}
+            >
+              <Rows4 className="size-4" aria-hidden />
+              <span className="sr-only">{tDensity("compact")}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
