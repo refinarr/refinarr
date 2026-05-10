@@ -12,13 +12,20 @@ interface Result {
   toggle: () => void;
 }
 
+// In-memory fallback for storage-restricted environments (private mode,
+// sandboxed iframes, locked-down corporate browsers). Without this,
+// localStorage failures would silently revert every density toggle.
+let memoryDensity: Density | null = null;
+
 function readStored(): Density | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === "compact" || raw === "cozy") return raw;
     return null;
   } catch {
-    return null;
+    // localStorage unavailable — use the in-memory cache so the user's
+    // density choice from this session still applies.
+    return memoryDensity;
   }
 }
 
@@ -26,7 +33,9 @@ function writeStored(value: Density): void {
   try {
     localStorage.setItem(STORAGE_KEY, value);
   } catch {
-    // localStorage unavailable — fall through silently
+    // Storage-restricted environment (private mode, sandboxed iframe).
+    // Keep the value in memory so the UI updates within the session.
+    memoryDensity = value;
   }
 }
 

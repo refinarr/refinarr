@@ -178,10 +178,15 @@ export function MediaTable<T extends { id: number }>({
           ))}
         </ul>
       )}
-      <div
-        ref={tableRef}
-        className={cn("overflow-x-auto rounded-lg border", tableHidden)}
-      >
+      {/*
+        No `overflow-x-auto` on the wrapper: that would create a scroll
+        container and scope the sticky header inside it (sticky bounds to
+        the nearest non-visible-overflow ancestor). With CSS Grid +
+        min-w-0 cells, the table doesn't horizontally overflow at lg+
+        widths anyway; mobile uses the card list above and never reaches
+        this code path.
+      */}
+      <div ref={tableRef} className={cn("rounded-lg border", tableHidden)}>
         <div role="table" className="w-full text-sm">
           <div
             role="rowgroup"
@@ -270,10 +275,7 @@ export function MediaTable<T extends { id: number }>({
                   <div
                     role="cell"
                     className="flex items-center px-3"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleSelect(row.id);
-                    }}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <Checkbox
                       checked={selectedIds.has(row.id)}

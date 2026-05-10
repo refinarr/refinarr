@@ -247,7 +247,11 @@ function Root<T extends MediaItem>({
   // so search-bar text entry isn't hijacked.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (event.key !== ",") return;
+      // Bare `,` only — Cmd+, / Ctrl+, is the OS "Preferences" shortcut
+      // and Alt+, is reserved on some platforms.
+      if (event.key !== "," || event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
       const target = event.target as HTMLElement | null;
       const tag = target?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) {
