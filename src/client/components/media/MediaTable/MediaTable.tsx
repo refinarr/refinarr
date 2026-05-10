@@ -1,10 +1,21 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { Checkbox } from "@/client/components/ui/checkbox";
 import type { Density } from "@/client/hooks/ui/useDensity";
 import { cn } from "@/client/lib/utils";
 import { MediaCard } from "./MediaCard";
+
+// Pixel-perfect row heights matching --spacing-row-* tokens in globals.css.
+// The virtualizer needs a number, not a CSS var, for estimateSize.
+const ROW_HEIGHT_PX = { compact: 36, cozy: 48 } as const;
 
 export type SortDirection = "asc" | "desc";
 
@@ -87,6 +98,40 @@ export function MediaTable<T extends { id: number }>({
   density = "cozy",
 }: Props<T>) {
   const { ref: tableRef, scrolled } = useScrolledPast(4);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const [scrollMargin, setScrollMargin] = useState(0);
+  const rowHeight = ROW_HEIGHT_PX[density];
+
+  // Recompute scrollMargin whenever the body's offset within the page
+  // changes (e.g. window resize, sticky header height shift). useLayout-
+  // Effect avoids the one-frame flicker that would happen if we read
+  // offsetTop after paint.
+  useLayoutEffect(() => {
+    const node = bodyRef.current;
+    if (!node) return;
+    const measure = () => setScrollMargin(node.offsetTop);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
+  // Window-scoped virtualization: the page (not the table) is the scroll
+  // container, so we hand the virtualizer the body's offset within the
+  // viewport via scrollMargin. Result: only the visible rows + overscan
+  // are mounted, regardless of total count. Pairs naturally with
+  // useInfiniteScroll's sentinel (still visible to IntersectionObserver
+  // because the spacer keeps real document height).
+  const virtualizer = useWindowVirtualizer({
+    count: rows.length,
+    estimateSize: () => rowHeight,
+    overscan: 8,
+    scrollMargin,
+  });
 
   if (rows.length === 0 && emptyState) {
     return <>{emptyState}</>;
@@ -193,56 +238,73 @@ export function MediaTable<T extends { id: number }>({
               })}
             </div>
           </div>
-          <div role="rowgroup" data-testid="media-table-body">
-            {rows.map((row) => (
-              <div
-                key={row.id}
-                role="row"
-                className={cn(
-                  "group hover:bg-muted/50 relative grid cursor-pointer items-center border-t transition-colors",
-                  rowHeightClass,
-                  selectedIds.has(row.id) && "bg-brand/10",
-                )}
-                style={{ gridTemplateColumns: gridTemplate }}
-                onClick={() => onRowClick(row.id)}
-              >
+          <div
+            ref={bodyRef}
+            role="rowgroup"
+            data-testid="media-table-body"
+            style={{ height: virtualizer.getTotalSize(), position: "relative" }}
+          >
+            {virtualizer.getVirtualItems().map((vRow) => {
+              const row = rows[vRow.index];
+              if (!row) return null;
+              return (
                 <div
-                  role="cell"
-                  className="flex items-center px-3"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleSelect(row.id);
+                  key={row.id}
+                  role="row"
+                  data-index={vRow.index}
+                  className={cn(
+                    "group hover:bg-muted/50 grid cursor-pointer items-center border-t transition-colors",
+                    rowHeightClass,
+                    selectedIds.has(row.id) && "bg-brand/10",
+                  )}
+                  style={{
+                    gridTemplateColumns: gridTemplate,
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    transform: `translateY(${vRow.start - scrollMargin}px)`,
                   }}
+                  onClick={() => onRowClick(row.id)}
                 >
-                  <Checkbox
-                    checked={selectedIds.has(row.id)}
-                    onCheckedChange={() => onToggleSelect(row.id)}
-                  />
+                  <div
+                    role="cell"
+                    className="flex items-center px-3"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleSelect(row.id);
+                    }}
+                  >
+                    <Checkbox
+                      checked={selectedIds.has(row.id)}
+                      onCheckedChange={() => onToggleSelect(row.id)}
+                    />
+                  </div>
+                  {columns.map((col) => (
+                    <div
+                      key={col.key}
+                      role="cell"
+                      className={cn(
+                        "min-w-0 px-3",
+                        col.className,
+                        col.key === "title" && "truncate",
+                      )}
+                    >
+                      {col.render(row)}
+                    </div>
+                  ))}
+                  {rowActions && (
+                    <div
+                      role="cell"
+                      className="bg-muted/60 absolute top-0 right-0 flex h-full items-center gap-1 px-3 opacity-0 transition-opacity group-hover:opacity-100"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {rowActions(row)}
+                    </div>
+                  )}
                 </div>
-                {columns.map((col) => (
-                  <div
-                    key={col.key}
-                    role="cell"
-                    className={cn(
-                      "min-w-0 px-3",
-                      col.className,
-                      col.key === "title" && "truncate",
-                    )}
-                  >
-                    {col.render(row)}
-                  </div>
-                ))}
-                {rowActions && (
-                  <div
-                    role="cell"
-                    className="bg-muted/60 absolute top-0 right-0 flex h-full items-center gap-1 px-3 opacity-0 transition-opacity group-hover:opacity-100"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {rowActions(row)}
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
