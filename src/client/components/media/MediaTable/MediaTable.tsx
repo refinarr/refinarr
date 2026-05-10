@@ -139,20 +139,29 @@ export function MediaTable<T extends { id: number }>({
 
   const tableHidden = renderCard ? "hidden lg:block" : "";
   const rowHeightClass = density === "compact" ? "h-row-compact" : "h-row-cozy";
-  // Grid template: checkbox column + one track per data column. Each
-  // column contributes `auto` width unless it has a `w-*` className,
-  // in which case CSS-grid gathers it from the cell. Title gets `1fr`
-  // so it absorbs spare space.
+  // Grid template: checkbox column + one track per data column.
+  //
+  // - Title is bounded (`minmax(8rem, 24rem)`) so short titles hug content
+  //   instead of leaving a huge gap after the text, and very long titles
+  //   stop at 24rem and rely on the `truncate` cell class.
+  // - The LAST column without a `w-N` class (typically `issues` /
+  //   `penalties`) gets `1fr` to absorb leftover viewport width — that's
+  //   the column whose content (CF badge list) actually wants to flex.
+  // - Columns with `w-N` classes use `minmax(0, Nrem)` so the track is
+  //   strict (CSS Grid otherwise auto-grows tracks to fit content; the
+  //   bare `Nrem` form was treating widths as min-only and Profile was
+  //   stretching past `w-36` to fit "Ultra-HD WEB Preferred").
+  const lastFlexIndex = columns.findLastIndex(
+    (c) => c.key !== "title" && !c.className?.match(/(?:^|\s)w-(\d+)(?:\s|$)/),
+  );
   const gridTemplate = `2.5rem ${columns
-    .map((c) => {
-      if (c.key === "title") return "minmax(0,1fr)";
-      // Pull explicit widths out of className (w-N or w-Nrem) by
-      // reading the className text — keeps the contract simple
-      // without changing every column def.
+    .map((c, i) => {
+      if (c.key === "title") return "minmax(8rem,24rem)";
+      if (i === lastFlexIndex) return "minmax(0,1fr)";
       const widthMatch = c.className?.match(/(?:^|\s)w-(\d+)(?:\s|$)/);
       if (widthMatch) {
         const n = Number(widthMatch[1]);
-        return `${n * 0.25}rem`;
+        return `minmax(0,${n * 0.25}rem)`;
       }
       return "auto";
     })
