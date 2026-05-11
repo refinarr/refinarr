@@ -101,8 +101,11 @@
   --spacing-control-lg: 3.25rem; /* primary CTA / hero pickers */
   --spacing-bottom-bar: 4rem; /* mobile bottom tab bar height (excludes safe-area inset) */
   --spacing-mobile-filter-bar: 3rem; /* mobile filter toolbar height (sits above the tab bar) */
+  --spacing-bulk-bar: 3.5rem; /* desktop BulkActionToolbar box height (md:py-3 1.5rem + md:h-8 button 2rem). Drives both the bar's enforced min-height AND the sticky offset for the table header that pins below it. */
   --spacing-row-compact: 2.25rem; /* compact MediaTable row (~36px) */
   --spacing-row-cozy: 3rem; /* cozy MediaTable row (~48px, default) */
+  --spacing-card-gap: 0.5rem; /* inter-card spacing in mobile MediaCard list (~8px) */
+  --spacing-card-min: 6.25rem; /* virtualizer estimate for mobile cards before measureElement refines it (~100px) */
 }
 
 /* First-paint safety: surface is keyed on the .dark class (toggled by

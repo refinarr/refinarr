@@ -14,6 +14,10 @@ import { SettingsCardSkeleton } from "@/client/components/states/SettingsCardSke
 import { Button } from "@/client/components/ui/button";
 import { useInstances } from "@/client/hooks/data/useInstances";
 import { useMe } from "@/client/hooks/data/useMe";
+import {
+  useMediaQuery,
+  usePrefersReducedMotion,
+} from "@/client/hooks/ui/useMediaQuery";
 import { cn } from "@/client/lib/utils";
 import type { PublicInstance } from "@/shared/types/api";
 import { SettingsRail, type SettingsRailItem } from "./components/SettingsRail";
@@ -44,6 +48,18 @@ export default function SettingsPage() {
   // X-Api-Key callers can't change a password, so the section + rail
   // entry are skipped to keep the rail honest (no dead anchors).
   const showAccount = me?.source === "session";
+
+  // Respect the OS-level "reduce motion" accessibility setting. Used to
+  // pick "auto" vs "smooth" scroll behaviour for hash navigation /
+  // rail clicks — important for users with motion sensitivity.
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const scrollBehavior: ScrollBehavior = prefersReducedMotion
+    ? "auto"
+    : "smooth";
+  // The rail layout shows beside content at md+ widths; below that
+  // we collapse to the mobile picker dropdown. Same media query the
+  // smooth-scroll branches use, sourced from the hook for consistency.
+  const isMdUp = useMediaQuery("(min-width: 768px)");
 
   const items = useMemo<SettingsRailItem[]>(() => {
     const list: SettingsRailItem[] = [
@@ -86,19 +102,19 @@ export default function SettingsPage() {
       const id = readHash(ids);
       if (!id) return;
       setPickedId(id);
-      if (window.matchMedia("(min-width: 768px)").matches) {
+      if (isMdUp) {
         // RAF gives async children a tick to mount before measuring.
         requestAnimationFrame(() => {
           document
             .getElementById(id)
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            ?.scrollIntoView({ behavior: scrollBehavior, block: "start" });
         });
       }
     };
     apply();
     window.addEventListener("popstate", apply);
     return () => window.removeEventListener("popstate", apply);
-  }, [ids]);
+  }, [ids, isMdUp, scrollBehavior]);
 
   const navigate = (id: string) => {
     const sectionId = id as SectionId;
@@ -110,10 +126,10 @@ export default function SettingsPage() {
     if (window.location.hash !== `#${sectionId}`) {
       window.history.replaceState(null, "", `#${sectionId}`);
     }
-    if (window.matchMedia("(min-width: 768px)").matches) {
+    if (isMdUp) {
       document
         .getElementById(sectionId)
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        ?.scrollIntoView({ behavior: scrollBehavior, block: "start" });
     }
   };
 

@@ -109,6 +109,8 @@ class DataCache {
 export const dataCache = new DataCache();
 export const CACHE_TTL_MS = 5 * 60 * 1000;
 // Stale window: cached data continues to serve for this long past freshTtl
-// while a background refresh runs. 30 minutes is forgiving — even a slow
-// upstream rebuild has time to complete before the entry hard-expires.
-export const CACHE_STALE_MS = 30 * 60 * 1000;
+// while a background refresh runs. 12 hours is generous — once a cache
+// has been built once for an instance, it's effectively pinned for the
+// session. The user will rarely hit a hard miss (and pay the upstream
+// rebuild latency) outside of fresh server startup or explicit invalidate.
+export const CACHE_STALE_MS = 12 * 60 * 60 * 1000;

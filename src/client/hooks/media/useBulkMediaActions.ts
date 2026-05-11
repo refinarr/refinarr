@@ -7,6 +7,7 @@ import type {
   BulkAction,
   BulkProgress,
 } from "@/client/components/media/BulkActionToolbar";
+import type { QueuedSearchResponse } from "@/shared/types/api";
 import type { ActionLog, MediaType } from "@/shared/types/models";
 import { isAbortError } from "./useBulkAbort";
 
@@ -96,10 +97,13 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
   const searchMutation = useMutation({
     mutationFn: ({ items, isBulk, signal }: BulkVars<T>) => {
       const groupId = groupIdForBulk(isBulk, items.length);
+      // Manual searches always queue (live OR dry-run); the worker
+      // writes the dry_run ActionLog row when it drains, so the
+      // response is always the queued shape.
       return runBulk(
         items,
         (item) =>
-          api.post<ActionLog>(config.search.endpoint, {
+          api.post<QueuedSearchResponse>(config.search.endpoint, {
             ...config.search.body(item, instanceId),
             ...(groupId ? { groupId } : {}),
           }),

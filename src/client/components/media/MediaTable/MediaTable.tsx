@@ -1,34 +1,45 @@
 "use client";
+import { useMemo, useRef, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { Checkbox } from "@/client/components/ui/checkbox";
+  getCoreRowModel,
+  useReactTable,
+  type SortingState,
+} from "@tanstack/react-table";
 import type { Density } from "@/client/hooks/ui/useDensity";
-import { cn } from "@/client/lib/utils";
-import { MediaCard } from "./MediaCard";
+import { useIsDesktop } from "@/client/hooks/ui/useMediaQuery";
+import { useColumnSizing } from "@/client/hooks/media/useColumnSizing";
+import { useVirtList } from "@/client/hooks/ui/useVirtList";
+import { MediaCardList } from "./MediaCardList";
+import { MediaTableHeader } from "./MediaTableHeader";
+import { MediaTableRow } from "./MediaTableRow";
+import { MediaTableSkeletonRow } from "./MediaTableSkeletonRow";
+import type { ColumnDef, SortDirection, SortKey } from "./types";
 
-// Pixel-perfect row heights matching --spacing-row-* tokens in globals.css.
-// The virtualizer needs a number, not a CSS var, for estimateSize.
+export type { ColumnDef, SortDirection };
+
 const ROW_HEIGHT_PX = { compact: 36, cozy: 48 } as const;
 
-export type SortDirection = "asc" | "desc";
+// Width of the leading select-all column and the trailing row-actions
+// column. Both are fixed and rendered outside the TanStack column model
+// — they are infrastructure, not data columns.
+const SELECT_COLUMN_PX = 40;
+const ACTIONS_COLUMN_PX = 62;
 
-export interface ColumnDef<T> {
-  key: string;
-  header: ReactNode;
-  sortKey?: "score" | "title" | "added" | "size";
-  className?: string;
-  // Optional filter trigger rendered inline next to the header (Excel
-  // / Airtable-style funnel popover). Column defs decide which slice
-  // of the page-level filter state this column controls.
-  filter?: ReactNode;
-  render: (row: T) => ReactNode;
+// Adaptive overscan tuned to dataset size — qui's pattern. Bigger
+// lists get LOWER overscan because each row's render cost grows;
+// mounting 100 buffer rows you can't see is worse than briefly missing
+// one when the user outscrolls the buffer. Skeleton placeholders fill
+// any visible gap so the trade-off is invisible.
+function pickRowOverscan(count: number): number {
+  // Tuned against fast flick-scroll: small/medium lists get a wide
+  // buffer so React can keep up with rapid scroll events without
+  // dropping a frame between commits (visible as a black flash). Very
+  // large lists trade buffer width for per-row render cost.
+  if (count > 50000) return 4;
+  if (count > 10000) return 8;
+  if (count > 1000) return 16;
+  return 30;
 }
 
 interface Props<T extends { id: number }> {
@@ -37,53 +48,65 @@ interface Props<T extends { id: number }> {
   selectedIds: Set<number>;
   onToggleSelect: (id: number) => void;
   onRowClick: (id: number) => void;
-  sortBy: "score" | "title" | "added" | "size";
+  sortBy: SortKey;
   order: SortDirection;
-  onSortChange: (key: "score" | "title" | "added" | "size") => void;
+  onSortChange: (key: SortKey) => void;
   rowActions?: (row: T) => ReactNode;
   renderCard?: (row: T) => ReactNode;
   emptyState?: ReactNode;
-  // Active row density. "compact" = h-row-compact (~36px), "cozy" =
-  // h-row-cozy (~48px, default). Read from useDensity() in the shell.
+  // Active row density (desktop only). "compact" = h-row-compact (~36px),
+  // "cozy" = h-row-cozy (~48px, default). Read from useDensity().
   density?: Density;
+  // Range-based pagination — when virt's last visible index approaches
+  // the end of `rows`, the table calls fetchNextPage.
+  fetchNextPage?: () => unknown;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  // Master "select all" state — drives the checkbox in the column
+  // header. Desktop-only chrome; mobile cards have their own per-card
+  // checkbox and don't render this.
+  allSelected: boolean;
+  someSelected: boolean;
+  onToggleAll: () => void;
+  // localStorage key used to persist column widths separately per
+  // table (e.g. "movies", "shows"). Required so widths don't leak
+  // between pages.
+  tableId: string;
 }
 
-// Track scroll position on the nearest scroll container so the sticky
-// header gets a backdrop-blur once the user scrolls past the top.
-function useScrolledPast(threshold: number) {
-  const [scrolled, setScrolled] = useState(false);
-  const ref = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    // Walk up until we find a scrollable ancestor; window scroll is
-    // the fallback so most pages get the effect even when the table
-    // itself isn't the scroll container.
-    let scroller: HTMLElement | Window = window;
-    let parent: HTMLElement | null = node.parentElement;
-    while (parent) {
-      const overflow = window.getComputedStyle(parent).overflowY;
-      if (overflow === "auto" || overflow === "scroll") {
-        scroller = parent;
-        break;
-      }
-      parent = parent.parentElement;
-    }
-    const onScroll = () => {
-      const top =
-        scroller === window
-          ? window.scrollY
-          : (scroller as HTMLElement).scrollTop;
-      setScrolled(top > threshold);
-    };
-    scroller.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => scroller.removeEventListener("scroll", onScroll);
-  }, [threshold]);
-  return { ref, scrolled };
+export function MediaTable<T extends { id: number }>(props: Props<T>) {
+  const isDesktop = useIsDesktop();
+
+  if (props.rows.length === 0 && props.emptyState) {
+    return <>{props.emptyState}</>;
+  }
+
+  // Card list is rendered when:
+  //   - viewport is mobile (mobile path is always cards), OR
+  //   - desktop and the user picked density="card" in the top bar.
+  // Both require renderCard to be supplied (we pass it for movies/shows).
+  const useCardList =
+    props.renderCard && (!isDesktop || props.density === "card");
+  if (useCardList) {
+    return (
+      <MediaCardList
+        rows={props.rows}
+        selectedIds={props.selectedIds}
+        onToggleSelect={props.onToggleSelect}
+        onRowClick={props.onRowClick}
+        renderCard={props.renderCard!}
+        rowActions={props.rowActions}
+        fetchNextPage={props.fetchNextPage}
+        hasNextPage={props.hasNextPage}
+        isFetchingNextPage={props.isFetchingNextPage}
+      />
+    );
+  }
+
+  return <MediaTableDesktopBody {...props} />;
 }
 
-export function MediaTable<T extends { id: number }>({
+function MediaTableDesktopBody<T extends { id: number }>({
   rows,
   columns,
   selectedIds,
@@ -93,287 +116,158 @@ export function MediaTable<T extends { id: number }>({
   order,
   onSortChange,
   rowActions,
-  renderCard,
-  emptyState,
   density = "cozy",
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
+  allSelected,
+  someSelected,
+  onToggleAll,
+  tableId,
 }: Props<T>) {
-  const { ref: tableRef, scrolled } = useScrolledPast(4);
+  const tableRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
-  const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null);
-  const [scrollMargin, setScrollMargin] = useState(0);
-  const rowHeight = ROW_HEIGHT_PX[density];
+  // Only "compact" and "cozy" reach the desktop table; the parent
+  // short-circuits "card"/"poster" to MediaCardList before getting here.
+  const rowDensity: "compact" | "cozy" =
+    density === "compact" ? "compact" : "cozy";
+  const rowHeight = ROW_HEIGHT_PX[rowDensity];
+  const rowHeightClass =
+    rowDensity === "compact" ? "h-row-compact" : "h-row-cozy";
+  const hasActions = !!rowActions;
 
-  // Find the nearest scrollable ancestor and recompute scrollMargin (the
-  // body's offset within that scroller) whenever the body shifts —
-  // density changes, sticky header height changes, window resize.
-  // useLayoutEffect avoids the one-frame flicker if we read offsetTop
-  // after paint. Falls back to AppShell's <main> when the walk doesn't
-  // find a scrollable parent (e.g. wrapping div with no overflow).
-  useLayoutEffect(() => {
-    const node = bodyRef.current;
-    if (!node) return;
+  const { columnSizing, onColumnSizingChange, resetColumnSize } =
+    useColumnSizing(tableId);
 
-    let scroller: HTMLElement | null = null;
-    let parent = node.parentElement;
-    while (parent) {
-      const overflow = window.getComputedStyle(parent).overflowY;
-      if (overflow === "auto" || overflow === "scroll") {
-        scroller = parent;
-        break;
-      }
-      parent = parent.parentElement;
-    }
-    if (!scroller) scroller = document.getElementById("main");
-    setScrollElement(scroller);
+  // Bridge server-side sort into TanStack's controlled state. We map by
+  // `meta.sortKey` (the column's id may differ from the server's sort
+  // key, though by convention they match). manualSorting = true means
+  // TanStack tracks state + drives the header's API but does NOT
+  // actually sort rows — that happens server-side.
+  const sorting = useMemo<SortingState>(() => {
+    const match = columns.find((c) => c.meta?.sortKey === sortBy && c.id);
+    if (!match?.id) return [];
+    return [{ id: match.id, desc: order === "desc" }];
+  }, [columns, sortBy, order]);
 
-    const measure = () => {
-      if (!scroller) return;
-      const bodyTop = node.getBoundingClientRect().top;
-      const scrollerTop = scroller.getBoundingClientRect().top;
-      setScrollMargin(bodyTop - scrollerTop + scroller.scrollTop);
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    window.addEventListener("resize", measure);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, []);
-
-  // Element-scoped virtualization. AppShell's <main> is the actual scroll
-  // container (its overflow-y-auto traps the document scroll), so window
-  // virtualization never picks up the events — that's why earlier only
-  // the initial slice rendered. Hand the virtualizer the real scroll
-  // element + the body's offset within it via scrollMargin. Result: only
-  // the visible rows + overscan are mounted, regardless of total count.
-  // Pairs naturally with useInfiniteScroll's sentinel (still visible to
-  // IntersectionObserver because the spacer keeps real document height).
-  // overscan = how many rows above/below the viewport stay mounted to
-  // mask fast-scroll latency. 8 was too tight: on a flick scroll the
-  // user could outrun the buffer faster than the virtualizer's RAF
-  // could re-measure, leaving a blank gap for ~1 frame. 24 keeps
-  // ~2 viewports of rows mounted at cozy density (~12 rows on screen)
-  // — enough headroom for most flick gestures, still ~30 DOM nodes
-  // total versus thousands without virt.
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    estimateSize: () => rowHeight,
-    overscan: 24,
-    scrollMargin,
-    getScrollElement: () => scrollElement,
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const table = useReactTable({
+    data: rows,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => String(row.id),
+    state: { sorting, columnSizing },
+    manualSorting: true,
+    manualFiltering: true,
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
+    onColumnSizingChange,
+    onSortingChange: (updater) => {
+      const next = typeof updater === "function" ? updater(sorting) : updater;
+      if (next.length === 0) return;
+      const nextId = next[0].id;
+      const sortKey = columns.find((c) => c.id === nextId)?.meta?.sortKey;
+      if (sortKey) onSortChange(sortKey);
+    },
+    autoResetPageIndex: false,
   });
 
-  if (rows.length === 0 && emptyState) {
-    return <>{emptyState}</>;
-  }
+  const tableRows = table.getRowModel().rows;
 
-  const tableHidden = renderCard ? "hidden lg:block" : "";
-  const rowHeightClass = density === "compact" ? "h-row-compact" : "h-row-cozy";
-  // Grid template: checkbox column + one track per data column.
-  //
-  // - Title is bounded (`minmax(8rem, 24rem)`) so short titles hug content
-  //   instead of leaving a huge gap after the text, and very long titles
-  //   stop at 24rem and rely on the `truncate` cell class.
-  // - The LAST column without a `w-N` class (typically `issues` /
-  //   `penalties`) gets `1fr` to absorb leftover viewport width — that's
-  //   the column whose content (CF badge list) actually wants to flex.
-  // - Columns with `w-N` classes use `minmax(0, Nrem)` so the track is
-  //   strict (CSS Grid otherwise auto-grows tracks to fit content; the
-  //   bare `Nrem` form was treating widths as min-only and Profile was
-  //   stretching past `w-36` to fit "Ultra-HD WEB Preferred").
-  const lastFlexIndex = columns.findLastIndex(
-    (c) => c.key !== "title" && !c.className?.match(/(?:^|\s)w-(\d+)(?:\s|$)/),
-  );
-  const gridTemplate = `2.5rem ${columns
-    .map((c, i) => {
-      if (c.key === "title") return "minmax(8rem,24rem)";
-      if (i === lastFlexIndex) return "minmax(0,1fr)";
-      const widthMatch = c.className?.match(/(?:^|\s)w-(\d+)(?:\s|$)/);
-      if (widthMatch) {
-        const n = Number(widthMatch[1]);
-        return `minmax(0,${n * 0.25}rem)`;
-      }
-      return "auto";
-    })
-    .join(" ")}`;
+  const { items, virtEnabled, containerStyle } = useVirtList<T>({
+    rows,
+    containerRef: bodyRef,
+    estimateSize: rowHeight,
+    pickOverscan: pickRowOverscan,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  });
 
   return (
-    <>
-      {renderCard && (
-        <ul
-          data-testid="media-card-list"
-          className="flex flex-col gap-2 lg:hidden"
+    // The wrapper IS the scroll container for both axes (qui pattern).
+    // - overflow-auto: horizontal scroll appears when a resized column
+    //   pushes the row past the wrapper width; vertical scroll appears
+    //   when the row count exceeds the wrapper height.
+    // - flex-1 + min-h-0: takes all available height inside main's
+    //   flex-col layout. Without min-h-0, intrinsic content min-content
+    //   would push the wrapper taller than main, breaking the scroll.
+    // - The sticky header inside pins to the wrapper's top edge.
+    <div
+      ref={tableRef}
+      className="bg-background relative min-h-0 flex-1 overflow-auto border-y will-change-transform contain-paint select-none"
+    >
+      <div role="table" className="w-max min-w-full text-sm">
+        <MediaTableHeader
+          table={table}
+          containerRef={tableRef}
+          hasActions={hasActions}
+          allSelected={allSelected}
+          someSelected={someSelected}
+          onToggleAll={onToggleAll}
+          selectColumnPx={SELECT_COLUMN_PX}
+          actionsColumnPx={ACTIONS_COLUMN_PX}
+          onResetColumnSize={resetColumnSize}
+        />
+        <div
+          ref={bodyRef}
+          role="rowgroup"
+          data-testid="media-table-body"
+          className="bg-background"
+          style={containerStyle}
         >
-          {rows.map((row) => (
-            <MediaCard
-              key={row.id}
-              row={row}
-              selected={selectedIds.has(row.id)}
-              onToggleSelect={() => onToggleSelect(row.id)}
-              onRowClick={() => onRowClick(row.id)}
-              renderCard={renderCard}
-              actions={rowActions?.(row)}
-            />
-          ))}
-        </ul>
-      )}
-      {/*
-        No `overflow-x-auto` on the wrapper: that would create a scroll
-        container and scope the sticky header inside it (sticky bounds to
-        the nearest non-visible-overflow ancestor). With CSS Grid +
-        min-w-0 cells, the table doesn't horizontally overflow at lg+
-        widths anyway; mobile uses the card list above and never reaches
-        this code path.
-      */}
-      <div ref={tableRef} className={cn("rounded-lg border", tableHidden)}>
-        <div role="table" className="w-full text-sm">
-          <div
-            role="rowgroup"
-            className={cn(
-              "sticky top-0 z-10 border-b transition-colors",
-              scrolled
-                ? "bg-background/80 supports-backdrop-filter:backdrop-blur-sm"
-                : "bg-background",
-            )}
-          >
-            <div
-              role="row"
-              className="text-muted-foreground grid items-center text-left text-xs tracking-wide uppercase"
-              style={{ gridTemplateColumns: gridTemplate }}
-            >
-              <div role="columnheader" aria-hidden className="px-3 py-2.5" />
-              {columns.map((col) => {
-                const isActiveSort = col.sortKey === sortBy;
-                let ariaSort: "ascending" | "descending" | "none" | undefined;
-                if (col.sortKey && !isActiveSort) ariaSort = "none";
-                else if (isActiveSort)
-                  ariaSort = order === "asc" ? "ascending" : "descending";
-                const SortIcon = order === "asc" ? ChevronUp : ChevronDown;
-                return (
-                  <div
-                    key={col.key}
-                    role="columnheader"
-                    className={cn("px-3 py-2.5 font-medium", col.className)}
-                    aria-sort={ariaSort}
-                  >
-                    <span className="inline-flex min-w-0 items-center gap-1">
-                      {col.sortKey ? (
-                        <button
-                          type="button"
-                          className="hover:text-foreground inline-flex cursor-pointer items-center gap-1 select-none"
-                          onClick={() => onSortChange(col.sortKey!)}
-                        >
-                          <span className="truncate">{col.header}</span>
-                          <SortIcon
-                            className={cn(
-                              "text-foreground size-3.5 shrink-0 transition-opacity",
-                              isActiveSort ? "opacity-100" : "opacity-0",
-                            )}
-                            aria-hidden
-                          />
-                        </button>
-                      ) : (
-                        col.header
-                      )}
-                      {col.filter}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div
-            ref={bodyRef}
-            role="rowgroup"
-            data-testid="media-table-body"
-            style={
-              scrollElement
-                ? {
-                    height: virtualizer.getTotalSize(),
-                    position: "relative",
-                  }
-                : undefined
-            }
-          >
-            {(scrollElement
-              ? virtualizer.getVirtualItems().map((vRow) => ({
-                  row: rows[vRow.index],
-                  index: vRow.index,
-                  offset: vRow.start - scrollMargin,
-                  virt: true as const,
-                }))
-              : rows.map((row, index) => ({
-                  row,
-                  index,
-                  offset: 0,
-                  virt: false as const,
-                }))
-            ).map(({ row, index, offset, virt }) => {
-              if (!row) return null;
+          {items.map(({ row, index, style: virtStyle }) => {
+            if (!row) {
               return (
-                <div
-                  key={row.id}
-                  role="row"
-                  data-index={index}
-                  className={cn(
-                    "group hover:bg-muted/50 grid cursor-pointer items-center border-t transition-colors",
-                    rowHeightClass,
-                    selectedIds.has(row.id) && "bg-brand/10",
-                  )}
-                  style={
-                    virt
-                      ? {
-                          gridTemplateColumns: gridTemplate,
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          transform: `translateY(${offset}px)`,
-                        }
-                      : { gridTemplateColumns: gridTemplate }
-                  }
-                  onClick={() => onRowClick(row.id)}
-                >
-                  <div
-                    role="cell"
-                    className="flex items-center px-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Checkbox
-                      checked={selectedIds.has(row.id)}
-                      onCheckedChange={() => onToggleSelect(row.id)}
-                    />
-                  </div>
-                  {columns.map((col) => (
-                    <div
-                      key={col.key}
-                      role="cell"
-                      className={cn(
-                        "min-w-0 px-3",
-                        col.className,
-                        col.key === "title" && "truncate",
-                      )}
-                    >
-                      {col.render(row)}
-                    </div>
-                  ))}
-                  {rowActions && (
-                    <div
-                      role="cell"
-                      className="bg-muted/60 absolute top-0 right-0 flex h-full items-center gap-1 px-3 opacity-0 transition-opacity group-hover:opacity-100"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {rowActions(row)}
-                    </div>
-                  )}
-                </div>
+                <MediaTableSkeletonRow
+                  key={`skeleton-${index}`}
+                  index={index}
+                  columns={columns}
+                  rowHeightClass={rowHeightClass}
+                  style={virtStyle}
+                  hasActions={hasActions}
+                  selectColumnPx={SELECT_COLUMN_PX}
+                  actionsColumnPx={ACTIONS_COLUMN_PX}
+                  getColumnWidth={(id) => table.getColumn(id)?.getSize() ?? 0}
+                />
               );
-            })}
-          </div>
+            }
+            const tableRow = tableRows[index];
+            if (!tableRow) return null;
+            return (
+              <MediaTableRow
+                key={row.id}
+                row={tableRow}
+                rowData={row}
+                index={index}
+                selected={selectedIds.has(row.id)}
+                onToggleSelect={onToggleSelect}
+                onRowClick={onRowClick}
+                rowActions={rowActions}
+                rowHeightClass={rowHeightClass}
+                style={virtStyle}
+                selectColumnPx={SELECT_COLUMN_PX}
+                actionsColumnPx={ACTIONS_COLUMN_PX}
+              />
+            );
+          })}
+          <span hidden data-virt-enabled={virtEnabled} />
         </div>
       </div>
-    </>
+      {isFetchingNextPage && (
+        // Sticky-bottom indicator inside the scroll container — pins to
+        // the bottom edge of the visible viewport so the user always
+        // sees "loading more" without it stealing layout height from
+        // the table below. Lives INSIDE the wrapper (no longer in
+        // MediaListShell), so it can't push table rows out of view.
+        <div
+          aria-live="polite"
+          className="bg-background/95 border-border/60 text-muted-foreground sticky inset-x-0 bottom-0 flex shrink-0 items-center justify-center gap-2 border-t px-3 py-2 text-xs"
+        >
+          <Loader2 className="size-3.5 animate-spin" aria-hidden />
+          <span>Loading more…</span>
+        </div>
+      )}
+    </div>
   );
 }

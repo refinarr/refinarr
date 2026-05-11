@@ -96,7 +96,7 @@ describe("useFilterChips", () => {
     expect(chip).toBeTruthy();
   });
 
-  it("emits an onlyMissing chip when toggled on", () => {
+  it("does not emit an onlyMissing chip — the always-visible pill is the indicator", () => {
     const { result } = renderHook(
       () => {
         const filters = useMediaFilters("manual", 1);
@@ -108,7 +108,7 @@ describe("useFilterChips", () => {
       result.current.filters.setFilters((f) => ({ ...f, onlyMissing: true })),
     );
     expect(result.current.chips.some((c) => c.key === "onlyMissing")).toBe(
-      true,
+      false,
     );
   });
 

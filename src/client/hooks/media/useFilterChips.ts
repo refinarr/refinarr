@@ -159,6 +159,22 @@ export function useFilterChips({
         }
       : null;
 
+  // No chip for `onlyMissing` — the always-visible pill in
+  // MobileFilterBar (mobile) is already the indicator. Adding a chip
+  // here would show the same active state twice.
+  const tStatus = useTranslations("filters.monitorStatus");
+  const monitorStatusChip: FilterChip | null =
+    filters.filters.monitorStatus !== "all"
+      ? {
+          key: "monitorStatus",
+          label: t("monitorStatusLabel", {
+            value: tStatus(filters.filters.monitorStatus),
+          }),
+          onRemove: () =>
+            filters.setFilters((f) => ({ ...f, monitorStatus: "all" })),
+        }
+      : null;
+
   const chips: FilterChip[] = [
     filters.filters.q && {
       key: "q",
@@ -169,13 +185,9 @@ export function useFilterChips({
     ...severityChips,
     scoreChip,
     sizeChip,
+    monitorStatusChip,
     ...missingChips,
     ...penaltyChips,
-    filters.filters.onlyMissing && {
-      key: "onlyMissing",
-      label: t("onlyMissing"),
-      onRemove: () => filters.setFilters((f) => ({ ...f, onlyMissing: false })),
-    },
   ].filter(Boolean) as FilterChip[];
 
   const clearActiveFilters = () =>
@@ -191,6 +203,7 @@ export function useFilterChips({
       missingCfIds: [],
       hasNegativeCfIds: [],
       onlyMissing: false,
+      monitorStatus: "all",
     }));
 
   return { chips, clearActiveFilters };

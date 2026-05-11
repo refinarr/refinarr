@@ -4,13 +4,24 @@ import { useCallback, useSyncExternalStore } from "react";
 const STORAGE_KEY = "rfn-density";
 const CHANGE_EVENT = "rfn:density-change";
 
-export type Density = "compact" | "cozy";
+// "compact"/"cozy" = table row densities; "card" = full card view on
+// desktop (reuses the mobile MediaCardList); "poster" is reserved for
+// a future grid view and not yet in the cycle.
+export type Density = "compact" | "cozy" | "card" | "poster";
 
 interface Result {
   density: Density;
   setDensity: (next: Density) => void;
+  // Legacy 2-state toggle (compact ↔ cozy). Kept for any consumer that
+  // wants binary toggling; the new top-bar button uses `cycle()` instead.
   toggle: () => void;
+  // Advance density to the next mode in the cycle. Order: cozy →
+  // compact → card → cozy. `poster` is reserved for a future grid view
+  // and not in the cycle until that view ships.
+  cycle: () => void;
 }
+
+const CYCLE_ORDER: Density[] = ["cozy", "compact", "card"];
 
 // In-memory fallback for storage-restricted environments (private mode,
 // sandboxed iframes, locked-down corporate browsers). Without this,
@@ -20,7 +31,14 @@ let memoryDensity: Density | null = null;
 function readStored(): Density | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === "compact" || raw === "cozy") return raw;
+    if (
+      raw === "compact" ||
+      raw === "cozy" ||
+      raw === "card" ||
+      raw === "poster"
+    ) {
+      return raw;
+    }
     return null;
   } catch {
     // localStorage unavailable — use the in-memory cache so the user's
@@ -81,5 +99,15 @@ export function useDensity(): Result {
     dispatchChange();
   }, []);
 
-  return { density, setDensity, toggle };
+  const cycle = useCallback(() => {
+    const current = getSnapshot();
+    const idx = CYCLE_ORDER.indexOf(current);
+    // If current density isn't in the cycle (e.g. legacy "poster"
+    // value), restart at the first cycle mode.
+    const nextIdx = idx === -1 ? 0 : (idx + 1) % CYCLE_ORDER.length;
+    writeStored(CYCLE_ORDER[nextIdx]);
+    dispatchChange();
+  }, []);
+
+  return { density, setDensity, toggle, cycle };
 }

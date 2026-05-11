@@ -21,6 +21,7 @@ const baseFilters = {
   hasNegativeCfMatch: "all" as const,
   onlyMissing: false,
   flaggedOnly: true,
+  monitorStatus: "all" as const,
   scoringMode: "manual" as const,
 };
 

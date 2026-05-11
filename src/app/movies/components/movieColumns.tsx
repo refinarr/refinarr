@@ -7,6 +7,7 @@ import {
 } from "@/client/components/ui/popover";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { CfColumnFunnel } from "@/client/components/media/CfColumnFunnel";
+import { MonitorColumnFunnel } from "@/client/components/media/MonitorColumnFunnel";
 import { ProfileColumnFunnel } from "@/client/components/media/ProfileColumnFunnel";
 import { ScoreColumnFunnel } from "@/client/components/media/ScoreColumnFunnel";
 import { SearchStatusBadge } from "@/client/components/media/SearchStatusBadge";
@@ -72,17 +73,22 @@ export function movieColumns(
 
   return [
     {
-      key: "severity",
-      header: <span className="sr-only">{tCols("severity")}</span>,
-      className: "w-8",
-      filter: (
-        <SeverityColumnFunnel
-          filters={filters}
-          onChange={onFilterChange}
-          columnLabel={tCols("severity")}
-        />
-      ),
-      render: (m) => {
+      id: "severity",
+      header: () => <span className="sr-only">{tCols("severity")}</span>,
+      size: 56,
+      minSize: 56,
+      maxSize: 96,
+      enableSorting: false,
+      meta: {
+        filter: (
+          <SeverityColumnFunnel
+            filters={filters}
+            onChange={onFilterChange}
+            columnLabel={tCols("severity")}
+          />
+        ),
+      },
+      cell: ({ row: { original: m } }) => {
         const score = SCORE_FOR[scoringMode](m);
         return (
           <SeverityDot
@@ -97,10 +103,14 @@ export function movieColumns(
       },
     },
     {
-      key: "title",
-      header: tCols("title"),
-      sortKey: "title",
-      render: (m) => (
+      id: "title",
+      accessorFn: (m) => m.title,
+      header: () => tCols("title"),
+      size: 240,
+      minSize: 160,
+      maxSize: 480,
+      meta: { sortKey: "title" },
+      cell: ({ row: { original: m } }) => (
         <div className="flex min-w-0 items-baseline gap-2">
           <span className="truncate font-medium">{m.title}</span>
           <span className="text-muted-foreground shrink-0 text-xs">
@@ -111,8 +121,8 @@ export function movieColumns(
       ),
     },
     {
-      key: "monitored",
-      header: (
+      id: "monitored",
+      header: () => (
         <span
           className="text-muted-foreground inline-flex"
           title={tCols("monitored")}
@@ -121,8 +131,20 @@ export function movieColumns(
           <Eye className="size-3.5" aria-hidden />
         </span>
       ),
-      className: "w-8",
-      render: (m) =>
+      size: 80,
+      minSize: 72,
+      maxSize: 120,
+      enableSorting: false,
+      meta: {
+        filter: (
+          <MonitorColumnFunnel
+            filters={filters}
+            onChange={onFilterChange}
+            columnLabel={tCols("monitored")}
+          />
+        ),
+      },
+      cell: ({ row: { original: m } }) =>
         m.monitored ? (
           <Eye className="text-ok size-3.5" aria-label={t("monitoredYes")} />
         ) : (
@@ -133,37 +155,49 @@ export function movieColumns(
         ),
     },
     {
-      key: "profile",
-      header: profileHeaderLabel,
-      className: "w-36 text-muted-foreground",
-      filter: (
-        <ProfileColumnFunnel
-          profiles={profiles}
-          filters={filters}
-          onChange={onFilterChange}
-          columnLabel={profileHeaderLabel}
-        />
-      ),
-      render: (m) => (
+      id: "profile",
+      header: () => profileHeaderLabel,
+      size: 144,
+      minSize: 96,
+      maxSize: 240,
+      enableSorting: false,
+      meta: {
+        className: "text-muted-foreground",
+        filter: (
+          <ProfileColumnFunnel
+            profiles={profiles}
+            filters={filters}
+            onChange={onFilterChange}
+            columnLabel={profileHeaderLabel}
+          />
+        ),
+      },
+      cell: ({ row: { original: m } }) => (
         <span className="truncate text-xs">
           {profiles?.find((p) => p.id === m.qualityProfileId)?.name ?? "—"}
         </span>
       ),
     },
     {
-      key: "score",
-      header: scoreHeaderLabel,
-      sortKey: "score",
-      className: "w-36 whitespace-nowrap",
-      filter: (
-        <ScoreColumnFunnel
-          scoringMode={scoringMode}
-          filters={filters}
-          onChange={onFilterChange}
-          columnLabel={scoreHeaderLabel}
-        />
-      ),
-      render: (m) => {
+      id: "score",
+      accessorFn: (m) => SCORE_FOR[scoringMode](m),
+      header: () => scoreHeaderLabel,
+      size: 144,
+      minSize: 112,
+      maxSize: 240,
+      meta: {
+        sortKey: "score",
+        className: "whitespace-nowrap",
+        filter: (
+          <ScoreColumnFunnel
+            scoringMode={scoringMode}
+            filters={filters}
+            onChange={onFilterChange}
+            columnLabel={scoreHeaderLabel}
+          />
+        ),
+      },
+      cell: ({ row: { original: m } }) => {
         if (isProfileMode(scoringMode) && !m.hasFile) {
           return (
             <span className="text-muted-foreground text-xs">{t("noFile")}</span>
@@ -178,33 +212,45 @@ export function movieColumns(
       },
     },
     {
-      key: "size",
-      header: sizeHeaderLabel,
-      sortKey: "size",
-      className:
-        "w-24 text-xs text-muted-foreground tabular-nums whitespace-nowrap",
-      filter: (
-        <SizeColumnFunnel
-          filters={filters}
-          onChange={onFilterChange}
-          columnLabel={sizeHeaderLabel}
-        />
-      ),
-      render: (m) => formatBytes(m.sizeOnDisk),
+      id: "size",
+      accessorFn: (m) => m.sizeOnDisk,
+      header: () => sizeHeaderLabel,
+      size: 112,
+      minSize: 88,
+      maxSize: 200,
+      meta: {
+        sortKey: "size",
+        className:
+          "text-xs text-muted-foreground tabular-nums whitespace-nowrap",
+        filter: (
+          <SizeColumnFunnel
+            filters={filters}
+            onChange={onFilterChange}
+            columnLabel={sizeHeaderLabel}
+          />
+        ),
+      },
+      cell: ({ row: { original: m } }) => formatBytes(m.sizeOnDisk),
     },
     {
-      key: "issues",
-      header: issuesHeaderLabel,
-      filter: (
-        <CfColumnFunnel
-          scoringMode={scoringMode}
-          options={cfFunnelOptions}
-          filters={filters}
-          onChange={onFilterChange}
-          columnLabel={issuesHeaderLabel}
-        />
-      ),
-      render: (m) => {
+      id: "issues",
+      header: () => issuesHeaderLabel,
+      size: 240,
+      minSize: 160,
+      enableSorting: false,
+      meta: {
+        grow: true,
+        filter: (
+          <CfColumnFunnel
+            scoringMode={scoringMode}
+            options={cfFunnelOptions}
+            filters={filters}
+            onChange={onFilterChange}
+            columnLabel={issuesHeaderLabel}
+          />
+        ),
+      },
+      cell: ({ row: { original: m } }) => {
         const items = ISSUES_FOR[scoringMode](m);
         if (!items.length) return null;
         const visible = items.slice(0, issuesVisible);

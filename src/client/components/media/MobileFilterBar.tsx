@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { SlidersHorizontal, Check } from "lucide-react";
 import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
+import { usePrefersReducedMotion } from "@/client/hooks/ui/useMediaQuery";
+import { useScrollDirection } from "@/client/hooks/ui/useScrollDirection";
 import { cn } from "@/client/lib/utils";
 import type { QualityProfile, ScoringMode } from "@/shared/types/models";
 import { FilterSheet } from "./FilterSheet";
@@ -29,6 +31,7 @@ function countActiveFilters(f: MediaFilters): number {
   if (f.minSize !== null || f.maxSize !== null) n += 1;
   if (f.missingCfIds.length > 0) n += 1;
   if (f.hasNegativeCfIds.length > 0) n += 1;
+  if (f.monitorStatus !== "all") n += 1;
   return n;
 }
 
@@ -51,12 +54,28 @@ export function MobileFilterBar({
   const activeCount = countActiveFilters(filters);
   const onlyMissingActive = filters.onlyMissing;
 
+  // Auto-hide on scroll-down to free screen real estate; re-show on
+  // scroll-up. Sheet-open state suppresses the hide so the trigger
+  // can't slip away mid-tap. Mirrors MobileTabBar's behaviour so both
+  // bars move in lockstep.
+  const direction = useScrollDirection();
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const hidden = direction === "down" && !sheetOpen;
+
   return (
     <>
       <div
         role="toolbar"
         aria-label={t("toolbarAriaLabel")}
-        className="bg-card/90 border-border/60 h-mobile-filter-bar fixed inset-x-0 bottom-[calc(var(--spacing-bottom-bar)+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 border-t px-3 backdrop-blur-md md:hidden"
+        className={cn(
+          "bg-card/90 border-border/60 h-mobile-filter-bar fixed inset-x-0 bottom-[calc(var(--spacing-bottom-bar)+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 border-t px-3 backdrop-blur-md md:hidden",
+          // translate-y-full slides the bar past its own height + the
+          // tab bar beneath it. prefers-reduced-motion replaces the
+          // slide with an instant toggle so motion-sensitive users
+          // still get the layout affordance without the animation.
+          prefersReducedMotion ? "" : "transition-transform duration-200",
+          hidden && "translate-y-[calc(100%+var(--spacing-bottom-bar))]",
+        )}
       >
         <button
           type="button"

@@ -5,8 +5,8 @@ import { renderWithProviders, screen } from "@/test/render";
 import { BulkActionToolbar } from "../BulkActionToolbar";
 
 describe("BulkActionToolbar", () => {
-  it("renders nothing when nothing is selected", () => {
-    const { container } = renderWithProviders(
+  it("renders the toolbar with disabled buttons when nothing is selected", () => {
+    renderWithProviders(
       <BulkActionToolbar
         selectedCount={0}
         onSearch={vi.fn()}
@@ -14,7 +14,22 @@ describe("BulkActionToolbar", () => {
         onIgnore={vi.fn()}
       />,
     );
-    expect(container.firstChild).toBeNull();
+    // Previously this returned null on empty selection. The new
+    // contract: the toolbar is always rendered so its row doesn't
+    // appear/disappear in the layout; the four action buttons are
+    // disabled until a row is selected.
+    expect(
+      screen.getByRole("button", { name: /^search$/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /^ignore$/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /^delete$/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /delete and search/i }),
+    ).toBeDisabled();
   });
 
   it("renders all four actions when count > 0", () => {
@@ -40,7 +55,7 @@ describe("BulkActionToolbar", () => {
     ).toBeInTheDocument();
   });
 
-  it("uses fixed-bottom positioning on mobile and sticks to the top on md+", () => {
+  it("uses fixed-bottom positioning on mobile and renders inline on md+", () => {
     renderWithProviders(
       <BulkActionToolbar
         selectedCount={1}
@@ -57,8 +72,12 @@ describe("BulkActionToolbar", () => {
     expect(toolbar.className).toContain(
       "bottom-[calc(var(--spacing-bottom-bar)+var(--spacing-mobile-filter-bar)+env(safe-area-inset-bottom))]",
     );
-    expect(toolbar.className).toContain("md:sticky");
-    expect(toolbar.className).toContain("md:top-0");
+    // Desktop drops sticky in favour of inline flow (qui pattern) — two
+    // sticky elements (this bar + MediaTableHeader) caused layout
+    // jumping when this one mounted/unmounted. md:static reverts to
+    // normal flow so the bar slots into the page chrome.
+    expect(toolbar.className).toContain("md:static");
+    expect(toolbar.className).not.toContain("md:sticky");
   });
 
   it("renders an aria-live progress UI in place of action buttons when progress is provided", () => {

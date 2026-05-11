@@ -2,6 +2,7 @@
 import { useTranslations } from "next-intl";
 import { Search, Trash2, EyeOff, X } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
+import { cn } from "@/client/lib/utils";
 import type { BulkProgress } from "./types";
 
 interface Props {
@@ -13,6 +14,22 @@ interface Props {
   progress?: BulkProgress | null;
   onCancel?: () => void;
 }
+
+// Mobile: iOS Safari toolbar style — solid dark strip pinned above the
+// AppShell's bottom MobileTabBar AND the MediaListShell's
+// MobileFilterBar. Larger thumb-friendly icon buttons.
+// Desktop: bare flex group of icon-only ghost buttons inline inside
+// the unified TopHeader slot. No card background or padding of its own
+// — the parent header supplies the chrome. qui-style: a small selection
+// count badge sits before the icon group.
+const wrapperClasses =
+  "fixed inset-x-0 bottom-[calc(var(--spacing-bottom-bar)+var(--spacing-mobile-filter-bar)+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 bg-muted px-4 py-4 md:static md:inset-auto md:gap-1 md:bg-transparent md:p-0";
+
+// Mobile: large square tap targets (44pt-ish). Desktop: compact h-7 w-7
+// icon-only ghost buttons matching the rest of the unified header.
+const buttonSize = "h-10 w-10 md:h-7 md:w-7 md:p-0";
+const iconSize = "h-5 w-5 md:h-4 md:w-4";
+
 export function BulkActionToolbar({
   selectedCount,
   onSearch,
@@ -23,18 +40,12 @@ export function BulkActionToolbar({
   onCancel,
 }: Props) {
   const t = useTranslations("bulk");
-  if (selectedCount === 0 && !progress) return null;
-
-  // Mobile: iOS Safari toolbar style — solid dark strip pinned above
-  // the AppShell's bottom MobileTabBar AND the MediaListShell's
-  // MobileFilterBar (--spacing-bottom-bar + --spacing-mobile-filter-bar
-  // + safe-area-inset). No borders, ghost icon buttons. Sized larger
-  // than desktop for thumb-friendly tap targets.
-  // Desktop: card-style strip that sticks to the top of the main scroll
-  // container so it stays visible while the user scrolls a long list and
-  // selects rows further down.
-  const wrapperClasses =
-    "fixed inset-x-0 bottom-[calc(var(--spacing-bottom-bar)+var(--spacing-mobile-filter-bar)+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 bg-muted px-4 py-4 md:sticky md:top-0 md:bottom-auto md:mb-4 md:gap-2 md:rounded-md md:border-0 md:bg-accent md:px-3 md:py-3 md:pb-3";
+  // Bar stays visible permanently — buttons go disabled when nothing
+  // is selected. Previously this returned null on empty selection,
+  // which made the surrounding layout shift around as the user
+  // toggled selection. Always-on with disabled state is simpler and
+  // matches qui's pattern.
+  const actionsDisabled = disabled || selectedCount === 0;
 
   if (progress) {
     const pct =
@@ -69,61 +80,64 @@ export function BulkActionToolbar({
     );
   }
 
-  // Buttons use size="default" on mobile (h-9 ~ 36px tap target, comfortable
-  // for touch) and shrink to size="sm" on desktop via the md:h-8 override.
-  // Icons grow from h-5 to h-4 the same way.
-  const buttonSize = "h-10 w-10 md:h-8 md:w-auto md:px-3";
-  const iconSize = "h-5 w-5 md:h-4 md:w-4 md:mr-1";
-
   return (
     <div className={wrapperClasses}>
-      <span className="text-base font-medium md:text-sm">
+      {/* Mobile: full "N selected" sentence reads naturally on a wide
+          fixed-bottom bar. Desktop: compact count badge with min-width
+          so single/double/triple-digit counts all align. */}
+      <span className="text-base font-medium md:hidden">
         {t("selected", { count: selectedCount })}
       </span>
-      <div className="ml-auto flex items-center gap-1">
+      <span
+        className="text-muted-foreground hidden min-w-[3ch] text-center text-xs whitespace-nowrap tabular-nums md:inline"
+        aria-label={t("selected", { count: selectedCount })}
+      >
+        {selectedCount}
+      </span>
+      <div className="ml-auto flex items-center gap-1 md:ml-0">
         <Button
           size="sm"
           variant="ghost"
           onClick={onSearch}
-          disabled={disabled}
+          disabled={actionsDisabled}
+          title={t("search")}
           aria-label={t("search")}
           className={buttonSize}
         >
           <Search className={iconSize} />
-          <span className="hidden md:inline">{t("search")}</span>
         </Button>
         <Button
           size="sm"
           variant="ghost"
           onClick={onIgnore}
-          disabled={disabled}
+          disabled={actionsDisabled}
+          title={t("ignore")}
           aria-label={t("ignore")}
           className={buttonSize}
         >
           <EyeOff className={iconSize} />
-          <span className="hidden md:inline">{t("ignore")}</span>
         </Button>
         <Button
           size="sm"
           variant="ghost"
           onClick={() => onDelete(false)}
-          disabled={disabled}
+          disabled={actionsDisabled}
+          title={t("delete")}
           aria-label={t("delete")}
-          className={`${buttonSize} text-destructive hover:text-destructive`}
+          className={cn(buttonSize, "text-destructive hover:text-destructive")}
         >
           <Trash2 className={iconSize} />
-          <span className="hidden md:inline">{t("delete")}</span>
         </Button>
         <Button
           size="sm"
           variant="destructive"
           onClick={() => onDelete(true)}
-          disabled={disabled}
+          disabled={actionsDisabled}
+          title={t("deleteAndSearch")}
           aria-label={t("deleteAndSearch")}
           className={buttonSize}
         >
           <Trash2 className={iconSize} />
-          <span className="hidden md:inline">{t("deleteAndSearch")}</span>
         </Button>
       </div>
     </div>

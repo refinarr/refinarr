@@ -84,6 +84,7 @@
     "flaggedTile": "Flagged",
     "selectedTile": "Selected",
     "flaggedSummary": "{total} flagged{selected, select, 0 {} other { · {selected} selected}}",
+    "flaggedSummaryShort": "{total, plural, =0 {Nothing flagged} one {# Flagged} other {# Flagged}}",
     "scoringModeBanner": "{mode} mode"
   },
   "instanceHealth": {
@@ -252,8 +253,12 @@
     "clearAll": "Clear all",
     "density": {
       "groupLabel": "Row density",
+      "buttonLabel": "View mode",
+      "next": "Switch to {mode}",
       "cozy": "Cozy",
-      "compact": "Compact"
+      "compact": "Compact",
+      "card": "Cards",
+      "poster": "Posters"
     },
     "toolbarAriaLabel": "Filter toolbar",
     "activeCountAriaLabel": "{count, plural, one {# active filter} other {# active filters}}",
@@ -291,10 +296,20 @@
       "to10to25": "10 – 25 GB",
       "to25to50": "25 – 50 GB",
       "gt50": "> 50 GB"
-    }
+    },
+    "monitorStatus": {
+      "label": "Monitor status",
+      "description": "Show only items with the chosen monitor state.",
+      "all": "All",
+      "monitored": "Monitored",
+      "unmonitored": "Unmonitored",
+      "missing": "Missing files"
+    },
+    "monitorStatusLabel": "Monitored: {value}"
   },
   "bulk": {
     "selected": "{count} selected",
+    "selectAll": "Select all visible items",
     "search": "Search",
     "ignore": "Ignore",
     "delete": "Delete",

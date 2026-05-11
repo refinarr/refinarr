@@ -21,47 +21,36 @@ const baseFilters: MediaFilters = {
   hasNegativeCfMatch: "all",
   onlyMissing: false,
   flaggedOnly: true,
+  monitorStatus: "all",
 };
 
 describe("MediaSearchBar", () => {
-  it("renders the search input and the Only missing toggle pill", () => {
+  it("renders the search input", () => {
     renderWithProviders(
       <MediaSearchBar filters={baseFilters} onChange={vi.fn()} />,
     );
     expect(screen.getByPlaceholderText(/search title/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /only missing/i }),
-    ).toBeInTheDocument();
   });
 
-  it("invokes onChange when the Only missing pill is toggled", async () => {
-    const onChange = vi.fn();
+  it("does not render the Only missing pill (lives in QuickToggles / MobileFilterBar)", () => {
     renderWithProviders(
-      <MediaSearchBar filters={baseFilters} onChange={onChange} />,
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: /only missing/i }),
-    );
-    expect(onChange).toHaveBeenCalledWith({ onlyMissing: true });
-  });
-
-  it("shows Clear all only when at least one filter is active", async () => {
-    const { rerender } = renderWithProviders(
       <MediaSearchBar filters={baseFilters} onChange={vi.fn()} />,
     );
     expect(
-      screen.queryByRole("button", { name: /clear all/i }),
+      screen.queryByRole("button", { name: /only missing/i }),
     ).not.toBeInTheDocument();
+  });
 
-    rerender(
+  it("does not render a Clear all button (lives in ActiveFilterChips)", () => {
+    renderWithProviders(
       <MediaSearchBar
-        filters={{ ...baseFilters, onlyMissing: true }}
+        filters={{ ...baseFilters, onlyMissing: true, q: "x" }}
         onChange={vi.fn()}
       />,
     );
     expect(
-      screen.getByRole("button", { name: /clear all/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /clear all/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("does not render a Show all pill (driven by Instance.showAllMedia)", () => {
@@ -76,35 +65,12 @@ describe("MediaSearchBar", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("Clear all resets every value-bearing filter (flaggedOnly is preserved)", async () => {
+  it("invokes onChange when the search input changes", async () => {
     const onChange = vi.fn();
     renderWithProviders(
-      <MediaSearchBar
-        filters={{
-          ...baseFilters,
-          profileIds: [1],
-          minScore: 0,
-          maxScore: 0.5,
-          onlyMissing: true,
-          q: "x",
-        }}
-        onChange={onChange}
-      />,
+      <MediaSearchBar filters={baseFilters} onChange={onChange} />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /clear all/i }));
-    expect(onChange).toHaveBeenCalledWith({
-      q: "",
-      profileIds: [],
-      severities: [],
-      minScore: null,
-      maxScore: null,
-      minSize: null,
-      maxSize: null,
-      missingCfIds: [],
-      missingCfMatch: "all",
-      hasNegativeCfIds: [],
-      hasNegativeCfMatch: "all",
-      onlyMissing: false,
-    });
+    await userEvent.type(screen.getByPlaceholderText(/search title/i), "x");
+    expect(onChange).toHaveBeenCalledWith({ q: "x" });
   });
 });

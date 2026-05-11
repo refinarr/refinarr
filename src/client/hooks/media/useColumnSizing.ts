@@ -1,0 +1,64 @@
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import type { ColumnSizingState, Updater } from "@tanstack/react-table";
+
+const STORAGE_PREFIX = "media-table-sizing:";
+
+function readStored(key: string): ColumnSizingState {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(STORAGE_PREFIX + key);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as ColumnSizingState;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+function writeStored(key: string, value: ColumnSizingState) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value));
+  } catch {
+    // Quota / private mode / disabled storage — silently no-op. The
+    // user just loses persistence; the table still works in-memory.
+  }
+}
+
+// Persist TanStack's column sizing state in localStorage keyed per table
+// (`movies`, `shows`, etc.). Returns a [state, setter, reset] triple
+// shaped to match the `state.columnSizing` + `onColumnSizingChange`
+// contract TanStack expects.
+export function useColumnSizing(storageKey: string) {
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(() =>
+    readStored(storageKey),
+  );
+
+  useEffect(() => {
+    writeStored(storageKey, columnSizing);
+  }, [storageKey, columnSizing]);
+
+  const onColumnSizingChange = useCallback(
+    (updater: Updater<ColumnSizingState>) => {
+      setColumnSizing((prev) =>
+        typeof updater === "function" ? updater(prev) : updater,
+      );
+    },
+    [],
+  );
+
+  const resetColumnSize = useCallback((columnId: string) => {
+    setColumnSizing((prev) => {
+      if (!(columnId in prev)) return prev;
+      const next = { ...prev };
+      delete next[columnId];
+      return next;
+    });
+  }, []);
+
+  return { columnSizing, onColumnSizingChange, resetColumnSize } as const;
+}
