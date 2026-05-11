@@ -70,7 +70,9 @@ export function TopHeader({ onToggleSidebar, slot, belowSlot }: Props) {
         and friends all share the same vertical center via the parent's
         `items-center`. Mirrors qui's bulk-management-bar pattern.
       */}
-      {belowSlot && <div className="hidden basis-full md:block">{belowSlot}</div>}
+      {belowSlot && (
+        <div className="hidden basis-full md:block">{belowSlot}</div>
+      )}
     </header>
   );
 }

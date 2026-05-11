@@ -53,7 +53,7 @@ export function InstancePicker({
         {active.name}
       </span>
       {subtitle && (
-        <span className="text-muted-foreground whitespace-nowrap text-xs">
+        <span className="text-muted-foreground text-xs whitespace-nowrap">
           {subtitle}
         </span>
       )}

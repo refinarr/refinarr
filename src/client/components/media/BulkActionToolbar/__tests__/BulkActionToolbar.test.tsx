@@ -18,15 +18,9 @@ describe("BulkActionToolbar", () => {
     // contract: the toolbar is always rendered so its row doesn't
     // appear/disappear in the layout; the four action buttons are
     // disabled until a row is selected.
-    expect(
-      screen.getByRole("button", { name: /^search$/i }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: /^ignore$/i }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: /^delete$/i }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^search$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^ignore$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^delete$/i })).toBeDisabled();
     expect(
       screen.getByRole("button", { name: /delete and search/i }),
     ).toBeDisabled();

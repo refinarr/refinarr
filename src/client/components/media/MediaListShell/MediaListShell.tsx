@@ -482,7 +482,7 @@ function MediaListShellTopBar() {
         `flex-nowrap min-w-0`, which lets this shrink propagate.
       */}
       <div className="ml-auto flex min-w-0 items-center gap-2">
-        <div className="min-w-0 flex-1 max-w-56">
+        <div className="max-w-56 min-w-0 flex-1">
           <MediaSearchBar
             filters={filters.filters}
             onChange={(next) =>

@@ -2,7 +2,12 @@
 import { memo, useEffect, useState, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { flexRender, type Table } from "@tanstack/react-table";
+import {
+  flexRender,
+  type Header,
+  type HeaderGroup,
+  type Table,
+} from "@tanstack/react-table";
 import { Checkbox } from "@/client/components/ui/checkbox";
 import { cn } from "@/client/lib/utils";
 
@@ -68,6 +73,185 @@ interface Props<T> {
   onResetColumnSize: (columnId: string) => void;
 }
 
+interface HeaderRowProps<T> {
+  group: HeaderGroup<T>;
+  hasActions?: boolean;
+  selectColumnPx: number;
+  actionsColumnPx: number;
+  allSelected: boolean;
+  someSelected: boolean;
+  onToggleAll: () => void;
+  onResetColumnSize: (columnId: string) => void;
+  selectAllLabel: string;
+}
+
+interface HeaderCellProps<T> {
+  header: Header<T, unknown>;
+  isLastDataCol: boolean;
+  onResetColumnSize: (columnId: string) => void;
+}
+
+interface HeaderLabelProps<T> {
+  header: Header<T, unknown>;
+}
+
+function getAriaSort(
+  canSort: boolean,
+  sortDir: false | "asc" | "desc",
+): "ascending" | "descending" | "none" | undefined {
+  if (!canSort) return undefined;
+  if (sortDir === "asc") return "ascending";
+  if (sortDir === "desc") return "descending";
+  return "none";
+}
+
+function HeaderLabel<T>({ header }: HeaderLabelProps<T>) {
+  if (header.isPlaceholder) return null;
+  return flexRender(header.column.columnDef.header, header.getContext());
+}
+
+function SortableHeaderLabel<T>({ header }: HeaderLabelProps<T>) {
+  const sortDir = header.column.getIsSorted();
+  const isActiveSort = sortDir !== false;
+  const SortIcon = sortDir === "asc" ? ChevronUp : ChevronDown;
+
+  return (
+    <button
+      type="button"
+      className="hover:text-foreground inline-flex min-w-0 cursor-pointer items-center gap-1 select-none"
+      onClick={header.column.getToggleSortingHandler()}
+    >
+      <span className="truncate">
+        <HeaderLabel header={header} />
+      </span>
+      <SortIcon
+        className={cn(
+          "text-foreground size-3.5 shrink-0 transition-opacity",
+          isActiveSort ? "opacity-100" : "opacity-0",
+        )}
+        aria-hidden
+      />
+    </button>
+  );
+}
+
+function ResizeHandle<T>({
+  header,
+  onResetColumnSize,
+}: Pick<HeaderCellProps<T>, "header" | "onResetColumnSize">) {
+  const column = header.column;
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={`Resize ${column.id} column`}
+      onMouseDown={header.getResizeHandler()}
+      onTouchStart={header.getResizeHandler()}
+      onDoubleClick={() => onResetColumnSize(column.id)}
+      className="group/resize absolute top-0 right-0 flex h-full w-2 cursor-col-resize touch-none justify-end select-none"
+    >
+      <div
+        className={cn(
+          "h-full w-px",
+          column.getIsResizing()
+            ? "bg-brand"
+            : "group-hover/resize:bg-brand/50 bg-transparent",
+        )}
+      />
+    </div>
+  );
+}
+
+function HeaderCell<T>({
+  header,
+  isLastDataCol,
+  onResetColumnSize,
+}: HeaderCellProps<T>) {
+  const column = header.column;
+  const meta = column.columnDef.meta;
+  const canSort = column.getCanSort();
+  const canResize = column.getCanResize();
+
+  return (
+    <div
+      key={header.id}
+      role="columnheader"
+      aria-sort={getAriaSort(canSort, column.getIsSorted())}
+      className={cn(
+        "group/col relative flex shrink-0 items-center justify-between gap-1 px-3 py-2.5 font-medium",
+        !isLastDataCol && "border-border/60 border-r",
+        meta?.grow && "grow",
+        meta?.className,
+      )}
+      style={{ width: header.getSize() }}
+    >
+      {canSort ? (
+        <SortableHeaderLabel header={header} />
+      ) : (
+        <span className="inline-flex min-w-0 items-center truncate">
+          <HeaderLabel header={header} />
+        </span>
+      )}
+      {meta?.filter && <span className="ml-auto shrink-0">{meta.filter}</span>}
+      {canResize && (
+        <ResizeHandle header={header} onResetColumnSize={onResetColumnSize} />
+      )}
+    </div>
+  );
+}
+
+function HeaderRow<T>({
+  group,
+  hasActions,
+  selectColumnPx,
+  actionsColumnPx,
+  allSelected,
+  someSelected,
+  onToggleAll,
+  onResetColumnSize,
+  selectAllLabel,
+}: HeaderRowProps<T>) {
+  const lastDataColIndex = group.headers.length - 1;
+
+  return (
+    <div
+      key={group.id}
+      role="row"
+      className="text-muted-foreground flex items-center text-left text-xs tracking-wide uppercase"
+    >
+      <div
+        role="columnheader"
+        className="border-border/60 flex shrink-0 items-center border-r px-3 py-2.5"
+        style={{ width: selectColumnPx }}
+      >
+        <Checkbox
+          checked={allSelected}
+          indeterminate={someSelected}
+          onCheckedChange={onToggleAll}
+          aria-label={selectAllLabel}
+        />
+      </div>
+      {group.headers.map((header, idx) => (
+        <HeaderCell
+          key={header.id}
+          header={header}
+          isLastDataCol={idx === lastDataColIndex && !hasActions}
+          onResetColumnSize={onResetColumnSize}
+        />
+      ))}
+      {hasActions && (
+        <div
+          role="columnheader"
+          aria-hidden
+          className="shrink-0"
+          style={{ width: actionsColumnPx }}
+        />
+      )}
+    </div>
+  );
+}
+
 function MediaTableHeaderImpl<T>({
   table,
   containerRef,
@@ -101,117 +285,18 @@ function MediaTableHeaderImpl<T>({
       )}
     >
       {headerGroups.map((group) => (
-        <div
+        <HeaderRow
           key={group.id}
-          role="row"
-          className="text-muted-foreground flex items-center text-left text-xs tracking-wide uppercase"
-        >
-          <div
-            role="columnheader"
-            className="border-border/60 flex shrink-0 items-center border-r px-3 py-2.5"
-            style={{ width: selectColumnPx }}
-          >
-            <Checkbox
-              checked={allSelected}
-              indeterminate={someSelected}
-              onCheckedChange={onToggleAll}
-              aria-label={tBulk("selectAll")}
-            />
-          </div>
-          {group.headers.map((header, idx) => {
-            const column = header.column;
-            const meta = column.columnDef.meta;
-            const canSort = column.getCanSort();
-            const sortDir = column.getIsSorted();
-            const isActiveSort = sortDir !== false;
-            const SortIcon = sortDir === "asc" ? ChevronUp : ChevronDown;
-            let ariaSort: "ascending" | "descending" | "none" | undefined;
-            if (canSort && !isActiveSort) ariaSort = "none";
-            else if (isActiveSort)
-              ariaSort = sortDir === "asc" ? "ascending" : "descending";
-            const isLastDataCol =
-              idx === group.headers.length - 1 && !hasActions;
-            const canResize = column.getCanResize();
-            return (
-              <div
-                key={header.id}
-                role="columnheader"
-                aria-sort={ariaSort}
-                className={cn(
-                  "group/col relative flex shrink-0 items-center justify-between gap-1 px-3 py-2.5 font-medium",
-                  !isLastDataCol && "border-border/60 border-r",
-                  meta?.grow && "grow",
-                  meta?.className,
-                )}
-                style={{ width: header.getSize() }}
-              >
-                {canSort ? (
-                  <button
-                    type="button"
-                    className="hover:text-foreground inline-flex min-w-0 cursor-pointer items-center gap-1 select-none"
-                    onClick={column.getToggleSortingHandler()}
-                  >
-                    <span className="truncate">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </span>
-                    <SortIcon
-                      className={cn(
-                        "text-foreground size-3.5 shrink-0 transition-opacity",
-                        isActiveSort ? "opacity-100" : "opacity-0",
-                      )}
-                      aria-hidden
-                    />
-                  </button>
-                ) : (
-                  <span className="inline-flex min-w-0 items-center truncate">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </span>
-                )}
-                {meta?.filter && (
-                  <span className="ml-auto shrink-0">{meta.filter}</span>
-                )}
-                {canResize && (
-                  <div
-                    role="separator"
-                    aria-orientation="vertical"
-                    aria-label={`Resize ${column.id} column`}
-                    onMouseDown={header.getResizeHandler()}
-                    onTouchStart={header.getResizeHandler()}
-                    onDoubleClick={() => onResetColumnSize(column.id)}
-                    className="group/resize absolute top-0 right-0 flex h-full w-2 cursor-col-resize touch-none justify-end select-none"
-                  >
-                    <div
-                      className={cn(
-                        "h-full w-px",
-                        column.getIsResizing()
-                          ? "bg-brand"
-                          : "group-hover/resize:bg-brand/50 bg-transparent",
-                      )}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {hasActions && (
-            <div
-              role="columnheader"
-              aria-hidden
-              className="shrink-0"
-              style={{ width: actionsColumnPx }}
-            />
-          )}
-        </div>
+          group={group}
+          hasActions={hasActions}
+          selectColumnPx={selectColumnPx}
+          actionsColumnPx={actionsColumnPx}
+          allSelected={allSelected}
+          someSelected={someSelected}
+          onToggleAll={onToggleAll}
+          onResetColumnSize={onResetColumnSize}
+          selectAllLabel={tBulk("selectAll")}
+        />
       ))}
     </div>
   );
