@@ -41,10 +41,13 @@ test("add a Radarr instance and verify card appears", async ({ page }) => {
 test("delete the E2E instance removes it from the list", async ({ page }) => {
   const card = page
     .locator('[data-slot="card"]')
-    .filter({ hasText: "E2E Test Radarr" });
+    .filter({ hasText: "E2E Test Radarr" })
+    .first();
   await expect(card).toBeVisible({ timeout: 5_000 });
 
-  await card.getByRole("button", { name: "Delete" }).click();
+  await card.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+  await page.getByRole("button", { name: "Confirm" }).click();
 
   await expect(card).not.toBeVisible({ timeout: 10_000 });
 });
