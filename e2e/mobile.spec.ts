@@ -86,7 +86,7 @@ test("mobile bottom tab bar exposes primary nav and the More button opens the se
   await expect(page.getByRole("link", { name: /logs/i })).toBeVisible();
 });
 
-test("movies page renders cards and the MobileFilterBar exposes the Only-missing + Filters controls", async ({
+test("movies page renders cards and the MobileFilterBar exposes the Filters trigger", async ({
   page,
 }) => {
   await page.goto("/movies");
@@ -97,34 +97,13 @@ test("movies page renders cards and the MobileFilterBar exposes the Only-missing
   await expect(cardList).toBeVisible({ timeout: 10_000 });
   await expect(cardList.getByText("The Missing Format")).toBeVisible();
 
-  // MobileFilterBar is fixed at the bottom and owns the always-visible
-  // Only-missing toggle plus the Filters sheet trigger.
+  // MobileFilterBar is fixed at the bottom. The Only-missing pill was
+  // removed (severity:"missing" is the canonical "no file" filter and
+  // lives in the FilterSheet's Severity section now); the bar's only
+  // trigger is the Filters sheet button.
   const filterBar = page.getByRole("toolbar", { name: /filter toolbar/i });
   await expect(filterBar).toBeVisible();
   await expect(
-    filterBar.getByRole("button", { name: /only missing/i }),
-  ).toBeVisible();
-  await expect(
     filterBar.getByRole("button", { name: /^filters/i }),
   ).toBeVisible();
-});
-
-test("MobileFilterBar's Only-missing toggle commits the filter", async ({
-  page,
-}) => {
-  await page.goto("/movies");
-  await page
-    .getByTestId("media-card-list")
-    .getByText("The Missing Format")
-    .waitFor({ timeout: 10_000 });
-
-  const filterBar = page.getByRole("toolbar", { name: /filter toolbar/i });
-  const toggle = filterBar.getByRole("button", { name: /only missing/i });
-  await toggle.click();
-  // Activated state surfaces both as the toggle's aria-pressed and the
-  // search bar's "Clear all" link in the top-of-page filter strip.
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("button", { name: /clear all/i })).toBeVisible({
-    timeout: 5_000,
-  });
 });
