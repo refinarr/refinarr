@@ -100,7 +100,6 @@ export function parseMediaQuery(
     missingCfMatch: parseMatchMode(s.get("missingCfMatch")),
     hasNegativeCfIds: parseIdList(s.get("hasNegativeCfIds")),
     hasNegativeCfMatch: parseMatchMode(s.get("hasNegativeCfMatch")),
-    onlyMissing: s.get("onlyMissing") === "true",
     // Default true (preserves the legacy "flagged items only" contract).
     // Only an explicit `?flaggedOnly=false` opens the "Show all" view.
     flaggedOnly: s.get("flaggedOnly") !== "false",

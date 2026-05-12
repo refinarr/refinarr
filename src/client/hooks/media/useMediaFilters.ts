@@ -26,7 +26,6 @@ export interface MediaFilters {
   missingCfMatch: MatchMode;
   hasNegativeCfIds: number[];
   hasNegativeCfMatch: MatchMode;
-  onlyMissing: boolean;
   // Monitor-state filter. "all" (default) leaves the upstream untouched.
   // The other three values map 1:1 to the server's MonitorStatus filter
   // already enforced by parse-media-query + MediaService.
@@ -58,7 +57,6 @@ export const defaultMediaFilters: MediaFilters = {
   missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
-  onlyMissing: false,
   flaggedOnly: true,
   monitorStatus: "all",
 };

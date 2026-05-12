@@ -19,7 +19,6 @@ const baseFilters: MediaFilters = {
   missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
-  onlyMissing: false,
   flaggedOnly: true,
   monitorStatus: "all",
 };
@@ -32,19 +31,10 @@ describe("MediaSearchBar", () => {
     expect(screen.getByPlaceholderText(/search title/i)).toBeInTheDocument();
   });
 
-  it("does not render the Only missing pill (lives in QuickToggles / MobileFilterBar)", () => {
-    renderWithProviders(
-      <MediaSearchBar filters={baseFilters} onChange={vi.fn()} />,
-    );
-    expect(
-      screen.queryByRole("button", { name: /only missing/i }),
-    ).not.toBeInTheDocument();
-  });
-
   it("does not render a Clear all button (lives in ActiveFilterChips)", () => {
     renderWithProviders(
       <MediaSearchBar
-        filters={{ ...baseFilters, onlyMissing: true, q: "x" }}
+        filters={{ ...baseFilters, q: "x" }}
         onChange={vi.fn()}
       />,
     );

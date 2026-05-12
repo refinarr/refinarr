@@ -207,7 +207,6 @@ function applyVisibilityFilters<T extends MediaItem>(
     const status = query.monitorStatus;
     out = out.filter((m) => matchesMonitor(m, status));
   }
-  if (query.onlyMissing) out = out.filter((m) => !itemHasFile(m));
   return out;
 }
 
