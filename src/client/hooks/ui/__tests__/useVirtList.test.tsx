@@ -40,17 +40,23 @@ let virtualItems: VirtualRow[] = [];
 let totalSize = 1000;
 
 vi.mock("@tanstack/react-virtual", () => ({
+  // Cache the instance so re-renders return the SAME object — the real
+  // useVirtualizer returns a stable instance across renders, and tests
+  // that count `measure()` invocations across re-renders need the spy
+  // to accumulate rather than reset each render. beforeEach clears
+  // lastInstance so cross-test isolation still holds.
   useVirtualizer: (config: CapturedConfig) => {
     lastConfig = config;
-    const instance: VirtInstance = {
-      isScrolling: false,
-      measure: vi.fn(),
-      measureElement: vi.fn(),
-      getVirtualItems: () => virtualItems,
-      getTotalSize: () => totalSize,
-    };
-    lastInstance = instance;
-    return instance;
+    if (!lastInstance) {
+      lastInstance = {
+        isScrolling: false,
+        measure: vi.fn(),
+        measureElement: vi.fn(),
+        getVirtualItems: () => virtualItems,
+        getTotalSize: () => totalSize,
+      };
+    }
+    return lastInstance;
   },
 }));
 
@@ -503,8 +509,8 @@ describe("useVirtList — measure() on count growth", () => {
         onResult={() => {}}
       />,
     );
-    const before = lastInstance!.measure;
-    expect(before).toHaveBeenCalledTimes(1);
+    expect(lastInstance!.measure).toHaveBeenCalledTimes(1);
+    const callsBefore = lastInstance!.measure.mock.calls.length;
 
     rerender(
       <Probe
@@ -514,11 +520,13 @@ describe("useVirtList — measure() on count growth", () => {
         onResult={() => {}}
       />,
     );
-    // Same virtualizer instance is reused across renders (the mock
-    // returns a fresh object each call but the effect deps include
-    // `virtualizer`; both effective-count growth AND identity change
-    // trigger measure). Either way, total > 1 confirms the rebuild.
-    expect(lastInstance!.measure.mock.calls.length).toBeGreaterThanOrEqual(1);
+    // The cached virtualizer instance is shared across renders, so the
+    // measure spy accumulates. Asserting on the DELTA proves the
+    // count-growth path fired its own measure() — not just the
+    // mount-time one.
+    expect(lastInstance!.measure.mock.calls.length).toBeGreaterThan(
+      callsBefore,
+    );
   });
 
   test("calls measure() when rows growth lifts effective count", () => {
@@ -531,6 +539,7 @@ describe("useVirtList — measure() on count growth", () => {
         onResult={() => {}}
       />,
     );
+    const callsBefore = lastInstance!.measure.mock.calls.length;
     rerender(
       <Probe
         rows={makeRows(150)} // next page landed
@@ -540,7 +549,9 @@ describe("useVirtList — measure() on count growth", () => {
         onResult={() => {}}
       />,
     );
-    expect(lastInstance!.measure.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(lastInstance!.measure.mock.calls.length).toBeGreaterThan(
+      callsBefore,
+    );
     expect(lastConfig!.count).toBe(150);
   });
 });

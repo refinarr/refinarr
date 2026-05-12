@@ -83,21 +83,30 @@ describe("SearchQueueRepository", () => {
   });
 
   test("createUnique re-throws errors that are not unique-constraint violations", async () => {
-    // Foreign-key / not-null violations should bubble up — only P2002
-    // (partial unique index) is special-cased into the dedup return.
-    // Force a generic error by passing a non-string payload.
-    await expect(
-      searchQueueRepository.createUnique({
-        instanceId: 1,
-        action: "movie",
-        mediaId: 1,
-        title: "X",
-        // @ts-expect-error — intentionally invalid to provoke a non-P2002 error.
-        payload: 12345,
-        seasonNumber: 0,
-        fileId: 0,
-      }),
-    ).rejects.toThrow();
+    // Stub the underlying insert with a sentinel non-P2002 error so the
+    // assertion is decoupled from Prisma's payload validation. If
+    // payload normalization or schema changes later swallow what we
+    // used to trigger an error, this test still proves that
+    // createUnique's error path (anything but P2002) bubbles unchanged.
+    const sentinel = new Error("simulated FK violation");
+    const createSpy = vi
+      .spyOn(prisma.searchQueue, "create")
+      .mockRejectedValueOnce(sentinel);
+    try {
+      await expect(
+        searchQueueRepository.createUnique({
+          instanceId: 1,
+          action: "movie",
+          mediaId: 1,
+          title: "X",
+          payload: "{}",
+          seasonNumber: 0,
+          fileId: 0,
+        }),
+      ).rejects.toBe(sentinel);
+    } finally {
+      createSpy.mockRestore();
+    }
   });
 
   test("findNextPending returns the oldest pending row for the instance", async () => {
