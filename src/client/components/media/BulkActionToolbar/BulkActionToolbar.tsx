@@ -98,7 +98,7 @@ export function BulkActionToolbar({
             onClick={onCancel}
             aria-label={t("cancel")}
           >
-            <X className="size-4" />
+            <X />
           </Button>
         )}
       </div>

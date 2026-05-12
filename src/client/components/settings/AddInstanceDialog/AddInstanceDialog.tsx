@@ -150,14 +150,14 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
               disabled={!canTest || testing}
             >
               {testing ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
+                <Loader2 className="mr-2 animate-spin" />
               ) : (
-                <Plug className="mr-2 size-4" />
+                <Plug className="mr-2" />
               )}
               {t("testConnection")}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {submitting && <Loader2 className="mr-2 animate-spin" />}
               {tCommon("save")}
             </Button>
           </DialogFooter>
