@@ -37,10 +37,9 @@ const ANCHOR_ABOVE_FILTER =
 const ANCHOR_VIEWPORT_BOTTOM = "bottom-[env(safe-area-inset-bottom)]";
 const MOBILE_HIDDEN = "hidden md:flex";
 
-// Mobile: large square tap targets (44pt-ish). Desktop: compact h-7 w-7
-// icon-only ghost buttons matching the rest of the unified header.
-const buttonSize = "h-10 w-10 md:h-7 md:w-7 md:p-0";
-const iconSize = "h-5 w-5 md:h-4 md:w-4";
+// Button dimensions live on the primitive's `size="icon-touch"`
+// variant (40px on mobile, 28px on md+). Per project rule, never
+// override control heights via className.
 
 export function BulkActionToolbar({
   selectedCount,
@@ -122,48 +121,45 @@ export function BulkActionToolbar({
       </span>
       <div className="ml-auto flex items-center gap-1 md:ml-0">
         <Button
-          size="sm"
+          size="icon-touch"
           variant="ghost"
           onClick={onSearch}
           disabled={actionsDisabled}
           title={t("search")}
           aria-label={t("search")}
-          className={buttonSize}
         >
-          <Search className={iconSize} />
+          <Search />
         </Button>
         <Button
-          size="sm"
+          size="icon-touch"
           variant="ghost"
           onClick={onIgnore}
           disabled={actionsDisabled}
           title={t("ignore")}
           aria-label={t("ignore")}
-          className={buttonSize}
         >
-          <EyeOff className={iconSize} />
+          <EyeOff />
         </Button>
         <Button
-          size="sm"
+          size="icon-touch"
           variant="ghost"
           onClick={() => onDelete(false)}
           disabled={actionsDisabled}
           title={t("delete")}
           aria-label={t("delete")}
-          className={cn(buttonSize, "text-destructive hover:text-destructive")}
+          className="text-destructive hover:text-destructive"
         >
-          <Trash2 className={iconSize} />
+          <Trash2 />
         </Button>
         <Button
-          size="sm"
+          size="icon-touch"
           variant="destructive"
           onClick={() => onDelete(true)}
           disabled={actionsDisabled}
           title={t("deleteAndSearch")}
           aria-label={t("deleteAndSearch")}
-          className={buttonSize}
         >
-          <Trash2 className={iconSize} />
+          <Trash2 />
         </Button>
       </div>
     </div>
