@@ -255,8 +255,10 @@ describe("POST /api/instances/[id]/auto-search/trigger — real dispatch", () =>
   });
 
   test("scope=missing + monitoredOnly=false: movies without files (monitored or not) are candidates", async () => {
-    // With monitoredOnly=false, onlyMissing only checks existingFileCount < totalFileCount,
-    // not the monitored flag — unmonitored items with no file are still "missing".
+    // With monitoredOnly=false, the missing scope translates to
+    // severities:["missing"] which only checks existingFileCount === 0,
+    // not the monitored flag — unmonitored items with no file are still
+    // "missing".
     const movies = [
       movie(1, { hasFile: false, monitored: true }), // missing
       movie(2, { hasFile: true, monitored: true }), // not missing

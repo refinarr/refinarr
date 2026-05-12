@@ -11,9 +11,12 @@ export interface FilterChip {
 
 interface Props {
   chips: FilterChip[];
+  // Optional reset action shown after the chip list. Hidden when no
+  // chips are active so the strip stays tidy when nothing is set.
+  onClearAll?: () => void;
 }
 
-export function ActiveFilterChips({ chips }: Props) {
+export function ActiveFilterChips({ chips, onClearAll }: Props) {
   const t = useTranslations("filters");
   if (chips.length === 0) return null;
   return (
@@ -36,6 +39,15 @@ export function ActiveFilterChips({ chips }: Props) {
           </button>
         </Badge>
       ))}
+      {onClearAll && (
+        <button
+          type="button"
+          onClick={onClearAll}
+          className="text-muted-foreground hover:text-foreground ml-1 text-xs"
+        >
+          {t("clearAll")}
+        </button>
+      )}
     </div>
   );
 }

@@ -1,11 +1,28 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { MediaDataQueryHook } from "@/client/hooks/media/useMediaData";
 import type { MovieItem } from "@/shared/types/models";
 import { renderWithProviders } from "@/test/render";
 import { MOVIE_BULK_CONFIG } from "../../media-bulk-configs";
+
+// Tests interact with the Card render path inside MediaTable, which
+// gates desktop vs mobile via matchMedia. Force mobile so the Card prop
+// (renderCard) is invoked — the assertions here are about ctx wiring,
+// not which layout path renders.
+beforeEach(() => {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+});
 
 // Mock heavy data/state hooks used inside the shell so the component is
 // rendered in isolation without spinning up a TanStack QueryClient or DB.
@@ -122,7 +139,11 @@ describe("MediaListShell", () => {
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
       >
-        <MediaListShell.Body<MovieItem> columns={() => []} Card={() => null} />
+        <MediaListShell.Body<MovieItem>
+          tableId="test"
+          columns={() => []}
+          Card={() => null}
+        />
         <MediaListShell.Drawer<MovieItem> as={() => null} />
       </MediaListShell>,
     );
@@ -141,7 +162,11 @@ describe("MediaListShell", () => {
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
       >
-        <MediaListShell.Body<MovieItem> columns={columns} Card={Card} />
+        <MediaListShell.Body<MovieItem>
+          tableId="test"
+          columns={columns}
+          Card={Card}
+        />
       </MediaListShell>,
     );
 

@@ -49,6 +49,7 @@
     "refresh": "Refresh",
     "clear": "Clear",
     "loading": "Loading…",
+    "loadingMore": "Loading more…",
     "all": "All",
     "edit": "Edit",
     "test": "Test",
@@ -84,6 +85,7 @@
     "flaggedTile": "Flagged",
     "selectedTile": "Selected",
     "flaggedSummary": "{total} flagged{selected, select, 0 {} other { · {selected} selected}}",
+    "flaggedSummaryShort": "{total, plural, =0 {Nothing flagged} one {# Flagged} other {# Flagged}}",
     "scoringModeBanner": "{mode} mode"
   },
   "instanceHealth": {
@@ -126,7 +128,11 @@
     }
   },
   "a11y": {
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "table": {
+      "resizeColumn": "Resize {column} column",
+      "issueOverflow": "{count, plural, one {Show 1 more issue tag} other {Show # more issue tags}}"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -171,6 +177,7 @@
     "refreshTitle": "Refresh from Radarr",
     "columns": {
       "title": "Title",
+      "monitored": "Monitored",
       "profile": "Profile",
       "score": "Score",
       "size": "Size",
@@ -178,6 +185,8 @@
       "missing": "Missing",
       "penalties": "Penalties"
     },
+    "monitoredYes": "Monitored",
+    "monitoredNo": "Unmonitored",
     "noFile": "No file",
     "drawer": {
       "score": "Score",
@@ -193,8 +202,11 @@
     "title": "Shows",
     "flaggedSummary": "{total} flagged{selected, select, 0 {} other { · {selected} selected}}",
     "refreshTitle": "Refresh from Sonarr",
+    "monitoredYes": "Monitored",
+    "monitoredNo": "Unmonitored",
     "columns": {
       "title": "Title",
+      "monitored": "Monitored",
       "profile": "Profile",
       "score": "Score",
       "size": "Size",
@@ -241,9 +253,17 @@
     "title": "Filters",
     "openFilters": "Filters",
     "applyFilters": "Apply",
-    "onlyMissing": "Only missing",
     "showAll": "Show all",
     "clearAll": "Clear all",
+    "density": {
+      "groupLabel": "Row density",
+      "buttonLabel": "View mode",
+      "next": "Switch to {mode}",
+      "cozy": "Cozy",
+      "compact": "Compact",
+      "card": "Cards",
+      "poster": "Posters"
+    },
     "toolbarAriaLabel": "Filter toolbar",
     "activeCountAriaLabel": "{count, plural, one {# active filter} other {# active filters}}",
     "sheetDescription": "Toggle filters that apply to the visible items.",
@@ -260,7 +280,9 @@
     "noProfilesAvailable": "No quality profiles available.",
     "scoreHeading": "Score",
     "scoreColumnDescription": "Pick a score range.",
-    "scoreRangeLabel": "Score: {min} – {max}",
+    "scoreRangeBoth": "Score: {min} to {max}",
+    "scoreRangeMin": "Score: {min} or above",
+    "scoreRangeMax": "Score: {max} or below",
     "scoreBuckets": {
       "manualLt30": "< 30%",
       "manual30to60": "30 – 60%",
@@ -272,7 +294,9 @@
     },
     "sizeHeading": "File size",
     "sizeColumnDescription": "Pick a size bucket.",
-    "sizeRangeLabel": "Size: {min} – {max}",
+    "sizeRangeBoth": "Size: {min} to {max}",
+    "sizeRangeMin": "Size: {min} or larger",
+    "sizeRangeMax": "Size: up to {max}",
     "sizeBuckets": {
       "lt1": "< 1 GB",
       "to1to5": "1 – 5 GB",
@@ -280,10 +304,21 @@
       "to10to25": "10 – 25 GB",
       "to25to50": "25 – 50 GB",
       "gt50": "> 50 GB"
-    }
+    },
+    "monitorStatus": {
+      "label": "Monitor status",
+      "description": "Show only items with the chosen monitor state.",
+      "all": "All",
+      "monitored": "Monitored",
+      "unmonitored": "Unmonitored",
+      "missing": "Missing files"
+    },
+    "monitorStatusLabel": "Monitored: {value}"
   },
   "bulk": {
     "selected": "{count} selected",
+    "selectAll": "Select all visible items",
+    "selectRow": "Select row",
     "search": "Search",
     "ignore": "Ignore",
     "delete": "Delete",
@@ -503,6 +538,7 @@
       "nextRun": "Next",
       "nextRunIn": "in {eta}",
       "runningNow": "Running now…",
+      "cronUnscheduled": "Cron expression invalid — auto-search won't run until you fix it",
       "runNow": "Run now",
       "pickStrategyLabel": "Pick strategy",
       "pickStrategyBalanced": "Balanced",

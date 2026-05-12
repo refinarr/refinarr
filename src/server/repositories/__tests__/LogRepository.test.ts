@@ -44,6 +44,19 @@ describe("LogRepository", () => {
     expect(failedInst1.items[0].error).toBe("Boom");
   });
 
+  test("findPaginated applies the action filter independently", async () => {
+    await logRepository.create({ ...baseLog, action: "search" });
+    await logRepository.create({ ...baseLog, action: "delete" });
+    await logRepository.create({ ...baseLog, action: "ignore" });
+    const deletes = await logRepository.findPaginated(
+      { action: "delete" },
+      1,
+      50,
+    );
+    expect(deletes.total).toBe(1);
+    expect(deletes.items[0].action).toBe("delete");
+  });
+
   test("findPaginated paginates correctly", async () => {
     for (let i = 0; i < 5; i += 1) {
       await logRepository.create({ ...baseLog, mediaId: i });

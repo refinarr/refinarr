@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { SlidersHorizontal, Check } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
+import { usePrefersReducedMotion } from "@/client/hooks/ui/useMediaQuery";
+import { useScrollDirection } from "@/client/hooks/ui/useScrollDirection";
 import { cn } from "@/client/lib/utils";
 import type { QualityProfile, ScoringMode } from "@/shared/types/models";
 import { FilterSheet } from "./FilterSheet";
@@ -13,17 +15,12 @@ interface Props {
   profiles: QualityProfile[] | undefined;
   cfOptions: { missing: CfOption[]; penalty: CfOption[] };
   filters: MediaFilters;
-  // Whether the active instance defaults to all media. Surfaces the
-  // "Show all" pill alongside "Only missing".
-  showAllEnabled?: boolean;
   onChange: (patch: Partial<MediaFilters>) => void;
 }
 
-// Counts the sheet-managed filter axes only — onlyMissing has its own
-// always-visible toggle in this bar, so including it would inflate the
-// Filters badge while the sheet itself can't see/clear it. Multi-select
-// axes count once (not per chip) so "Filters · N" reads as the number
-// of axes that mutate the table, not the number of selected chips.
+// Count of filter axes currently mutating the table. Mirrors the chips
+// strip's notion of "active filters" — multi-select axes count once
+// (not per chip) so "Filters · N" reads as axes, not individual chips.
 function countActiveFilters(f: MediaFilters): number {
   let n = 0;
   if (f.profileIds.length > 0) n += 1;
@@ -32,69 +29,48 @@ function countActiveFilters(f: MediaFilters): number {
   if (f.minSize !== null || f.maxSize !== null) n += 1;
   if (f.missingCfIds.length > 0) n += 1;
   if (f.hasNegativeCfIds.length > 0) n += 1;
+  if (f.monitorStatus !== "all") n += 1;
   return n;
 }
 
 // Mobile-only fixed-bottom toolbar. Sits above the AppShell's
-// MobileTabBar (--spacing-bottom-bar) and below any visible
-// BulkActionToolbar — both other layers honour
-// --spacing-mobile-filter-bar in their bottom offsets so nothing
-// overlaps. Exposes one big "Filters" button (with active-axis badge)
-// plus the always-on "Only missing" toggle so the most common filter
-// action stays one tap away.
+// MobileTabBar (--spacing-bottom-bar). One trigger — "Filters" — opens
+// the FilterSheet; the previous "Only missing" pill duplicated the
+// severity-funnel "No file" bucket, so it lives in the sheet now.
 export function MobileFilterBar({
   scoringMode,
   profiles,
   cfOptions,
   filters,
-  showAllEnabled = false,
   onChange,
 }: Props) {
   const t = useTranslations("filters");
   const [sheetOpen, setSheetOpen] = useState(false);
   const activeCount = countActiveFilters(filters);
-  const onlyMissingActive = filters.onlyMissing;
-  const showAllActive = !filters.flaggedOnly;
+
+  // Auto-hide on scroll-down to free screen real estate; re-show on
+  // scroll-up. Sheet-open state suppresses the hide so the trigger
+  // can't slip away mid-tap. Mirrors MobileTabBar's behaviour so both
+  // bars move in lockstep.
+  const direction = useScrollDirection();
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const hidden = direction === "down" && !sheetOpen;
 
   return (
     <>
       <div
         role="toolbar"
         aria-label={t("toolbarAriaLabel")}
-        className="bg-card/90 border-border/60 h-mobile-filter-bar fixed inset-x-0 bottom-[calc(var(--spacing-bottom-bar)+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 border-t px-3 backdrop-blur-md md:hidden"
-      >
-        <button
-          type="button"
-          aria-pressed={onlyMissingActive}
-          onClick={() => onChange({ onlyMissing: !filters.onlyMissing })}
-          className={cn(
-            "h-control-sm inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
-            onlyMissingActive
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-input text-muted-foreground hover:bg-accent hover:text-foreground",
-          )}
-        >
-          {onlyMissingActive && <Check className="size-3" />}
-          {t("onlyMissing")}
-        </button>
-
-        {showAllEnabled && (
-          <button
-            type="button"
-            aria-pressed={showAllActive}
-            onClick={() => onChange({ flaggedOnly: !filters.flaggedOnly })}
-            className={cn(
-              "h-control-sm inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
-              showAllActive
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-input text-muted-foreground hover:bg-accent hover:text-foreground",
-            )}
-          >
-            {showAllActive && <Check className="size-3" />}
-            {t("showAll")}
-          </button>
+        className={cn(
+          "bg-card/90 border-border/60 h-mobile-filter-bar fixed inset-x-0 bottom-[calc(var(--spacing-bottom-bar)+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 border-t px-3 backdrop-blur-md md:hidden",
+          // translate-y-full slides the bar past its own height + the
+          // tab bar beneath it. prefers-reduced-motion replaces the
+          // slide with an instant toggle so motion-sensitive users
+          // still get the layout affordance without the animation.
+          prefersReducedMotion ? "" : "transition-transform duration-200",
+          hidden && "translate-y-[calc(100%+var(--spacing-bottom-bar))]",
         )}
-
+      >
         <button
           type="button"
           onClick={() => setSheetOpen(true)}

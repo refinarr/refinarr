@@ -96,22 +96,6 @@ describe("useFilterChips", () => {
     expect(chip).toBeTruthy();
   });
 
-  it("emits an onlyMissing chip when toggled on", () => {
-    const { result } = renderHook(
-      () => {
-        const filters = useMediaFilters("manual", 1);
-        return { filters, ...useFilterChips({ filters, prefs, profiles }) };
-      },
-      { wrapper },
-    );
-    act(() =>
-      result.current.filters.setFilters((f) => ({ ...f, onlyMissing: true })),
-    );
-    expect(result.current.chips.some((c) => c.key === "onlyMissing")).toBe(
-      true,
-    );
-  });
-
   it("clearActiveFilters resets value-bearing filters but keeps sort + match modes", () => {
     let captured!: MediaFiltersResult["filters"];
     const { result } = renderHook(
@@ -134,7 +118,6 @@ describe("useFilterChips", () => {
         maxScore: 0.5,
         minSize: 0,
         maxSize: 1_000_000_000,
-        onlyMissing: true,
         sortBy: "title",
         order: "desc",
         missingCfMatch: "any",
@@ -151,7 +134,6 @@ describe("useFilterChips", () => {
     expect(captured.maxScore).toBeNull();
     expect(captured.minSize).toBeNull();
     expect(captured.maxSize).toBeNull();
-    expect(captured.onlyMissing).toBe(false);
     // Preferences preserved
     expect(captured.sortBy).toBe("title");
     expect(captured.order).toBe("desc");

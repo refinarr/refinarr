@@ -1,12 +1,23 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen } from "@/test/render";
+
+// Stub the scroll-direction hook so anchor-swap behavior is testable
+// without needing to drive a real scroll event in jsdom/happy-dom.
+let mockDirection: "up" | "down" | null = null;
+vi.mock("@/client/hooks/ui/useScrollDirection", () => ({
+  useScrollDirection: () => mockDirection,
+}));
+
 import { BulkActionToolbar } from "../BulkActionToolbar";
 
 describe("BulkActionToolbar", () => {
-  it("renders nothing when nothing is selected", () => {
-    const { container } = renderWithProviders(
+  beforeEach(() => {
+    mockDirection = null;
+  });
+  it("renders the toolbar with disabled buttons when nothing is selected", () => {
+    renderWithProviders(
       <BulkActionToolbar
         selectedCount={0}
         onSearch={vi.fn()}
@@ -14,7 +25,16 @@ describe("BulkActionToolbar", () => {
         onIgnore={vi.fn()}
       />,
     );
-    expect(container.firstChild).toBeNull();
+    // Previously this returned null on empty selection. The new
+    // contract: the toolbar is always rendered so its row doesn't
+    // appear/disappear in the layout; the four action buttons are
+    // disabled until a row is selected.
+    expect(screen.getByRole("button", { name: /^search$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^ignore$/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^delete$/i })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /delete and search/i }),
+    ).toBeDisabled();
   });
 
   it("renders all four actions when count > 0", () => {
@@ -40,7 +60,7 @@ describe("BulkActionToolbar", () => {
     ).toBeInTheDocument();
   });
 
-  it("uses fixed-bottom positioning on mobile and sticks to the top on md+", () => {
+  it("anchors above the filter bar on mobile (top of the 3-stack) by default", () => {
     renderWithProviders(
       <BulkActionToolbar
         selectedCount={1}
@@ -51,14 +71,54 @@ describe("BulkActionToolbar", () => {
     );
     const toolbar = screen.getByText(/1 selected/i).parentElement!;
     expect(toolbar.className).toContain("fixed");
-    // Lifted above the AppShell's mobile bottom tab bar AND the
-    // MediaListShell's MobileFilterBar so the toolbar isn't hidden
-    // behind either.
+    // Default mobile anchor — above the tab bar + filter bar +
+    // safe-area. The three bars stack from viewport bottom upwards:
+    // tab → filter → bulk.
     expect(toolbar.className).toContain(
       "bottom-[calc(var(--spacing-bottom-bar)+var(--spacing-mobile-filter-bar)+env(safe-area-inset-bottom))]",
     );
-    expect(toolbar.className).toContain("md:sticky");
-    expect(toolbar.className).toContain("md:top-0");
+    expect(toolbar.className).toContain("z-30");
+    // Desktop drops sticky in favour of inline flow (qui pattern) — two
+    // sticky elements (this bar + MediaTableHeader) caused layout
+    // jumping when this one mounted/unmounted. md:static reverts to
+    // normal flow so the bar slots into the page chrome.
+    expect(toolbar.className).toContain("md:static");
+    expect(toolbar.className).not.toContain("md:sticky");
+  });
+
+  it("drops to the viewport bottom anchor when the user scrolls down with a selection", () => {
+    mockDirection = "down";
+    renderWithProviders(
+      <BulkActionToolbar
+        selectedCount={1}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+      />,
+    );
+    const toolbar = screen.getByText(/1 selected/i).parentElement!;
+    // Anchor swap: tab + filter just slid off-screen, bulk slides down
+    // into the slot they vacated. Bottom is now just env(safe-area).
+    expect(toolbar.className).toContain("bottom-[env(safe-area-inset-bottom)]");
+    expect(toolbar.className).not.toContain(
+      "bottom-[calc(var(--spacing-bottom-bar)+var(--spacing-mobile-filter-bar)+env(safe-area-inset-bottom))]",
+    );
+  });
+
+  it("returns to the above-filter anchor when scroll direction flips back to up", () => {
+    mockDirection = "up";
+    renderWithProviders(
+      <BulkActionToolbar
+        selectedCount={1}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+      />,
+    );
+    const toolbar = screen.getByText(/1 selected/i).parentElement!;
+    expect(toolbar.className).toContain(
+      "bottom-[calc(var(--spacing-bottom-bar)+var(--spacing-mobile-filter-bar)+env(safe-area-inset-bottom))]",
+    );
   });
 
   it("renders an aria-live progress UI in place of action buttons when progress is provided", () => {

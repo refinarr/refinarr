@@ -27,9 +27,9 @@ describe("SearchDispatcher", () => {
     await setDryRun(false);
   });
 
-  // ── Live (queue) branch — never hits upstream, just enqueues ────────────────
+  // ── Live mode — enqueues with isDryRun=false ──────────────────────────
 
-  test("live mode: movie action enqueues a pending row", async () => {
+  test("live mode: movie action enqueues a pending row with isDryRun=false", async () => {
     const inst = await instanceService.create(baseRadarr);
     const result = await searchDispatcher.dispatch({
       action: "movie",
@@ -39,7 +39,7 @@ describe("SearchDispatcher", () => {
     });
 
     expect(result.kind).toBe("queued");
-    if (result.kind !== "queued") return;
+    expect(result.isDryRun).toBe(false);
     const row = await searchQueueRepository.findById(result.queueId);
     expect(row?.action).toBe("movie");
     expect(row?.mediaId).toBe(42);
@@ -56,7 +56,7 @@ describe("SearchDispatcher", () => {
     });
 
     expect(result.kind).toBe("queued");
-    if (result.kind !== "queued") return;
+    expect(result.isDryRun).toBe(false);
     const row = await searchQueueRepository.findById(result.queueId);
     expect(row?.action).toBe("series");
   });
@@ -72,7 +72,6 @@ describe("SearchDispatcher", () => {
     });
 
     expect(result.kind).toBe("queued");
-    if (result.kind !== "queued") return;
     const row = await searchQueueRepository.findById(result.queueId);
     expect(row?.action).toBe("season");
     expect(JSON.parse(row!.payload)).toEqual({ seasonNumber: 3 });
@@ -89,7 +88,6 @@ describe("SearchDispatcher", () => {
     });
 
     expect(result.kind).toBe("queued");
-    if (result.kind !== "queued") return;
     const row = await searchQueueRepository.findById(result.queueId);
     expect(row?.action).toBe("episode");
     expect(JSON.parse(row!.payload)).toEqual({ fileId: 99 });
@@ -106,15 +104,16 @@ describe("SearchDispatcher", () => {
       groupId,
     });
 
-    expect(result.kind).toBe("queued");
-    if (result.kind !== "queued") return;
     const row = await searchQueueRepository.findById(result.queueId);
     expect(row?.groupId).toBe(groupId);
   });
 
-  // ── Dry-run branch — short-circuits to a logged ActionLog row ───────────────
+  // ── Dry-run mode — also enqueues, with isDryRun=true ──────────────────
+  // The worker writes the dry_run ActionLog row when it drains. This keeps
+  // manual searches consistent with the auto-runner (which always queues)
+  // so users see a single, unified pipeline regardless of mode.
 
-  test("dry-run mode: movie action returns ActionLog with status=dry_run", async () => {
+  test("dry-run mode: movie action still enqueues a pending row + flags isDryRun=true", async () => {
     await setDryRun(true);
     const inst = await instanceService.create(baseRadarr);
     const result = await searchDispatcher.dispatch({
@@ -124,15 +123,15 @@ describe("SearchDispatcher", () => {
       title: "Movie Title",
     });
 
-    expect(result.kind).toBe("dryRun");
-    if (result.kind !== "dryRun") return;
-    expect(result.actionLog.status).toBe("dry_run");
-    expect(result.actionLog.action).toBe("search");
-    expect(result.actionLog.mediaId).toBe(42);
-    expect(result.actionLog.isDryRun).toBe(true);
+    expect(result.kind).toBe("queued");
+    expect(result.isDryRun).toBe(true);
+    const row = await searchQueueRepository.findById(result.queueId);
+    expect(row?.status).toBe("pending");
+    expect(row?.action).toBe("movie");
+    expect(row?.mediaId).toBe(42);
   });
 
-  test("dry-run mode: series action returns ActionLog with status=dry_run", async () => {
+  test("dry-run mode: series action enqueues and flags isDryRun=true", async () => {
     await setDryRun(true);
     const inst = await instanceService.create(baseSonarr);
     const result = await searchDispatcher.dispatch({
@@ -142,15 +141,13 @@ describe("SearchDispatcher", () => {
       title: "Series Title",
     });
 
-    expect(result.kind).toBe("dryRun");
-    if (result.kind !== "dryRun") return;
-    expect(result.actionLog.status).toBe("dry_run");
-    expect(result.actionLog.action).toBe("search");
-    expect(result.actionLog.mediaId).toBe(7);
-    expect(result.actionLog.isDryRun).toBe(true);
+    expect(result.kind).toBe("queued");
+    expect(result.isDryRun).toBe(true);
+    const row = await searchQueueRepository.findById(result.queueId);
+    expect(row?.action).toBe("series");
   });
 
-  test("dry-run mode: season action records search_season action", async () => {
+  test("dry-run mode: season action persists seasonNumber in payload", async () => {
     await setDryRun(true);
     const inst = await instanceService.create(baseSonarr);
     const result = await searchDispatcher.dispatch({
@@ -161,13 +158,14 @@ describe("SearchDispatcher", () => {
       title: "Series Title",
     });
 
-    expect(result.kind).toBe("dryRun");
-    if (result.kind !== "dryRun") return;
-    expect(result.actionLog.action).toBe("search_season");
-    expect(result.actionLog.status).toBe("dry_run");
+    expect(result.kind).toBe("queued");
+    expect(result.isDryRun).toBe(true);
+    const row = await searchQueueRepository.findById(result.queueId);
+    expect(row?.action).toBe("season");
+    expect(JSON.parse(row!.payload)).toEqual({ seasonNumber: 3 });
   });
 
-  test("dry-run mode: episode action records search_episode action", async () => {
+  test("dry-run mode: episode action persists fileId in payload", async () => {
     await setDryRun(true);
     const inst = await instanceService.create(baseSonarr);
     const result = await searchDispatcher.dispatch({
@@ -178,9 +176,10 @@ describe("SearchDispatcher", () => {
       title: "Series Title",
     });
 
-    expect(result.kind).toBe("dryRun");
-    if (result.kind !== "dryRun") return;
-    expect(result.actionLog.action).toBe("search_episode");
-    expect(result.actionLog.status).toBe("dry_run");
+    expect(result.kind).toBe("queued");
+    expect(result.isDryRun).toBe(true);
+    const row = await searchQueueRepository.findById(result.queueId);
+    expect(row?.action).toBe("episode");
+    expect(JSON.parse(row!.payload)).toEqual({ fileId: 99 });
   });
 });

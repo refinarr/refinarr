@@ -1,131 +1,34 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Search, Check } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/client/components/ui/input";
-import { cn } from "@/client/lib/utils";
 import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 
 interface Props {
   filters: MediaFilters;
   onChange: (next: Partial<MediaFilters>) => void;
-  // True when the active instance defaults to showing all media. Also
-  // surfaces the "Show all" pill; when false, the server enforces
-  // flaggedOnly=true regardless of client state.
-  showAllEnabled?: boolean;
 }
 
-// Visual-only pill style for the always-visible quick toggle. Form-control
-// sizing comes from h-control-sm so the pill lines up with primitives
-// elsewhere in the app.
-const PILL =
-  "inline-flex h-control-sm items-center gap-1.5 rounded-full border border-input bg-transparent px-3 text-xs font-medium whitespace-nowrap transition-colors hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none dark:bg-input/30 dark:hover:bg-input/50";
-const PILL_ACTIVE =
-  "border-primary bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/90";
-
-// Filter strip above the table. Title-search input + the "only missing"
-// toggle. Per-column filters (profile, score, size, severity, CFs) live
-// in the table column headers via ColumnFilter funnels — see
-// movieColumns / seriesColumns for the wiring.
-export function MediaSearchBar({
-  filters,
-  onChange,
-  showAllEnabled = false,
-}: Props) {
+// Title-search input. The "Only missing" toggle has its own home —
+// MobileFilterBar on small screens, MediaListShell's quick-toggles row
+// on md+ — so it isn't duplicated here. Per-column filters (profile,
+// score, size, severity, CFs) live in the table column headers via
+// ColumnFilter funnels — see movieColumns / seriesColumns for the
+// wiring. `flaggedOnly` is driven exclusively by `instance.showAllMedia`
+// (DB setting → useMediaFilters); to switch a library between
+// flagged-only and all-media, use the "Show all media" toggle in
+// InstanceCard.
+export function MediaSearchBar({ filters, onChange }: Props) {
   const t = useTranslations("filters");
-  const onlyMissingActive = filters.onlyMissing;
-  const defaultFlaggedOnly = !showAllEnabled;
-  // "Show all" is conceptually !flaggedOnly. The pill is on when the
-  // user has flipped flaggedOnly off.
-  const showAllActive = !filters.flaggedOnly;
-  const flaggedModeChanged = filters.flaggedOnly !== defaultFlaggedOnly;
-  const anyActive =
-    filters.profileIds.length > 0 ||
-    filters.severities.length > 0 ||
-    filters.missingCfIds.length > 0 ||
-    filters.hasNegativeCfIds.length > 0 ||
-    filters.minScore !== null ||
-    filters.maxScore !== null ||
-    filters.minSize !== null ||
-    filters.maxSize !== null ||
-    onlyMissingActive ||
-    flaggedModeChanged ||
-    filters.q !== "";
-
-  const clearAll = () =>
-    onChange({
-      q: "",
-      profileIds: [],
-      severities: [],
-      minScore: null,
-      maxScore: null,
-      minSize: null,
-      maxSize: null,
-      missingCfIds: [],
-      missingCfMatch: "all",
-      hasNegativeCfIds: [],
-      hasNegativeCfMatch: "all",
-      onlyMissing: false,
-      flaggedOnly: defaultFlaggedOnly,
-    });
-
   return (
-    <div className="space-y-3">
-      <div className="relative">
-        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-        <Input
-          value={filters.q}
-          onChange={(e) => onChange({ q: e.target.value })}
-          placeholder={t("searchPlaceholder")}
-          className="pl-9"
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {/*
-          The Only-missing pill is desktop-only. On mobile the same
-          toggle lives in MobileFilterBar so the search bar stays
-          tight and one-handed reachability is preserved.
-        */}
-        <button
-          type="button"
-          aria-pressed={onlyMissingActive}
-          onClick={() => onChange({ onlyMissing: !filters.onlyMissing })}
-          className={cn(
-            "hidden md:inline-flex",
-            PILL,
-            onlyMissingActive && PILL_ACTIVE,
-          )}
-        >
-          {onlyMissingActive && <Check className="size-3" />}
-          {t("onlyMissing")}
-        </button>
-
-        {showAllEnabled && (
-          <button
-            type="button"
-            aria-pressed={showAllActive}
-            onClick={() => onChange({ flaggedOnly: !filters.flaggedOnly })}
-            className={cn(
-              "hidden md:inline-flex",
-              PILL,
-              showAllActive && PILL_ACTIVE,
-            )}
-          >
-            {showAllActive && <Check className="size-3" />}
-            {t("showAll")}
-          </button>
-        )}
-
-        {anyActive && (
-          <button
-            type="button"
-            onClick={clearAll}
-            className="text-muted-foreground hover:text-foreground ml-1 text-xs"
-          >
-            {t("clearAll")}
-          </button>
-        )}
-      </div>
+    <div className="relative">
+      <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+      <Input
+        value={filters.q}
+        onChange={(e) => onChange({ q: e.target.value })}
+        placeholder={t("searchPlaceholder")}
+        className="pl-9"
+      />
     </div>
   );
 }

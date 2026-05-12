@@ -122,7 +122,6 @@ export interface MediaQuery {
   missingCfMatch?: "any" | "all";
   hasNegativeCfIds?: number[];
   hasNegativeCfMatch?: "any" | "all";
-  onlyMissing?: boolean;
   // Default `true` (preserves the original "flagged items only"
   // contract). Set `false` for the "Show all" library view.
   flaggedOnly?: boolean;

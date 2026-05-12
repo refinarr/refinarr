@@ -21,9 +21,14 @@ import {
 
 interface Props {
   instanceId: number;
+  // When true, render the Select alone (no leading "Scoring Mode" label).
+  // The top bar uses this to save horizontal space — the current mode
+  // is still visible in the SelectTrigger. Settings page leaves it false
+  // so the form field keeps its descriptive label.
+  hideLabel?: boolean;
 }
 
-export function ScoringModeSelector({ instanceId }: Props) {
+export function ScoringModeSelector({ instanceId, hideLabel }: Props) {
   const t = useTranslations("settings");
   const tToast = useTranslations("toast");
   const { data: instances } = useInstances();
@@ -42,21 +47,31 @@ export function ScoringModeSelector({ instanceId }: Props) {
     await updateScoringMode({ id: instanceId, data: { scoringMode: value } });
   };
 
+  const select = (
+    <Select value={mode} onValueChange={handleChange}>
+      <SelectTrigger
+        id="scoring-mode"
+        aria-label={hideLabel ? t("scoringMode") : undefined}
+        className="w-36"
+      >
+        <SelectValue>{t(`scoringModeOptions.${mode}`)}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {ALL_SCORING_MODES.map((m) => (
+          <SelectItem key={m} value={m}>
+            {t(`scoringModeOptions.${m}`)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  if (hideLabel) return select;
+
   return (
     <div className="flex items-center gap-3">
       <Label htmlFor="scoring-mode">{t("scoringMode")}</Label>
-      <Select value={mode} onValueChange={handleChange}>
-        <SelectTrigger id="scoring-mode" className="w-36">
-          <SelectValue>{t(`scoringModeOptions.${mode}`)}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {ALL_SCORING_MODES.map((m) => (
-            <SelectItem key={m} value={m}>
-              {t(`scoringModeOptions.${m}`)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {select}
     </div>
   );
 }

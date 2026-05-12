@@ -5,6 +5,7 @@ import { logRepository } from "@/server/repositories/LogRepository";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { mediaServiceFor } from "@/server/services/media-services";
+import { isValidCronExpression } from "@/shared/cron";
 import type {
   ArrType,
   AutoSearchScoringMode,
@@ -36,9 +37,8 @@ export function cronPrevFire(
   cronExpression: string,
   now = new Date(),
 ): Date | null {
+  if (!isValidCronExpression(cronExpression)) return null;
   try {
-    const fields = cronExpression.trim().split(/\s+/);
-    if (fields.length !== 5) return null;
     return CronExpressionParser.parse(cronExpression, { currentDate: now })
       .prev()
       .toDate();
@@ -70,9 +70,8 @@ export function computeNextRun({
     const base = lastRunAt ? lastRunAt.getTime() : 0;
     return new Date(base + intervalMinutes * 60 * 1000);
   }
+  if (!isValidCronExpression(cronExpression)) return null;
   try {
-    const fields = cronExpression.trim().split(/\s+/);
-    if (fields.length !== 5) return null;
     return CronExpressionParser.parse(cronExpression, { currentDate: now })
       .next()
       .toDate();
@@ -89,16 +88,7 @@ export function buildAutoSearchStatus(
   instance: Instance,
   running: boolean,
 ): AutoSearchStatus {
-  const cronValid = (() => {
-    const fields = instance.autoSearchCronExpression.trim().split(/\s+/);
-    if (fields.length !== 5) return false;
-    try {
-      CronExpressionParser.parse(instance.autoSearchCronExpression);
-      return true;
-    } catch {
-      return false;
-    }
-  })();
+  const cronValid = isValidCronExpression(instance.autoSearchCronExpression);
 
   const rawNextRunAt = instance.autoSearchEnabled
     ? computeNextRun({
@@ -409,7 +399,10 @@ class AutoRunner {
         inst.autoSearchScope === "flagged" ||
         inst.autoSearchScope === "upgrade",
       monitorStatus: inst.autoSearchMonitoredOnly ? "monitored" : "all",
-      onlyMissing: inst.autoSearchScope === "missing" ? true : undefined,
+      // scope === "missing" → keep only items with no existing file
+      // (`existingFileCount === 0`). Severity "missing" is the canonical
+      // server-side encoding of that predicate.
+      severities: inst.autoSearchScope === "missing" ? ["missing"] : undefined,
       scoringModeOverride,
     });
 
