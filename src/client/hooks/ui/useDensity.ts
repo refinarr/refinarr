@@ -39,10 +39,11 @@ function readStored(): Density | null {
     ) {
       return raw;
     }
-    return null;
+    // Storage reads can succeed (return null) even when writes throw —
+    // e.g. some private-mode browsers. Fall through to the in-memory
+    // cache so a toggle made earlier in the session isn't lost.
+    return memoryDensity;
   } catch {
-    // localStorage unavailable — use the in-memory cache so the user's
-    // density choice from this session still applies.
     return memoryDensity;
   }
 }
@@ -50,6 +51,10 @@ function readStored(): Density | null {
 function writeStored(value: Density): void {
   try {
     localStorage.setItem(STORAGE_KEY, value);
+    // Storage works — clear the in-memory fallback so a subsequent
+    // user-initiated `localStorage.clear()` (or testing teardown) can't
+    // resurrect a stale value via the fallback path.
+    memoryDensity = null;
   } catch {
     // Storage-restricted environment (private mode, sandboxed iframe).
     // Keep the value in memory so the UI updates within the session.

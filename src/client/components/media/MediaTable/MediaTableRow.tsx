@@ -1,6 +1,10 @@
 "use client";
 import { memo, type CSSProperties, type ReactNode } from "react";
-import { flexRender, type Row } from "@tanstack/react-table";
+import {
+  flexRender,
+  type ColumnSizingState,
+  type Row,
+} from "@tanstack/react-table";
 import { Checkbox } from "@/client/components/ui/checkbox";
 import { cn } from "@/client/lib/utils";
 
@@ -18,6 +22,16 @@ interface Props<T extends { id: number }> {
   style: CSSProperties | undefined;
   selectColumnPx: number;
   actionsColumnPx: number;
+  // Whole TanStack columnSizing object. Included in the memo so that
+  // resizing a column re-renders visible rows with the new cell widths;
+  // without it the bag of props the memo compares stays equal and the
+  // row keeps its stale widths. Also bumps when the columns array
+  // identity changes (e.g. ctx-driven rebuild of column defs after
+  // profiles load), which forces row re-render with fresh cell content.
+  columnSizing: ColumnSizingState;
+  // Localized aria-label for the row's select checkbox. Passed from the
+  // table root so the i18n namespace stays centralised.
+  selectAriaLabel: string;
 }
 
 function MediaTableRowImpl<T extends { id: number }>({
@@ -32,6 +46,7 @@ function MediaTableRowImpl<T extends { id: number }>({
   style,
   selectColumnPx,
   actionsColumnPx,
+  selectAriaLabel,
 }: Props<T>) {
   return (
     <div
@@ -61,6 +76,7 @@ function MediaTableRowImpl<T extends { id: number }>({
         <Checkbox
           checked={selected}
           onCheckedChange={() => onToggleSelect(rowData.id)}
+          aria-label={selectAriaLabel}
         />
       </div>
       {row.getVisibleCells().map((cell) => {
@@ -131,7 +147,9 @@ function rowPropsEqual<T extends { id: number }>(
     prev.style?.transform === next.style?.transform &&
     prev.style?.height === next.style?.height &&
     prev.selectColumnPx === next.selectColumnPx &&
-    prev.actionsColumnPx === next.actionsColumnPx
+    prev.actionsColumnPx === next.actionsColumnPx &&
+    prev.columnSizing === next.columnSizing &&
+    prev.selectAriaLabel === next.selectAriaLabel
   );
   // Intentionally NOT compared:
   //  - row (TanStack row instance): new identity each render but content

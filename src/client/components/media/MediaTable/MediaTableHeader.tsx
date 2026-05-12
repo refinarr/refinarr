@@ -1,5 +1,5 @@
 "use client";
-import { memo, useEffect, useState, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import {
@@ -83,12 +83,18 @@ interface HeaderRowProps<T> {
   onToggleAll: () => void;
   onResetColumnSize: (columnId: string) => void;
   selectAllLabel: string;
+  // (header) => localized aria-label for that column's resize handle.
+  // Resolved at the HeaderRow level so HeaderCell stays display-only.
+  getResizeLabel: (header: Header<unknown, unknown>) => string;
 }
 
 interface HeaderCellProps<T> {
   header: Header<T, unknown>;
   isLastDataCol: boolean;
   onResetColumnSize: (columnId: string) => void;
+  // Localized aria-label for the resize handle (gets the column's
+  // display name substituted in by the caller).
+  resizeLabel: string;
 }
 
 interface HeaderLabelProps<T> {
@@ -138,14 +144,17 @@ function SortableHeaderLabel<T>({ header }: HeaderLabelProps<T>) {
 function ResizeHandle<T>({
   header,
   onResetColumnSize,
-}: Pick<HeaderCellProps<T>, "header" | "onResetColumnSize">) {
+  resizeLabel,
+}: Pick<HeaderCellProps<T>, "header" | "onResetColumnSize"> & {
+  resizeLabel: string;
+}) {
   const column = header.column;
 
   return (
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label={`Resize ${column.id} column`}
+      aria-label={resizeLabel}
       onMouseDown={header.getResizeHandler()}
       onTouchStart={header.getResizeHandler()}
       onDoubleClick={() => onResetColumnSize(column.id)}
@@ -167,6 +176,7 @@ function HeaderCell<T>({
   header,
   isLastDataCol,
   onResetColumnSize,
+  resizeLabel,
 }: HeaderCellProps<T>) {
   const column = header.column;
   const meta = column.columnDef.meta;
@@ -195,7 +205,11 @@ function HeaderCell<T>({
       )}
       {meta?.filter && <span className="ml-auto shrink-0">{meta.filter}</span>}
       {canResize && (
-        <ResizeHandle header={header} onResetColumnSize={onResetColumnSize} />
+        <ResizeHandle
+          header={header}
+          onResetColumnSize={onResetColumnSize}
+          resizeLabel={resizeLabel}
+        />
       )}
     </div>
   );
@@ -211,6 +225,7 @@ function HeaderRow<T>({
   onToggleAll,
   onResetColumnSize,
   selectAllLabel,
+  getResizeLabel,
 }: HeaderRowProps<T>) {
   const lastDataColIndex = group.headers.length - 1;
 
@@ -238,6 +253,7 @@ function HeaderRow<T>({
           header={header}
           isLastDataCol={idx === lastDataColIndex && !hasActions}
           onResetColumnSize={onResetColumnSize}
+          resizeLabel={getResizeLabel(header as Header<unknown, unknown>)}
         />
       ))}
       {hasActions && (
@@ -252,7 +268,14 @@ function HeaderRow<T>({
   );
 }
 
-function MediaTableHeaderImpl<T>({
+// NOT memoized: useReactTable hands back the SAME table instance even
+// when sorting/columnSizing change (it mutates internal state). A
+// default React.memo would see a stable `table` prop and skip the
+// re-render, leaving sort carets, aria-sort, and `header.getSize()`
+// widths stuck on stale values. The header is small (one row of
+// columnheaders) so the per-scroll re-render cost is negligible vs.
+// correctness.
+export function MediaTableHeader<T>({
   table,
   containerRef,
   hasActions,
@@ -265,10 +288,16 @@ function MediaTableHeaderImpl<T>({
 }: Props<T>) {
   const scrolled = useScrolledPast(containerRef, SCROLL_THRESHOLD_PX);
   const tBulk = useTranslations("bulk");
-  // Derive header groups from the stable table instance — recomputed on
-  // each render but only when this component renders, which is rare
-  // (memo'd: only when props actually change).
+  const tA11y = useTranslations("a11y.table");
   const headerGroups = table.getHeaderGroups();
+  const getResizeLabel = (header: Header<unknown, unknown>) => {
+    const def = header.column.columnDef;
+    // Prefer the column header text (a string in nearly every column def
+    // we ship). Falls back to the column id for cells that render a
+    // ReactNode header — better than nothing for assistive tech.
+    const name = typeof def.header === "string" ? def.header : header.column.id;
+    return tA11y("resizeColumn", { column: name });
+  };
 
   return (
     <div
@@ -296,20 +325,9 @@ function MediaTableHeaderImpl<T>({
           onToggleAll={onToggleAll}
           onResetColumnSize={onResetColumnSize}
           selectAllLabel={tBulk("selectAll")}
+          getResizeLabel={getResizeLabel}
         />
       ))}
     </div>
   );
 }
-
-// memo: the header re-rendered on every parent commit during virt
-// scroll (86×/flick at ~7.7ms each → ~660ms wasted) even though none
-// of its props had changed — Profiler's "Why did this render?" tag
-// confirmed: "The parent component rendered". Default shallow compare
-// is sufficient because every prop is stable: `table` is the
-// TanStack instance (stable across renders), `containerRef` is a
-// React ref, primitives don't change, and the two callbacks come from
-// useCallback-wrapped hooks.
-export const MediaTableHeader = memo(
-  MediaTableHeaderImpl,
-) as typeof MediaTableHeaderImpl;

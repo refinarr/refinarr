@@ -4,7 +4,12 @@ import { useVirtList } from "@/client/hooks/ui/useVirtList";
 import { MediaCard } from "./MediaCard";
 import { MediaCardSkeleton } from "./MediaCardSkeleton";
 
-const CARD_HEIGHT_ESTIMATE_PX = 100;
+// Real cards measure ~150–170px (title row 24, score row 24, optional
+// CF badge 24, actions row 32, p-3 padding 24, border 2, pb-card-gap 8).
+// Picking an estimate close to the real value keeps the cumulative
+// translateY in sync during fast scroll — under-estimating bunches
+// unmeasured rows on top of already-measured ones until virt catches up.
+const CARD_HEIGHT_ESTIMATE_PX = 156;
 
 function pickCardOverscan(count: number): number {
   if (count > 5000) return 3;
@@ -59,8 +64,13 @@ export function MediaCardList<T extends { id: number }>({
     // Scroll container: must own overflow-auto + a definite height
     // (flex-1 min-h-0 inside the parent flex-col). px gives cards
     // horizontal breathing room from the viewport edges on mobile and
-    // ensures rounded card borders aren't cut off.
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-auto p-3">
+    // ensures rounded card borders aren't cut off. data-scroll-root
+    // tells useScrollDirection this is the page's vertical scroller so
+    // mobile chrome auto-hide fires off the right element.
+    <div
+      data-scroll-root
+      className="relative flex min-h-0 flex-1 flex-col overflow-auto p-3"
+    >
       {/*
         max-w-3xl + mx-auto: keeps the card column centered on wide
         viewports (desktop "card" mode) so cards don't stretch the
@@ -93,10 +103,15 @@ export function MediaCardList<T extends { id: number }>({
             // measures as `estimateSize` (100px) so cumulative
             // translateY offsets drift and cards overlap on fast
             // scroll, and cards collapse to title's intrinsic width.
+            // `role="presentation"` makes assistive tech walk past this
+            // wrapper so the <ul> ↔ <li> (inside MediaCard) list
+            // semantics survive; the inner MediaCard is still the only
+            // listitem the AT sees, matching the flat-render path.
             return (
               <div
                 key={key}
                 ref={measureRef}
+                role="presentation"
                 data-index={index}
                 className="pb-card-gap"
                 style={{ ...style, height: undefined, width: "100%" }}

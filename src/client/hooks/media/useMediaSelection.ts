@@ -45,9 +45,14 @@ export function useMediaSelection<T extends HasId>(
   }, []);
   const clear = useCallback(() => setSelected(new Set()), []);
   const toggleAll = useCallback(() => {
-    setSelected((prev) =>
-      prev.size > 0 ? new Set() : new Set(items.map((i) => i.id)),
-    );
+    setSelected((prev) => {
+      // Clear only when EVERY visible item is already selected — partial
+      // selections should grow to select-all, not collapse to empty.
+      // Comparing by size against the item list is enough because every
+      // toggle goes through ids in `items`.
+      const allAlreadySelected = items.length > 0 && prev.size >= items.length;
+      return allAlreadySelected ? new Set() : new Set(items.map((i) => i.id));
+    });
   }, [items]);
   const selectedItems = items.filter((i) => selected.has(i.id));
   const deletableSelected = isDeletable

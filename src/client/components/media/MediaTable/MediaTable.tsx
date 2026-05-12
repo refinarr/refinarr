@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useRef, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import {
   getCoreRowModel,
@@ -138,6 +139,9 @@ function MediaTableDesktopBody<T extends { id: number }>({
 
   const { columnSizing, onColumnSizingChange, resetColumnSize } =
     useColumnSizing(tableId);
+  const tBulk = useTranslations("bulk");
+  const tCommon = useTranslations("common");
+  const selectRowAriaLabel = tBulk("selectRow");
 
   // Bridge server-side sort into TanStack's controlled state. We map by
   // `meta.sortKey` (the column's id may differ from the server's sort
@@ -161,6 +165,13 @@ function MediaTableDesktopBody<T extends { id: number }>({
     manualFiltering: true,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
+    // Force a 2-state cycle (asc ↔ desc). TanStack's default 3-state
+    // cycle includes "unsorted" — landing in that state would call our
+    // onSortingChange with an empty array, the early-return below skips
+    // the page-level onSortChange, and the column appears "stuck" after
+    // two clicks. The page treats sortBy as a required field, so the
+    // 3rd state has no representation upstream anyway.
+    enableSortingRemoval: false,
     onColumnSizingChange,
     onSortingChange: (updater) => {
       const next = typeof updater === "function" ? updater(sorting) : updater;
@@ -195,6 +206,7 @@ function MediaTableDesktopBody<T extends { id: number }>({
     // - The sticky header inside pins to the wrapper's top edge.
     <div
       ref={tableRef}
+      data-scroll-root
       className="bg-background relative min-h-0 flex-1 overflow-auto border-y will-change-transform contain-paint select-none"
     >
       <div role="table" className="w-max min-w-full text-sm">
@@ -248,6 +260,8 @@ function MediaTableDesktopBody<T extends { id: number }>({
                 style={virtStyle}
                 selectColumnPx={SELECT_COLUMN_PX}
                 actionsColumnPx={ACTIONS_COLUMN_PX}
+                columnSizing={columnSizing}
+                selectAriaLabel={selectRowAriaLabel}
               />
             );
           })}
@@ -265,7 +279,7 @@ function MediaTableDesktopBody<T extends { id: number }>({
           className="bg-background/95 border-border/60 text-muted-foreground sticky inset-x-0 bottom-0 flex shrink-0 items-center justify-center gap-2 border-t px-3 py-2 text-xs"
         >
           <Loader2 className="size-3.5 animate-spin" aria-hidden />
-          <span>Loading more…</span>
+          <span>{tCommon("loadingMore")}</span>
         </div>
       )}
     </div>

@@ -4,16 +4,24 @@ import type { ColumnSizingState, Updater } from "@tanstack/react-table";
 
 const STORAGE_PREFIX = "media-table-sizing:";
 
+function isColumnSizingState(value: unknown): value is ColumnSizingState {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  // Each entry must be `string → finite number`; anything else (stale
+  // shape, hand-edited JSON, foreign payload) is rejected so TanStack
+  // can't crash trying to use it.
+  for (const v of Object.values(value as Record<string, unknown>)) {
+    if (typeof v !== "number" || !Number.isFinite(v)) return false;
+  }
+  return true;
+}
+
 function readStored(key: string): ColumnSizingState {
   if (typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(STORAGE_PREFIX + key);
     if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed as ColumnSizingState;
-    }
-    return {};
+    const parsed: unknown = JSON.parse(raw);
+    return isColumnSizingState(parsed) ? parsed : {};
   } catch {
     return {};
   }
