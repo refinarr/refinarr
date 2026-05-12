@@ -361,6 +361,7 @@
   },
   "history": {
     "title": "History",
+    "subtitle": "Every action taken on your media. Retry failed searches or clear records you no longer need.",
     "filters": {
       "instance": "Instance",
       "status": "Status",

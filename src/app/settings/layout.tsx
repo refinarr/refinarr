@@ -12,7 +12,11 @@ import { SettingsPicker } from "./components/SettingsPicker";
 // hosts each route's page.tsx. No scroll-spy, no hash sync — Next.js
 // routing drives section switching, the rail/picker just produce
 // <Link>s and router.push() calls.
-export default function SettingsLayout({ children }: { children: ReactNode }) {
+interface Props {
+  children: ReactNode;
+}
+
+export default function SettingsLayout({ children }: Props) {
   const t = useTranslations("settings");
   const { data: me } = useMe();
 
@@ -59,21 +63,23 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
     return list;
   }, [t, showAccount]);
 
-  const pageHeader = (
-    <div className="bg-card border-border/60 space-y-section p-header border-b">
-      <header>
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-muted-foreground mt-1 text-sm">{t("subtitle")}</p>
-      </header>
-      <div className="md:hidden">
-        <SettingsPicker items={items} />
-      </div>
-    </div>
-  );
-
   return (
-    <AppShell pageHeader={pageHeader}>
+    <AppShell>
       <div className="space-y-page">
+        {/* Inline header matches the Dashboard / Queue / History /
+            Logs pattern — `<h1>` + muted subtitle in the page's normal
+            content flow, no separate `bg-card` chrome bar. */}
+        <header>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">{t("subtitle")}</p>
+        </header>
+
+        {/* Mobile picker sits directly under the header — desktop uses
+            the rail instead, so the picker is hidden there. */}
+        <div className="md:hidden">
+          <SettingsPicker items={items} />
+        </div>
+
         <div className="gap-page flex">
           <SettingsRail items={items} className="sticky top-0 hidden md:flex" />
           <div className="space-y-page max-w-2xl flex-1">{children}</div>

@@ -31,7 +31,7 @@ export default function InstancesSettingsPage() {
       {isLoading ? (
         <SettingsCardSkeleton />
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-subgroup">
           {(instances ?? []).map((inst) => (
             <InstanceCard
               key={inst.id}

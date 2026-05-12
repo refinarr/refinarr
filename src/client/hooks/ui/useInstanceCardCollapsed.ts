@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 // Per-instance collapsed state for the Settings InstanceCard. Default
 // expanded. Persisted in localStorage under rfn-inst-collapsed:<id> so
@@ -62,9 +62,16 @@ function getServerSnapshot(): boolean {
 }
 
 export function useInstanceCardCollapsed(id: number): Result {
+  // Memoize subscribe + getSnapshot per id. Without memoization,
+  // useSyncExternalStore would unsubscribe + resubscribe on every
+  // render of the consuming component (and re-read the snapshot
+  // through a different function reference), which is what React's
+  // own docs warn about.
+  const subscribe = useMemo(() => makeSubscribe(id), [id]);
+  const getSnapshot = useCallback(() => readStored(id), [id]);
   const collapsed = useSyncExternalStore(
-    makeSubscribe(id),
-    () => readStored(id),
+    subscribe,
+    getSnapshot,
     getServerSnapshot,
   );
 
