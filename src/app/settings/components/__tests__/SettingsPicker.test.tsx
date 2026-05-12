@@ -3,13 +3,38 @@ import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Settings } from "lucide-react";
+
+// Stub Next.js navigation hooks: usePathname feeds the active item,
+// router.push() is the navigation effect we assert on.
+let mockPathname = "/settings/general";
+const pushMock = vi.fn();
+vi.mock("next/navigation", () => ({
+  usePathname: () => mockPathname,
+  useRouter: () => ({ push: pushMock }),
+}));
+
 import { SettingsPicker } from "../SettingsPicker";
 import type { SettingsRailItem } from "../SettingsRail";
 
 const ITEMS: SettingsRailItem[] = [
-  { id: "general", label: "General", icon: Settings },
-  { id: "appearance", label: "Appearance", icon: Settings },
-  { id: "instances", label: "Instances", icon: Settings },
+  {
+    id: "general",
+    label: "General",
+    icon: Settings,
+    href: "/settings/general",
+  },
+  {
+    id: "appearance",
+    label: "Appearance",
+    icon: Settings,
+    href: "/settings/appearance",
+  },
+  {
+    id: "instances",
+    label: "Instances",
+    icon: Settings,
+    href: "/settings/instances",
+  },
 ];
 
 describe("SettingsPicker", () => {
@@ -36,19 +61,17 @@ describe("SettingsPicker", () => {
     Element.prototype.scrollIntoView = original.scrollIntoView;
   });
 
-  it("renders the active section label in the trigger", () => {
-    render(
-      <SettingsPicker items={ITEMS} active="appearance" onSelect={() => {}} />,
-    );
+  it("renders the label of the section matching the current pathname", () => {
+    mockPathname = "/settings/appearance";
+    render(<SettingsPicker items={ITEMS} />);
     expect(screen.getByRole("combobox")).toHaveTextContent(/appearance/i);
   });
 
-  it("calls onSelect with the chosen id when a different item is picked", async () => {
-    const onSelect = vi.fn();
+  it("calls router.push with the chosen item's href", async () => {
+    mockPathname = "/settings/general";
+    pushMock.mockClear();
     const user = userEvent.setup();
-    render(
-      <SettingsPicker items={ITEMS} active="general" onSelect={onSelect} />,
-    );
+    render(<SettingsPicker items={ITEMS} />);
 
     const trigger = screen.getByRole("combobox");
     trigger.focus();
@@ -57,6 +80,6 @@ describe("SettingsPicker", () => {
     const option = await screen.findByRole("option", { name: /instances/i });
     await user.click(option);
 
-    expect(onSelect).toHaveBeenCalledWith("instances");
+    expect(pushMock).toHaveBeenCalledWith("/settings/instances");
   });
 });

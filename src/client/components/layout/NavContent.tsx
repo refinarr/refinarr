@@ -62,22 +62,26 @@ export function NavContent({ onNavigate, excludeKeys }: Props) {
   return (
     <>
       <nav className="flex flex-col gap-1">
-        {visibleLinks.map(({ href, key, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            onClick={onNavigate}
-            className={cn(
-              "focus-visible:ring-ring focus-visible:ring-offset-background flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-              pathname === href
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-            )}
-          >
-            <Icon className="size-4" />
-            {t(key)}
-          </Link>
-        ))}
+        {visibleLinks.map(({ href, key, icon: Icon }) => {
+          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={onNavigate}
+              aria-current={isActive ? "page" : undefined}
+              className={cn(
+                "focus-visible:ring-ring focus-visible:ring-offset-background flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              )}
+            >
+              <Icon className="size-4" />
+              {t(key)}
+            </Link>
+          );
+        })}
       </nav>
       <div className="border-border mt-auto border-t px-3 pt-4">
         {me && (

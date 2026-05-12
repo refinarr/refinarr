@@ -1,4 +1,5 @@
 "use client";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -11,24 +12,29 @@ import type { SettingsRailItem } from "./SettingsRail";
 
 interface Props {
   items: SettingsRailItem[];
-  active: string;
-  onSelect: (id: string) => void;
   className?: string;
 }
 
-// Mobile counterpart to SettingsRail. Renders the active section's
-// label + icon in the trigger (Base UI's <SelectValue /> defaults to
-// the raw value). Sticky positioning is handled by the parent so the
-// page can group the picker with the page title in one sticky bar.
-export function SettingsPicker({ items, active, onSelect, className }: Props) {
-  const activeItem = items.find((i) => i.id === active);
+// Mobile counterpart to SettingsRail. Each rail item is a route, so
+// the picker reads the current section from the URL via usePathname()
+// and navigates with router.push() on change — no parent-owned active
+// state, no onSelect callback. Renders the active item's label + icon
+// in the trigger (Base UI's <SelectValue /> shows the raw value
+// otherwise).
+export function SettingsPicker({ items, className }: Props) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const activeItem =
+    items.find(
+      (i) => pathname === i.href || pathname.startsWith(`${i.href}/`),
+    ) ?? items[0];
   const ActiveIcon = activeItem?.icon;
 
   return (
     <Select
-      value={active}
+      value={activeItem?.href ?? ""}
       onValueChange={(v) => {
-        if (v) onSelect(v);
+        if (v) router.push(v);
       }}
     >
       <SelectTrigger className={cn("w-full", className)}>
@@ -40,8 +46,8 @@ export function SettingsPicker({ items, active, onSelect, className }: Props) {
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {items.map(({ id, label, icon: Icon }) => (
-          <SelectItem key={id} value={id}>
+        {items.map(({ id, label, icon: Icon, href }) => (
+          <SelectItem key={id} value={href}>
             <span className="flex items-center gap-2">
               <Icon className="size-4" />
               {label}
