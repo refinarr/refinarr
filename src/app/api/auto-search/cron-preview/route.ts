@@ -2,22 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { CronExpressionParser } from "cron-parser";
 import { badRequest } from "@/server/lib/api-errors";
 import { createApiHandler } from "@/server/lib/handler";
+import { isValidCronExpression } from "@/shared/cron";
 import type { CronPreviewResponse } from "@/shared/types/api";
 
 export const GET = createApiHandler(async (req: NextRequest) => {
   const expr = req.nextUrl.searchParams.get("expr") ?? "";
-  const trimmed = expr.trim();
-  const isAtAlias = /^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(
-    trimmed,
-  );
-  if (!isAtAlias) {
-    const fields = trimmed.split(/\s+/);
-    if (fields.length !== 5)
-      throw badRequest("Invalid cron expression", "INVALID_CRON");
+  if (!isValidCronExpression(expr)) {
+    throw badRequest("Invalid cron expression", "INVALID_CRON");
   }
 
   try {
-    const interval = CronExpressionParser.parse(expr, {
+    const interval = CronExpressionParser.parse(expr.trim(), {
       currentDate: new Date(),
     });
     const next: string[] = [];

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CronExpressionParser } from "cron-parser";
 import { createApiHandler } from "@/server/lib/handler";
 import { instanceService } from "@/server/services/InstanceService";
 import { dataCache } from "@/server/lib/data-cache";
@@ -9,6 +8,7 @@ import {
   parseJson,
   positiveInt,
 } from "@/server/lib/api-errors";
+import { isValidCronExpression } from "@/shared/cron";
 import { instanceUpdateSchema } from "@/shared/types/schemas";
 import type { Instance } from "@/shared/types/models";
 import type { PublicInstance } from "@/shared/types/api";
@@ -53,22 +53,18 @@ export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
     instanceUpdateSchema,
     "Invalid instance update",
   );
-  if (
-    update.autoSearchScheduleMode === "cron" &&
-    update.autoSearchCronExpression
-  ) {
-    const trimmedExpr = update.autoSearchCronExpression.trim();
-    const isAtAlias = /^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(
-      trimmedExpr,
-    );
-    if (!isAtAlias) {
-      const fields = trimmedExpr.split(/\s+/);
-      if (fields.length !== 5)
-        throw badRequest("Invalid cron expression", "INVALID_CRON");
-    }
-    try {
-      CronExpressionParser.parse(update.autoSearchCronExpression);
-    } catch {
+  // Cron validation has to consider the EFFECTIVE expression — the
+  // payload's expression if present, otherwise whatever is already
+  // stored on the instance. Previously we only validated when both
+  // `mode === "cron"` and `expression` were in the same payload, so a
+  // client that flipped mode to cron without resending the expression
+  // could leave an invalid/stale stored value driving the runner.
+  if (update.autoSearchScheduleMode === "cron") {
+    const existing = await instanceService.getById(id);
+    if (!existing) throw notFound();
+    const effectiveExpr =
+      update.autoSearchCronExpression ?? existing.autoSearchCronExpression;
+    if (!isValidCronExpression(effectiveExpr)) {
       throw badRequest("Invalid cron expression", "INVALID_CRON");
     }
   }

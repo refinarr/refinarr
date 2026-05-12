@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CronExpressionParser } from "cron-parser";
 import { badRequest, parseJson } from "@/server/lib/api-errors";
 import { createApiHandler } from "@/server/lib/handler";
 import { instanceService } from "@/server/services/InstanceService";
+import { isValidCronExpression } from "@/shared/cron";
 import { instanceCreateSchema } from "@/shared/types/schemas";
 import type { Instance } from "@/shared/types/models";
 import type { PublicInstance } from "@/shared/types/api";
@@ -40,13 +40,14 @@ export const GET = createApiHandler(async () => {
 
 export const POST = createApiHandler(async (req: NextRequest) => {
   const data = await parseJson(req, instanceCreateSchema, "Invalid instance");
-  if (data.autoSearchScheduleMode === "cron" && data.autoSearchCronExpression) {
-    const fields = data.autoSearchCronExpression.trim().split(/\s+/);
-    if (fields.length !== 5)
-      throw badRequest("Invalid cron expression", "INVALID_CRON");
-    try {
-      CronExpressionParser.parse(data.autoSearchCronExpression);
-    } catch {
+  if (data.autoSearchScheduleMode === "cron") {
+    // An instance with mode="cron" MUST carry a valid expression — the
+    // runner can't schedule anything without one. Reject if either the
+    // expression is missing or fails to parse (5-field syntax OR an
+    // accepted alias like `@daily`). Previously the check only rejected
+    // non-5-field strings, so `@daily` was rejected here even though the
+    // update/preview endpoints accepted it.
+    if (!isValidCronExpression(data.autoSearchCronExpression)) {
       throw badRequest("Invalid cron expression", "INVALID_CRON");
     }
   }

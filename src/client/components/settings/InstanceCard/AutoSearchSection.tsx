@@ -1,7 +1,13 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, ChevronRight, Loader2, PauseCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  PauseCircle,
+} from "lucide-react";
 import { Button } from "@/client/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +32,7 @@ import {
   msUntil,
 } from "@/client/lib/format-relative";
 import { withToast } from "@/client/lib/with-toast";
+import { isCronSyntaxValid } from "@/shared/cron";
 import type { PublicInstance } from "@/shared/types/api";
 
 interface Props {
@@ -79,14 +86,15 @@ export function AutoSearchSection({ instance }: Props) {
   // guard auto-save without waiting for the form to surface the error.
   const cronPreview = useCronPreview(localFields.autoSearchCronExpression);
   const isCronMode = debouncedFields.autoSearchScheduleMode === "cron";
-  const trimmedCronExpr = debouncedFields.autoSearchCronExpression.trim();
-  const cronFieldCount = trimmedCronExpr.split(/\s+/).length;
-  const isAtAlias = /^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(
-    trimmedCronExpr,
-  );
+  // Syntactic gate is shared with the server (src/shared/cron.ts) so a
+  // change to the alias list or field-count rule lands in both places.
+  // We keep the `cronPreview.isError` check separately because it
+  // catches semantic errors (out-of-range fields, unreachable schedules)
+  // that the syntactic check can't see.
   const isCronValid =
     !isCronMode ||
-    ((isAtAlias || cronFieldCount === 5) && !cronPreview.isError);
+    (isCronSyntaxValid(debouncedFields.autoSearchCronExpression) &&
+      !cronPreview.isError);
 
   // Auto-save whenever debouncedFields change (skip on mount).
   // Skip save when the cron expression is known-invalid to avoid storing bad data.
@@ -150,6 +158,17 @@ export function AutoSearchSection({ instance }: Props) {
     closedSummary = tCommon("off");
   }
 
+  // "enabled but unscheduled" — server has the instance set to cron
+  // mode with a syntactically invalid expression. The runner sits idle
+  // and never logs again until the user edits the instance, so without
+  // this banner the UI shows a stale "Last run …" with no hint that
+  // automation is broken.
+  const cronUnschedulable =
+    localFields.autoSearchEnabled &&
+    localFields.autoSearchScheduleMode === "cron" &&
+    status !== undefined &&
+    status.cronValid === false;
+
   let runStatus;
   if (paused) {
     runStatus = (
@@ -163,6 +182,13 @@ export function AutoSearchSection({ instance }: Props) {
       <span className="text-brand flex items-center gap-1">
         <Loader2 className="size-3 animate-spin" />
         {t("runningNow")}
+      </span>
+    );
+  } else if (cronUnschedulable) {
+    runStatus = (
+      <span className="text-warning flex items-center gap-1">
+        <AlertTriangle className="size-3" />
+        {t("cronUnscheduled")}
       </span>
     );
   } else {

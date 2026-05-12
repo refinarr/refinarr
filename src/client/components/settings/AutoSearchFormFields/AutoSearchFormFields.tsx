@@ -21,6 +21,7 @@ import {
 import { useCronPreview } from "@/client/hooks/data/useAutoSearch";
 import { useDebouncedValue } from "@/client/hooks/ui/useDebouncedValue";
 import { formatCronTime } from "@/client/lib/format";
+import { isCronSyntaxValid } from "@/shared/cron";
 import type {
   AutoSearchPickStrategy,
   AutoSearchScope,
@@ -142,12 +143,12 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
   const cronPreview = useCronPreview(value.autoSearchCronExpression);
   const debouncedCron = useDebouncedValue(value.autoSearchCronExpression, 400);
   const trimmedCron = debouncedCron.trim();
-  const cronFieldCount = trimmedCron.split(/\s+/).length;
-  const isAtAlias = /^@(yearly|annually|monthly|weekly|daily|hourly)$/i.test(
-    trimmedCron,
-  );
+  // Syntactic check is shared with the server (src/shared/cron.ts) so
+  // the inline aria-invalid hint never drifts from the rules the API
+  // actually enforces. Empty input is "no error" — let placeholder do
+  // its job until the user types something.
   const cronError =
-    (trimmedCron !== "" && !isAtAlias && cronFieldCount !== 5) ||
+    (trimmedCron !== "" && !isCronSyntaxValid(debouncedCron)) ||
     cronPreview.isError;
 
   const scopeLabel: Record<AutoSearchScope, string> = {
