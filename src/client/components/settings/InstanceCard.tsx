@@ -116,7 +116,7 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
               disabled={test.isPending}
               aria-label={tCommon("test")}
             >
-              <Plug className="size-4" />
+              <Plug />
             </Button>
             <Button
               variant="outline"
@@ -124,7 +124,7 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
               onClick={onEdit}
               aria-label={tCommon("edit")}
             >
-              <Edit2 className="size-4" />
+              <Edit2 />
             </Button>
             <Button
               variant="outline"
@@ -133,7 +133,7 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
               disabled={deleteInstance.isPending}
               aria-label={tCommon("delete")}
             >
-              <Trash2 className="text-destructive size-4" />
+              <Trash2 className="text-destructive" />
             </Button>
           </div>
         </div>

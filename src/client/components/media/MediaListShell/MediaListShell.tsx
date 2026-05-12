@@ -479,7 +479,7 @@ function MediaListShellTopBar() {
         aria-label={tCommon("refresh")}
       >
         <RefreshCw
-          className={cn("size-4", refreshMutation.isPending && "animate-spin")}
+          className={cn(refreshMutation.isPending && "animate-spin")}
         />
       </Button>
 

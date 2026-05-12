@@ -27,7 +27,7 @@ export function RowHoverActions({
         disabled={searchPending}
         onClick={onSearch}
       >
-        <Search className="size-3" />
+        <Search />
       </Button>
       <Button
         variant="ghost"
@@ -37,7 +37,7 @@ export function RowHoverActions({
         disabled={ignorePending}
         onClick={onIgnore}
       >
-        <EyeOff className="size-3" />
+        <EyeOff />
       </Button>
     </div>
   );
