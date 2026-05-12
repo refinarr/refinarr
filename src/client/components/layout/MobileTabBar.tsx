@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Film, LayoutDashboard, Menu, Tv2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { usePrefersReducedMotion } from "@/client/hooks/ui/useMediaQuery";
+import { useScrollDirection } from "@/client/hooks/ui/useScrollDirection";
 import { cn } from "@/client/lib/utils";
 import { ARR_LIBRARY_ROUTE } from "@/shared/arr-type";
 
@@ -34,10 +36,25 @@ interface Props {
 export function MobileTabBar({ onMoreClick, moreOpen }: Props) {
   const pathname = usePathname();
   const t = useTranslations("nav");
+  // Auto-hide on scroll-down to give content more screen real estate;
+  // re-show the moment the user scrolls up. Drawer-open state suppresses
+  // the hide so the tab bar's "More" button doesn't slip away mid-tap.
+  const direction = useScrollDirection();
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const hidden = direction === "down" && !moreOpen;
   return (
     <nav
       aria-label={t("primary")}
-      className="bg-card/90 border-border/60 fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+      className={cn(
+        "bg-card/90 border-border/60 fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden",
+        // translate-y-full slides the bar past its own height; the
+        // safe-area padding sits inside the bar so it slides with us.
+        // prefers-reduced-motion replaces the slide with an instant
+        // toggle so motion-sensitive users still get the layout
+        // affordance without the animation.
+        prefersReducedMotion ? "" : "transition-transform duration-200",
+        hidden && "translate-y-full",
+      )}
     >
       <div className="h-bottom-bar flex items-stretch">
         {TABS.map(({ href, labelKey, icon: Icon }) => {

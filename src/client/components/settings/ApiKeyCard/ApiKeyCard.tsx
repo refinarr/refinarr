@@ -53,7 +53,7 @@ export function ApiKeyCard() {
                 onClick={hide}
                 aria-label={tk("hide")}
               >
-                <EyeOff className="size-4" />
+                <EyeOff />
               </Button>
               <Button
                 variant="outline"
@@ -61,7 +61,7 @@ export function ApiKeyCard() {
                 onClick={copy}
                 aria-label={tk("copy")}
               >
-                <Copy className="size-4" />
+                <Copy />
               </Button>
             </>
           ) : (
@@ -75,7 +75,7 @@ export function ApiKeyCard() {
             onClick={() => ask("rotate")}
             aria-label={tk("rotate")}
           >
-            <RefreshCw className="size-4" />
+            <RefreshCw />
           </Button>
         </div>
       </CardContent>
@@ -109,7 +109,7 @@ export function ApiKeyCard() {
                 {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
+                {submitting && <Loader2 className="mr-2 animate-spin" />}
                 {pending === "rotate" ? tk("rotate") : tk("reveal")}
               </Button>
             </DialogFooter>

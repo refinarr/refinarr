@@ -25,11 +25,12 @@ export default function ShowsPage() {
         i18nNamespace="shows"
         confirmDeleteBulkKey="confirm.deleteSeries"
       >
-        <MediaListShell.Header />
-        <MediaListShell.SearchBar />
         <MediaListShell.Chips />
-        <MediaListShell.BulkBar />
-        <MediaListShell.Body columns={seriesColumns} Card={SeriesCard} />
+        <MediaListShell.Body
+          tableId="shows"
+          columns={seriesColumns}
+          Card={SeriesCard}
+        />
         <MediaListShell.Drawer as={SeriesDrawer} />
       </MediaListShell>
     </Suspense>

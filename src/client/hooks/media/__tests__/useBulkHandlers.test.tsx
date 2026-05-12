@@ -26,7 +26,10 @@ function makeSelection(state: {
     selectedItems: state.selectedItems,
     deletableSelected: state.deletableSelected,
     deletableCount: state.deletableSelected.length,
+    allSelected: false,
+    someSelected: state.selectedItems.length > 0,
     toggle: vi.fn(),
+    toggleAll: vi.fn(),
     clear: vi.fn(),
   };
 }

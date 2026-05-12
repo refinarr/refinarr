@@ -1,8 +1,5 @@
 import { dryRunService } from "@/server/services/DryRunService";
-import { movieService } from "@/server/services/MovieService";
-import { seriesService } from "@/server/services/SeriesService";
 import { searchQueueService } from "@/server/services/SearchQueueService";
-import type { ActionLog } from "@/shared/types/models";
 
 interface SearchDispatchBase {
   instanceId: number;
@@ -35,24 +32,24 @@ export type SearchDispatchInput =
   | SeasonDispatchInput
   | EpisodeDispatchInput;
 
-export interface DryRunDispatchResult {
-  kind: "dryRun";
-  actionLog: ActionLog;
-}
-
-export interface QueuedDispatchResult {
+export interface SearchDispatchResult {
   kind: "queued";
   queueId: number;
+  // Carried so the client can pick the right toast variant ("queued for
+  // dry-run preview" vs "search started"). The queue worker is what
+  // actually records the dry-run ActionLog when it drains the entry.
+  isDryRun: boolean;
 }
 
-export type SearchDispatchResult = DryRunDispatchResult | QueuedDispatchResult;
-
 export class SearchDispatcher {
+  // ALWAYS routes through the queue, including in dry-run mode. This keeps
+  // manual searches consistent with the auto-runner (which always enqueues)
+  // and gives users a single, visible pipeline. The worker handles the
+  // dry-run vs live branch when it drains: in dry-run, executeAction inside
+  // the service writes a "dry_run" ActionLog row and skips the upstream
+  // call; in live mode it dispatches normally and stamps the commandId.
   async dispatch(input: SearchDispatchInput): Promise<SearchDispatchResult> {
-    if (await dryRunService.isDryRun()) {
-      const actionLog = await this.recordDryRun(input);
-      return { kind: "dryRun", actionLog };
-    }
+    const isDryRun = await dryRunService.isDryRun();
     const entry = await searchQueueService.enqueue({
       instanceId: input.instanceId,
       action: input.action,
@@ -61,46 +58,7 @@ export class SearchDispatcher {
       groupId: input.groupId,
       payload: this.queuePayload(input),
     });
-    return { kind: "queued", queueId: entry.id };
-  }
-
-  // Bypasses the queue and calls the service trigger directly. Used only on
-  // the dry-run path: executeAction inside the service skips the upstream
-  // `run()` callback and writes an ActionLog row with status="dry_run", which
-  // we surface back to the client so the History table updates immediately.
-  private async recordDryRun(input: SearchDispatchInput): Promise<ActionLog> {
-    switch (input.action) {
-      case "movie":
-        return movieService.triggerSearch(
-          input.instanceId,
-          input.mediaId,
-          input.title,
-          { groupId: input.groupId },
-        );
-      case "series":
-        return seriesService.triggerSearch(
-          input.instanceId,
-          input.mediaId,
-          input.title,
-          { groupId: input.groupId },
-        );
-      case "season":
-        return seriesService.triggerSeasonSearch(
-          input.instanceId,
-          input.mediaId,
-          input.seasonNumber,
-          input.title,
-          { groupId: input.groupId },
-        );
-      case "episode":
-        return seriesService.triggerEpisodeFileSearch(
-          input.instanceId,
-          input.mediaId,
-          input.fileId,
-          input.title,
-          { groupId: input.groupId },
-        );
-    }
+    return { kind: "queued", queueId: entry.id, isDryRun };
   }
 
   private queuePayload(

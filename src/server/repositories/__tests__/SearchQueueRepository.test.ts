@@ -1,4 +1,6 @@
 import { describe, test, expect, vi } from "vitest";
+import { appLogger } from "@/server/lib/app-logger";
+import { prisma } from "@/server/lib/db";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 
 async function enqueue(
@@ -24,6 +26,87 @@ describe("SearchQueueRepository", () => {
     const fetched = await searchQueueRepository.findById(row.id);
     expect(fetched?.id).toBe(row.id);
     expect(fetched?.status).toBe("pending");
+  });
+
+  test("plain create() inserts a row without dedup", async () => {
+    // The non-deduping create() bypasses the partial unique index path —
+    // used by callers that don't want createUnique's idempotency.
+    const entry = await searchQueueRepository.create({
+      instanceId: 1,
+      action: "movie",
+      mediaId: 200,
+      title: "plain",
+      payload: "{}",
+      seasonNumber: 0,
+      fileId: 0,
+      status: "pending",
+      error: null,
+      processedAt: null,
+      groupId: null,
+    });
+    expect(entry.id).toBeGreaterThan(0);
+    expect(entry.title).toBe("plain");
+    const fetched = await searchQueueRepository.findById(entry.id);
+    expect(fetched?.title).toBe("plain");
+  });
+
+  test("createUnique swallows trim() rejections via appLogger.warn (defence in depth)", async () => {
+    // The fire-and-forget trim() inside createUnique catches its own
+    // rejection and warns instead of bubbling — so a hot insert path
+    // never throws because retention bookkeeping hit a transient DB
+    // error. Spy on prisma.searchQueue.count so trim() always rejects.
+    const countSpy = vi
+      .spyOn(prisma.searchQueue, "count")
+      .mockRejectedValueOnce(new Error("DB unavailable"));
+    const warnSpy = vi.spyOn(appLogger, "warn").mockImplementation(() => {});
+    try {
+      const { entry } = await searchQueueRepository.createUnique({
+        instanceId: 1,
+        action: "movie",
+        mediaId: 500,
+        title: "trim-fault",
+        payload: "{}",
+        seasonNumber: 0,
+        fileId: 0,
+      });
+      expect(entry.id).toBeGreaterThan(0);
+      // Allow the fire-and-forget catch to settle.
+      await vi.waitFor(() => expect(warnSpy).toHaveBeenCalled(), {
+        timeout: 200,
+      });
+      const [msg] = warnSpy.mock.calls[0];
+      expect(msg).toMatch(/trim failed/i);
+    } finally {
+      countSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
+  });
+
+  test("createUnique re-throws errors that are not unique-constraint violations", async () => {
+    // Stub the underlying insert with a sentinel non-P2002 error so the
+    // assertion is decoupled from Prisma's payload validation. If
+    // payload normalization or schema changes later swallow what we
+    // used to trigger an error, this test still proves that
+    // createUnique's error path (anything but P2002) bubbles unchanged.
+    const sentinel = new Error("simulated FK violation");
+    const createSpy = vi
+      .spyOn(prisma.searchQueue, "create")
+      .mockRejectedValueOnce(sentinel);
+    try {
+      await expect(
+        searchQueueRepository.createUnique({
+          instanceId: 1,
+          action: "movie",
+          mediaId: 1,
+          title: "X",
+          payload: "{}",
+          seasonNumber: 0,
+          fileId: 0,
+        }),
+      ).rejects.toBe(sentinel);
+    } finally {
+      createSpy.mockRestore();
+    }
   });
 
   test("findNextPending returns the oldest pending row for the instance", async () => {

@@ -5,6 +5,7 @@ import {
   CfFunnelBody,
   type CfOption,
 } from "@/client/components/media/CfColumnFunnel";
+import { MonitorFunnelBody } from "@/client/components/media/MonitorColumnFunnel";
 import { ProfileFunnelBody } from "@/client/components/media/ProfileColumnFunnel";
 import { ScoreFunnelBody } from "@/client/components/media/ScoreColumnFunnel";
 import { SeverityFunnelBody } from "@/client/components/media/SeverityColumnFunnel";
@@ -64,6 +65,7 @@ export function FilterSheet({
   onChange,
 }: Props) {
   const t = useTranslations("filters");
+  const tMonitor = useTranslations("filters.monitorStatus");
   const manual = isManualMode(scoringMode);
   const cfFunnelOptions = manual ? cfOptions.missing : cfOptions.penalty;
   const cfTitle = manual ? t("missingHeading") : t("penaltyHeading");
@@ -79,7 +81,8 @@ export function FilterSheet({
     filters.minSize !== null ||
     filters.maxSize !== null ||
     filters.missingCfIds.length > 0 ||
-    filters.hasNegativeCfIds.length > 0;
+    filters.hasNegativeCfIds.length > 0 ||
+    filters.monitorStatus !== "all";
 
   const clearAll = () =>
     onChange({
@@ -93,6 +96,7 @@ export function FilterSheet({
       missingCfMatch: "all",
       hasNegativeCfIds: [],
       hasNegativeCfMatch: "all",
+      monitorStatus: "all",
     });
 
   return (
@@ -124,6 +128,12 @@ export function FilterSheet({
             description={t("severityColumnDescription")}
           >
             <SeverityFunnelBody filters={filters} onChange={onChange} />
+          </Section>
+          <Section
+            title={tMonitor("label")}
+            description={tMonitor("description")}
+          >
+            <MonitorFunnelBody filters={filters} onChange={onChange} />
           </Section>
           <Section
             title={t("profileHeading")}

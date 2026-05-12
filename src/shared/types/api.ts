@@ -112,12 +112,14 @@ export interface CronPreviewResponse {
   next: string[];
 }
 
-// Wire shape returned by the search/delete-with-search routes when an action
-// is queued for the search worker (live mode). Dry-run mode returns the
-// resulting ActionLog row instead — see SearchDispatchResult.
+// Wire shape returned by the search routes when an action is queued for
+// the search worker. Manual searches always queue (live OR dry-run); the
+// worker writes the dry_run ActionLog row when it drains in dry-run
+// mode. `isDryRun` lets the client pick the right toast variant.
 export interface QueuedSearchResponse {
   queued: true;
   queueId: number;
+  isDryRun: boolean;
 }
 
 export interface SetConfigDto {

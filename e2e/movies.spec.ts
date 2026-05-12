@@ -122,9 +122,12 @@ test("search action in dry-run mode shows queued toast", async ({ page }) => {
     .getByText("The Missing Format")
     .waitFor({ timeout: 10_000 });
 
+  // MediaTableRow renders `<div role="row">` (the table is a div-based
+  // grid, not an HTML <table>) so the locator targets the role, not the
+  // `tr` tag.
   const movieRow = page
     .getByTestId("media-table-body")
-    .locator("tr")
+    .getByRole("row")
     .filter({ hasText: "The Missing Format" });
   const searchBtn = movieRow.getByRole("button", { name: /search/i }).first();
 

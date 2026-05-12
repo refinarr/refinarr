@@ -126,14 +126,24 @@ export function useFilterChips({
   }));
 
   const { minScore, maxScore, minSize, maxSize } = filters.filters;
+  // Contextual range labels — when only one bound is set, the chip reads
+  // as "X or above" / "up to X" instead of "−∞ – X" / "X – +∞" math
+  // notation. Both bounds set → "min to max".
+  const scoreChipLabel = () => {
+    if (minScore !== null && maxScore !== null) {
+      return t("scoreRangeBoth", {
+        min: String(minScore),
+        max: String(maxScore),
+      });
+    }
+    if (minScore !== null) return t("scoreRangeMin", { min: String(minScore) });
+    return t("scoreRangeMax", { max: String(maxScore) });
+  };
   const scoreChip: FilterChip | null =
     minScore !== null || maxScore !== null
       ? {
           key: "score",
-          label: t("scoreRangeLabel", {
-            min: minScore !== null ? String(minScore) : "−∞",
-            max: maxScore !== null ? String(maxScore) : "+∞",
-          }),
+          label: scoreChipLabel(),
           onRemove: () =>
             filters.setFilters((f) => ({
               ...f,
@@ -142,20 +152,42 @@ export function useFilterChips({
             })),
         }
       : null;
+  const sizeChipLabel = () => {
+    if (minSize !== null && maxSize !== null) {
+      return t("sizeRangeBoth", {
+        min: formatBytes(minSize),
+        max: formatBytes(maxSize),
+      });
+    }
+    if (minSize !== null) {
+      return t("sizeRangeMin", { min: formatBytes(minSize) });
+    }
+    return t("sizeRangeMax", { max: formatBytes(maxSize as number) });
+  };
   const sizeChip: FilterChip | null =
     minSize !== null || maxSize !== null
       ? {
           key: "size",
-          label: t("sizeRangeLabel", {
-            min: minSize !== null ? formatBytes(minSize) : "0",
-            max: maxSize !== null ? formatBytes(maxSize) : "∞",
-          }),
+          label: sizeChipLabel(),
           onRemove: () =>
             filters.setFilters((f) => ({
               ...f,
               minSize: null,
               maxSize: null,
             })),
+        }
+      : null;
+
+  const tStatus = useTranslations("filters.monitorStatus");
+  const monitorStatusChip: FilterChip | null =
+    filters.filters.monitorStatus !== "all"
+      ? {
+          key: "monitorStatus",
+          label: t("monitorStatusLabel", {
+            value: tStatus(filters.filters.monitorStatus),
+          }),
+          onRemove: () =>
+            filters.setFilters((f) => ({ ...f, monitorStatus: "all" })),
         }
       : null;
 
@@ -169,13 +201,9 @@ export function useFilterChips({
     ...severityChips,
     scoreChip,
     sizeChip,
+    monitorStatusChip,
     ...missingChips,
     ...penaltyChips,
-    filters.filters.onlyMissing && {
-      key: "onlyMissing",
-      label: t("onlyMissing"),
-      onRemove: () => filters.setFilters((f) => ({ ...f, onlyMissing: false })),
-    },
   ].filter(Boolean) as FilterChip[];
 
   const clearActiveFilters = () =>
@@ -190,7 +218,7 @@ export function useFilterChips({
       maxSize: null,
       missingCfIds: [],
       hasNegativeCfIds: [],
-      onlyMissing: false,
+      monitorStatus: "all",
     }));
 
   return { chips, clearActiveFilters };

@@ -1,5 +1,9 @@
 import { useState } from "react";
-import type { ScoringMode, Severity } from "@/shared/types/models";
+import type {
+  MonitorStatus,
+  ScoringMode,
+  Severity,
+} from "@/shared/types/models";
 import { useDebouncedValue } from "../ui/useDebouncedValue";
 
 export type MatchMode = "any" | "all";
@@ -22,7 +26,10 @@ export interface MediaFilters {
   missingCfMatch: MatchMode;
   hasNegativeCfIds: number[];
   hasNegativeCfMatch: MatchMode;
-  onlyMissing: boolean;
+  // Monitor-state filter. "all" (default) leaves the upstream untouched.
+  // The other three values map 1:1 to the server's MonitorStatus filter
+  // already enforced by parse-media-query + MediaService.
+  monitorStatus: MonitorStatus;
   // Page-level view mode. true shows only flagged items; false includes
   // all media. Instance.showAllMedia supplies the per-instance default,
   // and the server still enforces flaggedOnly=true when that setting is off.
@@ -50,8 +57,8 @@ export const defaultMediaFilters: MediaFilters = {
   missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
-  onlyMissing: false,
   flaggedOnly: true,
+  monitorStatus: "all",
 };
 
 function mediaFiltersForInstance(showAllMedia: boolean): MediaFilters {

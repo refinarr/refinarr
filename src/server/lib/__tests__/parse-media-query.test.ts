@@ -22,7 +22,6 @@ describe("parseMediaQuery", () => {
       missingCfMatch: "all",
       hasNegativeCfIds: undefined,
       hasNegativeCfMatch: "all",
-      onlyMissing: false,
       // Default-on flagged-only filter; default "all" monitor status.
       flaggedOnly: true,
       monitorStatus: "all",
@@ -111,14 +110,6 @@ describe("parseMediaQuery", () => {
     expect(
       parseMediaQuery(urlParams("hasNegativeCfMatch=any")).hasNegativeCfMatch,
     ).toBe("any");
-  });
-
-  test("treats onlyMissing as a strict boolean string", () => {
-    expect(parseMediaQuery(urlParams("onlyMissing=true")).onlyMissing).toBe(
-      true,
-    );
-    expect(parseMediaQuery(urlParams("onlyMissing=1")).onlyMissing).toBe(false);
-    expect(parseMediaQuery(urlParams("")).onlyMissing).toBe(false);
   });
 
   test("threads q through unchanged when present", () => {

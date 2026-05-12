@@ -90,7 +90,14 @@ test("ignoring a movie removes it from the flagged list", async ({ page }) => {
     .getByText("Ignorable Film")
     .waitFor({ timeout: 10_000 });
 
-  const ignoreBtn = page.getByRole("button", { name: "Ignore" }).first();
+  // Scope to the table body so we hit the row's Ignore button — the
+  // BulkActionToolbar also exposes an Ignore button but it's disabled
+  // until something is selected, and an unscoped `first()` was hitting
+  // that disabled button.
+  const ignoreBtn = page
+    .getByTestId("media-table-body")
+    .getByRole("button", { name: "Ignore" })
+    .first();
   if (await ignoreBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
     await ignoreBtn.click();
 

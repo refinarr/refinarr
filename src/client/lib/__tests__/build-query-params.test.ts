@@ -4,10 +4,10 @@ import { appendFilterParams } from "../build-query-params";
 describe("appendFilterParams", () => {
   it("sets primitive values as strings", () => {
     const params = new URLSearchParams();
-    appendFilterParams(params, { sortBy: "score", page: 2, onlyMissing: true });
+    appendFilterParams(params, { sortBy: "score", page: 2, flaggedOnly: true });
     expect(params.get("sortBy")).toBe("score");
     expect(params.get("page")).toBe("2");
-    expect(params.get("onlyMissing")).toBe("true");
+    expect(params.get("flaggedOnly")).toBe("true");
   });
 
   it("skips undefined, null, empty string, and false", () => {

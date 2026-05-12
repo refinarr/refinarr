@@ -86,7 +86,7 @@ export function PasswordChangeCard() {
             </p>
           )}
           <Button type="submit" disabled={submitting}>
-            {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {submitting && <Loader2 className="mr-2 animate-spin" />}
             {t("submit")}
           </Button>
         </form>

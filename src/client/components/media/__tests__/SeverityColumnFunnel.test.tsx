@@ -19,8 +19,8 @@ const baseFilters: MediaFilters = {
   missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
-  onlyMissing: false,
   flaggedOnly: true,
+  monitorStatus: "all",
 };
 
 describe("SeverityColumnFunnel", () => {
