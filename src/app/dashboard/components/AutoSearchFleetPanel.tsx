@@ -1,6 +1,7 @@
 "use client";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Loader2, PauseCircle, Play } from "lucide-react";
+import { AlertTriangle, Loader2, PauseCircle, Play } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
 import {
   useAutoSearchStatuses,
@@ -49,9 +50,22 @@ function FleetRow({ instance, status }: RowProps) {
   const pausedUntil = status?.pausedUntil ?? null;
   const lastRunAt = status?.lastRunAt ?? null;
   const nextRunAt = status?.nextRunAt ?? null;
+  const overdue = status?.overdue ?? false;
+  const failedStreak = status?.failedStreak ?? 0;
+  const health = status?.health ?? "ok";
 
   let statusContent;
-  if (paused && pausedUntil) {
+  if (health === "critical") {
+    // Critical wins over running/paused/overdue because it represents
+    // accumulated failures the user needs to investigate; rendering
+    // "Running…" or "Paused" would mask the alert.
+    statusContent = (
+      <span className="text-critical inline-flex items-center gap-1">
+        <AlertTriangle className="size-3" />
+        {t("failedStreak", { count: failedStreak })}
+      </span>
+    );
+  } else if (paused && pausedUntil) {
     statusContent = (
       <span className="text-warning inline-flex items-center gap-1">
         <PauseCircle className="size-3" />
@@ -63,6 +77,12 @@ function FleetRow({ instance, status }: RowProps) {
       <span className="text-brand inline-flex items-center gap-1">
         <Loader2 className="size-3 animate-spin" />
         {t("running")}
+      </span>
+    );
+  } else if (overdue && nextRunAt) {
+    statusContent = (
+      <span className="text-warning inline-flex items-center gap-1">
+        {t("overdue", { eta: formatEta(-msUntil(nextRunAt), tTime) })}
       </span>
     );
   } else {
@@ -88,6 +108,12 @@ function FleetRow({ instance, status }: RowProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        <Link
+          href="/logs"
+          className="text-muted-foreground hover:text-foreground px-2 text-xs underline-offset-2 hover:underline"
+        >
+          {t("viewRuns")}
+        </Link>
         {paused && (
           <Button
             size="sm"

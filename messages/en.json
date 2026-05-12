@@ -170,6 +170,9 @@
       "lastRun": "Last run {time}",
       "nextRun": "Next in {eta}",
       "pausedUntil": "Paused until {time}",
+      "overdue": "Overdue — scheduled {eta} ago",
+      "failedStreak": "{count} failed ticks — check Logs",
+      "viewRuns": "View runs",
       "resume": "Resume",
       "runNow": "Run now"
     }

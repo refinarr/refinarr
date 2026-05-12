@@ -29,6 +29,7 @@ const stubInstance: Instance = {
   autoSearchCooldownHours: 0,
   autoSearchPausedUntil: null,
   autoSearchScoringMode: "inherit",
+  autoSearchFailedStreak: 0,
 };
 
 class TestClient extends ArrClient {

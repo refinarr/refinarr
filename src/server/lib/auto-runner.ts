@@ -17,6 +17,16 @@ import { LogSource } from "@/shared/types/models";
 import type { AutoSearchStatus } from "@/shared/types/api";
 import { appLogger } from "./app-logger";
 
+// HMR globals — declared on globalThis so the singleton survives module
+// reloads. Typing them here is what lets startInternal() / the module-init
+// block read and write without `as unknown as { … }` casts at each access.
+// `var` (not let/const) is required by the `declare global` augmentation
+// spec for properties to attach to globalThis.
+declare global {
+  var autoRunner: AutoRunner | undefined;
+  var autoRunnerStopPromise: Promise<void> | undefined;
+}
+
 const AUTO_SEARCH_SCORING_OVERRIDE: Record<
   AutoSearchScoringMode,
   ScoringMode | undefined
@@ -84,6 +94,23 @@ export function computeNextRun({
 // per-instance GET route and the bulk statuses route so the shape is always
 // consistent. Reads live running state from the singleton autoRunner — must
 // be called server-side only.
+// Grace window before a not-yet-fired scheduled tick is flagged "overdue".
+// Setting this above the scheduler's own scheduleNext drift threshold avoids
+// false positives from sub-second timer wake-up jitter.
+export const OVERDUE_GRACE_MS = 60_000;
+
+// Consecutive failed ticks before the dashboard tier flips to "critical".
+export const FAILED_STREAK_CRITICAL_THRESHOLD = 3;
+
+function computeHealth(
+  failedStreak: number,
+  overdue: boolean,
+): AutoSearchStatus["health"] {
+  if (failedStreak >= FAILED_STREAK_CRITICAL_THRESHOLD) return "critical";
+  if (overdue) return "warning";
+  return "ok";
+}
+
 export function buildAutoSearchStatus(
   instance: Instance,
   running: boolean,
@@ -109,6 +136,34 @@ export function buildAutoSearchStatus(
     : null;
   const paused = pausedUntil !== null && Date.now() < pausedUntil.getTime();
 
+  // Overdue = scheduled tick is past its window AND we're not currently
+  // running and not paused. For cron mode, compare against the most recent
+  // cron slot (cronPrevFire) since rawNextRunAt is always future-facing.
+  const overdue = (() => {
+    if (!instance.autoSearchEnabled || running || paused) return false;
+    const now = Date.now();
+    if (instance.autoSearchScheduleMode === "cron") {
+      const prev = cronPrevFire(instance.autoSearchCronExpression);
+      if (!prev) return false;
+      const lastRun = instance.autoSearchLastRunAt?.getTime() ?? 0;
+      return (
+        prev.getTime() > lastRun && now - prev.getTime() > OVERDUE_GRACE_MS
+      );
+    }
+    // Interval mode: when lastRunAt is null, computeNextRun returns
+    // epoch + interval — already in the past, but conceptually that's the
+    // "first tick is about to fire" sentinel, not a missed run. The user
+    // just enabled the schedule; let the runner have its first tick before
+    // we surface a warning.
+    if (instance.autoSearchLastRunAt === null) return false;
+    return (
+      rawNextRunAt !== null && now - rawNextRunAt.getTime() > OVERDUE_GRACE_MS
+    );
+  })();
+
+  const failedStreak = instance.autoSearchFailedStreak;
+  const health = computeHealth(failedStreak, overdue);
+
   return {
     enabled: instance.autoSearchEnabled,
     scheduleMode: instance.autoSearchScheduleMode,
@@ -125,6 +180,9 @@ export function buildAutoSearchStatus(
     pausedUntil: paused ? pausedUntil!.toISOString() : null,
     cooldownHours: instance.autoSearchCooldownHours,
     scoringMode: instance.autoSearchScoringMode,
+    overdue,
+    failedStreak,
+    health,
   };
 }
 
@@ -188,6 +246,11 @@ class AutoRunner {
   private loggedInvalidCron = new Set<number>();
   private started = false;
   private startPromise: Promise<void> | null = null;
+  // In-flight tick promises. setTimeout fires tick() without an awaiter, so
+  // without this set a stop() call (e.g. between tests) returns before the
+  // tick's DB writes settle and a subsequent setup's truncation transaction
+  // collides with them. stop() drains this set before clearing state.
+  private inFlight = new Set<Promise<void>>();
 
   async start(): Promise<void> {
     if (this.started) return;
@@ -200,6 +263,16 @@ class AutoRunner {
 
   private async startInternal(): Promise<void> {
     if (this.started) return;
+    // HMR: in dev, a previous runner's async stop() may still be draining.
+    // Wait for it before populating timers, otherwise the old runner's
+    // in-flight ticks race against the new one's state.
+    if (process.env.NODE_ENV !== "production") {
+      const pending = globalThis.autoRunnerStopPromise;
+      if (pending) {
+        await pending;
+        globalThis.autoRunnerStopPromise = undefined;
+      }
+    }
     const instances = await instanceRepository.findAllEnabled();
     for (const inst of instances) {
       if (inst.autoSearchEnabled) this.register(inst);
@@ -214,13 +287,26 @@ class AutoRunner {
     });
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     for (const handle of this.timers.values()) clearTimeout(handle);
     this.timers.clear();
-    this.processing.clear();
     this.generations.clear();
     this.loggedInvalidCron.clear();
     this.started = false;
+    // Drain in-flight ticks before clearing `processing` so a tick mid-
+    // fanOut doesn't keep writing to the DB after stop() returns. Callers
+    // (tests, HMR) treat stop() as a synchronization point.
+    if (this.inFlight.size > 0) {
+      await Promise.allSettled([...this.inFlight]);
+    }
+    // Second sweep: a tick that was already mid-execution when we
+    // entered stop() can have called scheduleNext() during the drain
+    // (e.g. via an early-return branch in tick that reschedules), which
+    // populates this.timers AFTER the first clear. Clear again before
+    // declaring the runner truly quiescent.
+    for (const handle of this.timers.values()) clearTimeout(handle);
+    this.timers.clear();
+    this.processing.clear();
   }
 
   async refresh(instanceId: number): Promise<void> {
@@ -251,8 +337,36 @@ class AutoRunner {
     }
     this.processing.add(instanceId);
     try {
-      const result = await this.fanOut(instance);
-      await instanceRepository.stampLastRunAt(instanceId, new Date());
+      let result: { enqueued: number };
+      // fanOut owns the failed-streak outcome — only its rejection counts
+      // as a failed tick. Bookkeeping rejections are logged + swallowed
+      // so a transient DB blip doesn't falsely bump the streak (and risk
+      // flipping health to "critical" after enough success-then-glitch
+      // tries) or mask a real fanOut success from the caller.
+      try {
+        result = await this.fanOut(instance);
+      } catch (err) {
+        try {
+          await instanceRepository.bumpFailedStreak(instanceId);
+        } catch (bookkeepingErr) {
+          appLogger.error("Auto-runner runNow streak-bump failed", {
+            source: LogSource.AutoRun,
+            err: bookkeepingErr,
+            context: { instanceId },
+          });
+        }
+        throw err;
+      }
+      try {
+        await instanceRepository.stampLastRunAt(instanceId, new Date());
+        await instanceRepository.resetFailedStreak(instanceId);
+      } catch (bookkeepingErr) {
+        appLogger.error("Auto-runner runNow bookkeeping failed", {
+          source: LogSource.AutoRun,
+          err: bookkeepingErr,
+          context: { instanceId },
+        });
+      }
       return result;
     } finally {
       this.processing.delete(instanceId);
@@ -353,20 +467,7 @@ class AutoRunner {
       return;
     }
 
-    this.processing.add(instanceId);
-    try {
-      await this.fanOut(inst);
-    } catch (err) {
-      appLogger.error("Auto-runner tick failed", {
-        source: LogSource.AutoRun,
-        err,
-        context: { instanceId, instanceName: inst.name },
-      });
-    } finally {
-      this.processing.delete(instanceId);
-    }
-
-    await instanceRepository.stampLastRunAt(instanceId, new Date());
+    await this.runOnce(inst);
 
     if (this.generations.get(instanceId) !== gen) return;
 
@@ -382,6 +483,53 @@ class AutoRunner {
         gen,
         Math.max(0, after.getTime() - Date.now()),
       );
+    }
+  }
+
+  // Scheduled-tick wrapper around fanOut. Owns the processing lock,
+  // lastRunAt stamp, and failed-streak bookkeeping. runNow() bypasses this
+  // because it surfaces errors to the caller; ticks swallow them so the
+  // chain keeps rescheduling.
+  private async runOnce(inst: Instance): Promise<void> {
+    // Hold the per-instance lock across BOTH fanOut and the bookkeeping
+    // writes. Releasing in fanOut's finally would let a concurrent
+    // runNow() slip into the gap and race stampLastRunAt /
+    // bumpFailedStreak — that can lose a failed-streak update or stamp
+    // an older lastRunAt over the newer one.
+    this.processing.add(inst.id);
+    try {
+      let tickFailed = false;
+      try {
+        await this.fanOut(inst);
+      } catch (err) {
+        tickFailed = true;
+        appLogger.error("Auto-runner tick failed", {
+          source: LogSource.AutoRun,
+          err,
+          context: { instanceId: inst.id, instanceName: inst.name },
+        });
+      }
+
+      // Bookkeeping is its own try-catch so a transient DB error here
+      // can't escape the timer-rooted promise and kill the scheduling
+      // loop for this instance until the next refresh()/restart. Log +
+      // swallow.
+      try {
+        await instanceRepository.stampLastRunAt(inst.id, new Date());
+        if (tickFailed) {
+          await instanceRepository.bumpFailedStreak(inst.id);
+        } else {
+          await instanceRepository.resetFailedStreak(inst.id);
+        }
+      } catch (err) {
+        appLogger.error("Auto-runner bookkeeping failed", {
+          source: LogSource.AutoRun,
+          err,
+          context: { instanceId: inst.id, instanceName: inst.name, tickFailed },
+        });
+      }
+    } finally {
+      this.processing.delete(inst.id);
     }
   }
 
@@ -482,7 +630,23 @@ class AutoRunner {
 
   private scheduleNext(instanceId: number, gen: number, delayMs: number): void {
     const handle = setTimeout(() => {
-      void this.tick(instanceId, gen);
+      const work = this.tick(instanceId, gen);
+      this.inFlight.add(work);
+      // Catch BEFORE finally so an unexpected rejection bubbling out of
+      // tick() (or its bookkeeping) is logged + swallowed instead of
+      // crashing the process or producing an unhandled-rejection. The
+      // scheduling chain re-arms itself inside tick() so we just need to
+      // not leak; the next register/refresh restarts the chain if a
+      // truly fatal error escaped.
+      void work
+        .catch((err) =>
+          appLogger.error("Auto-runner tick promise rejected", {
+            source: LogSource.AutoRun,
+            err,
+            context: { instanceId },
+          }),
+        )
+        .finally(() => this.inFlight.delete(work));
     }, delayMs);
     handle.unref?.();
     this.timers.set(instanceId, handle);
@@ -497,14 +661,23 @@ class AutoRunner {
 }
 
 // HMR singleton — same pattern as status-poller and search-worker.
-const globalForAutoRunner = globalThis as unknown as {
-  autoRunner?: AutoRunner;
-};
-const previousAutoRunner = globalForAutoRunner.autoRunner;
-export const autoRunner = previousAutoRunner ?? new AutoRunner();
-if (process.env.NODE_ENV !== "production") {
+// stop() is async (drains in-flight ticks); we can't await at module init,
+// so the prior runner's stop promise is stashed on globalThis and awaited
+// at the top of start() instead. Without this, HMR can race a new runner
+// against the old one's still-draining ticks.
+//
+// In dev, ALWAYS construct a fresh AutoRunner when a previous one exists,
+// then hand off via stopPromise + startInternal()'s await. Reusing the
+// previous reference (the obvious `previousAutoRunner ?? new AutoRunner()`)
+// makes the stop/swap branch ref-identical and therefore unreachable,
+// which silently kept the old timer chain alive across reloads.
+const previousAutoRunner = globalThis.autoRunner;
+const isDev = process.env.NODE_ENV !== "production";
+export const autoRunner =
+  previousAutoRunner && !isDev ? previousAutoRunner : new AutoRunner();
+if (isDev) {
   if (previousAutoRunner && previousAutoRunner !== autoRunner) {
-    previousAutoRunner.stop();
+    globalThis.autoRunnerStopPromise = previousAutoRunner.stop();
   }
-  globalForAutoRunner.autoRunner = autoRunner;
+  globalThis.autoRunner = autoRunner;
 }

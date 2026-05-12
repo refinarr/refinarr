@@ -106,6 +106,17 @@ export interface AutoSearchStatus {
   pausedUntil: string | null;
   cooldownHours: number;
   scoringMode: AutoSearchScoringMode;
+  // True when nextRunAt was due more than OVERDUE_GRACE_MS ago but the
+  // tick hasn't fired yet (clock drift, system sleep, missed window).
+  overdue: boolean;
+  // Number of consecutive ticks that threw during fan-out. Reset on the
+  // first successful tick. health === "critical" once this hits 3.
+  failedStreak: number;
+  // Aggregated indicator for dashboard badge color:
+  //   "ok"        — healthy
+  //   "warning"   — overdue
+  //   "critical"  — failedStreak >= FAILED_STREAK_CRITICAL_THRESHOLD
+  health: "ok" | "warning" | "critical";
 }
 
 export interface CronPreviewResponse {

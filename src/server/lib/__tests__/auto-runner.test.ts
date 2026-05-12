@@ -6,6 +6,7 @@ import {
   autoRunner,
 } from "@/server/lib/auto-runner";
 import { instanceService } from "@/server/services/InstanceService";
+import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import type { Instance } from "@/shared/types/models";
@@ -28,13 +29,13 @@ const baseInstance = {
   autoSearchPickStrategy: "balanced" as const,
 };
 
-beforeEach(() => {
-  autoRunner.stop();
+beforeEach(async () => {
+  await autoRunner.stop();
   vi.useRealTimers();
 });
 
-afterEach(() => {
-  autoRunner.stop();
+afterEach(async () => {
+  await autoRunner.stop();
   vi.useRealTimers();
 });
 
@@ -431,7 +432,7 @@ describe("autoRunner — lifecycle", () => {
       ),
     );
     await autoRunner.start();
-    autoRunner.stop();
+    await autoRunner.stop();
     // Re-start should work cleanly.
     await autoRunner.start();
     await instanceService.delete(inst.id);
@@ -544,6 +545,88 @@ describe("autoRunner.runNow", () => {
     await expect(autoRunner.runNow(99999)).rejects.toMatchObject({
       code: "AUTO_RUN_INELIGIBLE",
     });
+  });
+
+  test("successful runNow resets autoSearchFailedStreak to 0", async () => {
+    mswServer.use(
+      http.get(`${radarrBase}/api/v3/movie`, () => HttpResponse.json([])),
+      ...radarrHandlers(
+        { baseUrl: radarrBase },
+        { movies: [], movieFiles: [], qualityProfiles: [] },
+      ),
+    );
+    const inst = await instanceService.create({
+      ...baseInstance,
+      autoSearchScope: "all",
+    });
+    // Simulate prior failures.
+    await instanceRepository.bumpFailedStreak(inst.id);
+    await instanceRepository.bumpFailedStreak(inst.id);
+    let row = await instanceRepository.findById(inst.id);
+    expect(row?.autoSearchFailedStreak).toBe(2);
+
+    await autoRunner.runNow(inst.id);
+
+    row = await instanceRepository.findById(inst.id);
+    expect(row?.autoSearchFailedStreak).toBe(0);
+    await instanceService.delete(inst.id);
+  });
+
+  test("failing runNow bumps autoSearchFailedStreak by 1", async () => {
+    // Upstream returns 500 → fanOut throws → runNow's catch bumps streak.
+    mswServer.use(
+      http.get(`${radarrBase}/api/v3/movie`, () =>
+        HttpResponse.json({ message: "boom" }, { status: 500 }),
+      ),
+    );
+    const inst = await instanceService.create({
+      ...baseInstance,
+      autoSearchScope: "all",
+    });
+
+    await expect(autoRunner.runNow(inst.id)).rejects.toThrow();
+
+    const row = await instanceRepository.findById(inst.id);
+    expect(row?.autoSearchFailedStreak).toBe(1);
+    await instanceService.delete(inst.id);
+  });
+
+  test("runNow does NOT bump streak when fanOut succeeds but bookkeeping fails", async () => {
+    // fanOut succeeds against an empty upstream → 0 enqueues. Mock
+    // stampLastRunAt to throw after that point. The bookkeeping rejection
+    // must NOT cascade into a failed-streak bump — runNow should still
+    // resolve and the streak should stay at its prior value.
+    mswServer.use(
+      http.get(`${radarrBase}/api/v3/movie`, () => HttpResponse.json([])),
+      ...radarrHandlers(
+        { baseUrl: radarrBase },
+        { movies: [], movieFiles: [], qualityProfiles: [] },
+      ),
+    );
+    const inst = await instanceService.create({
+      ...baseInstance,
+      autoSearchScope: "all",
+    });
+    // Pre-condition: streak starts at 0.
+    let row = await instanceRepository.findById(inst.id);
+    expect(row?.autoSearchFailedStreak).toBe(0);
+
+    const stampSpy = vi
+      .spyOn(instanceRepository, "stampLastRunAt")
+      .mockRejectedValueOnce(new Error("transient DB"));
+    try {
+      await expect(autoRunner.runNow(inst.id)).resolves.toMatchObject({
+        enqueued: 0,
+      });
+    } finally {
+      stampSpy.mockRestore();
+    }
+
+    // Streak still 0 — the bookkeeping failure was logged + swallowed,
+    // not attributed to fanOut.
+    row = await instanceRepository.findById(inst.id);
+    expect(row?.autoSearchFailedStreak).toBe(0);
+    await instanceService.delete(inst.id);
   });
 });
 
@@ -714,6 +797,7 @@ describe("buildAutoSearchStatus", () => {
     autoSearchCooldownHours: 0,
     autoSearchPausedUntil: null,
     autoSearchScoringMode: "inherit",
+    autoSearchFailedStreak: 0,
   };
 
   test("disabled instance: enabled=false suppresses nextRunAt regardless of lastRunAt", () => {
@@ -843,5 +927,99 @@ describe("buildAutoSearchStatus", () => {
     expect(status.cooldownHours).toBe(4);
     expect(status.scoringMode).toBe("profile");
     expect(status.paused).toBe(true);
+  });
+
+  test("overdue=false when nextRunAt is in the future", () => {
+    const lastRun = new Date(Date.now() - 5 * 60 * 1000);
+    const status = buildAutoSearchStatus(
+      { ...baseInst, autoSearchLastRunAt: lastRun },
+      false,
+    );
+    expect(status.overdue).toBe(false);
+    expect(status.health).toBe("ok");
+  });
+
+  test("overdue=false when interval and lastRunAt is null (first run)", () => {
+    // Freshly-enabled interval schedule: lastRunAt=null produces an
+    // epoch-based rawNextRunAt that's already far in the past, but the
+    // first tick hasn't had a chance to run yet — must not surface as a
+    // warning before the runner gets a chance.
+    const status = buildAutoSearchStatus(
+      { ...baseInst, autoSearchLastRunAt: null },
+      false,
+    );
+    expect(status.overdue).toBe(false);
+    expect(status.health).toBe("ok");
+  });
+
+  test("overdue=true when interval next-run is past grace window", () => {
+    // Interval=60min, lastRun=2h ago → nextRun computed 1h ago, well past
+    // the 60s grace window.
+    const lastRun = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const status = buildAutoSearchStatus(
+      { ...baseInst, autoSearchLastRunAt: lastRun },
+      false,
+    );
+    expect(status.overdue).toBe(true);
+    expect(status.health).toBe("warning");
+  });
+
+  test("overdue=false while running, even if next-run is past", () => {
+    const lastRun = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const status = buildAutoSearchStatus(
+      { ...baseInst, autoSearchLastRunAt: lastRun },
+      true,
+    );
+    expect(status.overdue).toBe(false);
+  });
+
+  test("overdue=false while paused, even if next-run is past", () => {
+    const lastRun = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const pausedUntil = new Date(Date.now() + 60 * 60 * 1000);
+    const status = buildAutoSearchStatus(
+      {
+        ...baseInst,
+        autoSearchLastRunAt: lastRun,
+        autoSearchPausedUntil: pausedUntil,
+      },
+      false,
+    );
+    expect(status.overdue).toBe(false);
+  });
+
+  test("failedStreak passes through; health=critical at threshold", () => {
+    const status = buildAutoSearchStatus(
+      { ...baseInst, autoSearchFailedStreak: 3 },
+      false,
+    );
+    expect(status.failedStreak).toBe(3);
+    expect(status.health).toBe("critical");
+  });
+
+  test("critical health overrides warning when both overdue and failedStreak hit", () => {
+    const lastRun = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const status = buildAutoSearchStatus(
+      {
+        ...baseInst,
+        autoSearchLastRunAt: lastRun,
+        autoSearchFailedStreak: 5,
+      },
+      false,
+    );
+    expect(status.overdue).toBe(true);
+    expect(status.health).toBe("critical");
+  });
+
+  test("failedStreak below threshold keeps health=ok when not overdue", () => {
+    const status = buildAutoSearchStatus(
+      {
+        ...baseInst,
+        autoSearchLastRunAt: new Date(),
+        autoSearchFailedStreak: 2,
+      },
+      false,
+    );
+    expect(status.failedStreak).toBe(2);
+    expect(status.health).toBe("ok");
   });
 });

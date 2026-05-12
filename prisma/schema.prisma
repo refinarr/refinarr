@@ -31,6 +31,7 @@ model Instance {
   autoSearchCooldownHours   Int       @default(0)
   autoSearchPausedUntil     DateTime?
   autoSearchScoringMode     String    @default("inherit")
+  autoSearchFailedStreak    Int       @default(0)
 }
 
 model AppConfig {

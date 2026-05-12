@@ -170,6 +170,7 @@ export class InstanceService {
       autoSearchCooldownHours: 0,
       autoSearchPausedUntil: null,
       autoSearchScoringMode: "inherit",
+      autoSearchFailedStreak: 0,
     };
     const client = ArrClientFactory.createArrClient(transient);
     const result = await client.testConnection();

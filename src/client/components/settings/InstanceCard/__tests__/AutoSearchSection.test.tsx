@@ -89,6 +89,9 @@ const enabledStatus: AutoSearchStatus = {
   pausedUntil: null,
   cooldownHours: 0,
   scoringMode: "inherit",
+  overdue: false,
+  failedStreak: 0,
+  health: "ok",
 };
 
 describe("AutoSearchSection", () => {

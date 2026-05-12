@@ -147,8 +147,8 @@ describe("POST /api/instances/[id]/auto-search/trigger — mocked dispatch", () 
 // ─── Real dispatch tests (MSW-backed) ───────────────────────────────────────
 
 describe("POST /api/instances/[id]/auto-search/trigger — real dispatch", () => {
-  beforeEach(() => {
-    autoRunner.stop();
+  beforeEach(async () => {
+    await autoRunner.stop();
   });
 
   // ── Scope filter tests ───────────────────────────────────────────────────

@@ -34,6 +34,7 @@ interface RawInstanceRow {
   autoSearchCooldownHours: number;
   autoSearchPausedUntil: Date | null;
   autoSearchScoringMode: string;
+  autoSearchFailedStreak: number;
 }
 
 function toAutoSearchScoringMode(v: string): AutoSearchScoringMode {
@@ -76,6 +77,7 @@ type CreateInstanceInput = Omit<
   | "autoSearchCooldownHours"
   | "autoSearchPausedUntil"
   | "autoSearchScoringMode"
+  | "autoSearchFailedStreak"
 > & {
   scoringMode?: ScoringMode;
   searchesPerHour?: number;
@@ -92,6 +94,7 @@ type CreateInstanceInput = Omit<
   autoSearchCooldownHours?: number;
   autoSearchPausedUntil?: Date | null;
   autoSearchScoringMode?: AutoSearchScoringMode;
+  autoSearchFailedStreak?: number;
 };
 
 export class InstanceRepository extends BaseRepository<Instance> {
@@ -144,6 +147,20 @@ export class InstanceRepository extends BaseRepository<Instance> {
     await this.db.instance.update({
       where: { id },
       data: { autoSearchLastRunAt: when },
+    });
+  }
+
+  async resetFailedStreak(id: number): Promise<void> {
+    await this.db.instance.update({
+      where: { id },
+      data: { autoSearchFailedStreak: 0 },
+    });
+  }
+
+  async bumpFailedStreak(id: number): Promise<void> {
+    await this.db.instance.update({
+      where: { id },
+      data: { autoSearchFailedStreak: { increment: 1 } },
     });
   }
 

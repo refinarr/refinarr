@@ -81,6 +81,7 @@ export interface Instance {
   autoSearchCooldownHours: number;
   autoSearchPausedUntil: Date | null;
   autoSearchScoringMode: AutoSearchScoringMode;
+  autoSearchFailedStreak: number;
 }
 
 export interface CustomFormat {
