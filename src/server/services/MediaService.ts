@@ -2,11 +2,9 @@ import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
-import {
-  ArrClientFactory,
-  type ClientFor,
-} from "@/server/clients/ArrClientFactory";
 import type { ArrClient } from "@/server/clients/ArrClient";
+import type { ClientFor } from "@/server/arr/composition";
+import type { MediaServiceDeps } from "@/server/arr/definition";
 import { appLogger } from "@/server/lib/app-logger";
 import {
   dataCache,
@@ -305,6 +303,13 @@ function matchesMonitor(
 export abstract class MediaService<TItem extends MediaItem> {
   protected abstract readonly cacheNamespace: string;
 
+  // DI dependencies — currently only the universal createClient factory.
+  // Injected by the composition root so MediaService doesn't reach for
+  // ArrClientFactory statically, which kept the old factory→service
+  // cycle latent. Subclasses inherit this constructor as-is; per-arr
+  // factories pass deps through the composition root.
+  constructor(protected readonly deps: MediaServiceDeps) {}
+
   // Tracks the timestamp of the most recent failed cache rebuild per key.
   // getCachedFlaggedCount / getCachedTotalCount return 0 (not null) for
   // BUILD_FAILURE_COOLDOWN_MS after a failure so the dashboard stops the
@@ -448,32 +453,22 @@ export abstract class MediaService<TItem extends MediaItem> {
     }
   }
 
-  // Resolves an instance + creates its ArrClient, the boilerplate every
-  // action method (`triggerSearch`, `deleteFile`, etc.) used to repeat
-  // verbatim.
+  // Resolves an instance + creates its ArrClient. Optional `expectedType`
+  // runtime-checks `instance.type` so a misuse (e.g. asking for "sonarr"
+  // with a radarr id) throws here, not at first method call.
   //
-  // Two call shapes:
-  //   `await this.withClient(instanceId)` → `client: ArrClient`,
-  //     for cross-arr operations (the abstract surface only).
-  //   `await this.withClient(instanceId, "sonarr")` → `client: SonarrClient`,
-  //     for arr-specific extras like `triggerSeasonSearch`. The
-  //     return-type narrowing comes from the `ClientFor<T>` mapping, so
-  //     the consumer doesn't need to import `SonarrClient` at all
-  //     (and stays inside the "subclasses constructed only via
-  //     ArrClientFactory" rule).
-  //
-  // The discriminator form runtime-checks `instance.type` against the
-  // requested arr type so a misuse (e.g. `withClient(radarrId, "sonarr")`)
-  // throws here, not at the first method call. The factory picks the
-  // matching client from `instance.type` so the runtime check is
-  // equivalent to `instanceof` without needing the subclass at runtime.
-  protected withClient(
-    instanceId: number,
-  ): Promise<{ instance: Instance; client: ArrClient }>;
-  protected withClient<T extends ArrType>(
+  // Overloads: when `expectedType` is supplied, the returned client is
+  // narrowed to the matching concrete subclass via `ClientFor<T>` (from
+  // the arr composition root). That removes the per-call `as SonarrClient`
+  // casts in subclass services. Without `expectedType`, the type stays
+  // `ArrClient` — callers that don't need narrowing pay nothing.
+  protected async withClient<T extends ArrType>(
     instanceId: number,
     expectedType: T,
   ): Promise<{ instance: Instance; client: ClientFor<T> }>;
+  protected async withClient(
+    instanceId: number,
+  ): Promise<{ instance: Instance; client: ArrClient }>;
   protected async withClient(
     instanceId: number,
     expectedType?: ArrType,
@@ -485,7 +480,7 @@ export abstract class MediaService<TItem extends MediaItem> {
         `Instance ${instanceId} is type ${instance.type}, expected ${expectedType}`,
       );
     }
-    return { instance, client: ArrClientFactory.createArrClient(instance) };
+    return { instance, client: this.deps.createClient(instance) };
   }
 
   // Build the three profile-derived maps every *arr build needs:

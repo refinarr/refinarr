@@ -3,7 +3,7 @@ import {
   indexEventsByMediaId,
   statusPollerService,
 } from "@/server/services/StatusPollerService";
-import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
+import { createArrClient } from "@/server/arr/composition";
 import {
   describeFetchError,
   type UpstreamHistoryEvent,
@@ -271,7 +271,7 @@ class StatusPoller {
       return "missing";
     }
 
-    const client = ArrClientFactory.createArrClient(instance);
+    const client = createArrClient(instance);
     const since = new Date(
       this.lastPolledAt.get(instanceId) ?? Date.now() - FIRST_POLL_LOOKBACK_MS,
     );

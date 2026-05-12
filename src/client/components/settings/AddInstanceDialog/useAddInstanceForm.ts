@@ -10,7 +10,7 @@ import {
   useTestCredentials,
 } from "@/client/hooks/data/useInstances";
 import { withToast } from "@/client/lib/with-toast";
-import { DEFAULT_ARR_TYPE } from "@/shared/arr-type";
+import { DEFAULT_ARR_TYPE } from "@/shared/arr-meta";
 import type { PublicInstance } from "@/shared/types/api";
 import type { ArrType } from "@/shared/types/models";
 

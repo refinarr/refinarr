@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { mediaServiceFor } from "@/server/services/media-services";
-import { movieService } from "@/server/services/MovieService";
-import { seriesService } from "@/server/services/SeriesService";
+import {
+  mediaServiceFor,
+  movieService,
+  seriesService,
+} from "@/server/arr/composition";
 
 describe("mediaServiceFor", () => {
   it("dispatches radarr to MovieService", () => {

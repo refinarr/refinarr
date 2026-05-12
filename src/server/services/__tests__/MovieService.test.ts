@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import { movieService } from "@/server/services/MovieService";
+import { movieService } from "@/server/arr/composition";
 import { instanceService } from "@/server/services/InstanceService";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";

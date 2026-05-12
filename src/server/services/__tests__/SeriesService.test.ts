@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import { seriesService } from "@/server/services/SeriesService";
+import { seriesService } from "@/server/arr/composition";
 import { instanceService } from "@/server/services/InstanceService";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";

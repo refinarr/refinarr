@@ -89,23 +89,24 @@ const eslintConfig = defineConfig([
       "sonarjs/prefer-immediate-return": "warn",
       // Forbid comparing against the ArrType / ScoringMode literals directly
       // (e.g. `inst.type === "radarr"` or `mode === "profile"`). Use a
-      // type-keyed registry instead — see mediaServiceFor, ArrClientFactory,
-      // SCORE_FOR / ISSUES_FOR in src/shared/scoring-mode.ts. Adding a new
-      // arr or scoring mode then needs one entry per registry; no
-      // conditional churn across the codebase.
+      // type-keyed registry instead — see mediaServiceFor / createArrClient /
+      // dispatchQueueEntry in src/server/arr/composition.ts, or SCORE_FOR /
+      // ISSUES_FOR in src/shared/scoring-mode.ts. Adding a new arr or
+      // scoring mode then needs one entry per registry; no conditional
+      // churn across the codebase.
       "no-restricted-syntax": [
         "warn",
         {
           selector:
             "BinaryExpression[operator='==='] > Literal[value='radarr']",
           message:
-            'Do not compare against the "radarr" literal. Use a type-keyed registry (mediaServiceFor / ArrClientFactory / a Record<ArrType, …>).',
+            'Do not compare against the "radarr" literal. Use a type-keyed registry (mediaServiceFor / createArrClient / a Record<ArrType, …>).',
         },
         {
           selector:
             "BinaryExpression[operator='==='] > Literal[value='sonarr']",
           message:
-            'Do not compare against the "sonarr" literal. Use a type-keyed registry (mediaServiceFor / ArrClientFactory / a Record<ArrType, …>).',
+            'Do not compare against the "sonarr" literal. Use a type-keyed registry (mediaServiceFor / createArrClient / a Record<ArrType, …>).',
         },
         {
           selector:
@@ -142,15 +143,18 @@ const eslintConfig = defineConfig([
       "no-restricted-syntax": "off",
     },
   },
-  // Registry / factory files legitimately reference the literals as keys
-  // and must enumerate them. The forbidden pattern is comparing AGAINST
-  // them, which these files don't do.
+  // Registry / module / facade files legitimately reference the literals
+  // as keys and must enumerate them. The forbidden pattern is comparing
+  // AGAINST them, which these files don't do — they index, switch via
+  // typed dispatch, or declare meta objects keyed by the literal.
   {
     files: [
-      "src/server/services/media-services.ts",
-      "src/server/clients/ArrClientFactory.ts",
+      "src/server/arr/composition.ts",
+      "src/server/arr/radarr.module.ts",
+      "src/server/arr/sonarr.module.ts",
+      "src/shared/arr-meta.ts",
       "src/shared/scoring-mode.ts",
-      "src/shared/arr-type.ts",
+      "src/client/lib/arr-ui.ts",
     ],
     rules: {
       "no-restricted-syntax": "off",

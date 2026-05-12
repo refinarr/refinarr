@@ -21,7 +21,7 @@ import {
 } from "@/client/components/ui/select";
 import type { PublicInstance } from "@/shared/types/api";
 import type { ArrType } from "@/shared/types/models";
-import { ALL_ARR_TYPES, isArrType } from "@/shared/arr-type";
+import { ALL_ARR_TYPES, isArrType } from "@/shared/arr-meta";
 import { useAddInstanceForm } from "./useAddInstanceForm";
 
 type InstanceFormKey = Parameters<

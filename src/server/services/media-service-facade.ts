@@ -1,12 +1,20 @@
+// Facade contract for cross-arr media services. The Facade Pattern in
+// classical OO hides multiple subsystems behind one narrow interface;
+// here the facade is the role both MovieService and SeriesService play
+// when consumed by code that doesn't care which arr it's talking to
+// (dashboard summary, retry route, status poller).
+//
+// Concrete implementations (MovieService, SeriesService) and the per-arr
+// lookup (mediaServiceFor, createArrClient, ARR_META, movieService,
+// seriesService) live in `@/server/arr/composition`. This file is
+// type-only — no runtime export — so it can't form a cycle with the
+// composition root that references these types.
 import type {
   ActionLog,
-  ArrType,
   MediaItem,
   MediaQuery,
   ScoringMode,
 } from "@/shared/types/models";
-import { movieService } from "./MovieService";
-import { seriesService } from "./SeriesService";
 
 export interface MediaCacheService {
   /**
@@ -52,11 +60,16 @@ export interface RetryableMediaService {
   ): Promise<ActionLog>;
 }
 
-// Cross-type service surface used by routes that branch on a media
-// instance's arr type. MovieService and SeriesService both implement this;
-// callers go through mediaServiceFor(inst.type) instead of hard-coding
+// The facade surface used by routes that branch on a media instance's
+// arr type. MovieService and SeriesService both implement this; callers
+// go through mediaServiceFor(inst.type) instead of hard-coding
 // `inst.type === "radarr" ? movieService : seriesService`.
-export type MediaRouteService = MediaCacheService & RetryableMediaService;
+//
+// Composed from the two capability interfaces above via intersection so
+// the file can grow a third capability (e.g. a future SearchableMediaService)
+// without touching the implementation classes — they pick up the new
+// methods automatically once added to either capability.
+export type MediaServiceFacade = MediaCacheService & RetryableMediaService;
 
 export interface RetryActionOptions {
   actionLogId?: number;
@@ -64,15 +77,4 @@ export interface RetryActionOptions {
   // on the resulting ActionLog.groupId so the History UI can collapse
   // them. Single-item invocations / retries leave this undefined.
   groupId?: string;
-}
-
-// Type-keyed registry of arr type → media service. Mirrors the established
-// ArrClientFactory pattern for HTTP clients.
-const services = {
-  radarr: movieService,
-  sonarr: seriesService,
-} satisfies Record<ArrType, MediaRouteService>;
-
-export function mediaServiceFor(arrType: ArrType): MediaRouteService {
-  return services[arrType];
 }

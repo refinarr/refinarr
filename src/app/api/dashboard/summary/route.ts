@@ -3,7 +3,7 @@ import { createApiHandler } from "@/server/lib/handler";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
-import { mediaServiceFor } from "@/server/services/media-services";
+import { mediaServiceFor } from "@/server/arr/composition";
 import type {
   DashboardSummary,
   DashboardInstanceSummary,

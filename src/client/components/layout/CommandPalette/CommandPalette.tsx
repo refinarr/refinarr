@@ -3,8 +3,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
-  Film,
-  Tv2,
   LayoutDashboard,
   History,
   Settings,
@@ -29,23 +27,8 @@ import {
 } from "@/client/components/ui/command";
 import { useInstances } from "@/client/hooks/data/useInstances";
 import { useConfig } from "@/client/hooks/data/useConfig";
-import type { ArrType } from "@/shared/types/models";
-import { ARR_LIBRARY_ROUTE } from "@/shared/arr-type";
-
-// Per-arr-type bits the command palette needs: which heading key to use
-// and which icon. The route lives in @/shared/arr-type so this map only
-// owns UI choices. Adding Lidarr / Whisparr is one more entry; the JSX
-// below iterates this map and auto-renders.
-const ARR_GROUPS: Record<
-  ArrType,
-  {
-    headingKey: "groups.radarrInstance" | "groups.sonarrInstance";
-    Icon: typeof Film;
-  }
-> = {
-  radarr: { headingKey: "groups.radarrInstance", Icon: Film },
-  sonarr: { headingKey: "groups.sonarrInstance", Icon: Tv2 },
-};
+import { ARR_UI } from "@/client/lib/arr-ui";
+import { ALL_ARR_TYPES, ARR_LIBRARY_ROUTE } from "@/shared/arr-meta";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -72,8 +55,6 @@ export function CommandPalette() {
     setOpen(false);
   };
 
-  const arrTypes = Object.keys(ARR_GROUPS) as ArrType[];
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
@@ -94,14 +75,18 @@ export function CommandPalette() {
                 <LayoutDashboard className="size-4" />
                 {tNav("dashboard")}
               </CommandItem>
-              <CommandItem onSelect={() => go(ARR_LIBRARY_ROUTE.radarr)}>
-                <Film className="size-4" />
-                {tNav("movies")}
-              </CommandItem>
-              <CommandItem onSelect={() => go(ARR_LIBRARY_ROUTE.sonarr)}>
-                <Tv2 className="size-4" />
-                {tNav("shows")}
-              </CommandItem>
+              {ALL_ARR_TYPES.map((type) => {
+                const { navLabelKey, Icon } = ARR_UI[type];
+                return (
+                  <CommandItem
+                    key={type}
+                    onSelect={() => go(ARR_LIBRARY_ROUTE[type])}
+                  >
+                    <Icon className="size-4" />
+                    {tNav(navLabelKey)}
+                  </CommandItem>
+                );
+              })}
               <CommandItem onSelect={() => go("/ignored")}>
                 <EyeOff className="size-4" />
                 {tNav("ignored")}
@@ -120,12 +105,12 @@ export function CommandPalette() {
               </CommandItem>
             </CommandGroup>
 
-            {arrTypes.map((type) => {
+            {ALL_ARR_TYPES.map((type) => {
               const matches = instances?.filter((i) => i.type === type) ?? [];
               if (matches.length === 0) return null;
-              const { headingKey, Icon } = ARR_GROUPS[type];
+              const { commandPaletteHeadingKey, Icon } = ARR_UI[type];
               return (
-                <CommandGroup key={type} heading={t(headingKey)}>
+                <CommandGroup key={type} heading={t(commandPaletteHeadingKey)}>
                   {matches.map((i) => (
                     <CommandItem
                       key={i.id}

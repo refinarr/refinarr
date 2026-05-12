@@ -1,65 +1,13 @@
-import { z } from "zod";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
-import { movieService } from "@/server/services/MovieService";
-import { seriesService } from "@/server/services/SeriesService";
-import type {
-  ActionLog,
-  Instance,
-  SearchQueueAction,
-  SearchQueueEntry,
-} from "@/shared/types/models";
+import { dispatchQueueEntry } from "@/server/arr/composition";
+import type { Instance, SearchQueueEntry } from "@/shared/types/models";
 import { LogSource } from "@/shared/types/models";
 import { appLogger } from "./app-logger";
 
 function parsePayload(raw: string | null | undefined): unknown {
   return raw ? JSON.parse(raw) : {};
 }
-
-const seasonPayload = z.object({
-  seasonNumber: z.number().int().nonnegative(),
-});
-const episodePayload = z.object({ fileId: z.number().int().positive() });
-
-type SearchHandler = (
-  instance: Instance,
-  entry: SearchQueueEntry,
-  payload: unknown,
-) => Promise<ActionLog>;
-
-// One handler per queue action. Record<Union, …> makes TypeScript flag a
-// missing handler the moment a new SearchQueueAction is added — no runtime
-// "unknown action" branch needed.
-const SEARCH_HANDLERS: Record<SearchQueueAction, SearchHandler> = {
-  movie: (instance, entry) =>
-    movieService.triggerSearch(instance.id, entry.mediaId, entry.title, {
-      groupId: entry.groupId ?? undefined,
-    }),
-  series: (instance, entry) =>
-    seriesService.triggerSearch(instance.id, entry.mediaId, entry.title, {
-      groupId: entry.groupId ?? undefined,
-    }),
-  season: (instance, entry, payload) => {
-    const { seasonNumber } = seasonPayload.parse(payload);
-    return seriesService.triggerSeasonSearch(
-      instance.id,
-      entry.mediaId,
-      seasonNumber,
-      entry.title,
-      { groupId: entry.groupId ?? undefined },
-    );
-  },
-  episode: (instance, entry, payload) => {
-    const { fileId } = episodePayload.parse(payload);
-    return seriesService.triggerEpisodeFileSearch(
-      instance.id,
-      entry.mediaId,
-      fileId,
-      entry.title,
-      { groupId: entry.groupId ?? undefined },
-    );
-  },
-};
 
 /**
  * Per-instance loop that drains SearchQueue at the configured rate.
@@ -233,15 +181,12 @@ class SearchWorker {
     instance: Instance,
     entry: SearchQueueEntry,
   ): Promise<void> {
-    // Route through the service layer so executeAction writes the ActionLog
-    // row + invalidates the data cache. Calling client.triggerSearch directly
-    // would skip both and the user would see nothing in History.
+    // Dispatch through the arr composition root so per-arr modules own
+    // their handler vocabulary (incl. zod payload schemas). search-worker
+    // stays arr-agnostic; adding a new arr is one module file + the
+    // BUILTIN_MODULES row, never an edit here.
     const payload = parsePayload(entry.payload);
-    // Lookup is type-safe at compile time, but the DB can hold any string
-    // in the action column — guard against a corrupt/legacy row.
-    const handler = SEARCH_HANDLERS[entry.action];
-    if (!handler) throw new Error(`Unknown queue action: ${entry.action}`);
-    const log = await handler(instance, entry, payload);
+    const log = await dispatchQueueEntry(instance, entry, payload);
     // executeAction returns the ActionLog rather than throwing on upstream
     // failure. Re-throw so the queue row gets marked failed (and not done).
     if (log.status === "failed") {

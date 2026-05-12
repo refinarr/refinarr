@@ -1,9 +1,8 @@
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
-import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
-// Type-only — `SonarrClient` shows up in a type assertion inside
-// `buildSeries` (the factory still constructs the real subclass;
-// no value-level import keeps the "subclasses constructed only via
-// ArrClientFactory" rule intact).
+// Type-only — `SonarrClient` is the narrow type SeriesService works
+// against. The actual instance is constructed by `deps.createClient`
+// (DI'd by the composition root); keeping the import type-only stops
+// SeriesService from reaching for the concrete class directly.
 import type {
   SonarrClient,
   SonarrEpisodeFile,
@@ -28,7 +27,10 @@ import type {
   ScoringMode,
 } from "@/shared/types/models";
 import { MediaService } from "./MediaService";
-import type { RetryActionOptions } from "./media-services";
+import type {
+  MediaServiceFacade,
+  RetryActionOptions,
+} from "./media-service-facade";
 
 // Local shorthand for the SonarrSeries shape — derived from the client's
 // return type since `SonarrSeries` is internal to `SonarrClient.ts`.
@@ -63,7 +65,10 @@ function fileCounts(s: SonarrSeries): { existing: number; total: number } {
   );
 }
 
-export class SeriesService extends MediaService<SeriesItem> {
+export class SeriesService
+  extends MediaService<SeriesItem>
+  implements MediaServiceFacade
+{
   protected readonly cacheNamespace = "series";
 
   protected getForWarm(
@@ -125,7 +130,7 @@ export class SeriesService extends MediaService<SeriesItem> {
     >,
     mode: ScoringMode,
   ): Promise<SeriesItem[]> {
-    const client = ArrClientFactory.createArrClient(instance) as SonarrClient;
+    const client = this.deps.createClient(instance) as SonarrClient;
     const [series, profiles] = await Promise.all([
       client.getSeries(),
       client.getQualityProfiles(),
@@ -438,7 +443,9 @@ export class SeriesService extends MediaService<SeriesItem> {
     title: string,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    // Narrow to SonarrClient — triggerSeasonSearch is series-specific.
+    // withClient(id, "sonarr") narrows the client to SonarrClient via
+    // the ClientFor<T> overload — no cast needed; the runtime expectedType
+    // check makes the narrowing sound.
     const { instance, client } = await this.withClient(instanceId, "sonarr");
 
     return this.executeAction({
@@ -467,8 +474,9 @@ export class SeriesService extends MediaService<SeriesItem> {
     title: string,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    // Narrow to SonarrClient — getEpisodes + triggerEpisodeSearch are
-    // series-specific.
+    // withClient(id, "sonarr") narrows the client to SonarrClient via
+    // the ClientFor<T> overload — see triggerSeasonSearch for the same
+    // pattern.
     const { instance, client } = await this.withClient(instanceId, "sonarr");
 
     return this.executeAction({
@@ -483,8 +491,11 @@ export class SeriesService extends MediaService<SeriesItem> {
       run: async () => {
         const episodes = await client.getEpisodes(mediaId);
         const episodeIds = episodes
-          .filter((e) => e.episodeFileId === fileId)
-          .map((e) => e.id);
+          .filter(
+            (e: { id: number; episodeFileId: number }) =>
+              e.episodeFileId === fileId,
+          )
+          .map((e: { id: number }) => e.id);
         if (episodeIds.length === 0)
           throw new Error("Episode not found for file");
         return client.triggerEpisodeSearch(episodeIds);
@@ -493,4 +504,6 @@ export class SeriesService extends MediaService<SeriesItem> {
   }
 }
 
-export const seriesService = new SeriesService();
+// Singleton lives in `@/server/arr/composition` (along with the
+// radarr/movie counterpart). Consumers import `seriesService` from
+// there instead of from this file.

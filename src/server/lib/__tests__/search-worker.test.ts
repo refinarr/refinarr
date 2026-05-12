@@ -271,7 +271,7 @@ describe("SearchWorker", () => {
       async () => {
         const refetched = await searchQueueRepository.findById(queued.id);
         expect(refetched?.status).toBe("failed");
-        expect(refetched?.error).toMatch(/Unknown queue action/);
+        expect(refetched?.error).toMatch(/Unsupported queue action/);
       },
       { timeout: 3000 },
     );

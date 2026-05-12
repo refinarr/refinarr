@@ -1,10 +1,12 @@
 import { describe, test, expect, vi } from "vitest";
 import { MediaService } from "@/server/services/MediaService";
 import { instanceService } from "@/server/services/InstanceService";
+import { createArrClient } from "@/server/arr/composition";
 import { CACHE_TTL_MS } from "@/server/lib/data-cache";
 // Type-only client imports — used inside `expect(...).toBeInstanceOf` /
-// runtime-result checks but not constructed directly. Keeps the
-// "subclasses constructed only via ArrClientFactory" rule intact.
+// runtime-result checks but not constructed directly. The "factory is
+// the only constructor" rule is enforced now by composition root +
+// MediaService DI.
 import { RadarrClient } from "@/server/clients/RadarrClient";
 import { SonarrClient } from "@/server/clients/SonarrClient";
 import { LogSource } from "@/shared/types/models";
@@ -28,7 +30,10 @@ class TestMediaService extends MediaService<MediaItem> {
     private readonly items: MediaItem[] = [],
     private buildError?: Error,
   ) {
-    super();
+    // Tests use the real createArrClient (which routes through the
+    // composition root). MSW handlers intercept the actual upstream
+    // calls — see src/test/msw.ts.
+    super({ createClient: createArrClient });
     this.cacheNamespace = cacheNamespace;
   }
 

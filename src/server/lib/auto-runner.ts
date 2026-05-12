@@ -4,10 +4,10 @@ import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
-import { mediaServiceFor } from "@/server/services/media-services";
+import { mediaServiceFor } from "@/server/arr/composition";
+import { ARR_META } from "@/shared/arr-meta";
 import { isValidCronExpression } from "@/shared/cron";
 import type {
-  ArrType,
   AutoSearchScoringMode,
   Instance,
   MediaItem,
@@ -33,11 +33,6 @@ const AUTO_SEARCH_SCORING_OVERRIDE: Record<
 > = {
   profile: "profile",
   inherit: undefined,
-};
-
-const QUEUE_ACTIONS: Record<ArrType, "movie" | "series"> = {
-  radarr: "movie",
-  sonarr: "series",
 };
 
 // Pure function — exported for unit tests. Returns the most recent cron
@@ -592,7 +587,7 @@ class AutoRunner {
     const toEnqueue = picked.filter((item) => !alreadyPending.has(item.id));
 
     const groupId = toEnqueue.length > 1 ? crypto.randomUUID() : undefined;
-    const action = QUEUE_ACTIONS[inst.type];
+    const action = ARR_META[inst.type].defaultBatchAction;
     let enqueued = 0;
 
     for (const item of toEnqueue) {

@@ -1,5 +1,5 @@
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
-import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
+import { createArrClient } from "@/server/arr/composition";
 import { appLogger } from "@/server/lib/app-logger";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { searchWorker } from "@/server/lib/search-worker";
@@ -124,7 +124,7 @@ export class InstanceService {
   async testConnection(id: number): Promise<boolean> {
     const instance = await instanceRepository.findById(id);
     if (!instance) return false;
-    const client = ArrClientFactory.createArrClient(instance);
+    const client = createArrClient(instance);
     const result = await client.testConnection();
     const log = result.ok ? appLogger.info : appLogger.error;
     log.call(appLogger, "Connection test", {
@@ -172,7 +172,7 @@ export class InstanceService {
       autoSearchScoringMode: "inherit",
       autoSearchFailedStreak: 0,
     };
-    const client = ArrClientFactory.createArrClient(transient);
+    const client = createArrClient(transient);
     const result = await client.testConnection();
     const log = result.ok ? appLogger.info : appLogger.error;
     log.call(appLogger, "Credentials test", {

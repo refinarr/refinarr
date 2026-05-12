@@ -7,7 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import { usePrefersReducedMotion } from "@/client/hooks/ui/useMediaQuery";
 import { useScrollDirection } from "@/client/hooks/ui/useScrollDirection";
 import { cn } from "@/client/lib/utils";
-import { ARR_LIBRARY_ROUTE } from "@/shared/arr-type";
+import { ARR_LIBRARY_ROUTE } from "@/shared/arr-meta";
 
 interface TabKey {
   href: string;

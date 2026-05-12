@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { parseMediaQuery } from "@/server/lib/parse-media-query";
-import { seriesService } from "@/server/services/SeriesService";
+import { seriesService } from "@/server/arr/composition";
 
 export const GET = createApiHandler(async (req: NextRequest) => {
   const s = req.nextUrl.searchParams;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { parseJson } from "@/server/lib/api-errors";
-import { seriesService } from "@/server/services/SeriesService";
+import { seriesService } from "@/server/arr/composition";
 import { searchDispatcher } from "@/server/services/SearchDispatcher";
 import { dataCache } from "@/server/lib/data-cache";
 import { sonarrDeleteSchema } from "@/shared/types/schemas";

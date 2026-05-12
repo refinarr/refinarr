@@ -1,5 +1,4 @@
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
-import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
 import type {
   RadarrClient,
   RadarrMovieFile,
@@ -23,7 +22,10 @@ import type {
   ScoringMode,
 } from "@/shared/types/models";
 import { MediaService } from "./MediaService";
-import type { RetryActionOptions } from "./media-services";
+import type {
+  MediaServiceFacade,
+  RetryActionOptions,
+} from "./media-service-facade";
 
 // Local shorthand for the RadarrMovie shape — derived from the client's
 // return type since `RadarrMovie` is internal to `RadarrClient.ts`.
@@ -44,7 +46,10 @@ type ManualCtx = {
   wantedCfs: Array<{ id: number; name: string }>;
 };
 
-export class MovieService extends MediaService<MovieItem> {
+export class MovieService
+  extends MediaService<MovieItem>
+  implements MediaServiceFacade
+{
   protected readonly cacheNamespace = "movies";
 
   protected getForWarm(
@@ -106,7 +111,7 @@ export class MovieService extends MediaService<MovieItem> {
     >,
     mode: ScoringMode,
   ): Promise<MovieItem[]> {
-    const client = ArrClientFactory.createArrClient(instance) as RadarrClient;
+    const client = this.deps.createClient(instance) as RadarrClient;
     const [movies, profiles] = await Promise.all([
       client.getMovies(),
       client.getQualityProfiles(),
@@ -303,4 +308,7 @@ export class MovieService extends MediaService<MovieItem> {
   }
 }
 
-export const movieService = new MovieService();
+// Singleton lives in `@/server/arr/composition` (along with the
+// sonarr/series counterpart) so it can be wired with the DI deps the
+// MediaService base now requires. Consumers import `movieService` from
+// there instead of from this file.

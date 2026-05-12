@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { parseJson } from "@/server/lib/api-errors";
-import { movieService } from "@/server/services/MovieService";
+import { movieService } from "@/server/arr/composition";
 import { searchDispatcher } from "@/server/services/SearchDispatcher";
 import { dataCache } from "@/server/lib/data-cache";
 import { radarrDeleteSchema } from "@/shared/types/schemas";

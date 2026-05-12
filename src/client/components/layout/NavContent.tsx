@@ -3,8 +3,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
-  Film,
-  Tv2,
   LayoutDashboard,
   History,
   Settings,
@@ -16,14 +14,19 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/client/lib/utils";
 import { useMe, useLogout } from "@/client/hooks/data/useMe";
-import { ARR_LIBRARY_ROUTE } from "@/shared/arr-type";
+import { ARR_UI } from "@/client/lib/arr-ui";
+import { ARR_LIBRARY_ROUTE, ALL_ARR_TYPES } from "@/shared/arr-meta";
+
+// Per-arr nav label keys come from ARR_UI (one source for the icon +
+// i18n key per arr). Adding Lidarr / Whisparr drops a row in arr-ui.ts
+// and this union widens automatically.
+type ArrNavKey = (typeof ARR_UI)[keyof typeof ARR_UI]["navLabelKey"];
 
 interface NavLink {
   href: string;
   key:
     | "dashboard"
-    | "movies"
-    | "shows"
+    | ArrNavKey
     | "ignored"
     | "queue"
     | "history"
@@ -34,8 +37,13 @@ interface NavLink {
 
 const links: NavLink[] = [
   { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
-  { href: ARR_LIBRARY_ROUTE.radarr, key: "movies", icon: Film },
-  { href: ARR_LIBRARY_ROUTE.sonarr, key: "shows", icon: Tv2 },
+  ...ALL_ARR_TYPES.map(
+    (type): NavLink => ({
+      href: ARR_LIBRARY_ROUTE[type],
+      key: ARR_UI[type].navLabelKey,
+      icon: ARR_UI[type].Icon,
+    }),
+  ),
   { href: "/ignored", key: "ignored", icon: EyeOff },
   { href: "/queue", key: "queue", icon: Hourglass },
   { href: "/history", key: "history", icon: History },

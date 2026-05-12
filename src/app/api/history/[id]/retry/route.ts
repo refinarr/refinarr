@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
-import { mediaServiceFor } from "@/server/services/media-services";
+import { mediaServiceFor } from "@/server/arr/composition";
 import { badRequest, notFound, positiveInt } from "@/server/lib/api-errors";
 import { retryPayloadSchema } from "@/shared/types/schemas";
 

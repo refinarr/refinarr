@@ -9,17 +9,7 @@ import { InstanceErrorSummary } from "@/client/components/history/InstanceErrorS
 import { useInstanceHealth } from "@/client/hooks/data/useInstances";
 import { formatRelative } from "@/client/lib/format-relative";
 import type { DashboardInstanceSummary } from "@/shared/types/api";
-import type { ArrType } from "@/shared/types/models";
-import { ARR_LIBRARY_ROUTE } from "@/shared/arr-type";
-
-// Per-type i18n key for the "N flagged X" noun. The library route lives
-// in @/shared/arr-type, so this map only owns UI strings. Adding Lidarr
-// / Whisparr means dropping a third entry — the rest of the card is
-// type-agnostic.
-const NOUN_KEY: Record<ArrType, "flaggedMoviesNoun" | "flaggedSeriesNoun"> = {
-  radarr: "flaggedMoviesNoun",
-  sonarr: "flaggedSeriesNoun",
-};
+import { ARR_LIBRARY_ROUTE, ARR_META } from "@/shared/arr-meta";
 
 interface Props {
   instance: DashboardInstanceSummary;
@@ -70,7 +60,7 @@ export function InstanceSummaryCard({ instance }: Props) {
   const healthLabel = t(LABEL_KEY[state]);
 
   const libraryHref = ARR_LIBRARY_ROUTE[instance.type];
-  const flaggedNounKey = NOUN_KEY[instance.type];
+  const flaggedNounKey = ARR_META[instance.type].dashboardCardNounI18nKey;
 
   return (
     <Card className={!instance.enabled ? "opacity-60" : ""}>
