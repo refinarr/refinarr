@@ -7,11 +7,6 @@ import { useMe } from "@/client/hooks/data/useMe";
 import { SettingsRail, type SettingsRailItem } from "./components/SettingsRail";
 import { SettingsPicker } from "./components/SettingsPicker";
 
-// Shared shell for every /settings/* route. Renders the page header
-// (title + mobile picker), the desktop rail, and the right column that
-// hosts each route's page.tsx. No scroll-spy, no hash sync — Next.js
-// routing drives section switching, the rail/picker just produce
-// <Link>s and router.push() calls.
 interface Props {
   children: ReactNode;
 }
@@ -74,8 +69,6 @@ export default function SettingsLayout({ children }: Props) {
           <p className="text-muted-foreground mt-1 text-sm">{t("subtitle")}</p>
         </header>
 
-        {/* Mobile picker sits directly under the header — desktop uses
-            the rail instead, so the picker is hidden there. */}
         <div className="md:hidden">
           <SettingsPicker items={items} />
         </div>

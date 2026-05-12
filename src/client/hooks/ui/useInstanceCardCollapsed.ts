@@ -1,11 +1,6 @@
 "use client";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
-// Per-instance collapsed state for the Settings InstanceCard. Default
-// expanded. Persisted in localStorage under rfn-inst-collapsed:<id> so
-// each card remembers its preference between visits. Cross-tab updates
-// flow via a single CustomEvent — re-using one event keeps the API
-// shape identical to useSidebarOpen / useDensity.
 const CHANGE_EVENT = "rfn:instance-card-collapsed-change";
 
 interface Result {
