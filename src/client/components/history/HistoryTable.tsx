@@ -13,12 +13,18 @@ import {
 } from "@/client/components/ui/table";
 import { formatRelative } from "@/client/lib/format";
 import type { ActionLog, ActionStatus } from "@/shared/types/models";
+import type { GroupSummary } from "@/shared/types/api";
 import { ActionStatusBadge } from "./ActionStatusBadge";
 import { ActionTypeBadge } from "./ActionTypeBadge";
 import { RetryButton } from "./RetryButton";
 
 interface Props {
   logs: ActionLog[];
+  // Server-side aggregate per groupId. When present, the batch parent
+  // row uses these counts instead of the per-page row count — so a 100-
+  // item batch spanning paginated pages shows the true total. Optional
+  // for backward compat with callers that don't paginate.
+  groupSummaries?: Record<string, GroupSummary>;
 }
 
 // Output of `groupLogs`. A group with a single child OR a null groupId
@@ -107,7 +113,7 @@ function statusCounts(
   }));
 }
 
-export function HistoryTable({ logs }: Props) {
+export function HistoryTable({ logs, groupSummaries }: Props) {
   const tCols = useTranslations("history.columns");
   const tRetry = useTranslations("history.retry");
   const tBatch = useTranslations("history.batch");
@@ -146,6 +152,7 @@ export function HistoryTable({ logs }: Props) {
                 tRetry,
                 tBatch,
                 tActions,
+                groupSummaries?.[g.rows[0].groupId!],
               ),
         )}
       </TableBody>
@@ -208,6 +215,10 @@ function renderBatch(
   tRetry: T,
   tBatch: T,
   tActions: T,
+  // When present (paginated /api/history response), these aggregates win
+  // over the per-page `rows.length`/`statusCounts(rows)` calculations so
+  // a batch spanning pages reads as one batch with the true total.
+  summary: GroupSummary | undefined,
 ): ReactElement[] {
   const groupId = rows[0].groupId!;
   const head = rows[0];
@@ -248,12 +259,20 @@ function renderBatch(
       <TableCell className="text-sm font-medium">
         {tBatch("header", {
           action: tActions(head.action),
-          count: rows.length,
+          count: summary?.total ?? rows.length,
         })}
       </TableCell>
       <TableCell>
         <div className="flex flex-wrap gap-1">
-          {statusCounts(rows).map(({ status, count }) => (
+          {(summary
+            ? STATUS_DISPLAY_ORDER.filter(
+                (s) => (summary.statusCounts[s] ?? 0) > 0,
+              ).map((status) => ({
+                status,
+                count: summary.statusCounts[status] as number,
+              }))
+            : statusCounts(rows)
+          ).map(({ status, count }) => (
             <ActionStatusBadge key={status} status={status} count={count} />
           ))}
         </div>

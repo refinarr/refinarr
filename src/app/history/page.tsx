@@ -67,6 +67,13 @@ function HistoryContent() {
   };
 
   const allLogs: ActionLog[] = data?.pages.flatMap((p) => p.items) ?? [];
+  // Merge per-page groupSummaries — same groupId across pages carries an
+  // identical aggregate (server-side computed), so naive Object.assign
+  // collision is intentional.
+  const groupSummaries = Object.assign(
+    {},
+    ...(data?.pages ?? []).map((p) => p.groupSummaries),
+  );
 
   const statusLabel = (key: string) => {
     switch (key) {
@@ -186,7 +193,9 @@ function HistoryContent() {
 
       {isLoading && <MediaTableSkeleton />}
       {!isLoading && allLogs.length === 0 && <EmptyLogs />}
-      {allLogs.length > 0 && <HistoryTable logs={allLogs} />}
+      {allLogs.length > 0 && (
+        <HistoryTable logs={allLogs} groupSummaries={groupSummaries} />
+      )}
 
       <div ref={sentinelRef} className="h-4" />
       {isFetchingNextPage && <MediaTableSkeleton rows={3} />}

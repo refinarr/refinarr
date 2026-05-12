@@ -143,6 +143,28 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
     });
   }
 
+  // Per-group pending counts. Used by /api/history to fold queued-but-
+  // not-yet-dispatched rows into batch GroupSummary totals so a fresh
+  // bulk op shows its full size in the batch header immediately.
+  async findPendingCountByGroup(
+    groupIds: string[],
+  ): Promise<Record<string, number>> {
+    if (groupIds.length === 0) return {};
+    const rows = await this.db.searchQueue.groupBy({
+      by: ["groupId"],
+      where: { groupId: { in: groupIds }, status: "pending" },
+      _count: { _all: true },
+    });
+    // The where-clause excludes null groupIds, so r.groupId is non-null
+    // for every returned row; assert that to TS (Prisma's generated
+    // types stay nullable regardless of the filter).
+    const out: Record<string, number> = {};
+    for (const r of rows) {
+      out[r.groupId as string] = r._count._all;
+    }
+    return out;
+  }
+
   async findLastProcessedAt(instanceId: number): Promise<Date | null> {
     const row = await this.db.searchQueue.findFirst({
       where: { instanceId, status: { in: ["done", "failed"] } },

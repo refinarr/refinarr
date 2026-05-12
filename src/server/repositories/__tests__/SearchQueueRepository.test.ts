@@ -340,4 +340,95 @@ describe("SearchQueueRepository", () => {
     // Terminal row for instance 1 stays put.
     expect(await searchQueueRepository.findById(c.id)).not.toBeNull();
   });
+
+  describe("findPendingCountByGroup", () => {
+    test("empty groupIds returns empty object", async () => {
+      const result = await searchQueueRepository.findPendingCountByGroup([]);
+      expect(result).toEqual({});
+    });
+
+    test("counts pending rows per group, ignores non-pending", async () => {
+      // Two pending in group "alpha", one done in "alpha", three pending in
+      // "beta", and one row with null groupId (should be excluded).
+      await prisma.searchQueue.createMany({
+        data: [
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 1,
+            title: "a1",
+            payload: "{}",
+            status: "pending",
+            groupId: "alpha",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 2,
+            title: "a2",
+            payload: "{}",
+            status: "pending",
+            groupId: "alpha",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 3,
+            title: "a3",
+            payload: "{}",
+            status: "done",
+            groupId: "alpha",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 4,
+            title: "b1",
+            payload: "{}",
+            status: "pending",
+            groupId: "beta",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 5,
+            title: "b2",
+            payload: "{}",
+            status: "pending",
+            groupId: "beta",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 6,
+            title: "b3",
+            payload: "{}",
+            status: "pending",
+            groupId: "beta",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 7,
+            title: "solo",
+            payload: "{}",
+            status: "pending",
+            groupId: null,
+          },
+        ],
+      });
+      const result = await searchQueueRepository.findPendingCountByGroup([
+        "alpha",
+        "beta",
+      ]);
+      expect(result).toEqual({ alpha: 2, beta: 3 });
+    });
+
+    test("groupId requested but no pending rows → not included in result", async () => {
+      const result = await searchQueueRepository.findPendingCountByGroup([
+        "nope",
+      ]);
+      expect(result).toEqual({});
+    });
+  });
 });

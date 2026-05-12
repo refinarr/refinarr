@@ -495,4 +495,56 @@ describe("LogRepository", () => {
       );
     });
   });
+
+  describe("findGroupSummaries", () => {
+    test("empty groupIds returns empty object without a DB round-trip", async () => {
+      const result = await logRepository.findGroupSummaries([]);
+      expect(result).toEqual({});
+    });
+
+    test("aggregates per-status counts and reports action for a single group", async () => {
+      const { prisma } = await import("@/server/lib/db");
+      const groupId = "g-1";
+      await prisma.actionLog.createMany({
+        data: [
+          { ...baseLog, mediaId: 1, status: "searched", groupId },
+          { ...baseLog, mediaId: 2, status: "searched", groupId },
+          { ...baseLog, mediaId: 3, status: "failed", groupId },
+        ],
+      });
+
+      const result = await logRepository.findGroupSummaries([groupId]);
+      expect(result[groupId]).toEqual({
+        groupId,
+        total: 3,
+        statusCounts: { searched: 2, failed: 1 },
+        action: "search",
+      });
+    });
+
+    test("omits groupIds with zero matching rows", async () => {
+      const result = await logRepository.findGroupSummaries(["does-not-exist"]);
+      expect(result).toEqual({});
+    });
+
+    test("returns one entry per groupId requested when multiple exist", async () => {
+      const { prisma } = await import("@/server/lib/db");
+      await prisma.actionLog.createMany({
+        data: [
+          { ...baseLog, mediaId: 10, status: "success", groupId: "alpha" },
+          {
+            ...baseLog,
+            mediaId: 11,
+            status: "searched",
+            groupId: "beta",
+            action: "search_season",
+          },
+        ],
+      });
+      const result = await logRepository.findGroupSummaries(["alpha", "beta"]);
+      expect(Object.keys(result).sort()).toEqual(["alpha", "beta"]);
+      expect(result.alpha.action).toBe("search");
+      expect(result.beta.action).toBe("search_season");
+    });
+  });
 });

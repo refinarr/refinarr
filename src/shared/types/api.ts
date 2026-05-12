@@ -1,5 +1,7 @@
 import type {
   ActionLog,
+  ActionStatus,
+  ActionType,
   ArrType,
   AutoSearchPickStrategy,
   AutoSearchScheduleMode,
@@ -13,6 +15,31 @@ export interface PaginatedResponse<T> {
   page: number;
   limit: number;
   hasMore: boolean;
+}
+
+// Per-group aggregate sent alongside the paginated /api/history response so
+// a batch's header reads "Batch · search · 100 items / 3 failed" even when
+// the 100 children span multiple paginated pages. Counts include the
+// in-memory pending queue rows synthesized by the route, so a fresh bulk
+// op shows its full size immediately instead of trickling in.
+export interface GroupSummary {
+  groupId: string;
+  total: number;
+  // Per-status counts — keys are sparse (only present statuses appear).
+  // Pending counts here include both queued-but-not-dispatched rows and
+  // any ActionLog rows that have a `pending` status.
+  statusCounts: Partial<Record<ActionStatus, number>>;
+  action: ActionType;
+}
+
+// Augments PaginatedResponse for /api/history specifically. Distinct shape
+// so the type contract for callers that don't need group context (e.g.
+// retry mutations) stays simple.
+export interface HistoryResponse extends PaginatedResponse<ActionLog> {
+  // Map keyed by groupId — entries exist only for groups that have at
+  // least one row referenced on the current page (kept compact so the
+  // payload doesn't balloon on a quiet instance).
+  groupSummaries: Record<string, GroupSummary>;
 }
 
 // Canonical JSON error shape returned by createApiHandler. `traceId` is

@@ -9,6 +9,7 @@ import type {
   SearchQueueAction,
   SearchQueueEntry,
 } from "@/shared/types/models";
+import type { GroupSummary } from "@/shared/types/api";
 
 // Map a SearchQueue action key to the ActionLog action type. Both vocabularies
 // describe the same concept; the queue uses a narrower per-arr taxonomy
@@ -91,12 +92,51 @@ export const GET = createApiHandler(async (req: NextRequest) => {
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 
+  // Group summaries: aggregate counts per groupId across BOTH the
+  // ActionLog (all statuses) and the SearchQueue (pending-only). Without
+  // this, the batch header on /history would reflect only the rows on the
+  // current paginated page — a 100-item batch spanning pages would show
+  // "47 items" until the user clicked through to see siblings.
+  const groupIds = Array.from(
+    new Set(
+      merged.map((r) => r.groupId).filter((id): id is string => id !== null),
+    ),
+  );
+  const [actionSummaries, queuePendingByGroup] = await Promise.all([
+    logRepository.findGroupSummaries(groupIds),
+    searchQueueRepository.findPendingCountByGroup(groupIds),
+  ]);
+
+  const groupSummaries: Record<string, GroupSummary> = { ...actionSummaries };
+  // Fold pending queue counts into existing summaries (status: pending).
+  for (const [groupId, pendingCount] of Object.entries(queuePendingByGroup)) {
+    if (pendingCount === 0) continue;
+    const existing = groupSummaries[groupId];
+    if (existing) {
+      existing.statusCounts.pending =
+        (existing.statusCounts.pending ?? 0) + pendingCount;
+      existing.total += pendingCount;
+    } else {
+      // Group has only pending queue rows (no ActionLog yet) — derive
+      // the action from a synthetic row we already have in scope.
+      const seed = pendingSynthetics.find((r) => r.groupId === groupId);
+      if (!seed) continue;
+      groupSummaries[groupId] = {
+        groupId,
+        total: pendingCount,
+        statusCounts: { pending: pendingCount },
+        action: seed.action,
+      };
+    }
+  }
+
   return NextResponse.json({
     items: merged,
     total: total + pendingSynthetics.length,
     page,
     limit,
     hasMore: page * limit < total,
+    groupSummaries,
   });
 });
 
