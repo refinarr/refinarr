@@ -39,7 +39,7 @@ export function SettingsRail({ items, className }: Props) {
             className={cn(
               "focus-visible:ring-ring flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
               selected
-                ? "bg-primary text-primary-foreground"
+                ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
           >
