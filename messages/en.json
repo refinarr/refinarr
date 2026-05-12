@@ -59,7 +59,8 @@
     "on": "On",
     "off": "Off",
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "moreActions": "More actions"
   },
   "dialog": {
     "close": "Close"
@@ -722,6 +723,10 @@
     "clearHistory": {
       "title": "Clear history?",
       "body": "Clear all history? This cannot be undone."
+    },
+    "deleteInstance": {
+      "title": "Delete instance?",
+      "body": "Delete “{name}”? Its data stays in Radarr/Sonarr — only refinarr's link to it is removed. This cannot be undone."
     },
     "clearLogs": {
       "title": "Clear logs?",
