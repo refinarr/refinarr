@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ColumnSizingState, Updater } from "@tanstack/react-table";
 
 const STORAGE_PREFIX = "media-table-sizing:";
@@ -45,8 +45,19 @@ export function useColumnSizing(storageKey: string) {
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(() =>
     readStored(storageKey),
   );
+  // Tracks the key the current `columnSizing` value was hydrated against.
+  // When the caller swaps `storageKey` at runtime, the in-memory state
+  // belongs to the OLD key — we must rehydrate from the NEW key before
+  // writing, otherwise the persist effect would clobber the new table's
+  // saved widths with the old table's sizing.
+  const hydratedKeyRef = useRef(storageKey);
 
   useEffect(() => {
+    if (hydratedKeyRef.current !== storageKey) {
+      hydratedKeyRef.current = storageKey;
+      setColumnSizing(readStored(storageKey));
+      return;
+    }
     writeStored(storageKey, columnSizing);
   }, [storageKey, columnSizing]);
 

@@ -245,7 +245,20 @@ function MediaTableDesktopBody<T extends { id: number }>({
               );
             }
             const tableRow = tableRows[index];
-            if (!tableRow) return null;
+            if (!tableRow) {
+              // virt and TanStack should always agree — effectiveCount
+              // in useVirtList is `rows.length + skeleton-buffer`, and
+              // we hit the skeleton branch above when `row` is
+              // undefined. If we're here with no tableRow, virt is
+              // projecting an index past the table row model, which is
+              // a sync bug worth surfacing in dev.
+              if (process.env.NODE_ENV !== "production") {
+                console.warn(
+                  `[MediaTable] virt projected index ${index} but tableRows has length ${tableRows.length}`,
+                );
+              }
+              return null;
+            }
             return (
               <MediaTableRow
                 key={row.id}
