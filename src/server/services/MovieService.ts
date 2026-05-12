@@ -111,7 +111,7 @@ export class MovieService
     >,
     mode: ScoringMode,
   ): Promise<MovieItem[]> {
-    const client = this.deps.createClient(instance) as RadarrClient;
+    const client = this.clientFromInstance(instance, "radarr");
     const [movies, profiles] = await Promise.all([
       client.getMovies(),
       client.getQualityProfiles(),

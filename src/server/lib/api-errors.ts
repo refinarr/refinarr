@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { ZodError, type ZodType } from "zod";
+import type { ArrType, Instance } from "@/shared/types/models";
 
 type ApiErrorLogLevel = "warn" | "error";
 
@@ -102,6 +103,31 @@ export function positiveInt(value: string | undefined, name: string): number {
     throw badRequest(`Invalid ${name}`);
   }
   return numericValue;
+}
+
+// Assertion predicate for route handlers that take a user-supplied
+// `instanceId` and need the resolved instance to be a specific arr type
+// (e.g. `/api/radarr/*` routes require a radarr instance). Throws
+// `badRequest` so a sonarr id sent to a radarr route surfaces as a 400,
+// not a cryptic 500 at the first upstream call.
+//
+// Lives in api-errors.ts (not composition.ts) so the arr composition
+// root stays HTTP-free — HTTP status / 4xx semantics belong at the
+// API tier alongside the other route guards (parseJson, positiveInt).
+//
+// `asserts instance is Instance & { type: T }` narrows TS in the
+// caller after the call, so a subsequent `createTypedClient(instance,
+// "radarr")` is sound without any local cast.
+export function assertArrType<T extends ArrType>(
+  instance: Instance,
+  expectedType: T,
+): asserts instance is Instance & { type: T } {
+  if (instance.type !== expectedType) {
+    throw badRequest(
+      `Instance ${instance.id} is type ${instance.type}, expected ${expectedType}`,
+      "ARR_TYPE_MISMATCH",
+    );
+  }
 }
 
 export class ZodPayloadError extends Error {

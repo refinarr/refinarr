@@ -483,6 +483,31 @@ export abstract class MediaService<TItem extends MediaItem> {
     return { instance, client: this.deps.createClient(instance) };
   }
 
+  // Typed variant of `withClient` for callers that already hold the
+  // instance (e.g. internal `build*` methods called from `getMovies` /
+  // `getSeries`). Runtime-checks `instance.type` against `expectedType`
+  // and returns the narrowed concrete client via `ClientFor<T>` — no
+  // extra repo round-trip, no `as SonarrClient` cast at the call site.
+  //
+  // Throws a plain `Error` on mismatch — this method is only reachable
+  // from internal `build*` paths where the arr-type is established by
+  // construction (the per-arr service is wired to its own type via
+  // composition root). A mismatch firing here means a programmer bug,
+  // not user input, so a 500 is the correct surfaced status. Route
+  // handlers that take user-supplied `instanceId` validate the type
+  // *before* getting here via `assertArrType` in `api-errors.ts`.
+  protected clientFromInstance<T extends ArrType>(
+    instance: Instance,
+    expectedType: T,
+  ): ClientFor<T> {
+    if (instance.type !== expectedType) {
+      throw new Error(
+        `Instance ${instance.id} is type ${instance.type}, expected ${expectedType}`,
+      );
+    }
+    return this.deps.createClient(instance) as ClientFor<T>;
+  }
+
   // Build the three profile-derived maps every *arr build needs:
   //   byId — profile lookup, also used to drop items pointing at a
   //     deleted profile (broken upstream state).

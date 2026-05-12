@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
-import { notFound, positiveInt } from "@/server/lib/api-errors";
+import { assertArrType, notFound, positiveInt } from "@/server/lib/api-errors";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
-import { createArrClient } from "@/server/arr/composition";
-import { RadarrClient } from "@/server/clients/RadarrClient";
+import { createTypedClient } from "@/server/arr/composition";
 
 export const GET = createApiHandler(async (req: NextRequest) => {
   const instanceId = positiveInt(
@@ -12,7 +11,8 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   );
   const instance = await instanceRepository.findById(instanceId);
   if (!instance) throw notFound("Instance not found");
-  const client = createArrClient(instance) as RadarrClient;
+  assertArrType(instance, "radarr");
+  const client = createTypedClient(instance, "radarr");
   const profiles = await client.getQualityProfiles();
   return NextResponse.json(profiles);
 });

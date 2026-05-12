@@ -130,7 +130,7 @@ export class SeriesService
     >,
     mode: ScoringMode,
   ): Promise<SeriesItem[]> {
-    const client = this.deps.createClient(instance) as SonarrClient;
+    const client = this.clientFromInstance(instance, "sonarr");
     const [series, profiles] = await Promise.all([
       client.getSeries(),
       client.getQualityProfiles(),

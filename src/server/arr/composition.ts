@@ -64,6 +64,34 @@ export function createArrClient(instance: Instance): ArrClient {
   return new def.Client(instance);
 }
 
+// Typed factory — narrows the returned client to the concrete subclass
+// when the caller already knows `instance.type` matches `expectedType`.
+//
+// composition.ts stays HTTP-free: it doesn't know about routes or
+// HttpError. Callers that take user-supplied `instanceId` (route
+// handlers) MUST validate the arr-type FIRST via `assertArrType()`
+// from `@/server/lib/api-errors` so a mismatch surfaces as a
+// deterministic 400, not a 500 here. After the assertion, TS narrows
+// `instance.type` to `T` and the cast below is sound.
+//
+// Callers that already hold a type-narrowed instance (post-assertion
+// or by service-layer invariant) pay no runtime check overhead — the
+// runtime guard below is defense-in-depth for direct internal use.
+export function createTypedClient<T extends ArrType>(
+  instance: Instance,
+  expectedType: T,
+): ClientFor<T> {
+  if (instance.type !== expectedType) {
+    // Internal invariant check — routes must validate via
+    // `assertArrType` before reaching here. A mismatch firing here
+    // means a service-layer bug, surfaces as 500 via createApiHandler.
+    throw new Error(
+      `Instance ${instance.id} is type ${instance.type}, expected ${expectedType}`,
+    );
+  }
+  return createArrClient(instance) as ClientFor<T>;
+}
+
 // Shared deps handed to every service. Today only the universal
 // createClient; future deps (clock, metrics, feature flags) extend
 // here without touching service constructors.
