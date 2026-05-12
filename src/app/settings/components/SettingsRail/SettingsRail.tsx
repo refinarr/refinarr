@@ -1,5 +1,7 @@
 "use client";
 import type { ComponentType } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/client/lib/utils";
 
@@ -7,45 +9,43 @@ export interface SettingsRailItem {
   id: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
+  // Absolute path the rail entry navigates to (e.g. "/settings/appearance").
+  href: string;
 }
 
 interface Props {
   items: SettingsRailItem[];
-  active: string;
-  onSelect: (id: string) => void;
   className?: string;
 }
 
-export function SettingsRail({ items, active, onSelect, className }: Props) {
+export function SettingsRail({ items, className }: Props) {
   const t = useTranslations("settings");
+  const pathname = usePathname();
   return (
     <nav
       aria-label={t("navAriaLabel")}
       className={cn("flex w-56 shrink-0 flex-col gap-1 self-start", className)}
     >
-      {items.map(({ id, label, icon: Icon }) => {
-        const selected = active === id;
+      {items.map(({ id, label, icon: Icon, href }) => {
+        // Match exact path OR any nested route under it, so future
+        // sub-routes (e.g. /settings/instances/[id]) still highlight
+        // the parent rail entry.
+        const selected = pathname === href || pathname.startsWith(`${href}/`);
         return (
-          <button
+          <Link
             key={id}
-            type="button"
-            aria-current={selected ? "true" : undefined}
-            onClick={() => onSelect(id)}
+            href={href}
+            aria-current={selected ? "page" : undefined}
             className={cn(
-              "focus-visible:ring-ring relative flex items-center gap-2 rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
+              "focus-visible:ring-ring flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none",
               selected
-                ? "border-primary bg-primary/10 text-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground border-transparent",
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
           >
-            <Icon
-              className={cn(
-                "size-4 transition-colors",
-                selected && "text-primary",
-              )}
-            />
+            <Icon className="size-4" />
             <span>{label}</span>
-          </button>
+          </Link>
         );
       })}
     </nav>

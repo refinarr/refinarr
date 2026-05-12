@@ -5,7 +5,9 @@ test.use({ storageState: "e2e/.auth/user.json" });
 test.describe.configure({ mode: "serial" });
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/settings");
+  // Settings is now route-per-section; /settings redirects to
+  // /settings/general, so navigate straight to the Instances route.
+  await page.goto("/settings/instances");
 });
 
 test("settings page renders Add Instance button", async ({ page }) => {

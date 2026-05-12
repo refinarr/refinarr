@@ -1,49 +1,83 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { Settings } from "lucide-react";
 import { renderWithProviders } from "@/test/render";
+
+// Stub Next.js navigation hooks so we can drive the rail's
+// pathname-derived "active" state without a real router.
+let mockPathname = "/settings/general";
+vi.mock("next/navigation", () => ({
+  usePathname: () => mockPathname,
+}));
+
 import { SettingsRail, type SettingsRailItem } from "../SettingsRail";
 
 const ITEMS: SettingsRailItem[] = [
-  { id: "general", label: "General", icon: Settings },
-  { id: "appearance", label: "Appearance", icon: Settings },
-  { id: "instances", label: "Instances", icon: Settings },
+  {
+    id: "general",
+    label: "General",
+    icon: Settings,
+    href: "/settings/general",
+  },
+  {
+    id: "appearance",
+    label: "Appearance",
+    icon: Settings,
+    href: "/settings/appearance",
+  },
+  {
+    id: "instances",
+    label: "Instances",
+    icon: Settings,
+    href: "/settings/instances",
+  },
 ];
 
 describe("SettingsRail", () => {
-  it("renders one button per item with the label", () => {
-    renderWithProviders(
-      <SettingsRail items={ITEMS} active="general" onSelect={() => {}} />,
-    );
-    expect(screen.getAllByRole("button")).toHaveLength(3);
+  it("renders one Link per item with the label", () => {
+    mockPathname = "/settings/general";
+    renderWithProviders(<SettingsRail items={ITEMS} />);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(3);
+    expect(screen.getByRole("link", { name: /general/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /general/i }),
+      screen.getByRole("link", { name: /appearance/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /appearance/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /instances/i }),
+      screen.getByRole("link", { name: /instances/i }),
     ).toBeInTheDocument();
   });
 
-  it("marks the active item with aria-current=true", () => {
-    renderWithProviders(
-      <SettingsRail items={ITEMS} active="appearance" onSelect={() => {}} />,
-    );
-    const active = screen.getByRole("button", { name: /appearance/i });
-    expect(active).toHaveAttribute("aria-current", "true");
-    const inactive = screen.getByRole("button", { name: /general/i });
+  it("marks the link matching the current pathname with aria-current=page", () => {
+    mockPathname = "/settings/appearance";
+    renderWithProviders(<SettingsRail items={ITEMS} />);
+    const active = screen.getByRole("link", { name: /appearance/i });
+    expect(active).toHaveAttribute("aria-current", "page");
+    const inactive = screen.getByRole("link", { name: /general/i });
     expect(inactive).not.toHaveAttribute("aria-current");
   });
 
-  it("calls onSelect with the clicked item id", () => {
-    const onSelect = vi.fn();
-    renderWithProviders(
-      <SettingsRail items={ITEMS} active="general" onSelect={onSelect} />,
+  it("treats nested paths as matching the parent entry", () => {
+    // e.g. /settings/instances/123 should still highlight 'Instances'.
+    mockPathname = "/settings/instances/42";
+    renderWithProviders(<SettingsRail items={ITEMS} />);
+    expect(screen.getByRole("link", { name: /instances/i })).toHaveAttribute(
+      "aria-current",
+      "page",
     );
-    fireEvent.click(screen.getByRole("button", { name: /instances/i }));
-    expect(onSelect).toHaveBeenCalledWith("instances");
+  });
+
+  it("renders Links pointing at each item's href", () => {
+    mockPathname = "/settings/general";
+    renderWithProviders(<SettingsRail items={ITEMS} />);
+    expect(screen.getByRole("link", { name: /general/i })).toHaveAttribute(
+      "href",
+      "/settings/general",
+    );
+    expect(screen.getByRole("link", { name: /appearance/i })).toHaveAttribute(
+      "href",
+      "/settings/appearance",
+    );
   });
 });
