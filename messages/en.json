@@ -49,6 +49,7 @@
     "refresh": "Refresh",
     "clear": "Clear",
     "loading": "Loading…",
+    "loadingMore": "Loading more…",
     "all": "All",
     "edit": "Edit",
     "test": "Test",
@@ -127,7 +128,11 @@
     }
   },
   "a11y": {
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "table": {
+      "resizeColumn": "Resize {column} column",
+      "issueOverflow": "{count, plural, one {Show 1 more issue tag} other {Show # more issue tags}}"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -248,7 +253,6 @@
     "title": "Filters",
     "openFilters": "Filters",
     "applyFilters": "Apply",
-    "onlyMissing": "Only missing",
     "showAll": "Show all",
     "clearAll": "Clear all",
     "density": {
@@ -276,7 +280,9 @@
     "noProfilesAvailable": "No quality profiles available.",
     "scoreHeading": "Score",
     "scoreColumnDescription": "Pick a score range.",
-    "scoreRangeLabel": "Score: {min} – {max}",
+    "scoreRangeBoth": "Score: {min} to {max}",
+    "scoreRangeMin": "Score: {min} or above",
+    "scoreRangeMax": "Score: {max} or below",
     "scoreBuckets": {
       "manualLt30": "< 30%",
       "manual30to60": "30 – 60%",
@@ -288,7 +294,9 @@
     },
     "sizeHeading": "File size",
     "sizeColumnDescription": "Pick a size bucket.",
-    "sizeRangeLabel": "Size: {min} – {max}",
+    "sizeRangeBoth": "Size: {min} to {max}",
+    "sizeRangeMin": "Size: {min} or larger",
+    "sizeRangeMax": "Size: up to {max}",
     "sizeBuckets": {
       "lt1": "< 1 GB",
       "to1to5": "1 – 5 GB",
@@ -310,6 +318,7 @@
   "bulk": {
     "selected": "{count} selected",
     "selectAll": "Select all visible items",
+    "selectRow": "Select row",
     "search": "Search",
     "ignore": "Ignore",
     "delete": "Delete",
@@ -529,6 +538,7 @@
       "nextRun": "Next",
       "nextRunIn": "in {eta}",
       "runningNow": "Running now…",
+      "cronUnscheduled": "Cron expression invalid — auto-search won't run until you fix it",
       "runNow": "Run now",
       "pickStrategyLabel": "Pick strategy",
       "pickStrategyBalanced": "Balanced",

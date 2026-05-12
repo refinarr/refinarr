@@ -44,6 +44,7 @@ export function movieColumns(
     t,
     tCols,
     tTime,
+    tA11y,
   } = ctx;
   const issuesVisible = density === "compact" ? 1 : 2;
   const issuesHeaderLabel = tCols(ISSUES_HEADER_KEY[scoringMode]);
@@ -265,6 +266,9 @@ export function movieColumns(
                 <PopoverTrigger
                   className="border-input hover:bg-accent text-muted-foreground inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-xs"
                   onClick={(e) => e.stopPropagation()}
+                  aria-label={tA11y("issueOverflow", {
+                    count: overflow.length,
+                  })}
                 >
                   +{overflow.length}
                 </PopoverTrigger>
