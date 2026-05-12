@@ -106,6 +106,10 @@ export interface MediaListShellRenderCtx<T extends MediaItem> {
   t: TFn;
   tCols: TFn;
   tTime: TFn;
+  // a11y.table translator — column defs use this for non-visible
+  // aria-labels (overflow trigger, resize handle, etc.). Centralized in
+  // ctx so per-page column factories don't each call useTranslations.
+  tA11y: TFn;
 }
 
 // Internal context — exposes everything sub-components need. Typed against
@@ -186,6 +190,7 @@ function Root<T extends MediaItem>({
   const t = useTranslations(i18nNamespace);
   const tCols = useTranslations(COLUMNS_NS[i18nNamespace]);
   const tTime = useTranslations("time");
+  const tA11y = useTranslations("a11y.table");
   const router = useRouter();
 
   const inst = useInstanceSelection(arrType);
@@ -245,9 +250,12 @@ function Root<T extends MediaItem>({
     return { missing, penalty };
   }, [prefs, profiles]);
 
-  const { density, toggle: toggleDensity } = useDensity();
-  // `,` keyboard shortcut toggles density. Skips when typing in inputs
-  // so search-bar text entry isn't hijacked.
+  const { density, cycle: cycleDensity } = useDensity();
+  // `,` keyboard shortcut cycles density — matches the top-bar density
+  // button (cozy → compact → card → cozy). Previously used the legacy
+  // toggle() which only flipped compact ↔ cozy, so the shortcut could
+  // never reach "card" and would kick the user OUT of card unexpectedly.
+  // Skips when typing in inputs so search-bar text entry isn't hijacked.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       // Bare `,` only — Cmd+, / Ctrl+, is the OS "Preferences" shortcut
@@ -261,11 +269,11 @@ function Root<T extends MediaItem>({
         return;
       }
       event.preventDefault();
-      toggleDensity();
+      cycleDensity();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [toggleDensity]);
+  }, [cycleDensity]);
   const ctx: MediaListShellRenderCtx<T> = {
     arrType,
     scoringMode,
@@ -292,6 +300,7 @@ function Root<T extends MediaItem>({
     t,
     tCols,
     tTime,
+    tA11y,
   };
 
   if (!inst.loadingInstances && !inst.instances?.length) {
@@ -346,13 +355,17 @@ function Root<T extends MediaItem>({
           {/*
             Flex-col fills main's available height. Chips take their
             natural row; Body's table wrapper takes flex-1 and scrolls.
-            pb-mobile-filter-bar reserves vertical space below the last
-            row so it isn't hidden behind the fixed MobileFilterBar on
-            mobile; zeroed on desktop.
+            No flex gap between them on purpose: the Chips wrapper
+            carries its own vertical padding (py-2 md:py-3) and the
+            table's `border-y` top edge handles the visual separator,
+            so the chip strip reads as the table's filter row rather
+            than a floating section above it (Linear / Stripe / GitHub
+            pattern). No reserved bottom padding either — the mobile
+            chrome (TabBar, FilterBar, BulkActionToolbar) is fixed +
+            translucent and auto-hides on scroll-down, so reserving
+            space would leave an empty band below the last row.
           */}
-          <div className="pb-mobile-filter-bar flex min-h-0 flex-1 flex-col gap-4 md:pb-0">
-            {children}
-          </div>
+          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
           <MobileFilterBar
             scoringMode={ctx.scoringMode}
             profiles={profiles}
@@ -502,12 +515,13 @@ function MediaListShellTopBar() {
 
 function Chips() {
   const { chips, clearActiveFilters } = useShellContext();
-  // Chips sit ABOVE the scrollable table wrapper. Pad horizontally to
-  // line up with the page top header and add a top gap so they're not
-  // flush against the unified top header. Bottom margin is zero — the
-  // gap-4 on the flex-col parent handles spacing to the table below.
+  // Chips sit ABOVE the scrollable table wrapper. Horizontal padding
+  // matches the rest of the page (px-4 md:px-6). Vertical padding is
+  // intentionally tighter (py-2 md:py-3) so the strip reads as a slim
+  // band rather than a full section — `items-center` keeps the row
+  // centered inside it.
   return (
-    <div className="pt-content-top md:pt-page shrink-0 px-4 md:px-6">
+    <div className="flex shrink-0 items-center px-4 py-2 md:px-6 md:py-3">
       <ActiveFilterChips chips={chips} onClearAll={clearActiveFilters} />
     </div>
   );

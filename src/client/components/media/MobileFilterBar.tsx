@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { SlidersHorizontal, Check } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 import { usePrefersReducedMotion } from "@/client/hooks/ui/useMediaQuery";
 import { useScrollDirection } from "@/client/hooks/ui/useScrollDirection";
@@ -18,11 +18,9 @@ interface Props {
   onChange: (patch: Partial<MediaFilters>) => void;
 }
 
-// Counts the sheet-managed filter axes only — onlyMissing has its own
-// always-visible toggle in this bar, so including it would inflate the
-// Filters badge while the sheet itself can't see/clear it. Multi-select
-// axes count once (not per chip) so "Filters · N" reads as the number
-// of axes that mutate the table, not the number of selected chips.
+// Count of filter axes currently mutating the table. Mirrors the chips
+// strip's notion of "active filters" — multi-select axes count once
+// (not per chip) so "Filters · N" reads as axes, not individual chips.
 function countActiveFilters(f: MediaFilters): number {
   let n = 0;
   if (f.profileIds.length > 0) n += 1;
@@ -36,12 +34,9 @@ function countActiveFilters(f: MediaFilters): number {
 }
 
 // Mobile-only fixed-bottom toolbar. Sits above the AppShell's
-// MobileTabBar (--spacing-bottom-bar) and below any visible
-// BulkActionToolbar — both other layers honour
-// --spacing-mobile-filter-bar in their bottom offsets so nothing
-// overlaps. Exposes one big "Filters" button (with active-axis badge)
-// plus the always-on "Only missing" toggle so the most common filter
-// action stays one tap away.
+// MobileTabBar (--spacing-bottom-bar). One trigger — "Filters" — opens
+// the FilterSheet; the previous "Only missing" pill duplicated the
+// severity-funnel "No file" bucket, so it lives in the sheet now.
 export function MobileFilterBar({
   scoringMode,
   profiles,
@@ -52,7 +47,6 @@ export function MobileFilterBar({
   const t = useTranslations("filters");
   const [sheetOpen, setSheetOpen] = useState(false);
   const activeCount = countActiveFilters(filters);
-  const onlyMissingActive = filters.onlyMissing;
 
   // Auto-hide on scroll-down to free screen real estate; re-show on
   // scroll-up. Sheet-open state suppresses the hide so the trigger
@@ -77,21 +71,6 @@ export function MobileFilterBar({
           hidden && "translate-y-[calc(100%+var(--spacing-bottom-bar))]",
         )}
       >
-        <button
-          type="button"
-          aria-pressed={onlyMissingActive}
-          onClick={() => onChange({ onlyMissing: !filters.onlyMissing })}
-          className={cn(
-            "h-control-sm inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
-            onlyMissingActive
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-input text-muted-foreground hover:bg-accent hover:text-foreground",
-          )}
-        >
-          {onlyMissingActive && <Check className="size-3" />}
-          {t("onlyMissing")}
-        </button>
-
         <button
           type="button"
           onClick={() => setSheetOpen(true)}

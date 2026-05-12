@@ -44,7 +44,6 @@ const baseFilters: MediaFilters = {
   missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
-  onlyMissing: false,
   flaggedOnly: true,
   monitorStatus: "all",
 };
@@ -63,36 +62,11 @@ beforeEach(() => {
 });
 
 describe("MobileFilterBar — base rendering", () => {
-  it("renders the Only missing toggle and the Filters trigger", () => {
+  it("renders the Filters trigger", () => {
     renderWithProviders(<MobileFilterBar {...baseProps} onChange={vi.fn()} />);
-    expect(
-      screen.getByRole("button", { name: /only missing/i }),
-    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /filters/i }),
     ).toBeInTheDocument();
-  });
-
-  it("reflects onlyMissing=true via aria-pressed on the pill", () => {
-    renderWithProviders(
-      <MobileFilterBar
-        {...baseProps}
-        filters={{ ...baseFilters, onlyMissing: true }}
-        onChange={vi.fn()}
-      />,
-    );
-    expect(
-      screen.getByRole("button", { name: /only missing/i }),
-    ).toHaveAttribute("aria-pressed", "true");
-  });
-
-  it("toggles onlyMissing through onChange when the pill is tapped", async () => {
-    const onChange = vi.fn();
-    renderWithProviders(<MobileFilterBar {...baseProps} onChange={onChange} />);
-    await userEvent.click(
-      screen.getByRole("button", { name: /only missing/i }),
-    );
-    expect(onChange).toHaveBeenCalledWith({ onlyMissing: true });
   });
 
   it("shows the active-axis badge count when sheet-managed filters are set", () => {
@@ -110,22 +84,6 @@ describe("MobileFilterBar — base rendering", () => {
     );
     // Three sheet-managed axes set → badge shows "3".
     expect(screen.getByText("3")).toBeInTheDocument();
-  });
-
-  it("excludes onlyMissing from the active-axis count (it has its own pill)", () => {
-    renderWithProviders(
-      <MobileFilterBar
-        {...baseProps}
-        filters={{ ...baseFilters, onlyMissing: true }}
-        onChange={vi.fn()}
-      />,
-    );
-    // Only the toggle pill is active; the Filters trigger should
-    // render no badge (no number visible inside it).
-    const filtersBtn = screen.getByRole("button", { name: /filters/i });
-    expect(
-      filtersBtn.querySelector("[aria-label*='active filter']"),
-    ).toBeNull();
   });
 });
 
