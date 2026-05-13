@@ -1,9 +1,17 @@
 "use client";
 import { useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { KeyRound, Palette, Server, Settings, User } from "lucide-react";
+import {
+  Activity,
+  KeyRound,
+  Palette,
+  Server,
+  Settings,
+  User,
+} from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { useMe } from "@/client/hooks/data/useMe";
+import { useConfig } from "@/client/hooks/data/useConfig";
 import { SettingsRail, type SettingsRailItem } from "./components/SettingsRail";
 import { SettingsPicker } from "./components/SettingsPicker";
 
@@ -14,11 +22,17 @@ interface Props {
 export default function SettingsLayout({ children }: Props) {
   const t = useTranslations("settings");
   const { data: me } = useMe();
+  const { data: config } = useConfig();
 
   // Account section is only meaningful for password-bearing sessions.
   // X-Api-Key callers can't change a password, so the section + rail
   // entry are hidden to keep navigation honest (no dead links).
   const showAccount = me?.source === "session";
+  // Diagnostics is an opt-in surface gated behind debug mode — same
+  // bar as the source-filter dropdown on /logs. Cache stats aren't
+  // sensitive, but the page exists to help users investigate when
+  // something feels off, not as a default-on settings affordance.
+  const showDiagnostics = config?.debugMode ?? false;
 
   const items = useMemo<SettingsRailItem[]>(() => {
     const list: SettingsRailItem[] = [
@@ -47,6 +61,14 @@ export default function SettingsLayout({ children }: Props) {
         href: "/settings/api-access",
       },
     ];
+    if (showDiagnostics) {
+      list.push({
+        id: "diagnostics",
+        label: t("sections.diagnostics"),
+        icon: Activity,
+        href: "/settings/diagnostics",
+      });
+    }
     if (showAccount) {
       list.push({
         id: "account",
@@ -56,7 +78,7 @@ export default function SettingsLayout({ children }: Props) {
       });
     }
     return list;
-  }, [t, showAccount]);
+  }, [t, showAccount, showDiagnostics]);
 
   return (
     <AppShell>

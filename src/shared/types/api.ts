@@ -221,3 +221,28 @@ export interface DashboardSummary {
   totals: DashboardTotals;
   recentActivity: ActionLog[];
 }
+
+// Lives here (not in data-cache.ts) so the client `useCacheStats` hook
+// can import the type without dragging in the server module — keeps
+// the layer boundary clean.
+export interface CacheStatsSnapshot {
+  entries: number;
+  maxEntries: number;
+  sizeBytes: number;
+  maxSizeBytes: number;
+  hits: number;
+  misses: number;
+  // Only counts true LRU/size overflow — explicit invalidate() / clear()
+  // is NOT an eviction even though it removes entries.
+  evictions: number;
+  inflightCount: number;
+  // Absolute timestamp (not "age in ms") so the client can call
+  // formatRelative() directly — keeps `Date.now()` out of render
+  // bodies, which eslint-plugin-react-hooks's purity rule flags.
+  oldestEntryAtMs: number | null;
+  lastInvalidatedAtMs: number | null;
+}
+
+export interface ClearDiagnosticsCacheResponse {
+  ok: boolean;
+}

@@ -479,7 +479,8 @@
       "appearance": "Appearance",
       "instances": "Instances",
       "apiAccess": "API Access",
-      "account": "Account"
+      "account": "Account",
+      "diagnostics": "Diagnostics"
     },
     "instances": "Instances",
     "addInstance": "Add Instance",
@@ -688,6 +689,37 @@
       "type": "Type",
       "title": "Title",
       "ignored": "Ignored"
+    }
+  },
+  "diagnostics": {
+    "title": "Diagnostics",
+    "subtitle": "In-memory cache health and manual controls.",
+    "metrics": {
+      "entries": "Entries",
+      "memory": "Memory",
+      "hitRate": "Hit rate",
+      "inflight": "Inflight",
+      "hits": "Hits",
+      "misses": "Misses",
+      "evictions": "Evictions",
+      "oldest": "Oldest entry",
+      "lastInvalidated": "Last invalidated",
+      "never": "never",
+      "empty": "—",
+      "ofMax": "{current} / {max}"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "clear": "Clear cache"
+    },
+    "confirm": {
+      "title": "Clear cache?",
+      "body": "All cached upstream data will be dropped. Next page load triggers a fresh fetch.",
+      "confirmLabel": "Clear cache"
+    },
+    "toast": {
+      "cleared": "Cache cleared",
+      "clearFailed": "Couldn't clear cache"
     }
   },
   "toast": {

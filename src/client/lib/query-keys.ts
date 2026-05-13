@@ -33,4 +33,5 @@ export const queryKeys = {
     ["auto-search-status", instanceId] as const,
   autoSearchStatuses: () => ["auto-search-statuses"] as const,
   cronPreview: (expr: string) => ["cron-preview", expr] as const,
+  diagnosticsCache: () => ["diagnostics", "cache"] as const,
 };

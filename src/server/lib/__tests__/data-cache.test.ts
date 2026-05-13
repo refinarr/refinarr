@@ -229,3 +229,106 @@ describe("DataCache.rebuild", () => {
     expect(dataCache.get("movies:1:manual", 60_000)).toBeNull();
   });
 });
+
+// LRU + stats surface (nas-perf #2 + #3). Pin the cap behaviour and
+// the diagnostic counters that drive /settings/diagnostics. The
+// existing `beforeEach(dataCache.clear)` resets state and counters
+// between tests.
+describe("DataCache — LRU eviction + getStats", () => {
+  test("getStats reports zeros on a freshly-cleared cache", () => {
+    const stats = dataCache.getStats();
+    expect(stats.entries).toBe(0);
+    expect(stats.sizeBytes).toBe(0);
+    expect(stats.hits).toBe(0);
+    expect(stats.misses).toBe(0);
+    expect(stats.evictions).toBe(0);
+    expect(stats.inflightCount).toBe(0);
+    expect(stats.oldestEntryAtMs).toBeNull();
+    expect(stats.maxEntries).toBeGreaterThan(0);
+    expect(stats.maxSizeBytes).toBeGreaterThan(0);
+    // clear() stamps lastInvalidatedAtMs as a side-effect; it's set,
+    // not null, on the second beforeEach onwards. Allow either since
+    // the run order isn't guaranteed.
+  });
+
+  test("get/getWithStaleness bump hits and misses", () => {
+    expect(dataCache.get("movies:1:manual", 60_000)).toBeNull();
+    dataCache.set("movies:1:manual", { items: ["a"] });
+    expect(dataCache.get("movies:1:manual", 60_000)).toEqual({ items: ["a"] });
+    dataCache.getWithStaleness("movies:1:manual", 60_000, 60_000); // hit
+    dataCache.getWithStaleness("movies:2:manual", 60_000, 60_000); // miss
+    const stats = dataCache.getStats();
+    expect(stats.hits).toBe(2);
+    expect(stats.misses).toBe(2);
+  });
+
+  test("set increases sizeBytes and oldestEntryAtMs becomes non-null", () => {
+    dataCache.set("movies:1:manual", { items: [1, 2, 3] });
+    const stats = dataCache.getStats();
+    expect(stats.entries).toBe(1);
+    expect(stats.sizeBytes).toBeGreaterThan(0);
+    expect(stats.oldestEntryAtMs).not.toBeNull();
+    expect(stats.oldestEntryAtMs!).toBeGreaterThanOrEqual(0);
+  });
+
+  test("invalidate stamps lastInvalidatedAtMs", () => {
+    dataCache.set("movies:1:manual", { items: [] });
+    const before = Date.now();
+    dataCache.invalidate(1);
+    const stats = dataCache.getStats();
+    expect(stats.lastInvalidatedAtMs).not.toBeNull();
+    expect(stats.lastInvalidatedAtMs!).toBeGreaterThanOrEqual(before);
+  });
+
+  // Pushing past the LRU cap (200) — verifies the cache stays bounded
+  // AND the evictions counter (driven by disposeAfter with
+  // `reason === "evict"`) increments. Picks unique keys so prior
+  // tests' state can't leak in.
+  test("evicts oldest entries when the entry-count cap is exceeded", () => {
+    const stats0 = dataCache.getStats();
+    const cap = stats0.maxEntries;
+    for (let i = 0; i < cap + 5; i += 1) {
+      dataCache.set(`evict-test:${i}:data`, { items: [i] });
+    }
+    const after = dataCache.getStats();
+    expect(after.entries).toBeLessThanOrEqual(cap);
+    expect(after.evictions).toBeGreaterThanOrEqual(5);
+  });
+
+  // The first ~5 inserted keys should now be gone; the most recent
+  // ones still present. Pinning the FIFO-by-LRU property prevents a
+  // future "swap LRU for something else" from silently changing
+  // eviction order.
+  test("LRU order is preserved — oldest entries evict first", () => {
+    const stats0 = dataCache.getStats();
+    const cap = stats0.maxEntries;
+    for (let i = 0; i < cap + 3; i += 1) {
+      dataCache.set(`order-test:${i}:data`, { items: [i] });
+    }
+    // First 3 evicted; last 3 still present.
+    expect(dataCache.get("order-test:0:data", 60_000)).toBeNull();
+    expect(dataCache.get("order-test:2:data", 60_000)).toBeNull();
+    expect(dataCache.get(`order-test:${cap + 2}:data`, 60_000)).toEqual({
+      items: [cap + 2],
+    });
+  });
+
+  // sizeCalculation must not throw — JSON.stringify rejects circular
+  // refs (TypeError) and returns undefined on `undefined` data. Both
+  // cases used to crash the cache write path; the estimateBytes guard
+  // pins them to a flat fallback so the entry still consumes some
+  // budget toward the LRU cap.
+  test("set tolerates circular references without throwing", () => {
+    const a: Record<string, unknown> = { name: "a" };
+    a.self = a;
+    expect(() => dataCache.set("circular", a)).not.toThrow();
+    expect(dataCache.get("circular", 60_000)).toBe(a);
+    expect(dataCache.getStats().sizeBytes).toBeGreaterThan(0);
+  });
+
+  test("set tolerates undefined data without throwing", () => {
+    expect(() => dataCache.set("undef", undefined)).not.toThrow();
+    // Get returns the stored value (undefined), but the cache row exists.
+    expect(dataCache.getStats().entries).toBe(1);
+  });
+});
