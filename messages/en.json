@@ -480,7 +480,8 @@
       "instances": "Instances",
       "apiAccess": "API Access",
       "account": "Account",
-      "diagnostics": "Diagnostics"
+      "diagnostics": "Diagnostics",
+      "system": "System"
     },
     "instances": "Instances",
     "addInstance": "Add Instance",
@@ -722,7 +723,38 @@
       "clearFailed": "Couldn't clear cache"
     }
   },
+  "system": {
+    "title": "System",
+    "subtitle": "Build, runtime, and update status.",
+    "fields": {
+      "version": "Version",
+      "uptime": "Uptime",
+      "auth": "Auth",
+      "runtime": "Runtime",
+      "lastChecked": "Last checked GitHub"
+    },
+    "update": {
+      "current": "Up to date",
+      "available": "Update available · {tag}",
+      "unavailable": "Update check unavailable",
+      "viewRelease": "View release",
+      "checking": "Checking…",
+      "never": "never"
+    },
+    "actions": {
+      "refresh": "Refresh"
+    },
+    "auth": {
+      "session": "session · {username}",
+      "apiKey": "API key",
+      "proxy": "proxy · {username}"
+    }
+  },
   "toast": {
+    "system": {
+      "refreshed": "Update check refreshed",
+      "refreshFailed": "Couldn't refresh update check"
+    },
     "search": {
       "started": "Search started",
       "queuedDryRun": "Search queued (dry run)",

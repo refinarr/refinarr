@@ -222,6 +222,30 @@ export interface DashboardSummary {
   recentActivity: ActionLog[];
 }
 
+// Read-only info shown on /settings/system. Composed from
+// build-info.ts + github-release.ts on the server; the client
+// renders it verbatim and pairs auth info from useMe().
+export interface SystemInfo {
+  version: string;
+  // Absolute ts (not "age in ms") so the client can call
+  // formatRelative() directly — keeps Date.now() out of render
+  // bodies, which eslint-plugin-react-hooks's purity rule flags.
+  bootedAtMs: number;
+  node: string;
+  platform: string;
+  latestRelease: LatestReleaseInfo | null;
+}
+
+export interface LatestReleaseInfo {
+  tag: string;
+  htmlUrl: string;
+  checkedAtMs: number;
+  // True when this came from a stale cache (last fetch >6h ago AND a
+  // fresh fetch failed). The UI dims the badge to signal "may not be
+  // current".
+  isStale: boolean;
+}
+
 // Lives here (not in data-cache.ts) so the client `useCacheStats` hook
 // can import the type without dragging in the server module — keeps
 // the layer boundary clean.

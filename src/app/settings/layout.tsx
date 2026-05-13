@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   Activity,
+  Info,
   KeyRound,
   Palette,
   Server,
@@ -59,6 +60,12 @@ export default function SettingsLayout({ children }: Props) {
         label: t("sections.apiAccess"),
         icon: KeyRound,
         href: "/settings/api-access",
+      },
+      {
+        id: "system",
+        label: t("sections.system"),
+        icon: Info,
+        href: "/settings/system",
       },
     ];
     if (showDiagnostics) {
