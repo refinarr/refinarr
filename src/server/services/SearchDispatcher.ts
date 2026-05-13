@@ -1,36 +1,9 @@
 import { dryRunService } from "@/server/services/DryRunService";
 import { searchQueueService } from "@/server/services/SearchQueueService";
-
-interface SearchDispatchBase {
-  instanceId: number;
-  mediaId: number;
-  title: string;
-  groupId?: string;
-}
-
-export interface MovieDispatchInput extends SearchDispatchBase {
-  action: "movie";
-}
-
-export interface SeriesDispatchInput extends SearchDispatchBase {
-  action: "series";
-}
-
-export interface SeasonDispatchInput extends SearchDispatchBase {
-  action: "season";
-  seasonNumber: number;
-}
-
-export interface EpisodeDispatchInput extends SearchDispatchBase {
-  action: "episode";
-  fileId: number;
-}
-
-export type SearchDispatchInput =
-  | MovieDispatchInput
-  | SeriesDispatchInput
-  | SeasonDispatchInput
-  | EpisodeDispatchInput;
+import {
+  parseDispatchExtras,
+  type SearchDispatchInput,
+} from "@/server/arr/composition";
 
 export interface SearchDispatchResult {
   kind: "queued";
@@ -51,7 +24,7 @@ export class SearchDispatcher {
   async dispatch(input: SearchDispatchInput): Promise<SearchDispatchResult> {
     const isDryRun = await dryRunService.isDryRun();
     const entry = await searchQueueService.enqueue({
-      instanceId: input.instanceId,
+      instance: input.instance,
       action: input.action,
       mediaId: input.mediaId,
       title: input.title,
@@ -61,12 +34,20 @@ export class SearchDispatcher {
     return { kind: "queued", queueId: entry.id, isDryRun };
   }
 
+  // Validates and extracts the arr-specific extras via the owning
+  // module's zod schema. Unknown keys (e.g. from a TS-bypassed caller
+  // with stray fields) are stripped — only the schema-declared shape
+  // survives into `SearchQueue.payload`. Returns undefined for actions
+  // with no extras so the row's payload column gets `"{}"` not `"{...}"`.
   private queuePayload(
     input: SearchDispatchInput,
   ): Record<string, unknown> | undefined {
-    if (input.action === "season") return { seasonNumber: input.seasonNumber };
-    if (input.action === "episode") return { fileId: input.fileId };
-    return undefined;
+    const parsed = parseDispatchExtras(
+      input.instance.type,
+      input.action,
+      input,
+    );
+    return Object.keys(parsed).length === 0 ? undefined : parsed;
   }
 }
 

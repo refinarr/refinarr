@@ -43,8 +43,12 @@ export const instanceCreateSchema = z.object({
   ...autoSearchFields,
 });
 
+// `type` is intentionally NOT updatable — pending SearchQueue rows
+// carry only instanceId and resolve the arr-type at drain time from
+// the current instance.type. Allowing a Radarr↔Sonarr swap would
+// strand pending sonarr-action rows on a now-Radarr instance and
+// fail them at dispatch. To switch arr-types, delete and recreate.
 export const instanceUpdateSchema = z.object({
-  type: z.enum(["radarr", "sonarr"]).optional(),
   name: z.string().min(1).max(64).optional(),
   url: z.string().min(1).max(2048).optional(),
   apiKey: z.string().min(1).max(256).optional(),

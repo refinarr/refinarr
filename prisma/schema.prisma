@@ -133,23 +133,35 @@ model Session {
 }
 
 model SearchQueue {
-  id           Int       @id @default(autoincrement())
-  instanceId   Int
-  action       String
-  mediaId      Int
-  payload      String
-  title        String
-  status       String    @default("pending")
-  error        String?
+  id          Int       @id @default(autoincrement())
+  instanceId  Int
+  action      String
+  mediaId     Int
+  // JSON blob — per-action data parsed by each per-arr module's
+  // queueHandler at drain time (see `sonarr.module.ts` for the zod
+  // schemas). Stays arr-agnostic — adding Lidarr's `{ albumId }`
+  // shape needs no schema change.
+  payload     String
+  title       String
+  status      String    @default("pending")
+  error       String?
   // Hex UUID propagated to the ActionLog row when this entry drains.
   // Same value across every queue row that came from one bulk action.
-  groupId      String?
-  createdAt    DateTime  @default(now())
-  processedAt  DateTime?
-  seasonNumber Int       @default(0)
-  fileId       Int       @default(0)
+  groupId     String?
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+  // Per-action disambiguator computed by each per-arr module's
+  // `dedupKey(action, payload)` function (see `ArrDefinition` in
+  // `src/server/arr/definition.ts`). Used by the partial UNIQUE
+  // INDEX `SearchQueue_pending_dedup` below to scope dedup correctly
+  // for arrs whose actions need extra keys (Sonarr's season → ":3",
+  // episode → ":file:42"; Radarr's movie → ""). Replaced the
+  // previous Sonarr-shaped `seasonNumber` + `fileId` columns so the
+  // table stays arr-agnostic.
+  dedupKey    String    @default("")
 
   @@index([instanceId, status, createdAt])
-  // SearchQueue_pending_dedup: partial UNIQUE index (WHERE status='pending') is
-  // hand-written in the migration SQL — Prisma does not support WHERE-clause indexes.
+  // SearchQueue_pending_dedup: partial UNIQUE index (WHERE status='pending')
+  // on (instanceId, action, mediaId, dedupKey) is hand-written in the
+  // migration SQL — Prisma does not support WHERE-clause indexes.
 }

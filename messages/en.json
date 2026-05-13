@@ -575,6 +575,7 @@
       "addTitle": "Add Instance",
       "editTitle": "Edit Instance",
       "type": "Type",
+      "typeImmutableHint": "Type can't be changed after creation. Delete and recreate to switch.",
       "types": {
         "radarr": "Radarr",
         "sonarr": "Sonarr"

@@ -157,6 +157,22 @@ describe("GET / PUT / DELETE /api/instances/[id]", () => {
     expect(res.status).toBe(400);
   });
 
+  test("PUT silently drops `type` field — instance.type is immutable", async () => {
+    // Pending SearchQueue rows resolve arr-type at drain time from the
+    // live instance, so a Radarr↔Sonarr swap would strand sonarr-action
+    // rows on a now-Radarr instance and fail them at dispatch. The
+    // update schema omits `type`; zod's default object drops unknown
+    // keys, so the request succeeds with the field ignored. Delete +
+    // recreate is the intended path for arr-type changes.
+    const created = await POST(postReq(valid), { params: Promise.resolve({}) });
+    const { id, type } = await created.json();
+    const otherType = type === "radarr" ? "sonarr" : "radarr";
+    const res = await PUT(putReq(id, { type: otherType }), ctxFor(id));
+    expect(res.status).toBe(200);
+    const after = await prisma.instance.findUnique({ where: { id } });
+    expect(after?.type).toBe(type); // ← unchanged: the guarantee that matters
+  });
+
   test("DELETE removes the row", async () => {
     const created = await POST(postReq(valid), { params: Promise.resolve({}) });
     const { id } = await created.json();

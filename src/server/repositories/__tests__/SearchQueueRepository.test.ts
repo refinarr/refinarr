@@ -14,8 +14,7 @@ async function enqueue(
     mediaId,
     title: `t-${mediaId}`,
     payload: "{}",
-    seasonNumber: 0,
-    fileId: 0,
+    dedupKey: "",
   });
   return entry;
 }
@@ -37,8 +36,7 @@ describe("SearchQueueRepository", () => {
       mediaId: 200,
       title: "plain",
       payload: "{}",
-      seasonNumber: 0,
-      fileId: 0,
+      dedupKey: "",
       status: "pending",
       error: null,
       processedAt: null,
@@ -66,8 +64,7 @@ describe("SearchQueueRepository", () => {
         mediaId: 500,
         title: "trim-fault",
         payload: "{}",
-        seasonNumber: 0,
-        fileId: 0,
+        dedupKey: "",
       });
       expect(entry.id).toBeGreaterThan(0);
       // Allow the fire-and-forget catch to settle.
@@ -100,8 +97,7 @@ describe("SearchQueueRepository", () => {
           mediaId: 1,
           title: "X",
           payload: "{}",
-          seasonNumber: 0,
-          fileId: 0,
+          dedupKey: "",
         }),
       ).rejects.toBe(sentinel);
     } finally {
@@ -232,8 +228,7 @@ describe("SearchQueueRepository", () => {
         mediaId: 42,
         title: "X",
         payload: "{}",
-        seasonNumber: 0,
-        fileId: 0,
+        dedupKey: "",
       });
     const { entry: second, created: c2 } =
       await searchQueueRepository.createUnique({
@@ -242,8 +237,7 @@ describe("SearchQueueRepository", () => {
         mediaId: 42,
         title: "X",
         payload: "{}",
-        seasonNumber: 0,
-        fileId: 0,
+        dedupKey: "",
       });
     expect(c1).toBe(true);
     expect(c2).toBe(false);
@@ -258,8 +252,7 @@ describe("SearchQueueRepository", () => {
       mediaId: 7,
       title: "S",
       payload: "{}",
-      seasonNumber: 2,
-      fileId: 0,
+      dedupKey: ":2",
     });
     const { entry: second, created } = await searchQueueRepository.createUnique(
       {
@@ -268,8 +261,7 @@ describe("SearchQueueRepository", () => {
         mediaId: 7,
         title: "S",
         payload: "{}",
-        seasonNumber: 2,
-        fileId: 0,
+        dedupKey: ":2",
       },
     );
     expect(created).toBe(false);
@@ -283,8 +275,7 @@ describe("SearchQueueRepository", () => {
       mediaId: 7,
       title: "S1",
       payload: "{}",
-      seasonNumber: 1,
-      fileId: 0,
+      dedupKey: ":1",
     });
     const { entry: s2 } = await searchQueueRepository.createUnique({
       instanceId: 1,
@@ -292,8 +283,7 @@ describe("SearchQueueRepository", () => {
       mediaId: 7,
       title: "S2",
       payload: "{}",
-      seasonNumber: 2,
-      fileId: 0,
+      dedupKey: ":2",
     });
     expect(s1.id).not.toBe(s2.id);
     expect(await searchQueueRepository.countPending(1)).toBe(2);
@@ -306,8 +296,7 @@ describe("SearchQueueRepository", () => {
       mediaId: 99,
       title: "M",
       payload: "{}",
-      seasonNumber: 0,
-      fileId: 0,
+      dedupKey: "",
     });
     await searchQueueRepository.setStatus(first.id, "done");
     // Done row is outside the partial index scope — new pending row is allowed.
@@ -318,8 +307,7 @@ describe("SearchQueueRepository", () => {
         mediaId: 99,
         title: "M",
         payload: "{}",
-        seasonNumber: 0,
-        fileId: 0,
+        dedupKey: "",
       },
     );
     expect(created).toBe(true);

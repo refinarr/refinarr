@@ -29,8 +29,13 @@ interface CreateInput {
   mediaId: number;
   payload: string;
   title: string;
-  seasonNumber: number;
-  fileId: number;
+  // Per-action disambiguator computed by the owning per-arr module's
+  // `dedupKey(action, payload)`. Drives the partial UNIQUE INDEX
+  // `SearchQueue_pending_dedup` on
+  // `(instanceId, action, mediaId, dedupKey) WHERE status = 'pending'`.
+  // Callers go through `SearchQueueService.enqueue`, which derives
+  // this via `dedupKeyFor` in `@/server/arr/composition`.
+  dedupKey: string;
   // Optional — defaults to null for ad-hoc / test fixtures that don't
   // care about grouping. The bulk-action client supplies a UUID.
   groupId?: string | null;
@@ -82,8 +87,7 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
             instanceId: data.instanceId,
             action: data.action,
             mediaId: data.mediaId,
-            seasonNumber: data.seasonNumber,
-            fileId: data.fileId,
+            dedupKey: data.dedupKey,
             status: "pending",
           },
         });

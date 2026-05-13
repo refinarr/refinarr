@@ -717,7 +717,7 @@ describe("autoRunner — enqueue deduplication", () => {
 
     // Seed one pending queue entry.
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 1,
       title: "Movie 1",

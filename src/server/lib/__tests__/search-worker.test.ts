@@ -55,7 +55,7 @@ describe("SearchWorker", () => {
       ),
     );
     const queued = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 42,
       title: "X",
@@ -95,7 +95,7 @@ describe("SearchWorker", () => {
       ...sonarrHandlers({ baseUrl: sonarrBase }),
     );
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "series",
       mediaId: 7,
       title: "Show",
@@ -118,7 +118,7 @@ describe("SearchWorker", () => {
       ...sonarrHandlers({ baseUrl: sonarrBase }),
     );
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "season",
       mediaId: 7,
       title: "Show",
@@ -145,7 +145,7 @@ describe("SearchWorker", () => {
       ),
     );
     const queued = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 1,
       title: "X",
@@ -179,8 +179,7 @@ describe("SearchWorker", () => {
       mediaId: 1,
       payload: "{}",
       title: "Ghost",
-      seasonNumber: 0,
-      fileId: 0,
+      dedupKey: "",
     });
 
     await vi.waitFor(
@@ -211,7 +210,7 @@ describe("SearchWorker", () => {
       ...sonarrHandlers({ baseUrl: sonarrBase }),
     );
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "episode",
       mediaId: 7,
       title: "Show — S01E02",
@@ -235,7 +234,7 @@ describe("SearchWorker", () => {
     const { prisma } = await import("@/server/lib/db");
     await prisma.instance.delete({ where: { id: inst.id } });
     const queued = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 1,
       title: "ghost",
@@ -261,8 +260,7 @@ describe("SearchWorker", () => {
       mediaId: 1,
       payload: "{}",
       title: "ghost",
-      seasonNumber: 0,
-      fileId: 0,
+      dedupKey: "",
     });
     mswServer.use(...radarrHandlers({ baseUrl: radarrBase }));
 
@@ -303,7 +301,7 @@ describe("SearchWorker", () => {
     // Now enqueue. enqueue() pokes kick(); since no real drain happened,
     // kick() should fire processOne immediately and dispatch this search.
     const enqueued = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 7,
       title: "Late Arrival",

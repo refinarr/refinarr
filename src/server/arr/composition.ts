@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import type { ArrClient } from "@/server/clients/ArrClient";
 import type { MediaServiceFacade } from "@/server/services/media-service-facade";
 import type {
@@ -16,19 +17,21 @@ import { radarrModule } from "./radarr.module";
 import { sonarrModule } from "./sonarr.module";
 
 // Variance-erased entry shape used as the satisfies constraint below.
-// QueueHandler is contravariant in TService and the per-action handler
-// map is invariant in TActions, so the registry can't carry the strict
-// `ArrDefinition` directly — each per-arr module already type-checks
-// its own handlers inside `defineArrModule`. The registry only needs to
-// prove keys are exhaustive and meta / Client / createService line up.
+// `queueHandlers`, `dedupKey`, and `dispatchExtras` all key by
+// `TActions[number]` (or take it contravariantly), so a wide
+// `Record<ArrType, ArrDefinition<…, readonly SearchQueueAction[]>>`
+// can't hold mixed concrete-action modules. Each per-arr module
+// type-checks those fields inside `defineArrModule`; the registry
+// only needs to prove keys + meta / Client / createService line up.
 type RegistryEntry = Omit<
   ArrDefinition<
     ArrType,
     ArrClient,
     MediaServiceFacade,
-    readonly SearchQueueAction[]
+    readonly SearchQueueAction[],
+    Record<SearchQueueAction, z.ZodType>
   >,
-  "queueHandlers"
+  "queueHandlers" | "dedupKey" | "dispatchExtras"
 >;
 
 // Identity helper that enforces, at compile time, that every registry
@@ -170,3 +173,138 @@ export async function dispatchQueueEntry(
 export type ClientFor<T extends ArrType> = InstanceType<
   (typeof BUILTIN_MODULES)[T]["Client"]
 >;
+
+// Computes the dedup disambiguator string for a (arrType, action,
+// payload) triple. SearchQueueService passes the result as the
+// `dedupKey` column value so the partial unique index
+// `(instanceId, action, mediaId, dedupKey) WHERE status = 'pending'`
+// scopes uniqueness correctly per (arr-type, action).
+//
+// Keyed by `arrType` rather than `action` alone — even though Radarr
+// / Sonarr action vocabularies don't currently overlap, indexing by
+// action would silently let a future arr's same-named action
+// (Lidarr's hypothetical "episode" for podcasts, Whisparr's "scene"
+// vs Sonarr's "season"…) clobber the prior module's dedupKey at
+// module load. Indexing by arrType keeps each module's action
+// namespace local.
+//
+// Throws if `action` isn't declared in the module's `meta.queueActions`
+// — defense against malformed input or a stale code path that mixes
+// arr-types.
+export function dedupKeyFor(
+  arrType: ArrType,
+  action: SearchQueueAction,
+  payload: Record<string, unknown>,
+): string {
+  const def = BUILTIN_MODULES[arrType];
+  if (!def) {
+    throw new Error(`Unknown arr type: ${arrType as string}`);
+  }
+  // The `queueActions` tuple is the source of truth for which actions
+  // this arr owns. A caller passing an action this arr doesn't handle
+  // is a bug; surface it loudly rather than computing a meaningless
+  // dedupKey from the wrong module's logic.
+  if (
+    !(def.meta.queueActions as readonly SearchQueueAction[]).includes(action)
+  ) {
+    throw new Error(
+      `Arr "${arrType}" does not handle queue action "${action}"`,
+    );
+  }
+  // Per-module dedupKey is narrowly typed against its own action set;
+  // erase here at the boundary since the runtime check above proves
+  // the action is in-set.
+  const fn = def.dedupKey as (
+    action: SearchQueueAction,
+    payload: Record<string, unknown>,
+  ) => string;
+  return fn(action, payload);
+}
+
+// Shared base shape every dispatch input carries.
+export interface SearchDispatchBase {
+  mediaId: number;
+  title: string;
+  groupId?: string;
+}
+
+// Flatten an intersection into a single object type. TS's
+// excess-property check sometimes only inspects the first member of
+// an intersection at object-literal call sites; flattening forces
+// the merged shape so extras like `seasonNumber` are recognized as
+// known properties of `SearchDispatchInput`.
+type Flatten<T> = { [K in keyof T]: T[K] };
+
+// zod 4 infers `z.object({})` as `Record<string, never>` — that
+// index signature poisons intersections (every string key including
+// `action` becomes `never`). Strip it so the no-extras case
+// contributes an empty bag to the intersection instead.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+type CleanExtras<T> = string extends keyof T ? {} : T;
+
+// Discriminated union of every (arr-type, action) variant — derived
+// directly from `BUILTIN_MODULES`. Each variant carries:
+//   - `instance: Pick<Instance, "id"> & { type: <arr-type> }` so TS
+//     rejects e.g. `{ action: "season", instance: { type: "radarr" } }`
+//   - `action: <one of the arr's queueActions>`
+//   - any arr-specific extras inferred from the module's per-action
+//     zod schema in `dispatchExtras`
+//   - the shared `SearchDispatchBase` fields
+//
+// The action union sources from `meta.queueActions[number]`, not
+// `keyof dispatchExtras` — `meta.queueActions` is the authoritative
+// declaration of what this arr handles. Any stray entries in
+// `dispatchExtras` for actions NOT in queueActions are ignored here;
+// the per-arr handler-coverage check in `ArrDefinition.queueHandlers`
+// already forces declared actions to have schemas.
+//
+// Adding a new arr (Lidarr/Whisparr) needs zero edits here: the new
+// module declares its `meta.queueActions` and `dispatchExtras` schemas;
+// this union automatically gains the variants.
+// Validates and extracts the arr-specific dispatch extras for a given
+// (arrType, action) pair using the owning module's zod schema. Stripping
+// unknown keys here means an upstream caller that TS-bypassed extras
+// can't sneak them into the queue payload; validating means a malformed
+// payload (missing required fields, wrong types) fails fast at dispatch
+// rather than at drain.
+//
+// `raw` is the full dispatch input — the schema strips base fields
+// (instance/action/mediaId/title/groupId) along with any unknowns since
+// they aren't declared in the per-action schema. The result is exactly
+// the per-action shape that needs to live in `SearchQueue.payload`.
+export function parseDispatchExtras(
+  arrType: ArrType,
+  action: SearchQueueAction,
+  raw: unknown,
+): Record<string, unknown> {
+  const def = BUILTIN_MODULES[arrType];
+  if (!def) {
+    throw new Error(`Unknown arr type: ${arrType as string}`);
+  }
+  const extras = def.dispatchExtras as Partial<
+    Record<SearchQueueAction, z.ZodType>
+  >;
+  const schema = extras[action];
+  if (!schema) {
+    throw new Error(
+      `Arr "${arrType}" does not handle queue action "${action}"`,
+    );
+  }
+  return schema.parse(raw) as Record<string, unknown>;
+}
+
+export type SearchDispatchInput = {
+  [K in ArrType]: {
+    [A in (typeof BUILTIN_MODULES)[K]["meta"]["queueActions"][number]]: A extends keyof (typeof BUILTIN_MODULES)[K]["dispatchExtras"]
+      ? Flatten<
+          {
+            instance: Pick<Instance, "id"> & { type: K };
+            action: A;
+          } & CleanExtras<
+            z.infer<(typeof BUILTIN_MODULES)[K]["dispatchExtras"][A]>
+          > &
+            SearchDispatchBase
+        >
+      : never;
+  }[(typeof BUILTIN_MODULES)[K]["meta"]["queueActions"][number]];
+}[ArrType];

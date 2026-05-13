@@ -3,6 +3,7 @@ import { searchDispatcher } from "@/server/services/SearchDispatcher";
 import { instanceService } from "@/server/services/InstanceService";
 import { configRepository } from "@/server/repositories/ConfigRepository";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
+import type { Instance } from "@/shared/types/models";
 
 const baseRadarr = {
   type: "radarr" as const,
@@ -18,6 +19,18 @@ const baseSonarr = {
   apiKey: "abcd1234abcd1234abcd1234abcd1234",
 };
 
+// Prisma widens the row's `type` to string; narrow it for dispatch
+// inputs that pin instance.type per discriminated variant. Routes do
+// the equivalent via assertArrType (api-errors.ts).
+async function makeRadarr(): Promise<Instance & { type: "radarr" }> {
+  const inst = await instanceService.create(baseRadarr);
+  return inst as Instance & { type: "radarr" };
+}
+async function makeSonarr(): Promise<Instance & { type: "sonarr" }> {
+  const inst = await instanceService.create(baseSonarr);
+  return inst as Instance & { type: "sonarr" };
+}
+
 async function setDryRun(on: boolean) {
   await configRepository.set("dryRun", on ? "true" : "false");
 }
@@ -30,10 +43,10 @@ describe("SearchDispatcher", () => {
   // ── Live mode — enqueues with isDryRun=false ──────────────────────────
 
   test("live mode: movie action enqueues a pending row with isDryRun=false", async () => {
-    const inst = await instanceService.create(baseRadarr);
+    const inst = await makeRadarr();
     const result = await searchDispatcher.dispatch({
       action: "movie",
-      instanceId: inst.id,
+      instance: inst,
       mediaId: 42,
       title: "Movie Title",
     });
@@ -47,10 +60,10 @@ describe("SearchDispatcher", () => {
   });
 
   test("live mode: series action enqueues a pending row", async () => {
-    const inst = await instanceService.create(baseSonarr);
+    const inst = await makeSonarr();
     const result = await searchDispatcher.dispatch({
       action: "series",
-      instanceId: inst.id,
+      instance: inst,
       mediaId: 7,
       title: "Series Title",
     });
@@ -62,10 +75,10 @@ describe("SearchDispatcher", () => {
   });
 
   test("live mode: season action persists seasonNumber in payload", async () => {
-    const inst = await instanceService.create(baseSonarr);
+    const inst = await makeSonarr();
     const result = await searchDispatcher.dispatch({
       action: "season",
-      instanceId: inst.id,
+      instance: inst,
       mediaId: 7,
       seasonNumber: 3,
       title: "Series Title",
@@ -78,10 +91,10 @@ describe("SearchDispatcher", () => {
   });
 
   test("live mode: episode action persists fileId in payload", async () => {
-    const inst = await instanceService.create(baseSonarr);
+    const inst = await makeSonarr();
     const result = await searchDispatcher.dispatch({
       action: "episode",
-      instanceId: inst.id,
+      instance: inst,
       mediaId: 7,
       fileId: 99,
       title: "Series Title",
@@ -94,11 +107,11 @@ describe("SearchDispatcher", () => {
   });
 
   test("live mode: groupId is propagated to the queue row", async () => {
-    const inst = await instanceService.create(baseRadarr);
+    const inst = await makeRadarr();
     const groupId = "abcd1234abcd1234abcd1234abcd1234";
     const result = await searchDispatcher.dispatch({
       action: "movie",
-      instanceId: inst.id,
+      instance: inst,
       mediaId: 42,
       title: "Movie Title",
       groupId,
@@ -115,10 +128,10 @@ describe("SearchDispatcher", () => {
 
   test("dry-run mode: movie action still enqueues a pending row + flags isDryRun=true", async () => {
     await setDryRun(true);
-    const inst = await instanceService.create(baseRadarr);
+    const inst = await makeRadarr();
     const result = await searchDispatcher.dispatch({
       action: "movie",
-      instanceId: inst.id,
+      instance: inst,
       mediaId: 42,
       title: "Movie Title",
     });
@@ -133,10 +146,10 @@ describe("SearchDispatcher", () => {
 
   test("dry-run mode: series action enqueues and flags isDryRun=true", async () => {
     await setDryRun(true);
-    const inst = await instanceService.create(baseSonarr);
+    const inst = await makeSonarr();
     const result = await searchDispatcher.dispatch({
       action: "series",
-      instanceId: inst.id,
+      instance: inst,
       mediaId: 7,
       title: "Series Title",
     });
@@ -149,10 +162,10 @@ describe("SearchDispatcher", () => {
 
   test("dry-run mode: season action persists seasonNumber in payload", async () => {
     await setDryRun(true);
-    const inst = await instanceService.create(baseSonarr);
+    const inst = await makeSonarr();
     const result = await searchDispatcher.dispatch({
       action: "season",
-      instanceId: inst.id,
+      instance: inst,
       mediaId: 7,
       seasonNumber: 3,
       title: "Series Title",
@@ -167,10 +180,10 @@ describe("SearchDispatcher", () => {
 
   test("dry-run mode: episode action persists fileId in payload", async () => {
     await setDryRun(true);
-    const inst = await instanceService.create(baseSonarr);
+    const inst = await makeSonarr();
     const result = await searchDispatcher.dispatch({
       action: "episode",
-      instanceId: inst.id,
+      instance: inst,
       mediaId: 7,
       fileId: 99,
       title: "Series Title",
@@ -181,5 +194,47 @@ describe("SearchDispatcher", () => {
     const row = await searchQueueRepository.findById(result.queueId);
     expect(row?.action).toBe("episode");
     expect(JSON.parse(row!.payload)).toEqual({ fileId: 99 });
+  });
+
+  // The dispatcher routes the input through the owning module's
+  // `dispatchExtras` zod schema, which strips unknown keys. Pins the
+  // invariant: a TS-bypassed caller can't sneak arbitrary fields into
+  // `SearchQueue.payload`.
+  test("queuePayload strips unknown keys via the module's zod schema", async () => {
+    const inst = await makeSonarr();
+    // Cast around TS to simulate a caller that bypassed the type
+    // system (e.g. a route that built the dispatch input from
+    // user JSON without re-validating).
+    const result = await searchDispatcher.dispatch({
+      action: "season",
+      instance: inst,
+      mediaId: 7,
+      seasonNumber: 3,
+      title: "Series Title",
+      // @ts-expect-error — unknown field; should be stripped
+      bogusInjected: "ignored",
+    });
+    const row = await searchQueueRepository.findById(result.queueId);
+    expect(JSON.parse(row!.payload)).toEqual({ seasonNumber: 3 });
+  });
+
+  // Missing required schema fields fail fast at the dispatcher rather
+  // than at the worker's drain time. Pins the invariant: the queue row
+  // is never written with a payload the queue handler can't parse.
+  test("queuePayload rejects a dispatch missing required schema fields", async () => {
+    const inst = await makeSonarr();
+    // Cast bypasses TS — simulating a runtime mismatch (e.g. a
+    // route that built the input from untyped JSON without
+    // pre-validating). The dispatcher's `parseDispatchExtras` step
+    // catches it before any DB write.
+    await expect(
+      searchDispatcher.dispatch({
+        action: "season",
+        instance: inst,
+        mediaId: 7,
+        title: "Series Title",
+      } as never),
+    ).rejects.toThrow();
+    expect(await searchQueueRepository.findAll()).toHaveLength(0);
   });
 });

@@ -593,7 +593,7 @@ class AutoRunner {
     for (const item of toEnqueue) {
       try {
         await searchQueueService.enqueue({
-          instanceId: inst.id,
+          instance: inst,
           action,
           mediaId: item.id,
           title: item.title,

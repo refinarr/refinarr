@@ -91,7 +91,15 @@ export class InstanceService {
     return created;
   }
 
-  async update(id: number, data: Partial<Instance>): Promise<Instance> {
+  // `type` is omitted from the input — instance.type is immutable
+  // after create. See `instanceUpdateSchema` for the route-level gate
+  // and the WHY (pending SearchQueue rows resolve arr-type at drain
+  // time from the live instance, so a Radarr↔Sonarr swap would
+  // strand them).
+  async update(
+    id: number,
+    data: Omit<Partial<Instance>, "type">,
+  ): Promise<Instance> {
     if (typeof data.url === "string") assertSafeArrUrl(data.url);
     const updated = await instanceRepository.update(id, data);
     // Restart the worker loop for this instance so a new searchesPerHour

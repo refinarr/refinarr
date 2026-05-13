@@ -1,7 +1,10 @@
+import { z } from "zod";
 import { RadarrClient } from "@/server/clients/RadarrClient";
 import { MovieService } from "@/server/services/MovieService";
 import { ARR_META } from "@/shared/arr-meta";
 import { defineArrModule } from "./definition";
+
+const noExtras = z.object({});
 
 // Self-contained registration for the Radarr backend. Imported by the
 // composition root; nothing else should reach for it directly. To add
@@ -17,4 +20,11 @@ export const radarrModule = defineArrModule({
         groupId: entry.groupId ?? undefined,
       }),
   },
+  // Radarr's only queue action is `movie` — uniqueness is fully
+  // captured by `(instance, "movie", movieId)`, so the disambiguator
+  // is always empty.
+  dedupKey: () => "",
+  // No arr-specific dispatch fields for Radarr — the (instance,
+  // action, mediaId, title) base is the complete input.
+  dispatchExtras: { movie: noExtras },
 });

@@ -528,7 +528,7 @@ describe("POST /api/instances/[id]/auto-search/trigger — real dispatch", () =>
 
     // Pre-seed movie 1 as pending.
     await searchQueueService.enqueue({
-      instanceId: id,
+      instance: { id, type: "radarr" },
       action: "movie",
       mediaId: 1,
       title: "Movie 1",

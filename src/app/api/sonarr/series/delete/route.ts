@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
-import { parseJson } from "@/server/lib/api-errors";
+import { assertArrType, notFound, parseJson } from "@/server/lib/api-errors";
 import { seriesService } from "@/server/arr/composition";
+import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { searchDispatcher } from "@/server/services/SearchDispatcher";
 import { dataCache } from "@/server/lib/data-cache";
 import { sonarrDeleteSchema } from "@/shared/types/schemas";
@@ -16,6 +17,9 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     search = false,
     groupId,
   } = await parseJson(req, sonarrDeleteSchema, "Invalid delete payload");
+  const instance = await instanceRepository.findById(instanceId);
+  if (!instance) throw notFound("Instance not found");
+  assertArrType(instance, "sonarr");
 
   const result = await seriesService.deleteFiles(
     instanceId,
@@ -27,8 +31,8 @@ export const POST = createApiHandler(async (req: NextRequest) => {
   );
   if (search && result.status !== "failed") {
     await searchDispatcher.dispatch({
+      instance,
       action: "series",
-      instanceId,
       mediaId,
       title,
       groupId,

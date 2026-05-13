@@ -74,6 +74,7 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
               onValueChange={(v) => {
                 if (v && isArrType(v)) onChangeType(v);
               }}
+              disabled={isEdit}
             >
               <SelectTrigger>
                 <SelectValue>{t(`types.${selectedType}`)}</SelectValue>
@@ -86,6 +87,11 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
                 ))}
               </SelectContent>
             </Select>
+            {isEdit && (
+              <p className="text-muted-foreground text-xs">
+                {t("typeImmutableHint")}
+              </p>
+            )}
           </div>
           <FormField
             id="instance-name"

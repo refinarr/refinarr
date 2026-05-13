@@ -260,6 +260,10 @@ export interface SearchQueueEntry {
   groupId: string | null;
   createdAt: Date;
   processedAt: Date | null;
-  seasonNumber: number;
-  fileId: number;
+  // Per-action disambiguator computed at enqueue time by the owning
+  // per-arr module's `dedupKey(action, payload)`. Drives the partial
+  // UNIQUE INDEX `SearchQueue_pending_dedup`. See
+  // `src/server/arr/definition.ts` (ArrDefinition.dedupKey) and
+  // `src/server/arr/composition.ts` (dedupKeyFor).
+  dedupKey: string;
 }
