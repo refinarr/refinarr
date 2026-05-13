@@ -8,6 +8,7 @@ export interface AppLogFilters {
   level?: LogLevel;
   q?: string;
   source?: string;
+  instanceId?: number;
 }
 
 const MAX_ENTRIES = 500;
@@ -30,13 +31,21 @@ export function useAppLogs(filters: AppLogFilters = {}) {
     const qs = new URLSearchParams();
     if (filters.level) qs.set("level", filters.level);
     if (filters.source) qs.set("source", filters.source);
+    if (filters.instanceId) qs.set("instanceId", String(filters.instanceId));
     if (filters.q) qs.set("q", filters.q);
 
     const es = new EventSource(`/api/logs/stream?${qs}`);
     esRef.current = es;
 
     es.onopen = () => setIsConnected(true);
-    es.onerror = () => setIsConnected(false);
+    // On connection failure (server returned 4xx/5xx, or the request was
+    // aborted before "ready") clear isLoading too — otherwise the spinner
+    // hangs while EventSource auto-reconnects in a loop and the user
+    // can't see the empty-state / "no matches" UI underneath.
+    es.onerror = () => {
+      setIsConnected(false);
+      setIsLoading(false);
+    };
 
     es.addEventListener("ready", () => setIsLoading(false));
 
@@ -52,7 +61,7 @@ export function useAppLogs(filters: AppLogFilters = {}) {
         // malformed event — skip
       }
     };
-  }, [filters.level, filters.q, filters.source]);
+  }, [filters.level, filters.q, filters.source, filters.instanceId]);
 
   useEffect(() => {
     // SSE subscribe-to-external-system pattern. connect() opens an EventSource

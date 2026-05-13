@@ -424,6 +424,8 @@
       "message": "Message"
     },
     "empty": "No logs recorded yet — application logs will appear here as the app runs.",
+    "noMatches": "No logs match the current filters.",
+    "instanceAll": "All instances",
     "sourceAll": "All sources",
     "source": {
       "api": "API",
@@ -439,6 +441,33 @@
       "search-worker": "Search worker",
       "status-poller": "Status poller",
       "auto-run": "Auto-search"
+    },
+    "chips": {
+      "level": "Level: {label}",
+      "source": "Source: {label}",
+      "instance": "Instance: {name}",
+      "search": "Search: \"{q}\"",
+      "clearAll": "Clear all",
+      "removeAriaLabel": "Remove {label}"
+    },
+    "selectPrompt": "Select a log entry to see its full context.",
+    "detail": {
+      "timestamp": "Timestamp",
+      "context": "Context",
+      "error": "Error",
+      "stack": "Stack trace",
+      "showStack": "Show stack trace",
+      "hideStack": "Hide stack trace",
+      "copyRecord": "Copy record",
+      "copyTraceId": "Copy traceId",
+      "copyJson": "Copy JSON",
+      "noTraceId": "No traceId",
+      "noContext": "No context attached.",
+      "close": "Close"
+    },
+    "autoScroll": {
+      "label": "Auto-scroll",
+      "paused": "Paused — scroll resumed manually."
     }
   },
   "settings": {
@@ -716,7 +745,9 @@
     },
     "logs": {
       "cleared": "Logs cleared",
-      "clearFailed": "Couldn't clear logs"
+      "clearFailed": "Couldn't clear logs",
+      "copied": "Copied to clipboard",
+      "copyFailed": "Couldn't copy to clipboard"
     },
     "debugMode": {
       "enabled": "Debug mode on",

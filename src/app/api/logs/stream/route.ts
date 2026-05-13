@@ -3,6 +3,8 @@ import { createApiHandler } from "@/server/lib/handler";
 import { HttpError, badRequest } from "@/server/lib/api-errors";
 import { appLogRepository } from "@/server/repositories/AppLogRepository";
 import { eventBus, type ServerEvent } from "@/server/lib/event-bus";
+import { appLogger } from "@/server/lib/app-logger";
+import { LogSource } from "@/shared/types/models";
 import type { AppLogEntry, LogLevel } from "@/shared/types/models";
 
 const HEARTBEAT_MS = 25_000;
@@ -14,10 +16,16 @@ let activeClients = 0;
 
 function matches(
   entry: AppLogEntry,
-  filter: { level?: LogLevel; q?: string; source?: string },
+  filter: {
+    level?: LogLevel;
+    q?: string;
+    source?: string;
+    instanceId?: number;
+  },
 ): boolean {
   if (filter.level && entry.level !== filter.level) return false;
   if (filter.source && entry.source !== filter.source) return false;
+  if (filter.instanceId && entry.instanceId !== filter.instanceId) return false;
   if (filter.q && !entry.message.toLowerCase().includes(filter.q.toLowerCase()))
     return false;
   return true;
@@ -32,7 +40,19 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const level = req.nextUrl.searchParams.get("level") as LogLevel | null;
   const q = req.nextUrl.searchParams.get("q") ?? undefined;
   const source = req.nextUrl.searchParams.get("source") ?? undefined;
-  const filter = { level: level || undefined, q, source };
+  // Reject malformed instanceId rather than silently dropping the
+  // filter — a broadened stream after a typo'd link is more confusing
+  // than a 400, and matches the cursor validation a few lines below.
+  const instanceIdRaw = req.nextUrl.searchParams.get("instanceId");
+  let instanceId: number | undefined;
+  if (instanceIdRaw !== null) {
+    const parsed = Number(instanceIdRaw);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw badRequest("Invalid instanceId");
+    }
+    instanceId = parsed;
+  }
+  const filter = { level: level || undefined, q, source, instanceId };
 
   // Validate the resume cursor before using it in DB calls and id-dedup.
   // An invalid (NaN / negative) value would silently poison findSince().
@@ -121,7 +141,14 @@ export const GET = createApiHandler(async (req: NextRequest) => {
         heartbeat.unref?.();
 
         req.signal.addEventListener("abort", close);
-      } catch {
+      } catch (err) {
+        // Without logging, a Prisma error here (e.g. stale schema after
+        // a migration) silently closes the SSE and the client spins on
+        // "Reconnecting…" forever. Surface the cause.
+        appLogger.error("Log stream init failed", {
+          source: LogSource.Api,
+          err,
+        });
         close();
       }
     },

@@ -349,7 +349,7 @@ class StatusPoller {
     }
 
     if (commandUpdates > 0 || historyUpdates > 0) {
-      appLogger.info("Status poller updated rows", {
+      appLogger.debug("Status poller updated rows", {
         source: LogSource.StatusPoller,
         context: {
           instanceId,

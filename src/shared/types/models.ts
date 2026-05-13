@@ -231,6 +231,10 @@ export interface AppLogEntry {
   message: string;
   source: string | null;
   context: string | null;
+  // Lifted from `context.instanceId` at insert time so the /logs viewer
+  // can filter by instance without scanning the JSON column. Null when
+  // the originating log didn't carry an instanceId (auth, db, etc.).
+  instanceId: number | null;
   createdAt: Date;
 }
 

@@ -47,7 +47,7 @@ export class SearchQueueService {
     });
 
     if (!created) {
-      appLogger.info("Search enqueue deduped", {
+      appLogger.info(`Search enqueue deduped: ${entry.title}`, {
         source: LogSource.SearchQueue,
         context: {
           existingId: entry.id,
@@ -60,7 +60,7 @@ export class SearchQueueService {
       return entry;
     }
 
-    appLogger.info("Search enqueued", {
+    appLogger.info(`Search enqueued: ${entry.title}`, {
       source: LogSource.SearchQueue,
       context: {
         id: entry.id,
@@ -68,6 +68,7 @@ export class SearchQueueService {
         action: entry.action,
         mediaId: entry.mediaId,
         title: entry.title,
+        groupId: entry.groupId,
       },
     });
     searchWorker.kick(instanceId).catch((err) =>

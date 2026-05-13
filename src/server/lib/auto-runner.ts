@@ -493,34 +493,51 @@ class AutoRunner {
     // an older lastRunAt over the newer one.
     this.processing.add(inst.id);
     try {
-      let tickFailed = false;
+      let tickError: unknown;
+      let bookkeepingError: unknown;
       try {
         await this.fanOut(inst);
       } catch (err) {
-        tickFailed = true;
-        appLogger.error("Auto-runner tick failed", {
-          source: LogSource.AutoRun,
-          err,
-          context: { instanceId: inst.id, instanceName: inst.name },
-        });
+        tickError = err;
       }
 
-      // Bookkeeping is its own try-catch so a transient DB error here
-      // can't escape the timer-rooted promise and kill the scheduling
-      // loop for this instance until the next refresh()/restart. Log +
-      // swallow.
+      // Bookkeeping split into two try-catches so a transient
+      // stampLastRunAt failure doesn't skip the failed-streak update —
+      // the streak counter drives the "instance keeps failing" alert
+      // path and silently leaving it stale is worse than missing one
+      // lastRunAt heartbeat. Both errors funnel into a single log
+      // below.
       try {
         await instanceRepository.stampLastRunAt(inst.id, new Date());
-        if (tickFailed) {
+      } catch (err) {
+        bookkeepingError = err;
+      }
+      try {
+        if (tickError) {
           await instanceRepository.bumpFailedStreak(inst.id);
         } else {
           await instanceRepository.resetFailedStreak(inst.id);
         }
       } catch (err) {
-        appLogger.error("Auto-runner bookkeeping failed", {
+        bookkeepingError = bookkeepingError ?? err;
+      }
+
+      // Merged failure log — one event per tick, with both error
+      // causes (if any) attached. Avoids the "which failure is real"
+      // confusion when both fire.
+      if (tickError || bookkeepingError) {
+        appLogger.error("Auto-runner tick failed", {
           source: LogSource.AutoRun,
-          err,
-          context: { instanceId: inst.id, instanceName: inst.name, tickFailed },
+          err: tickError ?? bookkeepingError,
+          context: {
+            instanceId: inst.id,
+            instanceName: inst.name,
+            tickFailed: !!tickError,
+            bookkeepingFailed: !!bookkeepingError,
+            ...(tickError && bookkeepingError
+              ? { bookkeepingError: String(bookkeepingError) }
+              : {}),
+          },
         });
       }
     } finally {
@@ -604,7 +621,13 @@ class AutoRunner {
         appLogger.error("Auto-runner enqueue failed", {
           source: LogSource.AutoRun,
           err,
-          context: { instanceId: inst.id, mediaId: item.id, title: item.title },
+          context: {
+            instanceId: inst.id,
+            mediaId: item.id,
+            title: item.title,
+            enqueuedSoFar: enqueued,
+            batchSize: toEnqueue.length,
+          },
         });
       }
     }

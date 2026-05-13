@@ -139,4 +139,27 @@ describe("appLogger — DB persistence", () => {
     const row = await prisma.appLog.findFirst();
     expect(row?.context).toBeNull();
   });
+
+  test("lifts context.instanceId to the indexed column on insert", async () => {
+    appLogger.info("with-instance", {
+      source: "auto-run",
+      context: { instanceId: 42, batchSize: 10 },
+    });
+    await flushPersist();
+    const row = await prisma.appLog.findFirst();
+    expect(row?.instanceId).toBe(42);
+    const ctx = JSON.parse(row!.context!);
+    expect(ctx.instanceId).toBe(42);
+    expect(ctx.batchSize).toBe(10);
+  });
+
+  test("leaves instanceId null when context omits it or it's non-numeric", async () => {
+    appLogger.info("no-inst", { context: { foo: "bar" } });
+    appLogger.info("string-inst", { context: { instanceId: "nope" } });
+    appLogger.info("zero-inst", { context: { instanceId: 0 } });
+    await flushPersist();
+    const rows = await prisma.appLog.findMany({ orderBy: { id: "asc" } });
+    expect(rows).toHaveLength(3);
+    for (const r of rows) expect(r.instanceId).toBeNull();
+  });
 });

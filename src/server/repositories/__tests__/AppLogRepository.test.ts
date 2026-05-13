@@ -122,6 +122,45 @@ describe("AppLogRepository", () => {
     expect(latest[0].message).toBe("find me");
   });
 
+  test("create persists the lifted instanceId column", async () => {
+    const row = await appLogRepository.create({ ...baseEntry, instanceId: 7 });
+    expect(row.instanceId).toBe(7);
+    const found = await appLogRepository.findById(row.id);
+    expect(found?.instanceId).toBe(7);
+  });
+
+  test("findPaginated filters by instanceId", async () => {
+    await appLogRepository.create({ ...baseEntry, instanceId: 1 });
+    await appLogRepository.create({ ...baseEntry, instanceId: 2 });
+    await appLogRepository.create({ ...baseEntry, instanceId: null });
+    const onlyOne = await appLogRepository.findPaginated(
+      { instanceId: 1 },
+      1,
+      50,
+    );
+    expect(onlyOne.total).toBe(1);
+    expect(onlyOne.items[0].instanceId).toBe(1);
+  });
+
+  test("findSince + findLatest accept instanceId filter", async () => {
+    const a = await appLogRepository.create({
+      ...baseEntry,
+      instanceId: 1,
+      message: "i1",
+    });
+    await appLogRepository.create({
+      ...baseEntry,
+      instanceId: 2,
+      message: "i2",
+    });
+
+    const since = await appLogRepository.findSince(0, { instanceId: 1 });
+    expect(since.map((r) => r.id)).toEqual([a.id]);
+
+    const latest = await appLogRepository.findLatest(50, { instanceId: 1 });
+    expect(latest.map((r) => r.id)).toEqual([a.id]);
+  });
+
   test("delete removes the row", async () => {
     const created = await appLogRepository.create(baseEntry);
     await appLogRepository.delete(created.id);

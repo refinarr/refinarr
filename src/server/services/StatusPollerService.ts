@@ -203,21 +203,27 @@ export class StatusPollerService {
       client.getRecentCommands(),
       logRepository.findOpenCommandsByInstance(instance.id, POLL_LOOKBACK_MS),
     ]);
-    appLogger.debug("statusPoller command-sync snapshot", {
-      source: LogSource.StatusPoller,
-      context: {
-        instanceId: instance.id,
-        upstreamCommands: commands.length,
-        ourOpenRows: ours.length,
-        ourCommandIds: ours.map((r) => r.commandId).filter(Boolean),
-        upstreamSample: commands.slice(0, 10).map((c) => ({
-          id: c.id,
-          name: c.name,
-          status: c.status,
-          completionMessage: c.body?.completionMessage ?? null,
-        })),
-      },
-    });
+    // Only emit the diagnostic snapshot when there's something to
+    // correlate. With no open rows on our side, the upstream sample is
+    // a wall of noise that fires every 5 min per instance and dilutes
+    // the log viewer.
+    if (ours.length > 0) {
+      appLogger.debug("statusPoller command-sync snapshot", {
+        source: LogSource.StatusPoller,
+        context: {
+          instanceId: instance.id,
+          upstreamCommands: commands.length,
+          ourOpenRows: ours.length,
+          ourCommandIds: ours.map((r) => r.commandId).filter(Boolean),
+          upstreamSample: commands.slice(0, 10).map((c) => ({
+            id: c.id,
+            name: c.name,
+            status: c.status,
+            completionMessage: c.body?.completionMessage ?? null,
+          })),
+        },
+      });
+    }
     if (commands.length === 0 || ours.length === 0) return 0;
     // Build the lookup ONCE per tick. Keyed by commandId; the row's
     // commandId is non-null per `findOpenCommandsByInstance`'s where clause.
@@ -266,21 +272,26 @@ export class StatusPollerService {
     since: Date,
   ): Promise<{ updates: number; events: UpstreamHistoryEvent[] }> {
     const events = await client.getRecentHistory(since);
-    appLogger.debug("statusPoller history-sync snapshot", {
-      source: LogSource.StatusPoller,
-      context: {
-        instanceId: instance.id,
-        sinceIso: since.toISOString(),
-        eventsObserved: events.length,
-        eventSample: events.slice(0, 10).map((e) => ({
-          id: e.id,
-          mediaId: e.mediaId,
-          scope: e.scope,
-          eventType: e.eventType,
-          date: e.date,
-        })),
-      },
-    });
+    // Skip the snapshot on empty ticks. The common case for an active
+    // instance is "0 new events since the last poll" — logging it every
+    // 5 min would dominate the debug stream.
+    if (events.length > 0) {
+      appLogger.debug("statusPoller history-sync snapshot", {
+        source: LogSource.StatusPoller,
+        context: {
+          instanceId: instance.id,
+          sinceIso: since.toISOString(),
+          eventsObserved: events.length,
+          eventSample: events.slice(0, 10).map((e) => ({
+            id: e.id,
+            mediaId: e.mediaId,
+            scope: e.scope,
+            eventType: e.eventType,
+            date: e.date,
+          })),
+        },
+      });
+    }
     if (events.length === 0) return { updates: 0, events };
     let updates = 0;
     // Process oldest-first so a grab+import for the same media in one

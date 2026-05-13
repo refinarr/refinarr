@@ -105,15 +105,21 @@ model ActionLog {
 }
 
 model AppLog {
-  id        Int      @id @default(autoincrement())
-  level     String
-  message   String
-  source    String?
-  context   String?
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  level      String
+  message    String
+  source     String?
+  context    String?
+  // Lifted from `context.instanceId` by app-logger on insert so the
+  // /logs viewer can filter by instance without JSON-extract scans.
+  // Old rows (pre-migration) are backfilled from existing context JSON.
+  instanceId Int?
+  createdAt  DateTime @default(now())
 
   @@index([level])
   @@index([createdAt])
+  @@index([instanceId])
+  @@index([instanceId, createdAt])
 }
 
 model User {

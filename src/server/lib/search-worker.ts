@@ -93,13 +93,25 @@ class SearchWorker {
     if (this.processing.has(instanceId)) return;
     this.processing.add(instanceId);
     let drained = false;
+    let inFlight: SearchQueueEntry | null = null;
     try {
-      drained = await this.processOne(instanceId);
+      drained = await this.processOne(instanceId, (entry) => {
+        inFlight = entry;
+      });
     } catch (e) {
       appLogger.error("Search worker tick failed", {
         source: LogSource.SearchWorker,
         err: e,
-        context: { instanceId },
+        context: {
+          instanceId,
+          ...(inFlight
+            ? {
+                queueId: (inFlight as SearchQueueEntry).id,
+                action: (inFlight as SearchQueueEntry).action,
+                mediaId: (inFlight as SearchQueueEntry).mediaId,
+              }
+            : {}),
+        },
       });
     } finally {
       this.processing.delete(instanceId);
@@ -108,10 +120,6 @@ class SearchWorker {
       // behind "queue keeps growing after it empties" reports.
       if (drained) {
         this.lastProcessedAt.set(instanceId, Date.now());
-        appLogger.debug("Search worker drained", {
-          source: LogSource.SearchWorker,
-          context: { instanceId, drained },
-        });
       }
     }
   }
@@ -133,9 +141,13 @@ class SearchWorker {
     tick();
   }
 
-  private async processOne(instanceId: number): Promise<boolean> {
+  private async processOne(
+    instanceId: number,
+    onEntry?: (entry: SearchQueueEntry) => void,
+  ): Promise<boolean> {
     const next = await searchQueueService.findNextPending(instanceId);
     if (!next) return false;
+    onEntry?.(next);
 
     const instance = await instanceRepository.findById(instanceId);
     if (!instance || !instance.enabled) {
@@ -149,11 +161,12 @@ class SearchWorker {
     try {
       await this.runSearch(instance, next);
       await searchQueueService.markDone(next.id);
-      appLogger.info("Search dispatched", {
+      appLogger.info(`Search dispatched: ${next.title} [${instance.name}]`, {
         source: LogSource.SearchWorker,
         context: {
           queueId: next.id,
           instanceId,
+          instanceName: instance.name,
           action: next.action,
           mediaId: next.mediaId,
           title: next.title,
@@ -162,17 +175,21 @@ class SearchWorker {
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       await searchQueueService.markFailed(next.id, message);
-      appLogger.error("Search dispatch failed", {
-        source: LogSource.SearchWorker,
-        err: e,
-        context: {
-          queueId: next.id,
-          instanceId,
-          action: next.action,
-          mediaId: next.mediaId,
-          title: next.title,
+      appLogger.error(
+        `Search dispatch failed: ${next.title} [${instance.name}]`,
+        {
+          source: LogSource.SearchWorker,
+          err: e,
+          context: {
+            queueId: next.id,
+            instanceId,
+            instanceName: instance.name,
+            action: next.action,
+            mediaId: next.mediaId,
+            title: next.title,
+          },
         },
-      });
+      );
     }
     return true;
   }
