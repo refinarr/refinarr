@@ -224,15 +224,26 @@ export class StatusPollerService {
         },
       });
     }
-    if (commands.length === 0 || ours.length === 0) return 0;
+    if (ours.length === 0) return 0;
+
     // Build the lookup ONCE per tick. Keyed by commandId; the row's
     // commandId is non-null per `findOpenCommandsByInstance`'s where clause.
     const byCommandId = new Map<number, ActionLog>();
     for (const r of ours) {
       if (r.commandId != null) byCommandId.set(r.commandId, r);
     }
+
+    const aged = await this.fetchAgedOutCommands(
+      instance,
+      client,
+      commands,
+      byCommandId,
+    );
+    const allCommands = aged.length > 0 ? [...commands, ...aged] : commands;
+    if (allCommands.length === 0) return 0;
+
     let updates = 0;
-    for (const cmd of commands) {
+    for (const cmd of allCommands) {
       const row = byCommandId.get(cmd.id);
       if (!row) continue;
       const patch = deriveCommandUpdate(
@@ -257,6 +268,42 @@ export class StatusPollerService {
       }
     }
     return updates;
+  }
+
+  // Aged-out fallback. On a busy *arr the recent /command window
+  // (~20 entries) rolls fast — ProcessMonitoredDownloads /
+  // RefreshMonitoredDownloads stream commands every minute, so a
+  // user-initiated search that found 0 releases ages off the recent
+  // list within ~30 min. Without per-id lookup, those rows stay stuck
+  // at "searched" forever. Returns the commands we successfully
+  // re-fetched; nulls (404 / network failure) drop quietly so the row
+  // waits for the next tick.
+  private async fetchAgedOutCommands(
+    instance: Instance,
+    client: ArrClient,
+    recent: UpstreamCommand[],
+    byCommandId: Map<number, ActionLog>,
+  ): Promise<UpstreamCommand[]> {
+    const recentIds = new Set(recent.map((c) => c.id));
+    const agedIds = [...byCommandId.keys()].filter((id) => !recentIds.has(id));
+    if (agedIds.length === 0) return [];
+
+    const results = await Promise.all(
+      agedIds.map((id) => client.getCommandById(id)),
+    );
+    const aged = results.filter((c): c is UpstreamCommand => c !== null);
+    if (aged.length > 0) {
+      appLogger.debug("statusPoller fetched aged-out commands", {
+        source: LogSource.StatusPoller,
+        context: {
+          instanceId: instance.id,
+          requested: agedIds.length,
+          fetched: aged.length,
+          agedIds: aged.map((c) => c.id),
+        },
+      });
+    }
+    return aged;
   }
 
   /**

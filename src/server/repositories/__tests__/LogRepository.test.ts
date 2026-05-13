@@ -274,6 +274,44 @@ describe("LogRepository", () => {
         ),
       ).toEqual([1]);
     });
+
+    test("excludes 'searched' rows whose completionMessage is already stamped", async () => {
+      // Unstamped — still needs command-sync observation.
+      const a = await logRepository.create({
+        ...baseLog,
+        commandId: 7777,
+        status: "searched",
+      });
+      // Already observed — command-sync has nothing more to do.
+      // History-sync handles the searched → grabbed transition via
+      // mediaId-keyed correlation, which doesn't read this query.
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 101,
+        commandId: 7778,
+        status: "searched",
+        completionMessage: "0 releases found",
+      });
+      const open = await logRepository.findOpenCommandsByInstance(1, 60_000);
+      expect(open.map((r) => r.id)).toEqual([a.id]);
+    });
+
+    test("keeps 'grabbed' rows even when completionMessage is stamped (heal path)", async () => {
+      // A 'grabbed' row carrying the synthesized "No releases grabbed"
+      // message is a known race: history-sync advanced the row past
+      // 'searched' AFTER command-sync synthesized the message. The
+      // next command-sync tick must reach this row to clear the stale
+      // text — so the filter MUST keep 'grabbed' rows even with a
+      // stamped completionMessage.
+      const a = await logRepository.create({
+        ...baseLog,
+        commandId: 7777,
+        status: "grabbed",
+        completionMessage: "No releases grabbed",
+      });
+      const open = await logRepository.findOpenCommandsByInstance(1, 60_000);
+      expect(open.map((r) => r.id)).toEqual([a.id]);
+    });
   });
 
   describe("findCorrelatableByMedia — history-sync fuzzy match", () => {

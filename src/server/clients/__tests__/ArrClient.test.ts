@@ -150,3 +150,81 @@ describe("describeFetchError", () => {
     expect(describeFetchError({ weird: true })).toBe("[object Object]");
   });
 });
+
+// Per-id command lookup is the fallback for commands that aged out of
+// the recent /command window. Status poller relies on null vs. value
+// to decide whether to skip a row or feed it through the join logic.
+describe("ArrClient.getCommandById", () => {
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+  afterEach(() => {
+    fetchSpy?.mockRestore();
+  });
+
+  test("returns the projected command when the id exists", async () => {
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: 99,
+          name: "MoviesSearch",
+          status: "completed",
+          started: "2026-05-13T16:27:11Z",
+          ended: "2026-05-13T16:27:42Z",
+          body: { completionMessage: "Sent 1 release(s)...", message: null },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new TestClient(stubInstance);
+    const cmd = await client.getCommandById(99);
+    expect(cmd).toEqual(
+      expect.objectContaining({
+        id: 99,
+        name: "MoviesSearch",
+        status: "completed",
+        body: expect.objectContaining({
+          completionMessage: "Sent 1 release(s)...",
+        }),
+      }),
+    );
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/command/99"),
+      expect.any(Object),
+    );
+  });
+
+  test("returns null on 404 instead of throwing", async () => {
+    fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("Not Found", { status: 404 }));
+    const client = new TestClient(stubInstance);
+    await expect(client.getCommandById(404)).resolves.toBeNull();
+  });
+
+  test("returns null on network failure instead of throwing", async () => {
+    fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new TypeError("fetch failed"));
+    const client = new TestClient(stubInstance);
+    await expect(client.getCommandById(7)).resolves.toBeNull();
+  });
+
+  // 5xx / 401 / 403 are real upstream problems (outage, auth break)
+  // and must NOT silently resolve to null — otherwise the status
+  // poller hides them and rows stay stuck without any signal in logs.
+  test("rethrows non-404 HTTP errors so outages surface", async () => {
+    fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("Server error", { status: 500 }));
+    const client = new TestClient(stubInstance);
+    await expect(client.getCommandById(7)).rejects.toThrow(/500/);
+  });
+
+  test("rethrows 401 (auth break) instead of swallowing", async () => {
+    fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("Unauthorized", { status: 401 }));
+    const client = new TestClient(stubInstance);
+    await expect(client.getCommandById(7)).rejects.toThrow(/401/);
+  });
+});

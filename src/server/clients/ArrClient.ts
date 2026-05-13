@@ -25,6 +25,22 @@ export function describeFetchError(e: unknown): string {
   return e.message;
 }
 
+// Typed HTTP-status error for upstream *arr non-2xx responses. Carries
+// the status code so callers can discriminate (e.g. `getCommandById`
+// swallows 404 but rethrows 5xx / 401 to surface real outages).
+// Subclassing Error keeps `instanceof Error` checks elsewhere intact;
+// the message format stays the same as the pre-typed throw so any
+// `ActionLog.error` strings that captured it remain stable.
+export class ArrHttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ArrHttpError";
+  }
+}
+
 // 10 s is generous for a LAN-hosted *arr instance. Without a bound,
 // an unreachable instance causes fetch() to hang until the OS-level TCP
 // timeout fires (minutes), which blocks DataCache.rebuild() and makes
@@ -70,6 +86,22 @@ interface UpstreamCommandRecord {
   started?: string | null;
   ended?: string | null;
   body?: { completionMessage?: string | null; message?: string | null };
+}
+
+function projectCommand(r: UpstreamCommandRecord): UpstreamCommand {
+  return {
+    id: r.id,
+    name: r.name,
+    status: r.status,
+    started: r.started ?? null,
+    ended: r.ended ?? null,
+    body: r.body
+      ? {
+          completionMessage: r.body.completionMessage ?? null,
+          message: r.body.message ?? null,
+        }
+      : undefined,
+  };
 }
 
 // Universal fields every Servarr HistoryResource carries. The per-arr
@@ -157,7 +189,10 @@ export abstract class ArrClient {
           body: redactString(text).slice(0, 500),
         },
       });
-      throw new Error(`${this.instanceName} API error: ${res.status}`);
+      throw new ArrHttpError(
+        `${this.instanceName} API error: ${res.status}`,
+        res.status,
+      );
     }
 
     const ct = res.headers.get("content-type") ?? "";
@@ -206,19 +241,34 @@ export abstract class ArrClient {
   // per-action polling.
   async getRecentCommands(): Promise<UpstreamCommand[]> {
     const records = await this.fetch<UpstreamCommandRecord[]>("/command");
-    return records.map((r) => ({
-      id: r.id,
-      name: r.name,
-      status: r.status,
-      started: r.started ?? null,
-      ended: r.ended ?? null,
-      body: r.body
-        ? {
-            completionMessage: r.body.completionMessage ?? null,
-            message: r.body.message ?? null,
-          }
-        : undefined,
-    }));
+    return records.map((r) => projectCommand(r));
+  }
+
+  // Fallback for commands that aged out of `/command`'s recent window.
+  // On a busy *arr (frequent ProcessMonitoredDownloads /
+  // RefreshMonitoredDownloads), a search command dispatched ~20+
+  // commands ago will no longer appear in the recent list — without
+  // a per-id fallback the status poller never observes its outcome
+  // and the ActionLog row stays stuck at "searched".
+  //
+  // Returns null only for the two cases where "the row's outcome is
+  // genuinely unobservable right now":
+  //   - 404: command has been GC'd by the *arr; nothing to fetch.
+  //   - Network/transport failure (TypeError from Node fetch, AbortError
+  //     from the timeout guard): retry next tick.
+  // 5xx / 401 / 403 / other non-2xx rethrow so an actual upstream
+  // outage or auth break surfaces in the poller's error path instead
+  // of silently leaving rows stuck.
+  async getCommandById(id: number): Promise<UpstreamCommand | null> {
+    try {
+      const r = await this.fetch<UpstreamCommandRecord>(`/command/${id}`);
+      return r ? projectCommand(r) : null;
+    } catch (err) {
+      if (err instanceof ArrHttpError && err.status === 404) return null;
+      if (err instanceof TypeError) return null;
+      if (err instanceof DOMException && err.name === "AbortError") return null;
+      throw err;
+    }
   }
 
   // History sync: media-event history bounded by `since` so we don't

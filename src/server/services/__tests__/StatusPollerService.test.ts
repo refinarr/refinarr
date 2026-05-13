@@ -378,12 +378,18 @@ function mockClient(opts: {
   history?: UpstreamHistoryEvent[];
   commandsError?: Error;
   historyError?: Error;
+  // Per-id command lookup for aged-out fallback. Map keyed by commandId.
+  // Missing keys = `/command/{id}` 404 → return null (caller skips the
+  // row). `undefined` opts.byId = no per-id surface at all (legacy
+  // tests pre-dating the fallback).
+  byId?: Map<number, UpstreamCommand>;
 }): ArrClient {
   return {
     getRecentCommands: vi.fn(async () => {
       if (opts.commandsError) throw opts.commandsError;
       return opts.commands ?? [];
     }),
+    getCommandById: vi.fn(async (id: number) => opts.byId?.get(id) ?? null),
     getRecentHistory: vi.fn(async () => {
       if (opts.historyError) throw opts.historyError;
       return opts.history ?? [];
@@ -531,11 +537,82 @@ describe("StatusPollerService.pollCommands (command sync)", () => {
     expect(await service.pollCommands(inst, mockClient({ commands: [] }))).toBe(
       0,
     );
-    // Now seed a row but return zero commands → should also short-circuit.
+    // Now seed a row but return zero commands → aged-out fallback also
+    // returns nothing (default mock has no `byId` map). Updates count
+    // stays 0; the row waits for a future tick.
     await seedRow(inst);
     expect(await service.pollCommands(inst, mockClient({ commands: [] }))).toBe(
       0,
     );
+  });
+
+  // Aged-out fallback. The /command recent window rolls fast on busy
+  // *arrs; a search whose result we never observe stays "searched"
+  // forever unless we fall back to /command/{id} per-row.
+  test("aged-out commands are fetched via getCommandById and stamped", async () => {
+    const inst = await instanceService.create(baseInstance);
+    const row = await seedRow(inst, { commandId: 7777 });
+    // Recent /command doesn't include 7777 (cycled off the window),
+    // but /command/7777 still resolves with the completed payload.
+    const byId = new Map<number, UpstreamCommand>([
+      [
+        7777,
+        {
+          id: 7777,
+          name: "MoviesSearch",
+          status: "completed",
+          body: { completionMessage: "0 releases found", message: null },
+        },
+      ],
+    ]);
+    const client = mockClient({
+      commands: [
+        {
+          id: 9999,
+          name: "ProcessMonitoredDownloads",
+          status: "completed",
+        },
+      ],
+      byId,
+    });
+    const updates = await service.pollCommands(inst, client);
+    expect(updates).toBe(1);
+    const after = await logRepository.findById(row.id);
+    expect(after?.completionMessage).toBe("0 releases found");
+    expect(client.getCommandById).toHaveBeenCalledWith(7777);
+  });
+
+  test("aged-out lookup returning null leaves the row at 'searched'", async () => {
+    const inst = await instanceService.create(baseInstance);
+    const row = await seedRow(inst, { commandId: 7777 });
+    // Empty `byId` → /command/{id} returns null (404). Row untouched;
+    // the next tick will try again.
+    const updates = await service.pollCommands(
+      inst,
+      mockClient({ commands: [], byId: new Map() }),
+    );
+    expect(updates).toBe(0);
+    const after = await logRepository.findById(row.id);
+    expect(after?.status).toBe("searched");
+    expect(after?.completionMessage).toBeNull();
+  });
+
+  test("rows already in /command's recent window do NOT trigger getCommandById", async () => {
+    const inst = await instanceService.create(baseInstance);
+    await seedRow(inst, { commandId: 7777 });
+    const client = mockClient({
+      commands: [
+        {
+          id: 7777,
+          name: "MoviesSearch",
+          status: "completed",
+          body: { completionMessage: "Sent 1" },
+        },
+      ],
+    });
+    await service.pollCommands(inst, client);
+    // Recent list had the id — no per-id fallback needed.
+    expect(client.getCommandById).not.toHaveBeenCalled();
   });
 });
 

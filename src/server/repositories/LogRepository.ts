@@ -133,6 +133,22 @@ export class LogRepository extends BaseRepository<ActionLog> {
    * huge backlog. Status floor is "searched" or "grabbed" — terminal
    * states (failed, downloaded, dry_run) are excluded so we don't
    * re-process completed work.
+   *
+   * Two open lanes:
+   *   - status="searched" AND completionMessage IS NULL: command-sync
+   *     hasn't observed the outcome yet. Keep polling until it stamps.
+   *   - status="grabbed": always keep. Either the synthesized
+   *     "No releases grabbed" message is stale (history-sync moved
+   *     the row past 'searched' after the synthesis fired) and needs
+   *     healing on the next command-sync tick, OR the row reached
+   *     'grabbed' without command-sync ever observing the command
+   *     completion and still needs to.
+   *
+   * Excludes "searched" rows whose completionMessage is already
+   * stamped — those have nothing more for command-sync to do; future
+   * state transitions are driven by history-sync which doesn't read
+   * this query. Without that branch the poller re-fetched the same
+   * /command/{id} every tick for 24h.
    */
   async findOpenCommandsByInstance(
     instanceId: number,
@@ -143,8 +159,11 @@ export class LogRepository extends BaseRepository<ActionLog> {
       where: {
         instanceId,
         commandId: { not: null },
-        status: { in: ["searched", "grabbed"] },
         createdAt: { gte: since },
+        OR: [
+          { status: "searched", completionMessage: null },
+          { status: "grabbed" },
+        ],
       },
       orderBy: { createdAt: "desc" },
     }) as Promise<ActionLog[]>;
