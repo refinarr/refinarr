@@ -1,10 +1,30 @@
 name: test
 
+# ──────────────────────────────────────────────────────────────────────
+# ⚠️  RUNNER CHOICE — controlled by the `RUNNER_LABEL` repository
+# variable AND the actor check below.
+#
+#   To self-hosted:  gh variable set RUNNER_LABEL --body "self-hosted" --repo iHX-Labs/refinarr
+#   Back to hosted:  gh variable delete RUNNER_LABEL --repo iHX-Labs/refinarr
+#
+# ACTOR GATE: only `github.actor == 'iHunterX'` (the maintainer) gets
+# routed to RUNNER_LABEL. Everyone else — collaborators, fork PR
+# authors, dependabot, etc. — runs on `ubuntu-latest`. Fork code can
+# never touch the homelab regardless of RUNNER_LABEL. Safe to keep
+# RUNNER_LABEL=self-hosted permanently, even after the repo is public.
+# ──────────────────────────────────────────────────────────────────────
+
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - "**.md"
+      - "messages/**"
+      - "plans/**"
+      - ".vscode/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,18 +33,13 @@ concurrency:
 jobs:
   unit:
     name: lint + tsc + vitest
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.actor == 'iHunterX' && (vars.RUNNER_LABEL || 'ubuntu-latest') || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
+      - uses: ./.github/actions/setup-deps
         with:
-          node-version: 22
-          cache: yarn
-
-      - name: Install dependencies (postinstall runs prisma generate)
-        run: yarn install --frozen-lockfile
+          self-hosted: ${{ vars.RUNNER_LABEL == 'self-hosted' && github.actor == 'iHunterX' }}
 
       - name: Lint
         run: yarn lint
@@ -45,20 +60,37 @@ jobs:
 
   e2e:
     name: playwright
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.actor == 'iHunterX' && (vars.RUNNER_LABEL || 'ubuntu-latest') || 'ubuntu-latest' }}
     timeout-minutes: 15
+    # Skip e2e on draft PRs to save minutes during in-flight iteration.
+    # When the PR is marked ready_for_review, the workflow re-runs and
+    # this job picks up. Pushes to main/develop always run e2e.
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
+      - uses: ./.github/actions/setup-deps
         with:
-          node-version: 22
-          cache: yarn
+          self-hosted: ${{ vars.RUNNER_LABEL == 'self-hosted' && github.actor == 'iHunterX' }}
 
-      - name: Install dependencies (postinstall runs prisma generate)
-        run: yarn install --frozen-lockfile
+      # Hosted-only cache. On self-hosted, the runner's bind-mounted
+      # /root/.cache/ms-playwright already persists browsers between
+      # runs, so the GitHub cache adds nothing (and historically caused
+      # partial-restore failures). On hosted, this saves ~25s vs a
+      # fresh download. The condition mirrors the runs-on routing
+      # above — only the maintainer on self-hosted skips the cache;
+      # everyone else (forks, collaborators) gets the hosted cache.
+      - name: Cache Playwright browsers (hosted only)
+        if: github.actor != 'iHunterX' || vars.RUNNER_LABEL != 'self-hosted'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package.json', 'yarn.lock') }}
 
-      - name: Install Playwright browsers
+      # Always run install — idempotent: ~1-2s no-op when browsers
+      # already exist (self-hosted bind mount, or hosted cache hit
+      # above), ~30s download otherwise. Single step means no
+      # half-installed state regardless of runner type.
+      - name: Install Playwright browsers + OS deps
         run: yarn playwright install --with-deps chromium
 
       - name: Run E2E tests
