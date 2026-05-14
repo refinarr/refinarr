@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/server/lib/db";
+import { userRepository } from "@/server/repositories/UserRepository";
 import {
   verifyPassword,
   createSession,
@@ -31,7 +31,7 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     credentialsSchema,
     "Invalid credentials",
   );
-  const user = await prisma.user.findUnique({ where: { username } });
+  const user = await userRepository.findByUsername(username);
   if (!user || !verifyPassword(password, user.passwordHash)) {
     const usernameHash = createHash("sha256")
       .update(username)

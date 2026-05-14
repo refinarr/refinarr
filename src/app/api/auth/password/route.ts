@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/server/lib/db";
+import { userRepository } from "@/server/repositories/UserRepository";
 import {
   hashPassword,
   verifyPassword,
@@ -51,7 +51,7 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     );
   }
 
-  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  const user = await userRepository.findById(session.userId);
   if (!user) throw unauthorized();
   if (!verifyPassword(currentPassword, user.passwordHash)) {
     appLogger.warn("Failed password change attempt", {
@@ -61,16 +61,11 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     throw unauthorized("Wrong current password");
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { passwordHash: hashPassword(newPassword) },
-  });
-
-  // Invalidate every OTHER session — keep the current one alive so the user
-  // isn't bounced. Standard "log out other devices" behaviour.
-  await prisma.session.deleteMany({
-    where: { userId: user.id, id: { not: sessionId } },
-  });
+  await userRepository.rotatePasswordAndRevokeOtherSessions(
+    user.id,
+    hashPassword(newPassword),
+    sessionId,
+  );
   appLogger.info("Password changed", {
     source: LogSource.Auth,
     context: { userId: user.id },

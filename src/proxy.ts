@@ -1,7 +1,8 @@
 import { randomUUID, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/server/lib/db";
 import { configRepository } from "@/server/repositories/ConfigRepository";
+import { userRepository } from "@/server/repositories/UserRepository";
+import { sessionRepository } from "@/server/repositories/SessionRepository";
 import { ConfigKey } from "@/server/config/keys";
 import { SESSION_COOKIE } from "@/server/lib/auth";
 import type { ApiErrorResponse } from "@/shared/types/api";
@@ -68,15 +69,13 @@ function apiError(
 }
 
 async function userExists(): Promise<boolean> {
-  const c = await prisma.user.count();
-  return c > 0;
+  return (await userRepository.count()) > 0;
 }
 
 async function isValidSessionId(id: string): Promise<boolean> {
-  const s = await prisma.session.findUnique({ where: { id } });
+  const s = await sessionRepository.findByToken(id);
   if (!s) return false;
-  if (s.expiresAt.getTime() < Date.now()) return false;
-  return true;
+  return s.expiresAt.getTime() >= Date.now();
 }
 
 function constantTimeMatch(a: string, b: string): boolean {

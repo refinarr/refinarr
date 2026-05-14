@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/server/lib/db";
+import { userRepository } from "@/server/repositories/UserRepository";
 import {
   hashPassword,
   createSession,
@@ -39,8 +39,9 @@ export const POST = createApiHandler(async (req: NextRequest) => {
   );
 
   try {
-    const user = await prisma.user.create({
-      data: { username, passwordHash: hashPassword(password) },
+    const user = await userRepository.create({
+      username,
+      passwordHash: hashPassword(password),
     });
     const session = await createSession(user.id);
     appLogger.info("Initial admin user created", {

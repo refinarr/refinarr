@@ -1,5 +1,6 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
-import { prisma } from "./db";
+import { userRepository } from "@/server/repositories/UserRepository";
+import { sessionRepository } from "@/server/repositories/SessionRepository";
 
 const SCRYPT_N = 16384;
 const SCRYPT_R = 8;
@@ -49,7 +50,7 @@ export function constantTimeEquals(a: string, b: string): boolean {
 }
 
 export async function getUserCount(): Promise<number> {
-  return prisma.user.count();
+  return userRepository.count();
 }
 
 export async function createSession(
@@ -57,17 +58,17 @@ export async function createSession(
 ): Promise<{ id: string; expiresAt: Date }> {
   const id = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_MS);
-  await prisma.session.create({ data: { id, userId, expiresAt } });
+  await sessionRepository.create({ id, userId, expiresAt });
   return { id, expiresAt };
 }
 
 export async function getSession(
   id: string,
 ): Promise<{ userId: number; expiresAt: Date } | null> {
-  const s = await prisma.session.findUnique({ where: { id } });
+  const s = await sessionRepository.findByToken(id);
   if (!s) return null;
   if (s.expiresAt.getTime() < Date.now()) {
-    await prisma.session.delete({ where: { id } }).catch(() => {});
+    await sessionRepository.deleteByToken(id);
     return null;
   }
   return { userId: s.userId, expiresAt: s.expiresAt };
@@ -78,11 +79,11 @@ export async function isValidSession(id: string): Promise<boolean> {
 }
 
 export async function deleteSession(id: string): Promise<void> {
-  await prisma.session.delete({ where: { id } }).catch(() => {});
+  await sessionRepository.deleteByToken(id);
 }
 
 export async function pruneExpiredSessions(): Promise<void> {
-  await prisma.session.deleteMany({ where: { expiresAt: { lt: new Date() } } });
+  await sessionRepository.pruneExpired();
 }
 
 export type SessionPasswordResult =
@@ -99,7 +100,7 @@ export async function verifySessionPassword(
   if (!sid) return "session_required";
   const session = await getSession(sid);
   if (!session) return "session_required";
-  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  const user = await userRepository.findById(session.userId);
   if (!user) return "session_required";
   return verifyPassword(password, user.passwordHash)
     ? "ok"
