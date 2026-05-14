@@ -1,18 +1,6 @@
 import { EventEmitter } from "events";
-import type { AppLogEntry } from "@/shared/types/models";
+import type { ServerEvent } from "@/shared/types/api";
 import { logger } from "./logger";
-
-/**
- * Server-pushed events for the SSE channel. Keep this list small —
- * each entry is something the UI cares about updating in response to.
- * The client maps event types to TanStack Query invalidations or to a
- * direct stream consumer (e.g. the /logs page tail).
- */
-export type ServerEvent =
-  | { type: "queue-changed"; instanceId: number }
-  | { type: "queue-cleared"; instanceId: number }
-  | { type: "history-changed"; instanceId: number }
-  | { type: "applog"; entry: AppLogEntry };
 
 class EventBus {
   private emitter = new EventEmitter();

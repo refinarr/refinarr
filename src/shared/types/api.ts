@@ -2,6 +2,7 @@ import type {
   ActionLog,
   ActionStatus,
   ActionType,
+  AppLogEntry,
   ArrType,
   AutoSearchPickStrategy,
   AutoSearchScheduleMode,
@@ -50,6 +51,20 @@ export interface ApiErrorResponse {
   code?: string;
   traceId: string;
 }
+
+// Server-pushed events delivered over the SSE channel. Shared because
+// the client subscribes through `src/client/lib/event-channel.ts` —
+// keeping the type in `src/server/` would force a forbidden
+// server→client import. Canonical home for BOTH ends: server emit
+// sites (`src/server/lib/event-bus.ts`, `src/app/api/events/route.ts`,
+// `src/app/api/logs/stream/route.ts`) and the client subscriber
+// import this file directly. No re-export shim — keep it that way
+// per the project's no-re-export-shim rule.
+export type ServerEvent =
+  | { type: "queue-changed"; instanceId: number }
+  | { type: "queue-cleared"; instanceId: number }
+  | { type: "history-changed"; instanceId: number }
+  | { type: "applog"; entry: AppLogEntry };
 
 // Client-side error report payload for /api/logs/client. Shape mirrors
 // what reportClientError in src/client/lib/client-error-logger.ts beacons

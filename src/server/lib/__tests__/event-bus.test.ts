@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach } from "vitest";
-import { eventBus, type ServerEvent } from "@/server/lib/event-bus";
+import { eventBus } from "@/server/lib/event-bus";
+import type { ServerEvent } from "@/shared/types/api";
 
 describe("eventBus", () => {
   beforeEach(() => {

@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { HttpError, badRequest } from "@/server/lib/api-errors";
 import { appLogRepository } from "@/server/repositories/AppLogRepository";
-import { eventBus, type ServerEvent } from "@/server/lib/event-bus";
+import { eventBus } from "@/server/lib/event-bus";
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/shared/types/models";
 import type { AppLogEntry, LogLevel } from "@/shared/types/models";
+import type { ServerEvent } from "@/shared/types/api";
 
 const HEARTBEAT_MS = 25_000;
 // Same ceiling as /api/events. Logs stream connections are typically
