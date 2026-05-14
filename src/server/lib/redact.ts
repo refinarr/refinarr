@@ -34,6 +34,11 @@ const RESERVED_KEYS = new Set<string>([
   "session",
   "encryptionkey",
   "encryption_key",
+  "token",
+  "bearer",
+  "jwt",
+  "secret",
+  "credentials",
 ]);
 
 export function redactString(input: string): string {
@@ -42,6 +47,19 @@ export function redactString(input: string): string {
     out = out.replace(re, fn as Parameters<string["replace"]>[1]);
   }
   return out;
+}
+
+function isPlainRecord(v: unknown): v is Record<string, unknown> {
+  if (!v || typeof v !== "object") return false;
+  const proto = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
+}
+
+function redactValue(v: unknown): unknown {
+  if (typeof v === "string") return redactString(v);
+  if (Array.isArray(v)) return v.map(redactValue);
+  if (isPlainRecord(v)) return redactContext(v);
+  return v;
 }
 
 export function redactContext(
@@ -54,13 +72,7 @@ export function redactContext(
       out[k] = "***";
       continue;
     }
-    if (typeof v === "string") {
-      out[k] = redactString(v);
-    } else if (v && typeof v === "object" && !Array.isArray(v)) {
-      out[k] = redactContext(v as Record<string, unknown>);
-    } else {
-      out[k] = v;
-    }
+    out[k] = redactValue(v);
   }
   return out;
 }

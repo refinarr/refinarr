@@ -5,12 +5,20 @@
 // those are the most common, supported targets. We only reject the
 // unambiguously-bad cases: non-http(s) schemes, cloud metadata endpoints,
 // IPv6 link-local, and the special 0.0.0.0 host.
+//
+// DNS rebinding (a host that resolves to a public IP at validation time
+// and a metadata IP at fetch time) is intentionally out of scope here.
+// refinarr is a self-hosted LAN tool — defending against rebinding would
+// require pinning the resolved IP across the whole request lifecycle,
+// which conflicts with the LAN use case (DHCP renewals, local DNS).
 
 const BLOCKED_HOSTS = new Set<string>([
   "169.254.169.254", // AWS, Azure, GCP, DigitalOcean metadata
   "metadata.google.internal",
   "metadata.googleapis.com",
   "100.100.100.200", // Alibaba metadata
+  "192.0.0.192", // Oracle Cloud metadata
+  "fd00:ec2::254", // AWS IMDS over IPv6
   "0.0.0.0",
 ]);
 

@@ -19,6 +19,10 @@ describe("assertSafeArrUrl — blocked hosts", () => {
   test("GCP metadata googleapis", () =>
     blocked("http://metadata.googleapis.com/"));
   test("Alibaba metadata IP", () => blocked("http://100.100.100.200/"));
+  test("Oracle Cloud metadata IP", () => blocked("http://192.0.0.192/"));
+  test("AWS IMDS over IPv6", () => blocked("http://[fd00:ec2::254]/"));
+  test("AWS IMDSv6 uppercase variant", () =>
+    blocked("http://[FD00:EC2::254]/"));
   test("null route 0.0.0.0", () => blocked("http://0.0.0.0/"));
   test("IPv6 link-local fe80::1", () => blocked("http://[fe80::1]/"));
   test("IPv6 link-local uppercase FE80", () =>
