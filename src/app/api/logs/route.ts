@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
-import { badRequest } from "@/server/lib/api-errors";
+import { positiveInt } from "@/server/lib/api-errors";
 import { appLogRepository } from "@/server/repositories/AppLogRepository";
 import type { LogLevel } from "@/shared/types/models";
 
@@ -12,16 +12,12 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const q = s.get("q") ?? undefined;
   const source = s.get("source") ?? undefined;
   const instanceIdRaw = s.get("instanceId");
-  let instanceId: number | undefined;
-  if (instanceIdRaw !== null) {
-    const parsed = Number(instanceIdRaw);
-    if (!Number.isInteger(parsed) || parsed <= 0) {
-      throw badRequest("Invalid instanceId");
-    }
-    instanceId = parsed;
-  }
-  const page = Number(s.get("page") ?? "1");
-  const limit = Number(s.get("limit") ?? "50");
+  const instanceId =
+    instanceIdRaw === null
+      ? undefined
+      : positiveInt(instanceIdRaw, "instanceId");
+  const page = positiveInt(s.get("page") ?? "1", "page");
+  const limit = positiveInt(s.get("limit") ?? "50", "limit");
 
   const filter = {
     level: LOG_LEVELS.includes(level as LogLevel)
