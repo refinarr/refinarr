@@ -136,6 +136,12 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([expiresAt])
+  // sessionRepository.deleteAllForUser / deleteOtherSessionsForUser
+  // filter by userId. Without this index those deleteMany calls are
+  // full-table scans — fine for solo users, awful when sessions grow
+  // (each password rotation prunes; without the index, the prune is
+  // O(n) on the whole session table).
+  @@index([userId])
 }
 
 model SearchQueue {
