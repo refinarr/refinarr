@@ -19,7 +19,12 @@ export const LogSource = {
 export type LogSource = (typeof LogSource)[keyof typeof LogSource];
 export type ScoringMode = "manual" | "profile";
 export type AutoSearchScheduleMode = "interval" | "cron";
-export type AutoSearchScope = "missing" | "upgrade" | "flagged" | "all";
+export type AutoSearchScope =
+  | "missing"
+  | "upgrade"
+  | "flagged"
+  | "all"
+  | "mixed";
 export type AutoSearchPickStrategy = "balanced" | "random";
 export type AutoSearchScoringMode = "inherit" | "profile";
 export type ActionType =

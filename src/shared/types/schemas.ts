@@ -26,7 +26,9 @@ const autoSearchFields = {
   autoSearchCronExpression: z.string().max(128).optional(),
   autoSearchBatchLimit: z.number().int().min(0).max(100).optional(),
   autoSearchMonitoredOnly: z.boolean().optional(),
-  autoSearchScope: z.enum(["missing", "upgrade", "flagged", "all"]).optional(),
+  autoSearchScope: z
+    .enum(["missing", "upgrade", "flagged", "all", "mixed"])
+    .optional(),
   autoSearchPickStrategy: z.enum(["balanced", "random"]).optional(),
   autoSearchCooldownHours: z.number().int().min(0).max(8760).optional(),
   autoSearchPausedUntil: z.iso.datetime().nullable().optional(),

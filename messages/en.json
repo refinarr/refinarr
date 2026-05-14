@@ -571,6 +571,8 @@
       "scopeFlaggedDesc": "Any flagged item",
       "scopeAll": "All",
       "scopeAllDesc": "Every item regardless of score",
+      "scopeMixed": "Mixed",
+      "scopeMixedDesc": "Some from each priority — missing, flagged, and upgrades",
       "lastRun": "Last run",
       "lastRunNever": "Never",
       "nextRun": "Next",

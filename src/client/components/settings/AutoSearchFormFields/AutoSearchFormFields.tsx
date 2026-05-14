@@ -156,12 +156,14 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
     upgrade: t("scopeUpgrade"),
     flagged: t("scopeFlagged"),
     all: t("scopeAll"),
+    mixed: t("scopeMixed"),
   };
   const scopeDesc: Record<AutoSearchScope, string> = {
     missing: t("scopeMissingDesc"),
     upgrade: t("scopeUpgradeDesc"),
     flagged: t("scopeFlaggedDesc"),
     all: t("scopeAllDesc"),
+    mixed: t("scopeMixedDesc"),
   };
   const strategy: AutoSearchPickStrategy = value.autoSearchPickStrategy;
   const pickLabel: Record<AutoSearchPickStrategy, string> = {
@@ -407,6 +409,7 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
                 <SelectItem value="upgrade">{t("scopeUpgrade")}</SelectItem>
                 <SelectItem value="missing">{t("scopeMissing")}</SelectItem>
                 <SelectItem value="all">{t("scopeAll")}</SelectItem>
+                <SelectItem value="mixed">{t("scopeMixed")}</SelectItem>
               </SelectContent>
             </Select>
           </FormField>

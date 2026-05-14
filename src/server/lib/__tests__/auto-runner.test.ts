@@ -2,6 +2,9 @@ import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   computeNextRun,
   pickAutoSearchBatch,
+  pickAutoSearchMixedBatch,
+  allocateMixedQuota,
+  categorizeForMixed,
   buildAutoSearchStatus,
   autoRunner,
 } from "@/server/lib/auto-runner";
@@ -246,6 +249,11 @@ describe("pickAutoSearchBatch — cooldown filtering", () => {
 describe("pickAutoSearchBatch", () => {
   const item = (id: number, cfScore: number) => ({ id, cfScore });
   const entry = (at: Date, failed = false) => ({ at, failed });
+  // Score accessor — mirrors what `SCORE_FOR[mode]` returns at the
+  // production call site. Tests that don't care about ordering omit it
+  // and accept the default `() => 0` (everything ties, falls back to
+  // insertion order).
+  const scoreOf = (it: { cfScore: number }) => it.cfScore;
 
   test("empty items → []", () => {
     expect(pickAutoSearchBatch([], new Map(), 5)).toEqual([]);
@@ -257,7 +265,14 @@ describe("pickAutoSearchBatch", () => {
 
   test("all never-searched → sorted by cfScore asc (backfill), sliced to limit", () => {
     const items = [item(1, 10), item(2, 5), item(3, 1)];
-    const result = pickAutoSearchBatch(items, new Map(), 2);
+    const result = pickAutoSearchBatch(
+      items,
+      new Map(),
+      2,
+      "balanced",
+      0,
+      scoreOf,
+    );
     expect(result.map((i) => i.id)).toEqual([3, 2]);
   });
 
@@ -281,8 +296,74 @@ describe("pickAutoSearchBatch", () => {
   test("backfill sorted by cfScore asc: worst score goes first", () => {
     // Both never-searched → backfill; lower cfScore wins
     const items = [item(1, 10), item(2, 1)];
-    const result = pickAutoSearchBatch(items, new Map(), 2);
+    const result = pickAutoSearchBatch(
+      items,
+      new Map(),
+      2,
+      "balanced",
+      0,
+      scoreOf,
+    );
     expect(result.map((i) => i.id)).toEqual([2, 1]);
+  });
+
+  // Regression for the profile-mode lossy-clamp bug. When `scoreOf`
+  // returns a raw signed customFormatScore (as SCORE_FOR.profile does),
+  // items with deep negative penalties must sort BEFORE items at the
+  // baseline. Previously the picker read `item.cfScore` (clamped to
+  // [0, 1] via scoreProfileCoverage) which collapsed all below-cutoff
+  // items to 0, making catastrophic-penalty and just-below-cutoff
+  // items indistinguishable in the worst-first sort.
+  test("scoreOf with signed scores sorts negative-penalty items first (profile-mode regression)", () => {
+    const items = [
+      { id: 1, customFormatScore: 5 }, // slightly above zero
+      { id: 2, customFormatScore: -200 }, // catastrophic penalty
+      { id: 3, customFormatScore: 0 }, // baseline
+      { id: 4, customFormatScore: -10 }, // mild penalty
+    ];
+    const result = pickAutoSearchBatch(
+      items,
+      new Map(),
+      4,
+      "balanced",
+      0,
+      (it) => it.customFormatScore,
+    );
+    // Worst (most negative) first → least bad → positive last.
+    expect(result.map((i) => i.id)).toEqual([2, 4, 3, 1]);
+  });
+
+  test("missing-file sentinel (-Infinity) outranks every finite score", () => {
+    // Callers in auto-runner wrap the per-mode SCORE_FOR accessor with a
+    // sentinel: items with `existingFileCount === 0` resolve to -Infinity
+    // so "no file at all" beats even the worst negative-penalty file.
+    const items = [
+      { id: 1, customFormatScore: -200, existingFileCount: 1 },
+      { id: 2, customFormatScore: 4500, existingFileCount: 0 }, // no file
+      { id: 3, customFormatScore: 0, existingFileCount: 0 }, // no file
+      { id: 4, customFormatScore: 50, existingFileCount: 1 },
+    ];
+    const scoreOf = (it: (typeof items)[number]) =>
+      it.existingFileCount === 0
+        ? Number.NEGATIVE_INFINITY
+        : it.customFormatScore;
+    const result = pickAutoSearchBatch(
+      items,
+      new Map(),
+      4,
+      "balanced",
+      0,
+      scoreOf,
+    );
+    // Missing-file items (2, 3) first regardless of customFormatScore,
+    // then negative-penalty (1), then mild positive (4).
+    expect(
+      result
+        .map((i) => i.id)
+        .slice(0, 2)
+        .sort(),
+    ).toEqual([2, 3]);
+    expect(result.map((i) => i.id).slice(2)).toEqual([1, 4]);
   });
 
   test("oldest-searched comes before recently-searched (balanced strategy)", () => {
@@ -302,7 +383,7 @@ describe("pickAutoSearchBatch", () => {
       [2, entry(ts)],
     ]);
     const items = [item(1, 10), item(2, 3)];
-    const result = pickAutoSearchBatch(items, map, 1, "balanced");
+    const result = pickAutoSearchBatch(items, map, 1, "balanced", 0, scoreOf);
     expect(result[0].id).toBe(2); // lower score first
   });
 
@@ -333,6 +414,236 @@ describe("pickAutoSearchBatch", () => {
     }
 
     expect(seen.size).toBe(100);
+  });
+});
+
+// ─── pickAutoSearchMixedBatch — scope=mixed ────────────────────────────────
+
+describe("categorizeForMixed", () => {
+  test("no file → missing", () => {
+    expect(
+      categorizeForMixed({
+        existingFileCount: 0,
+        flagged: true,
+        customFormatScore: 0,
+      }),
+    ).toBe("missing");
+  });
+
+  test("has file, negative score → flagged-penalty", () => {
+    expect(
+      categorizeForMixed({
+        existingFileCount: 1,
+        flagged: true,
+        customFormatScore: -200,
+      }),
+    ).toBe("flagged-penalty");
+  });
+
+  test("has file, flagged, positive score → upgrade", () => {
+    expect(
+      categorizeForMixed({
+        existingFileCount: 1,
+        flagged: true,
+        customFormatScore: 1250,
+      }),
+    ).toBe("upgrade");
+  });
+
+  test("has file, not flagged → null (clean — no bucket)", () => {
+    expect(
+      categorizeForMixed({
+        existingFileCount: 1,
+        flagged: false,
+        customFormatScore: 5000,
+      }),
+    ).toBeNull();
+  });
+
+  test("has file, not flagged, negative score → null (clean items never enter mixed)", () => {
+    // The `flagged` gate must come BEFORE the customFormatScore check
+    // so a clean item with an incidentally-negative score doesn't fall
+    // into "flagged-penalty". Locks down the mixed-scope contract:
+    // mixed only ever picks items the user actually wants to act on.
+    expect(
+      categorizeForMixed({
+        existingFileCount: 1,
+        flagged: false,
+        customFormatScore: -1,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("allocateMixedQuota", () => {
+  const ample = {
+    missing: 100,
+    "flagged-penalty": 100,
+    upgrade: 100,
+  } as const;
+
+  test("batchLimit=5 with ample supply → 2 missing + 2 flagged + 1 upgrade", () => {
+    expect(allocateMixedQuota(5, ample)).toEqual({
+      missing: 2,
+      "flagged-penalty": 2,
+      upgrade: 1,
+    });
+  });
+
+  test("batchLimit=6 with ample supply → 2 each (even split)", () => {
+    expect(allocateMixedQuota(6, ample)).toEqual({
+      missing: 2,
+      "flagged-penalty": 2,
+      upgrade: 2,
+    });
+  });
+
+  test("batchLimit=2 with ample supply → 1 missing + 1 flagged + 0 upgrade (upgrade cycled out)", () => {
+    expect(allocateMixedQuota(2, ample)).toEqual({
+      missing: 1,
+      "flagged-penalty": 1,
+      upgrade: 0,
+    });
+  });
+
+  test("batchLimit=0 → all zero", () => {
+    expect(allocateMixedQuota(0, ample)).toEqual({
+      missing: 0,
+      "flagged-penalty": 0,
+      upgrade: 0,
+    });
+  });
+
+  test("missing underfilled → spill to flagged-penalty", () => {
+    // batchLimit=6 wants 2 each; missing only has 1.
+    // Overflow of 1 rolls forward to flagged-penalty.
+    expect(
+      allocateMixedQuota(6, {
+        missing: 1,
+        "flagged-penalty": 100,
+        upgrade: 100,
+      }),
+    ).toEqual({ missing: 1, "flagged-penalty": 3, upgrade: 2 });
+  });
+
+  test("missing + flagged-penalty both empty → all spill to upgrade", () => {
+    expect(
+      allocateMixedQuota(6, {
+        missing: 0,
+        "flagged-penalty": 0,
+        upgrade: 100,
+      }),
+    ).toEqual({ missing: 0, "flagged-penalty": 0, upgrade: 6 });
+  });
+
+  test("upgrade underfilled → no loop-back (slots are lost)", () => {
+    expect(
+      allocateMixedQuota(6, {
+        missing: 100,
+        "flagged-penalty": 100,
+        upgrade: 0,
+      }),
+    ).toEqual({ missing: 2, "flagged-penalty": 2, upgrade: 0 });
+  });
+});
+
+describe("pickAutoSearchMixedBatch", () => {
+  const mk = (
+    id: number,
+    bucket: "missing" | "flagged-penalty" | "upgrade",
+  ) => {
+    if (bucket === "missing")
+      return { id, existingFileCount: 0, flagged: true, customFormatScore: 0 };
+    if (bucket === "flagged-penalty")
+      return {
+        id,
+        existingFileCount: 1,
+        flagged: true,
+        customFormatScore: -100,
+      };
+    return {
+      id,
+      existingFileCount: 1,
+      flagged: true,
+      customFormatScore: 500,
+    };
+  };
+
+  test("batchLimit=6 with ample supply → 2 from each bucket", () => {
+    const items = [
+      mk(1, "missing"),
+      mk(2, "missing"),
+      mk(3, "missing"),
+      mk(4, "flagged-penalty"),
+      mk(5, "flagged-penalty"),
+      mk(6, "flagged-penalty"),
+      mk(7, "upgrade"),
+      mk(8, "upgrade"),
+      mk(9, "upgrade"),
+    ];
+    const picked = pickAutoSearchMixedBatch(items, new Map(), 6, "balanced", 0);
+    expect(picked).toHaveLength(6);
+    const buckets = picked.map((p) => categorizeForMixed(p));
+    expect(buckets.filter((b) => b === "missing")).toHaveLength(2);
+    expect(buckets.filter((b) => b === "flagged-penalty")).toHaveLength(2);
+    expect(buckets.filter((b) => b === "upgrade")).toHaveLength(2);
+  });
+
+  test("clean items (not flagged, has file) are excluded entirely", () => {
+    const items = [
+      mk(1, "missing"),
+      { id: 2, existingFileCount: 1, flagged: false, customFormatScore: 9000 },
+      { id: 3, existingFileCount: 1, flagged: false, customFormatScore: 5000 },
+    ];
+    const picked = pickAutoSearchMixedBatch(items, new Map(), 3, "balanced", 0);
+    expect(picked.map((p) => p.id)).toEqual([1]);
+  });
+
+  test("empty bucket spills to next priority", () => {
+    // No missing items; batchLimit=3 should give 1 flagged + 1 upgrade
+    // (1+1 quota) + 1 spilled slot to flagged-penalty = 2 flagged + 1 upgrade.
+    const items = [
+      mk(1, "flagged-penalty"),
+      mk(2, "flagged-penalty"),
+      mk(3, "upgrade"),
+    ];
+    const picked = pickAutoSearchMixedBatch(items, new Map(), 3, "balanced", 0);
+    expect(picked).toHaveLength(3);
+    const buckets = picked.map((p) => categorizeForMixed(p));
+    expect(buckets.filter((b) => b === "flagged-penalty")).toHaveLength(2);
+    expect(buckets.filter((b) => b === "upgrade")).toHaveLength(1);
+  });
+
+  test("cooldown-filtered bucket spills its quota to next priority", () => {
+    // 3 missing items all in cooldown; 3 flagged-penalty items eligible.
+    // Without two-pass allocation, missing would steal 2 quota slots,
+    // produce 0 items, and we'd end up with only 2 flagged picks
+    // instead of using all of batchLimit=4.
+    const recent = new Date(Date.now() - 30 * 60 * 1000);
+    const items = [
+      mk(1, "missing"),
+      mk(2, "missing"),
+      mk(3, "missing"),
+      mk(4, "flagged-penalty"),
+      mk(5, "flagged-penalty"),
+      mk(6, "flagged-penalty"),
+      mk(7, "upgrade"),
+    ];
+    const lastSearched = new Map([
+      [1, { at: recent, failed: false }],
+      [2, { at: recent, failed: false }],
+      [3, { at: recent, failed: false }],
+    ]);
+    const cooldown2h = 2 * 60 * 60 * 1000;
+    const picked = pickAutoSearchMixedBatch(
+      items,
+      lastSearched,
+      4,
+      "balanced",
+      cooldown2h,
+    );
+    expect(picked).toHaveLength(4);
+    expect(picked.every((p) => p.id >= 4)).toBe(true);
   });
 });
 

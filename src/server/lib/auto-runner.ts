@@ -2,19 +2,21 @@ import crypto from "crypto";
 import { CronExpressionParser } from "cron-parser";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
+import { mediaServiceFor } from "@/server/arr/composition";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
-import { mediaServiceFor } from "@/server/arr/composition";
-import { ARR_META } from "@/shared/arr-meta";
-import { isValidCronExpression } from "@/shared/cron";
 import type {
   AutoSearchScoringMode,
   Instance,
   MediaItem,
   ScoringMode,
 } from "@/shared/types/models";
-import { LogSource } from "@/shared/types/models";
+
+import { ARR_META } from "@/shared/arr-meta";
 import type { AutoSearchStatus } from "@/shared/types/api";
+import { LogSource } from "@/shared/types/models";
+import { SCORE_FOR } from "@/shared/scoring-mode";
+import { isValidCronExpression } from "@/shared/cron";
 import { appLogger } from "./app-logger";
 
 // HMR globals — declared on globalThis so the singleton survives module
@@ -181,18 +183,16 @@ export function buildAutoSearchStatus(
   };
 }
 
-// Pure picker — exported for unit tests.
-//
-// Backfill items (never searched OR last search failed) always come first,
-// sorted by worst cfScore. Remaining slots are filled by strategy:
-//   "balanced" — oldest lastSearchedAt first, cfScore as tie-breaker.
-//   "random"   — random shuffle of the remainder.
-export function pickAutoSearchBatch<T extends { id: number; cfScore: number }>(
+// Pure picker — exported for unit tests. `scoreOf` must be signed
+// (use SCORE_FOR[mode] so profile mode reaches negative-penalty items
+// — scoreProfileCoverage clamps to [0,1] and would collapse them).
+export function pickAutoSearchBatch<T extends { id: number }>(
   items: T[],
   lastSearchedMap: Map<number, { at: Date; failed: boolean }>,
   batchLimit: number,
   strategy: "balanced" | "random" = "balanced",
   cooldownMs: number = 0,
+  scoreOf: (item: T) => number = () => 0,
 ): T[] {
   const now = Date.now();
   const eligible =
@@ -212,7 +212,7 @@ export function pickAutoSearchBatch<T extends { id: number; cfScore: number }>(
     if (!info || info.failed) backfill.push(item);
     else rest.push(item);
   }
-  backfill.sort((a, b) => a.cfScore - b.cfScore);
+  backfill.sort((a, b) => scoreOf(a) - scoreOf(b));
 
   let sortedRest: T[];
   if (strategy === "random") {
@@ -226,11 +226,123 @@ export function pickAutoSearchBatch<T extends { id: number; cfScore: number }>(
       const aT = lastSearchedMap.get(a.id)!.at.getTime();
       const bT = lastSearchedMap.get(b.id)!.at.getTime();
       if (aT !== bT) return aT - bT;
-      return a.cfScore - b.cfScore;
+      return scoreOf(a) - scoreOf(b);
     });
   }
 
   return [...backfill, ...sortedRest].slice(0, Math.max(0, batchLimit));
+}
+
+// Disjoint buckets for the "mixed" scope: missing (no file), flagged-
+// penalty (has file, negative customFormatScore), upgrade (has file,
+// flagged, score >= 0). Clean items return null and never participate.
+export type MixedBucket = "missing" | "flagged-penalty" | "upgrade";
+
+export function categorizeForMixed<
+  T extends {
+    existingFileCount: number;
+    flagged: boolean;
+    customFormatScore: number;
+  },
+>(item: T): MixedBucket | null {
+  if (item.existingFileCount === 0) return "missing";
+  // Unflagged items never participate, even with a negative score.
+  if (!item.flagged) return null;
+  if (item.customFormatScore < 0) return "flagged-penalty";
+  return "upgrade";
+}
+
+// Round-robin `batchLimit` slots across buckets in urgency order, then
+// spill overflow forward (missing → flagged-penalty → upgrade).
+// Upgrade does not loop back: lower-urgency buckets must never expand
+// into higher-urgency slots.
+export function allocateMixedQuota(
+  batchLimit: number,
+  available: Record<MixedBucket, number>,
+): Record<MixedBucket, number> {
+  const order: MixedBucket[] = ["missing", "flagged-penalty", "upgrade"];
+  const quota: Record<MixedBucket, number> = {
+    missing: 0,
+    "flagged-penalty": 0,
+    upgrade: 0,
+  };
+  for (let i = 0; i < batchLimit; i++) quota[order[i % 3]]++;
+
+  // Spill leftovers in urgency order.
+  for (let i = 0; i < order.length; i++) {
+    const bucket = order[i];
+    const overflow = quota[bucket] - available[bucket];
+    if (overflow > 0) {
+      quota[bucket] = available[bucket];
+      const next = order[i + 1];
+      if (next) quota[next] += overflow;
+    }
+  }
+  return quota;
+}
+
+export function pickAutoSearchMixedBatch<
+  T extends {
+    id: number;
+    existingFileCount: number;
+    flagged: boolean;
+    customFormatScore: number;
+  },
+>(
+  items: T[],
+  lastSearchedMap: Map<number, { at: Date; failed: boolean }>,
+  batchLimit: number,
+  strategy: "balanced" | "random" = "balanced",
+  cooldownMs: number = 0,
+  scoreOf: (item: T) => number = () => 0,
+): T[] {
+  const buckets: Record<MixedBucket, T[]> = {
+    missing: [],
+    "flagged-penalty": [],
+    upgrade: [],
+  };
+  for (const item of items) {
+    const b = categorizeForMixed(item);
+    if (b !== null) buckets[b].push(item);
+  }
+
+  // Two-pass: pre-filter each bucket through pickAutoSearchBatch
+  // (applies cooldown), allocate quota from the POST-COOLDOWN counts,
+  // then slice. Without this, a bucket whose raw size is N but whose
+  // eligible size is 0 steals slots that can't be filled.
+  const order: MixedBucket[] = ["missing", "flagged-penalty", "upgrade"];
+  const eligible: Record<MixedBucket, T[]> = {
+    missing: pickAutoSearchBatch(
+      buckets.missing,
+      lastSearchedMap,
+      Number.MAX_SAFE_INTEGER,
+      strategy,
+      cooldownMs,
+      scoreOf,
+    ),
+    "flagged-penalty": pickAutoSearchBatch(
+      buckets["flagged-penalty"],
+      lastSearchedMap,
+      Number.MAX_SAFE_INTEGER,
+      strategy,
+      cooldownMs,
+      scoreOf,
+    ),
+    upgrade: pickAutoSearchBatch(
+      buckets.upgrade,
+      lastSearchedMap,
+      Number.MAX_SAFE_INTEGER,
+      strategy,
+      cooldownMs,
+      scoreOf,
+    ),
+  };
+  const quota = allocateMixedQuota(batchLimit, {
+    missing: eligible.missing.length,
+    "flagged-penalty": eligible["flagged-penalty"].length,
+    upgrade: eligible.upgrade.length,
+  });
+  return order.flatMap((bucket) => eligible[bucket].slice(0, quota[bucket]));
 }
 
 class AutoRunner {
@@ -555,6 +667,8 @@ class AutoRunner {
       limit: 5000,
       sortBy: "score",
       order: "asc",
+      // `mixed` needs the wider net so missing-file items reach the
+      // bucket splitter; narrower scopes filter upstream for efficiency.
       flaggedOnly:
         inst.autoSearchScope === "flagged" ||
         inst.autoSearchScope === "upgrade",
@@ -574,13 +688,31 @@ class AutoRunner {
         : rawItems;
 
     const lastSearched = await logRepository.findLastSearchedAtByMedia(inst.id);
-    const picked = pickAutoSearchBatch(
-      items,
-      lastSearched,
-      inst.autoSearchBatchLimit,
-      inst.autoSearchPickStrategy,
-      inst.autoSearchCooldownHours * 60 * 60 * 1000,
-    );
+    const effectiveMode: ScoringMode = scoringModeOverride ?? inst.scoringMode;
+    // Missing-file items resolve to -Infinity so they outrank every
+    // finite negative score. (compareMedia sinks them to the bottom
+    // for page display; the picker needs the opposite.)
+    const baseScore = SCORE_FOR[effectiveMode];
+    const scoreOf = (item: MediaItem): number =>
+      item.existingFileCount === 0 ? Number.NEGATIVE_INFINITY : baseScore(item);
+    const picked =
+      inst.autoSearchScope === "mixed"
+        ? pickAutoSearchMixedBatch(
+            items,
+            lastSearched,
+            inst.autoSearchBatchLimit,
+            inst.autoSearchPickStrategy,
+            inst.autoSearchCooldownHours * 60 * 60 * 1000,
+            scoreOf,
+          )
+        : pickAutoSearchBatch(
+            items,
+            lastSearched,
+            inst.autoSearchBatchLimit,
+            inst.autoSearchPickStrategy,
+            inst.autoSearchCooldownHours * 60 * 60 * 1000,
+            scoreOf,
+          );
 
     if (picked.length === 0) {
       appLogger.info("Auto-runner tick — no eligible items", {
