@@ -1,11 +1,24 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { fireEvent } from "@testing-library/react";
 import { renderWithProviders, screen } from "@/test/render";
 import { MobileTabBar } from "../MobileTabBar";
 
+let mockPathname = "/movies";
+const mockReplace = vi.fn();
+
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/movies",
+  usePathname: () => mockPathname,
+  useRouter: () => ({ replace: mockReplace, push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(""),
+}));
+
+// MobileInstanceTab (rendered by MobileTabBar on /movies + /shows)
+// calls useInstances; stub it so the test doesn't hit MSW's
+// unhandled-request error and stay deterministic across runs.
+vi.mock("@/client/hooks/data/useInstances", () => ({
+  useInstances: () => ({ data: [] }),
+  useInstanceHealth: () => ({ data: undefined, isLoading: true }),
 }));
 
 describe("MobileTabBar", () => {
@@ -60,5 +73,35 @@ describe("MobileTabBar", () => {
     expect(
       screen.getByRole("button", { name: /open more menu/i }),
     ).toHaveAttribute("aria-expanded", "true");
+  });
+
+  describe("Instance tab presence by route", () => {
+    afterEach(() => {
+      mockPathname = "/movies";
+    });
+
+    it("does not render the Instance tab on /dashboard", () => {
+      mockPathname = "/dashboard";
+      renderWithProviders(
+        <MobileTabBar onMoreClick={() => {}} moreOpen={false} />,
+      );
+      // No instances loaded in the test (useInstances returns undefined)
+      // → MobileInstanceTab returns null on /movies + /shows too. But the
+      // wrapping condition itself should not render the component at all
+      // on /dashboard. We can't assert by absence of a render — we assert
+      // that the only buttons in the bar are the More button.
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+    });
+
+    it("renders nothing for the Instance tab while instances are loading", () => {
+      // /movies path is the default. MobileInstanceTab returns null when
+      // useInstances has no data yet → only the More button + 3 nav links
+      // are visible.
+      renderWithProviders(
+        <MobileTabBar onMoreClick={() => {}} moreOpen={false} />,
+      );
+      expect(screen.getAllByRole("link")).toHaveLength(3);
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+    });
   });
 });

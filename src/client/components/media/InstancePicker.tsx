@@ -2,14 +2,12 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
-import { InstanceConnectionDot } from "@/client/components/common/InstanceConnectionDot";
+import { InstanceMenuItem } from "@/client/components/common/InstanceMenuItem";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/client/components/ui/dropdown-menu";
-import { cn } from "@/client/lib/utils";
 import type { PublicInstance } from "@/shared/types/api";
 
 interface Props {
@@ -91,25 +89,12 @@ export function InstancePicker({
         className="flex max-w-sm min-w-72 flex-col gap-1 p-1.5"
       >
         {instances.map((i) => (
-          <DropdownMenuItem
+          <InstanceMenuItem
             key={i.id}
-            onClick={() => onChange(i.id)}
-            // items-center vertically aligns the health dot with the
-            // middle of the two-line label. py-2 + gap-3 give the row
-            // breathing room. Active item is brand-tinted.
-            className={cn(
-              "items-center gap-3 p-2",
-              i.id === activeId && "bg-accent",
-            )}
-          >
-            <InstanceConnectionDot instanceId={i.id} />
-            <div className="flex min-w-0 flex-col items-start gap-0.5 leading-tight">
-              <span className="truncate text-sm font-medium">{i.name}</span>
-              <span className="text-muted-foreground/70 truncate text-[11px]">
-                {i.url}
-              </span>
-            </div>
-          </DropdownMenuItem>
+            instance={i}
+            active={i.id === activeId}
+            onSelect={onChange}
+          />
         ))}
       </DropdownMenuContent>
     </DropdownMenu>

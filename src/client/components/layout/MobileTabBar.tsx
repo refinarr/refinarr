@@ -8,17 +8,45 @@ import { usePrefersReducedMotion } from "@/client/hooks/ui/useMediaQuery";
 import { useScrollDirection } from "@/client/hooks/ui/useScrollDirection";
 import { cn } from "@/client/lib/utils";
 import { ARR_LIBRARY_ROUTE } from "@/shared/arr-meta";
+import type { ArrType } from "@/shared/types/models";
+import { MobileInstanceTab } from "./MobileInstanceTab";
 
-interface TabKey {
+interface RouteTab {
+  kind: "route";
   href: string;
-  labelKey: "dashboard" | "movies" | "shows";
+  labelKey: "dashboard";
   icon: LucideIcon;
 }
+interface InstanceTab {
+  kind: "instance";
+  href: string;
+  labelKey: "movies" | "shows";
+  icon: LucideIcon;
+  arrType: ArrType;
+}
+type TabKey = RouteTab | InstanceTab;
 
 const TABS: TabKey[] = [
-  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: ARR_LIBRARY_ROUTE.radarr, labelKey: "movies", icon: Film },
-  { href: ARR_LIBRARY_ROUTE.sonarr, labelKey: "shows", icon: Tv2 },
+  {
+    kind: "route",
+    href: "/dashboard",
+    labelKey: "dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    kind: "instance",
+    href: ARR_LIBRARY_ROUTE.radarr,
+    labelKey: "movies",
+    icon: Film,
+    arrType: "radarr",
+  },
+  {
+    kind: "instance",
+    href: ARR_LIBRARY_ROUTE.sonarr,
+    labelKey: "shows",
+    icon: Tv2,
+    arrType: "sonarr",
+  },
 ];
 
 interface Props {
@@ -57,14 +85,26 @@ export function MobileTabBar({ onMoreClick, moreOpen }: Props) {
       )}
     >
       <div className="h-bottom-bar flex items-stretch">
-        {TABS.map(({ href, labelKey, icon: Icon }) => {
+        {TABS.map((tab) => {
+          if (tab.kind === "instance") {
+            return (
+              <MobileInstanceTab
+                key={tab.href}
+                arrType={tab.arrType}
+                href={tab.href}
+                label={t(tab.labelKey)}
+                icon={tab.icon}
+              />
+            );
+          }
+          const Icon = tab.icon;
           const active =
-            pathname === href ||
-            (href !== "/" && pathname.startsWith(`${href}/`));
+            pathname === tab.href ||
+            (tab.href !== "/" && pathname.startsWith(`${tab.href}/`));
           return (
             <Link
-              key={href}
-              href={href}
+              key={tab.href}
+              href={tab.href}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "flex flex-1 flex-col items-center justify-center gap-1 px-2 text-xs font-medium transition-colors",
@@ -74,7 +114,7 @@ export function MobileTabBar({ onMoreClick, moreOpen }: Props) {
               )}
             >
               <Icon className="size-5" />
-              <span className="truncate">{t(labelKey)}</span>
+              <span className="truncate">{t(tab.labelKey)}</span>
             </Link>
           );
         })}
