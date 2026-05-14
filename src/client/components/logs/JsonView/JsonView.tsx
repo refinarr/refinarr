@@ -34,6 +34,19 @@ interface NodeProps {
   keyLabel?: string;
 }
 
+interface PrimitiveValueProps {
+  node: JsonNode;
+}
+
+interface JsonKeyProps {
+  name: string;
+}
+
+interface CollapseToggleProps {
+  open: boolean;
+  onClick: () => void;
+}
+
 function isOpen(
   path: JsonPath,
   depth: number,
@@ -45,7 +58,7 @@ function isOpen(
   return depth < initiallyExpandedDepth;
 }
 
-function PrimitiveValue({ node }: { node: JsonNode }) {
+function PrimitiveValue({ node }: PrimitiveValueProps) {
   switch (node.kind) {
     case "null":
       return <span className="text-muted-foreground italic">null</span>;
@@ -68,17 +81,11 @@ function PrimitiveValue({ node }: { node: JsonNode }) {
   }
 }
 
-function JsonKey({ name }: { name: string }) {
+function JsonKey({ name }: JsonKeyProps) {
   return <span className="text-sky-400">&quot;{name}&quot;</span>;
 }
 
-function CollapseToggle({
-  open,
-  onClick,
-}: {
-  open: boolean;
-  onClick: () => void;
-}) {
+function CollapseToggle({ open, onClick }: CollapseToggleProps) {
   const Icon = open ? ChevronDown : ChevronRight;
   return (
     <button

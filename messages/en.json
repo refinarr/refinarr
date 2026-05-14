@@ -418,6 +418,12 @@
       "warn": "Warnings",
       "error": "Errors"
     },
+    "badgeLevels": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warn",
+      "error": "Error"
+    },
     "columns": {
       "time": "Time",
       "level": "Level",
