@@ -27,6 +27,7 @@ interface Props<T extends { id: number }> {
   fetchNextPage?: () => unknown;
   hasNextPage?: boolean;
   isFetchingNextPage?: boolean;
+  focusedId?: number | null;
 }
 
 // Card list rendered on mobile, and also on desktop when the user picks
@@ -46,6 +47,7 @@ export function MediaCardList<T extends { id: number }>({
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
+  focusedId,
 }: Props<T>) {
   const listRef = useRef<HTMLUListElement | null>(null);
 
@@ -96,6 +98,7 @@ export function MediaCardList<T extends { id: number }>({
               />
             );
           }
+          const isFocused = focusedId === row.id;
           if (style) {
             // Cards are variable-height; let virt measure the real
             // height (height:undefined) and stretch to the list
@@ -113,6 +116,7 @@ export function MediaCardList<T extends { id: number }>({
                 ref={measureRef}
                 role="presentation"
                 data-index={index}
+                data-mediaid={row.id}
                 className="pb-card-gap"
                 style={{ ...style, height: undefined, width: "100%" }}
               >
@@ -123,20 +127,23 @@ export function MediaCardList<T extends { id: number }>({
                   onRowClick={() => onRowClick(row.id)}
                   renderCard={renderCard}
                   actions={rowActions?.(row)}
+                  focused={isFocused}
                 />
               </div>
             );
           }
           return (
-            <MediaCard
-              key={key}
-              row={row}
-              selected={selectedIds.has(row.id)}
-              onToggleSelect={() => onToggleSelect(row.id)}
-              onRowClick={() => onRowClick(row.id)}
-              renderCard={renderCard}
-              actions={rowActions?.(row)}
-            />
+            <div key={key} data-mediaid={row.id}>
+              <MediaCard
+                row={row}
+                selected={selectedIds.has(row.id)}
+                onToggleSelect={() => onToggleSelect(row.id)}
+                onRowClick={() => onRowClick(row.id)}
+                renderCard={renderCard}
+                actions={rowActions?.(row)}
+                focused={isFocused}
+              />
+            </div>
           );
         })}
       </ul>

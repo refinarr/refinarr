@@ -192,6 +192,11 @@ export function useFilterChips({
       : null;
 
   const chips: FilterChip[] = [
+    filters.filters.mediaId !== null && {
+      key: "mediaId",
+      label: t("mediaIdLabel"),
+      onRemove: () => filters.setFilters((f) => ({ ...f, mediaId: null })),
+    },
     filters.filters.q && {
       key: "q",
       label: t("queryLabel", { q: filters.filters.q }),
@@ -210,6 +215,7 @@ export function useFilterChips({
     filters.setFilters((f) => ({
       ...f,
       q: "",
+      mediaId: null,
       profileIds: [],
       severities: [],
       minScore: null,

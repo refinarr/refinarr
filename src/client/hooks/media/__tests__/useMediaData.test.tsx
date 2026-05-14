@@ -13,6 +13,7 @@ const baseFilters = {
   sortBy: "score" as const,
   order: "asc" as const,
   q: "",
+  mediaId: null,
   profileIds: [],
   severities: [],
   missingCfIds: [],

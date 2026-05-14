@@ -185,6 +185,17 @@ function filterMedia<T extends MediaItem>(
   query: MediaQuery,
   mode: ScoringMode,
 ): T[] {
+  // Exact-id filter short-circuits every other axis — used by deep-links
+  // from /history and dashboard to land on a single specific item.
+  // Bypasses flaggedOnly/severity/etc. so the linked item is found even
+  // if other filters would normally exclude it. `!= null` (loose
+  // equality) rejects BOTH null and undefined — the client's `null`
+  // sentinel reaches here unchanged when callers spread MediaFilters
+  // straight into MediaQuery, and an `=== null` filter call would
+  // silently match nothing.
+  if (query.mediaId != null) {
+    return source.filter((m) => m.id === query.mediaId);
+  }
   const visibility = applyVisibilityFilters(source, query);
   const ranges = applyRangeFilters(visibility, query, mode);
   return applyMatchFilters(ranges, query);

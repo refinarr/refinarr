@@ -15,6 +15,7 @@ const baseFilters: MediaFilters = {
   minSize: null,
   maxSize: null,
   q: "",
+  mediaId: null,
   profileIds: [],
   severities: [],
   missingCfIds: [],

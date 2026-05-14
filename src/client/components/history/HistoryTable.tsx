@@ -1,6 +1,7 @@
 "use client";
 import type { ReactElement } from "react";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
@@ -12,7 +13,9 @@ import {
   TableRow,
 } from "@/client/components/ui/table";
 import { formatRelative } from "@/client/lib/format";
-import type { ActionLog, ActionStatus } from "@/shared/types/models";
+import { mediaFocusPath } from "@/client/lib/media-link";
+import { useInstances } from "@/client/hooks/data/useInstances";
+import type { ActionLog, ActionStatus, ArrType } from "@/shared/types/models";
 import type { GroupSummary } from "@/shared/types/api";
 import { ActionStatusBadge } from "./ActionStatusBadge";
 import { ActionTypeBadge } from "./ActionTypeBadge";
@@ -118,6 +121,13 @@ export function HistoryTable({ logs, groupSummaries }: Props) {
   const tRetry = useTranslations("history.retry");
   const tBatch = useTranslations("history.batch");
   const tActions = useTranslations("history.actionLabels");
+  const { data: instances } = useInstances();
+
+  const instanceTypeMap = useMemo(() => {
+    const map = new Map<number, ArrType>();
+    for (const i of instances ?? []) map.set(i.id, i.type);
+    return map;
+  }, [instances]);
 
   const groups = useMemo(() => groupLogs(logs), [logs]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -144,7 +154,7 @@ export function HistoryTable({ logs, groupSummaries }: Props) {
       <TableBody>
         {groups.flatMap((g) =>
           g.kind === "flat"
-            ? [renderFlat(g.row, tRetry)]
+            ? [renderFlat(g.row, tRetry, instanceTypeMap)]
             : renderBatch(
                 g.rows,
                 expanded.has(g.rows[0].groupId!),
@@ -153,6 +163,7 @@ export function HistoryTable({ logs, groupSummaries }: Props) {
                 tBatch,
                 tActions,
                 groupSummaries?.[g.rows[0].groupId!],
+                instanceTypeMap,
               ),
         )}
       </TableBody>
@@ -161,8 +172,51 @@ export function HistoryTable({ logs, groupSummaries }: Props) {
 }
 
 type T = ReturnType<typeof useTranslations>;
+type InstanceTypeMap = Map<number, ArrType>;
 
-function renderFlat(log: ActionLog, tRetry: T) {
+// Title cell that becomes a Link when we know the instance's arr-type
+// (always, in practice — instances load before history). The link
+// points at /movies?focus=ID or /shows?focus=ID; the media-list page
+// reads the param and scrolls + highlights the row.
+function TitleCell({
+  log,
+  instanceTypeMap,
+}: {
+  log: ActionLog;
+  instanceTypeMap: InstanceTypeMap;
+}) {
+  const instanceType = instanceTypeMap.get(log.instanceId);
+  const titleNode = instanceType ? (
+    <Link
+      href={mediaFocusPath({
+        instanceType,
+        instanceId: log.instanceId,
+        mediaId: log.mediaId,
+      })}
+      className="hover:text-brand hover:underline"
+    >
+      {log.title}
+    </Link>
+  ) : (
+    log.title
+  );
+  return (
+    <>
+      {titleNode}
+      {log.completionMessage && (
+        <span className="text-muted-foreground/80 ml-1.5 text-xs italic">
+          · {log.completionMessage}
+        </span>
+      )}
+    </>
+  );
+}
+
+function renderFlat(
+  log: ActionLog,
+  tRetry: T,
+  instanceTypeMap: InstanceTypeMap,
+) {
   return (
     <TableRow key={log.id}>
       <TableCell
@@ -186,12 +240,7 @@ function renderFlat(log: ActionLog, tRetry: T) {
         <ActionTypeBadge action={log.action} />
       </TableCell>
       <TableCell className="text-sm">
-        {log.title}
-        {log.completionMessage && (
-          <span className="text-muted-foreground/80 ml-1.5 text-xs italic">
-            · {log.completionMessage}
-          </span>
-        )}
+        <TitleCell log={log} instanceTypeMap={instanceTypeMap} />
       </TableCell>
       <TableCell>
         <ActionStatusBadge status={log.status} />
@@ -219,6 +268,7 @@ function renderBatch(
   // over the per-page `rows.length`/`statusCounts(rows)` calculations so
   // a batch spanning pages reads as one batch with the true total.
   summary: GroupSummary | undefined,
+  instanceTypeMap: InstanceTypeMap,
 ): ReactElement[] {
   const groupId = rows[0].groupId!;
   const head = rows[0];
@@ -308,12 +358,7 @@ function renderBatch(
             <ActionTypeBadge action={r.action} />
           </TableCell>
           <TableCell className="text-sm">
-            {r.title}
-            {r.completionMessage && (
-              <span className="text-muted-foreground/80 ml-1.5 text-xs italic">
-                · {r.completionMessage}
-              </span>
-            )}
+            <TitleCell log={r} instanceTypeMap={instanceTypeMap} />
           </TableCell>
           <TableCell>
             <ActionStatusBadge status={r.status} />

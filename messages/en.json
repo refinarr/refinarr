@@ -252,6 +252,7 @@
     "matchAllSuffix": "all",
     "profileLabel": "Profile: {name}",
     "queryLabel": "“{q}”",
+    "mediaIdLabel": "Selected item",
     "searchPlaceholder": "Search title or Custom Format…",
     "maxScore": "Max score",
     "active": "Active:",

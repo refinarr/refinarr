@@ -122,6 +122,12 @@ export interface MediaQuery {
   minSize?: number;
   maxSize?: number;
   q?: string;
+  // Exact-match filter on the radarr/sonarr media id. Used by
+  // history/dashboard deep-links (`?mediaId=<id>`) so the landed page
+  // shows precisely the linked item, not a fuzzy title-match list.
+  // Nullable so the client's `null` sentinel survives the round-trip
+  // (forQuery passes MediaFilters straight through).
+  mediaId?: number | null;
   profileIds?: number[];
   severities?: Severity[];
   missingCfIds?: number[];

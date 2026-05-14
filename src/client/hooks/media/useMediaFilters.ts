@@ -20,6 +20,11 @@ export interface MediaFilters {
   minSize: number | null;
   maxSize: number | null;
   q: string;
+  // Exact-match radarr/sonarr id. Set by history/dashboard deep-link
+  // links; bypasses every other filter so the linked item is found
+  // even if a stale severity/flagged filter would have excluded it.
+  // `null` = no filter.
+  mediaId: number | null;
   profileIds: number[];
   severities: Severity[];
   missingCfIds: number[];
@@ -51,6 +56,7 @@ export const defaultMediaFilters: MediaFilters = {
   minSize: null,
   maxSize: null,
   q: "",
+  mediaId: null,
   profileIds: [],
   severities: [],
   missingCfIds: [],
@@ -124,6 +130,10 @@ export function useMediaFilters(
     setTrackedInstance({ id: instanceId, showAllMedia });
     setFilters((f) => ({
       ...f,
+      // mediaId is instance-scoped (radarr/sonarr ids don't cross
+      // instances). Leaving it set would short-circuit the server
+      // filter to an empty result on the new instance.
+      mediaId: null,
       profileIds: [],
       missingCfIds: [],
       missingCfMatch: "all",

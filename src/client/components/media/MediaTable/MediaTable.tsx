@@ -73,6 +73,10 @@ interface Props<T extends { id: number }> {
   // table (e.g. "movies", "shows"). Required so widths don't leak
   // between pages.
   tableId: string;
+  // Id of a row to scroll into view + briefly highlight. Set by
+  // MediaListShell when the page receives `?focus=<id>` (history /
+  // dashboard deep-links). Null/undefined disables.
+  focusedId?: number | null;
 }
 
 export function MediaTable<T extends { id: number }>(props: Props<T>) {
@@ -97,6 +101,7 @@ export function MediaTable<T extends { id: number }>(props: Props<T>) {
         onRowClick={props.onRowClick}
         renderCard={props.renderCard!}
         rowActions={props.rowActions}
+        focusedId={props.focusedId}
         fetchNextPage={props.fetchNextPage}
         hasNextPage={props.hasNextPage}
         isFetchingNextPage={props.isFetchingNextPage}
@@ -125,6 +130,7 @@ function MediaTableDesktopBody<T extends { id: number }>({
   someSelected,
   onToggleAll,
   tableId,
+  focusedId,
 }: Props<T>) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
@@ -266,6 +272,7 @@ function MediaTableDesktopBody<T extends { id: number }>({
                 rowData={row}
                 index={index}
                 selected={selectedIds.has(row.id)}
+                focused={focusedId === row.id}
                 onToggleSelect={onToggleSelect}
                 onRowClick={onRowClick}
                 rowActions={rowActions}

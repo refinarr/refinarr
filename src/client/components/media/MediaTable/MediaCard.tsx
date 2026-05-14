@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { Checkbox } from "@/client/components/ui/checkbox";
+import { cn } from "@/client/lib/utils";
 
 interface Props<T extends { id: number }> {
   row: T;
@@ -10,6 +11,10 @@ interface Props<T extends { id: number }> {
   onRowClick: () => void;
   renderCard: (row: T) => ReactNode;
   actions?: ReactNode;
+  // True when this card is the deep-link target. Drives the focus
+  // animation directly on the card's rounded root so the highlight
+  // follows the card's border-radius instead of the wrapper's square.
+  focused?: boolean;
 }
 
 export function MediaCard<T extends { id: number }>({
@@ -19,9 +24,15 @@ export function MediaCard<T extends { id: number }>({
   onRowClick,
   renderCard,
   actions,
+  focused,
 }: Props<T>) {
   return (
-    <li className="bg-card hover:bg-muted/40 rounded-lg border transition-colors">
+    <li
+      className={cn(
+        "bg-card hover:bg-muted/40 rounded-lg border transition-colors",
+        focused && "media-row-focused",
+      )}
+    >
       <div
         className="flex cursor-pointer items-start gap-3 p-3"
         onClick={onRowClick}

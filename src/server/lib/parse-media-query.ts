@@ -70,6 +70,16 @@ function parseFiniteNumber(raw: string | null): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+// Stricter than parseFiniteNumber — used for media-id exact match where
+// 0, negatives, and fractions are nonsensical inputs. An invalid value
+// would otherwise trigger the exact-id short-circuit in MediaService
+// and return an empty list (misleading for malformed URLs).
+function parsePositiveInt(raw: string | null): number | undefined {
+  if (raw === null || raw === "") return undefined;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+}
+
 function parseMatchMode(raw: string | null): "any" | "all" {
   return raw === "any" ? "any" : "all";
 }
@@ -94,6 +104,7 @@ export function parseMediaQuery(
     minSize: parseFiniteNumber(s.get("minSize")),
     maxSize: parseFiniteNumber(s.get("maxSize")),
     q: s.get("q") ?? undefined,
+    mediaId: parsePositiveInt(s.get("mediaId")),
     profileIds: parseIdList(s.get("profileIds")),
     severities: parseSeverityList(s.get("severities")),
     missingCfIds: parseIdList(s.get("missingCfIds")),

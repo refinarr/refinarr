@@ -13,6 +13,10 @@ interface Props<T extends { id: number }> {
   rowData: T;
   index: number;
   selected: boolean;
+  // True when this row is the deep-link target (history / dashboard
+  // titles). Drives `data-focused` which a CSS rule animates with a
+  // brief glow so the user sees where they landed.
+  focused: boolean;
   onToggleSelect: (id: number) => void;
   onRowClick: (id: number) => void;
   rowActions?: (row: T) => ReactNode;
@@ -39,6 +43,7 @@ function MediaTableRowImpl<T extends { id: number }>({
   rowData,
   index,
   selected,
+  focused,
   onToggleSelect,
   onRowClick,
   rowActions,
@@ -52,6 +57,8 @@ function MediaTableRowImpl<T extends { id: number }>({
     <div
       role="row"
       data-index={index}
+      data-mediaid={rowData.id}
+      data-focused={focused || undefined}
       // bg-background: rows are opaque, so the wrapper bg never bleeds
       //   through a row's content area. Without this, transparent rows
       //   layered over the wrapper bg can momentarily look "blank"
@@ -63,6 +70,7 @@ function MediaTableRowImpl<T extends { id: number }>({
         "bg-background hover:bg-muted/50 flex min-w-full cursor-pointer items-center border-t contain-[layout_paint]",
         rowHeightClass,
         selected && "bg-brand/10",
+        focused && "media-row-focused",
       )}
       style={style}
       onClick={() => onRowClick(rowData.id)}
@@ -142,6 +150,7 @@ function rowPropsEqual<T extends { id: number }>(
   return (
     prev.rowData === next.rowData &&
     prev.selected === next.selected &&
+    prev.focused === next.focused &&
     prev.index === next.index &&
     prev.rowHeightClass === next.rowHeightClass &&
     prev.style?.transform === next.style?.transform &&

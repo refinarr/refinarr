@@ -8,7 +8,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/client/lib/utils";
@@ -131,6 +131,7 @@ interface InternalShellContext {
   askConfirm: ReturnType<typeof useConfirm>["confirm"];
   i18nNamespace: "movies" | "shows";
   confirmDeleteBulkKey: "confirm.deleteMovies" | "confirm.deleteSeries";
+  focusedId: number | null;
 }
 
 const ShellContext = createContext<InternalShellContext | null>(null);
@@ -192,7 +193,21 @@ function Root<T extends MediaItem>({
   const tTime = useTranslations("time");
   const tA11y = useTranslations("a11y.table");
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
+  // Deep-link target from /history or dashboard. Derived straight from
+  // the URL so there's no local-state sync (which would force a
+  // setState-in-effect when the param changes). After the row scrolls
+  // into view, the cleanup effect strips `?focus` from the URL — that
+  // re-renders this component with `focusedId === null`, the row's
+  // animation class falls off, and a future link reuses the same id
+  // cleanly.
+  const focusParam = searchParams.get("focus");
+  const focusedId = useMemo(() => {
+    const n = Number(focusParam);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [focusParam]);
   const inst = useInstanceSelection(arrType);
   const { data: prefs } = usePreferences(inst.activeInstance);
   const { data: profiles } = useQualityProfiles(arrType, inst.activeInstance);
@@ -213,6 +228,45 @@ function Root<T extends MediaItem>({
     inst.activeInstance,
     showAllEnabled,
   );
+  // ?mediaId=<id> from history/dashboard deep-links drives a server-
+  // side exact filter (single row). Decoupled from ?focus so a refresh
+  // (which loses focus, since we strip it after the pulse) still keeps
+  // the single-row view.
+  const mediaIdParam = useMemo(() => {
+    const raw = searchParams.get("mediaId");
+    const n = raw === null ? NaN : Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [searchParams]);
+  const setFilters = filters.setFilters;
+  useEffect(() => {
+    if (mediaIdParam === null) return;
+    setFilters((prev) =>
+      prev.mediaId === mediaIdParam ? prev : { ...prev, mediaId: mediaIdParam },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaIdParam]);
+  // Reverse sync: when the user clears the "Selected item" chip, strip
+  // ?mediaId from the URL so a refresh doesn't bring the filter back.
+  useEffect(() => {
+    if (filters.filters.mediaId !== null || mediaIdParam === null) return;
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("mediaId");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }, [filters.filters.mediaId, mediaIdParam, pathname, router, searchParams]);
+  useEffect(() => {
+    if (focusedId === null) return;
+    // Strip only ?focus after the pulse so the highlight stops, but
+    // leave ?mediaId + the filter applied — the user keeps the
+    // single-row view until they manually clear (chip / refresh / nav).
+    const timer = window.setTimeout(() => {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("focus");
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname);
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [focusedId, pathname, router, searchParams]);
   const data = useMediaData<T>(useQuery, inst.activeInstance, filters.forQuery);
   const queuedIds = useQueuedMediaIds(inst.activeInstance);
   const recentMap = useRecentSearchMap(inst.activeInstance);
@@ -330,6 +384,7 @@ function Root<T extends MediaItem>({
     askConfirm,
     i18nNamespace,
     confirmDeleteBulkKey,
+    focusedId,
   };
 
   return (
@@ -547,6 +602,7 @@ function Body<T extends MediaItem>({ columns, Card, tableId }: BodyProps<T>) {
     chips,
     clearActiveFilters,
     noCfsConfigured,
+    focusedId,
   } = useShellContext<T>();
 
   const hasItems = !data.isLoading && data.items.length > 0;
@@ -599,6 +655,7 @@ function Body<T extends MediaItem>({ columns, Card, tableId }: BodyProps<T>) {
             rows={data.items}
             columns={columns(ctx)}
             density={ctx.density}
+            focusedId={focusedId}
             fetchNextPage={data.fetchNextPage}
             hasNextPage={data.hasNextPage}
             isFetchingNextPage={data.isFetchingNextPage}
