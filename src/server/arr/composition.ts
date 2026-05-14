@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import type { ArrClient } from "@/server/clients/ArrClient";
-import type { MediaServiceFacade } from "@/server/services/media-service-facade";
+import type { MediaServiceFacade } from "@/server/arr/media-service-facade";
 import type {
   ActionLog,
   ArrType,

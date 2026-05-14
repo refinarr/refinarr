@@ -4,11 +4,12 @@
 // when consumed by code that doesn't care which arr it's talking to
 // (dashboard summary, retry route, status poller).
 //
-// Concrete implementations (MovieService, SeriesService) and the per-arr
-// lookup (mediaServiceFor, createArrClient, ARR_META, movieService,
-// seriesService) live in `@/server/arr/composition`. This file is
-// type-only — no runtime export — so it can't form a cycle with the
-// composition root that references these types.
+// Concrete implementations (MovieService, SeriesService) live in
+// `@/server/services/`; the per-arr lookup (mediaServiceFor,
+// createArrClient, ARR_META, movieService, seriesService) lives next
+// door in `@/server/arr/composition`. This file is type-only — no
+// runtime export — so it can't form a cycle with the composition
+// root that references these types.
 import type {
   ActionLog,
   MediaItem,

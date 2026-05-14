@@ -9,6 +9,10 @@ import type {
 } from "@/server/clients/SonarrClient";
 import { appLogger } from "@/server/lib/app-logger";
 import { badRequest } from "@/server/lib/api-errors";
+import type {
+  MediaServiceFacade,
+  RetryActionOptions,
+} from "@/server/arr/media-service-facade";
 import { LogSource } from "@/shared/types/models";
 import {
   isMissingWantedFormats,
@@ -27,10 +31,6 @@ import type {
   ScoringMode,
 } from "@/shared/types/models";
 import { MediaService } from "./MediaService";
-import type {
-  MediaServiceFacade,
-  RetryActionOptions,
-} from "./media-service-facade";
 
 // Local shorthand for the SonarrSeries shape — derived from the client's
 // return type since `SonarrSeries` is internal to `SonarrClient.ts`.
