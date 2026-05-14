@@ -36,7 +36,7 @@ jobs:
     runs-on: ${{ github.actor == 'iHunterX' && (vars.RUNNER_LABEL || 'ubuntu-latest') || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-deps
         with:
           self-hosted: ${{ vars.RUNNER_LABEL == 'self-hosted' && github.actor == 'iHunterX' }}
@@ -67,7 +67,7 @@ jobs:
     # this job picks up. Pushes to main/develop always run e2e.
     if: github.event_name == 'push' || github.event.pull_request.draft == false
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-deps
         with:
           self-hosted: ${{ vars.RUNNER_LABEL == 'self-hosted' && github.actor == 'iHunterX' }}
