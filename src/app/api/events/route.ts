@@ -1,7 +1,8 @@
-import { NextRequest } from "next/server";
-import { ensureSeeded } from "@/server/lib/bootstrap";
+import { NextRequest, NextResponse } from "next/server";
 import { eventBus } from "@/server/lib/event-bus";
 import { appLogger } from "@/server/lib/app-logger";
+import { createApiHandler } from "@/server/lib/handler";
+import { serviceUnavailable } from "@/server/lib/api-errors";
 import { LogSource } from "@/shared/types/models";
 import type { ServerEvent } from "@/shared/types/api";
 
@@ -18,11 +19,13 @@ const HEARTBEAT_MS = 25_000;
 const MAX_CLIENTS = 8;
 let activeClients = 0;
 
-export async function GET(req: NextRequest) {
-  await ensureSeeded();
-
+export const GET = createApiHandler(async (req: NextRequest) => {
   if (activeClients >= MAX_CLIENTS) {
-    return new Response("Too many SSE connections", { status: 503 });
+    throw serviceUnavailable(
+      "Too many SSE connections",
+      undefined,
+      "SSE_LIMIT",
+    );
   }
 
   const encoder = new TextEncoder();
@@ -92,7 +95,7 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return new Response(stream, {
+  return new NextResponse(stream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
@@ -101,7 +104,7 @@ export async function GET(req: NextRequest) {
       "X-Accel-Buffering": "no",
     },
   });
-}
+});
 
 /** Test-only — observe the live client count for assertions. */
 export function _activeClientCount(): number {

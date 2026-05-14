@@ -19,7 +19,11 @@ type RouteHandler = (
 
 export function createApiHandler(handler: RouteHandler) {
   return async (req: NextRequest, ctx?: RouteContext) => {
-    const traceId = randomUUID();
+    // Reuse the traceId the proxy minted (forwarded as `x-trace-id`)
+    // so a single request has one ID across edge + handler logs. Falls
+    // back to a fresh UUID for paths that bypass the proxy (e.g. direct
+    // imports inside tests).
+    const traceId = req.headers.get("x-trace-id") ?? randomUUID();
     const requestContext = {
       traceId,
       method: req.method,

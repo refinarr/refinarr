@@ -65,16 +65,41 @@ export function tooManyRequests(
   return new HttpError({ status: 429, message, headers, code });
 }
 
+// 503 for server-side capacity / availability limits. Distinct from
+// `tooManyRequests` (429) which is *per-caller* throttling — 503 says
+// "server is full", not "you specifically sent too many".
+export function serviceUnavailable(
+  message: string,
+  retryAfterMs?: number,
+  code?: string,
+): HttpError {
+  const headers: Record<string, string> = {};
+  if (retryAfterMs !== undefined) {
+    headers["Retry-After"] = String(Math.ceil(retryAfterMs / 1000));
+  }
+  return new HttpError({ status: 503, message, headers, code });
+}
+
+// 500 helper. Defaults to `expose: false` so a future caller doing
+// `throw internal("DB conn failed: " + cause)` can't leak the raw
+// message to the client. Pass `{ expose: true }` explicitly when the
+// message is intentional user-facing copy (e.g. "API key not
+// initialized" — see config/api-key route).
 export function internal(
   message = "Internal server error",
-  context?: Record<string, unknown>,
+  options: {
+    context?: Record<string, unknown>;
+    expose?: boolean;
+    code?: string;
+  } = {},
 ): HttpError {
   return new HttpError({
     status: 500,
     message,
-    expose: true,
+    code: options.code,
+    expose: options.expose ?? false,
     logLevel: "error",
-    context,
+    context: options.context,
   });
 }
 
