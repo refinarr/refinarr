@@ -272,8 +272,22 @@ class StatusPoller {
     }
 
     const client = createArrClient(instance);
+    // Re-poll an overlap window before `lastPolledAt` to catch events
+    // that fired NEAR the previous tick's wall-clock boundary. Radarr
+    // indexes /history events with sub-second lag — an event timestamped
+    // 19:02:02.000 may not yet appear in the response a fetch issued at
+    // 19:02:02.200. Without overlap, the next tick's `since` would be
+    // ahead of the event's date and the strict `d < sinceMs` filter
+    // permanently drops the event. 5 minutes is generous headroom for
+    // pathological indexing delays under heavy Radarr load.
+    // nextStatusFor is idempotent (already-applied state → no-op
+    // update), so the overlap costs only the cheap re-filter pass.
+    const HISTORY_OVERLAP_MS = 5 * 60 * 1000;
+    const lastPolled = this.lastPolledAt.get(instanceId);
     const since = new Date(
-      this.lastPolledAt.get(instanceId) ?? Date.now() - FIRST_POLL_LOOKBACK_MS,
+      lastPolled !== undefined
+        ? lastPolled - HISTORY_OVERLAP_MS
+        : Date.now() - FIRST_POLL_LOOKBACK_MS,
     );
 
     // Sequence: history sync first so its events feed the command-sync
