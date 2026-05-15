@@ -45,6 +45,10 @@ const FOUC_SCRIPT = `(function () {
     for (var key in vars) document.documentElement.style.setProperty(key, vars[key]);
     document.documentElement.setAttribute("data-theme", brand);
     if (dark) document.documentElement.classList.add("dark");
+  // Intentional swallow: this is pre-hydration theme init. If localStorage
+  // throws (private browsing, blocked cookies, quota errors) the page must
+  // still render with the default theme — throwing here would break the
+  // entire shell. Do NOT add error handling without preserving render.
   } catch (e) {}
 })();`;
 

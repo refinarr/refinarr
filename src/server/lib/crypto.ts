@@ -6,7 +6,7 @@ import {
   chmodSync,
   mkdirSync,
 } from "fs";
-import { dirname } from "path";
+import { dirname, join } from "path";
 
 const ALGO = "aes-256-gcm";
 const KEY_LEN = 32;
@@ -16,10 +16,12 @@ const PREFIX = "v1:";
 
 function defaultKeyPath(): string {
   // Mirrors the DB path logic in db.ts: /data in production, project dir in dev.
+  // Anchored to process.cwd() so Turbopack's NFT doesn't try to trace
+  // the relative `./local/...` form as a project-local module.
   if (process.env.ENCRYPTION_KEY_PATH) return process.env.ENCRYPTION_KEY_PATH;
   return process.env.NODE_ENV === "production"
     ? "/data/.encryption-key"
-    : "./local/.encryption-key";
+    : join(process.cwd(), "local", ".encryption-key");
 }
 
 function loadOrGenerateKey(): Buffer {

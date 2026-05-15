@@ -7,6 +7,7 @@ import { appLogger } from "./app-logger";
 import { searchWorker } from "./search-worker";
 import { statusPoller } from "./status-poller";
 import { autoRunner } from "./auto-runner";
+import { startRateLimitCleanup } from "./rate-limit";
 
 let seeded = false;
 let seedPromise: Promise<void> | null = null;
@@ -36,6 +37,7 @@ export async function seedDefaults(): Promise<void> {
   // observing upstream lifecycle for already-dispatched commands.
   await statusPoller.start();
   await autoRunner.start();
+  startRateLimitCleanup();
 }
 
 export async function ensureSeeded(): Promise<void> {

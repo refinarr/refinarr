@@ -135,13 +135,16 @@ export abstract class ArrClient {
   }
 
   protected async fetch<T>(path: string, init?: RequestInit): Promise<T> {
-    await arrRateLimiter.acquire(this.instanceId, init?.signal ?? undefined);
     const url = `${this.baseUrl}/api/v3${path}`;
 
     // Always enforce the 10s ceiling even when the caller passes its own signal.
     // AbortSignal.any() isn't available until Node 22; for broader compatibility
     // we compose manually: the timeout fires after ARR_FETCH_TIMEOUT_MS and a
     // caller abort propagates immediately, with the timeout cleared either way.
+    //
+    // The rate-limiter acquire is INSIDE this timeout window — a stuck token
+    // bucket would otherwise hang fetch indefinitely before the AbortController
+    // is even constructed.
     const ac = new AbortController();
     const timeoutId = setTimeout(
       () => ac.abort(new DOMException("TimeoutError", "TimeoutError")),
@@ -163,6 +166,7 @@ export abstract class ArrClient {
 
     let res: Response;
     try {
+      await arrRateLimiter.acquire(this.instanceId, ac.signal);
       res = await globalThis.fetch(url, {
         ...init,
         signal: ac.signal,

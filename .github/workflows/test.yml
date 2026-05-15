@@ -50,6 +50,14 @@ jobs:
       - name: Unit + integration tests (with coverage)
         run: yarn test:coverage
 
+      # Catches RSC boundary violations that lint and tsc don't see
+      # (e.g. importing a "use client" component into a Server Component
+      # tree, or a server-only module reaching a client bundle). The
+      # dev-checklist requires running this locally too; CI is the
+      # safety net.
+      - name: Production build
+        run: yarn build
+
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v7

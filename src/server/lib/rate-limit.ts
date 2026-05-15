@@ -36,9 +36,28 @@ export function clientIp(req: Request): string {
   return "unknown";
 }
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, b] of buckets) {
-    if (b.resetAt <= now) buckets.delete(k);
+let cleanupHandle: ReturnType<typeof setInterval> | null = null;
+
+// Lifted out of module top-level so the timer registration is
+// explicit (matches the searchWorker / statusPoller / autoRunner
+// startup pattern) and so module import in test/build contexts
+// doesn't spawn a stray interval. Called once from bootstrap.
+export function startRateLimitCleanup(): void {
+  if (cleanupHandle) return;
+  cleanupHandle = setInterval(() => {
+    const now = Date.now();
+    for (const [k, b] of buckets) {
+      if (b.resetAt <= now) buckets.delete(k);
+    }
+  }, 60_000);
+  cleanupHandle.unref?.();
+}
+
+// Test hook — stop the timer so vitest can exit cleanly when the
+// rate-limiter is exercised in unit tests.
+export function stopRateLimitCleanup(): void {
+  if (cleanupHandle) {
+    clearInterval(cleanupHandle);
+    cleanupHandle = null;
   }
-}, 60_000).unref?.();
+}
