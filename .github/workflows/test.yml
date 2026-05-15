@@ -81,7 +81,7 @@ jobs:
       # everyone else (forks, collaborators) gets the hosted cache.
       - name: Cache Playwright browsers (hosted only)
         if: github.actor != 'iHunterX' || vars.RUNNER_LABEL != 'self-hosted'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('package.json', 'yarn.lock') }}
