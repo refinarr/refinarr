@@ -4,7 +4,7 @@ description: Node 22 + Corepack/yarn + node_modules/Prisma cache + ensure Prisma
 inputs:
   # Composite actions don't have access to the `vars` context, so the
   # caller passes the self-hosted flag through. Used to gate the
-  # actions/cache@v4 step (which always pulls from GitHub's cache
+  # actions/cache@v5 step (which always pulls from GitHub's cache
   # servers and is slow over residential ISP on self-hosted runners).
   self-hosted:
     description: "true when running on a self-hosted runner"
@@ -33,7 +33,7 @@ runs:
         corepack enable
         corepack prepare yarn@1.22.22 --activate
 
-    # Hosted-only cache. actions/cache@v4 always downloads the blob
+    # Hosted-only cache. actions/cache@v5 always downloads the blob
     # from GitHub's cache servers (it doesn't check local disk first),
     # so on self-hosted the "hit" still pays a 200-300MB pull over the
     # homelab ISP — slower than a fresh `yarn install` from the
@@ -42,7 +42,7 @@ runs:
     - name: Cache node_modules + Prisma client (hosted only)
       if: inputs.self-hosted != 'true'
       id: cache-deps
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           node_modules
