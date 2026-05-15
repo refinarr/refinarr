@@ -1,12 +1,32 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/server/lib/db";
+import { appLogger } from "@/server/lib/app-logger";
+import { createApiHandler } from "@/server/lib/handler";
+import { LogSource } from "@/shared/types/models";
 
-// /api/health is whitelisted in the proxy, so no createApiHandler wrap needed.
+// /api/health is whitelisted in the proxy for AUTH (anyone can hit it
+// without a session) but wraps with createApiHandler so ensureSeeded()
+// runs before the first Prisma touch — critical for orchestrator
+// probes that may be the first request after boot. Failure to seed
+// surfaces as 500 here rather than a spurious 200 that hides a
+// broken DB.
 //
-// N6 (DB ping) was attempted twice and both broke e2e auth tests in
-// hard-to-reproduce ways related to ensureSeeded ordering / libsql
-// adapter quirks at first-touch. Left as a static 200 for now; a
-// proper readiness probe should live at a separate path (/api/health/db
-// or similar) so the e2e webServer probe path stays trivially correct.
-export async function GET() {
-  return NextResponse.json({ status: "ok" });
-}
+// Probes via prisma.appConfig.findFirst() (not $queryRaw — adapter
+// quirks bit us under the previous libsql setup). 503 on DB error so
+// Docker/k8s can distinguish 'process up' from 'process up AND DB
+// reachable AND seeded'.
+export const GET = createApiHandler(async (_req: NextRequest) => {
+  try {
+    await prisma.appConfig.findFirst();
+    return NextResponse.json({ status: "ok", db: "ok" });
+  } catch (err) {
+    appLogger.warn("Health probe DB query failed", {
+      source: LogSource.Api,
+      err,
+    });
+    return NextResponse.json(
+      { status: "degraded", db: "error" },
+      { status: 503 },
+    );
+  }
+});

@@ -1,9 +1,17 @@
 // @vitest-environment happy-dom
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { ActionLog } from "@/shared/types/models";
+import { http, HttpResponse, mswServer } from "@/test/msw";
 import { renderWithProviders, screen, within } from "@/test/render";
 import { HistoryTable } from "../HistoryTable";
+
+// HistoryTable resolves instance badges via useInstances() → GET /api/instances.
+// Stage an empty list so the query resolves instead of tripping MSW's
+// onUnhandledRequest guard.
+beforeEach(() => {
+  mswServer.use(http.get("*/api/instances", () => HttpResponse.json([])));
+});
 
 function makeLog(overrides: Partial<ActionLog>): ActionLog {
   return {

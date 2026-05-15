@@ -1,13 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { E2E_DB } from "./e2e/constants";
+
 const E2E_PORT = 7373;
-const E2E_DB = "file:./local/e2e-test.db";
 // Separate dist dir → separate lock file → no collision with the primary dev server.
 const E2E_DIST = ".next-e2e";
 
 export default defineConfig({
   testDir: "./e2e",
-  globalSetup: "./e2e/global-setup.ts",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -24,14 +24,20 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // Production build + start. prisma migrate deploy runs here (not only in
-    // globalSetup) so DATABASE_URL is guaranteed set before next start calls
-    // the instrumentation hook. globalSetup runs concurrently and Turbopack
-    // can finish next build before globalSetup's migration completes, causing
-    // an intermittent "no such table" crash without this guard.
-    command: `prisma migrate deploy && next build && next start -p ${E2E_PORT}`,
+    // Sequential preflight: wipe -> migrate -> seed admin + auth state ->
+    // build -> start. The seed runs in the webServer command chain
+    // (not Playwright's globalSetup hook) so it completes BEFORE
+    // `next start` opens any Prisma connection — eliminates the
+    // cross-process visibility race where webServer's snapshot was
+    // taken before globalSetup wrote the admin row.
+    //
+    // node --experimental-strip-types runs the .ts seed source directly
+    // (Node 22+ feature; CI runners have it via setup-node and the
+    // self-hosted image bundles node24). Avoids adding tsx as a dep
+    // for one preflight script.
+    command: `rm -f local/e2e-test.db local/e2e-test.db-journal local/e2e-test.db-wal local/e2e-test.db-shm local/.encryption-key.e2e && mkdir -p local && prisma migrate deploy && node --experimental-strip-types --no-warnings e2e/seed-admin.ts && next build && next start -p ${E2E_PORT}`,
     url: `http://localhost:${E2E_PORT}/api/health`,
-    // Never reuse — globalSetup wipes the DB so we always need a fresh server.
+    // Never reuse — seed-admin.ts wipes the DB so we always need a fresh server.
     reuseExistingServer: false,
     // First-run build can take ~60s; allow generous headroom.
     timeout: 240_000,

@@ -93,6 +93,20 @@ export function radarrHandlers(
       return HttpResponse.json({ id: 1 });
     }),
   );
+  // The auto-runner polls command + history every tick. Default them to
+  // "nothing running / empty history" so lifecycle tests don't trip the
+  // onUnhandledRequest guard; tests needing data override via use().
+  handlers.push(http.get(`${base}/command`, () => HttpResponse.json([])));
+  handlers.push(
+    http.get(`${base}/history`, () =>
+      HttpResponse.json({
+        page: 1,
+        pageSize: 200,
+        totalRecords: 0,
+        records: [],
+      }),
+    ),
+  );
   handlers.push(
     http.delete(`${base}/moviefile/:fileId`, ({ params }) => {
       opts.onDeleteFile?.(Number(params.fileId));
@@ -173,6 +187,20 @@ export function sonarrHandlers(
       opts.onCommand?.();
       return HttpResponse.json({ id: 1 });
     }),
+  );
+  // The auto-runner polls command + history every tick. Default them to
+  // "nothing running / empty history" so lifecycle tests don't trip the
+  // onUnhandledRequest guard; tests needing data override via use().
+  handlers.push(http.get(`${base}/command`, () => HttpResponse.json([])));
+  handlers.push(
+    http.get(`${base}/history`, () =>
+      HttpResponse.json({
+        page: 1,
+        pageSize: 200,
+        totalRecords: 0,
+        records: [],
+      }),
+    ),
   );
   handlers.push(
     http.delete(`${base}/episodefile/:fileId`, ({ params }) => {

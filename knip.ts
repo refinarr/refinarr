@@ -12,9 +12,6 @@ const config: KnipConfig = {
     // Used inside globals.css via `@import "tw-animate-css"`. Knip can't see
     // CSS-side imports.
     "tw-animate-css",
-    // Peer dep of `@prisma/adapter-libsql`; required at runtime even though
-    // we never import it directly.
-    "@libsql/client",
     // CLI tool, only invoked via `npx shadcn add` from the terminal.
     "shadcn",
     // Pino references this as a string ID (`transport.target`), invisible to
