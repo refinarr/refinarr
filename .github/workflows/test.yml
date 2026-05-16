@@ -38,8 +38,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-deps
-        with:
-          self-hosted: ${{ vars.RUNNER_LABEL == 'self-hosted' && github.actor == 'iHunterX' }}
 
       - name: Lint
         run: yarn lint
@@ -77,18 +75,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-deps
-        with:
-          self-hosted: ${{ vars.RUNNER_LABEL == 'self-hosted' && github.actor == 'iHunterX' }}
 
-      # Hosted-only cache. On self-hosted, the runner's bind-mounted
-      # /root/.cache/ms-playwright already persists browsers between
-      # runs, so the GitHub cache adds nothing (and historically caused
-      # partial-restore failures). On hosted, this saves ~25s vs a
-      # fresh download. The condition mirrors the runs-on routing
-      # above — only the maintainer on self-hosted skips the cache;
-      # everyone else (forks, collaborators) gets the hosted cache.
-      - name: Cache Playwright browsers (hosted only)
-        if: github.actor != 'iHunterX' || vars.RUNNER_LABEL != 'self-hosted'
+      # actions/cache for Playwright browsers — runs on every runner.
+      # Self-hosted resolves to the homelab falcondev cache server;
+      # hosted to GitHub's cache service.
+      - name: Cache Playwright browsers
         uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright

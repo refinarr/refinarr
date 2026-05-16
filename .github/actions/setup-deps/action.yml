@@ -1,16 +1,6 @@
 name: Setup deps
 description: Node 22 + Corepack/yarn + node_modules/Prisma cache + ensure Prisma client
 
-inputs:
-  # Composite actions don't have access to the `vars` context, so the
-  # caller passes the self-hosted flag through. Used to gate the
-  # actions/cache@v5 step (which always pulls from GitHub's cache
-  # servers and is slow over residential ISP on self-hosted runners).
-  self-hosted:
-    description: "true when running on a self-hosted runner"
-    required: false
-    default: "false"
-
 runs:
   using: composite
   steps:
@@ -33,14 +23,12 @@ runs:
         corepack enable
         corepack prepare yarn@1.22.22 --activate
 
-    # Hosted-only cache. actions/cache@v5 always downloads the blob
-    # from GitHub's cache servers (it doesn't check local disk first),
-    # so on self-hosted the "hit" still pays a 200-300MB pull over the
-    # homelab ISP — slower than a fresh `yarn install` from the
-    # bind-mounted yarn cache. Skipping the cache step on self-hosted
-    # lets the install path below handle both the warm and cold cases.
-    - name: Cache node_modules + Prisma client (hosted only)
-      if: inputs.self-hosted != 'true'
+    # actions/cache for node_modules + the generated Prisma client.
+    # Runs on every runner: GitHub-hosted resolves to GitHub's cache
+    # service, self-hosted to the homelab falcondev cache server
+    # (ACTIONS_RESULTS_URL on the patched runner) — LAN-speed, no ISP
+    # round-trip, which is why this is no longer gated to hosted-only.
+    - name: Cache node_modules + Prisma client
       id: cache-deps
       uses: actions/cache@v5
       with:
@@ -49,11 +37,10 @@ runs:
           node_modules/.prisma
         key: ${{ runner.os }}-node22-deps-${{ hashFiles('yarn.lock', 'prisma/schema.prisma') }}
 
-    # Always install — idempotent. On hosted-cache-hit it's a fast
-    # verify (everything already on disk via the cache step above).
-    # On self-hosted it rebuilds node_modules from the bind-mounted
-    # yarn cache (~30-60s steady state). Either way ends with a known-
-    # good node_modules.
+    # Always install — idempotent. On a cache hit it's a fast verify
+    # (node_modules already restored by the cache step above); on a
+    # miss it's a full install. Either way ends with a known-good
+    # node_modules.
     - name: Install dependencies
       shell: bash
       run: yarn install --frozen-lockfile
