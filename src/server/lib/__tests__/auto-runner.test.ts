@@ -8,6 +8,7 @@ import {
   buildAutoSearchStatus,
   autoRunner,
 } from "@/server/lib/auto-runner";
+import { realScheduler } from "@/server/lib/scheduler";
 import { instanceService } from "@/server/services/InstanceService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
@@ -33,6 +34,9 @@ const baseInstance = {
 };
 
 beforeEach(async () => {
+  // setup.ts swaps in inertScheduler globally; this suite drives real
+  // timers via vitest fake timers, so restore the real scheduler.
+  autoRunner.scheduler = realScheduler;
   await autoRunner.stop();
   vi.useRealTimers();
 });
@@ -885,9 +889,16 @@ describe("autoRunner.runNow", () => {
 
   test("failing runNow bumps autoSearchFailedStreak by 1", async () => {
     // Upstream returns 500 → fanOut throws → runNow's catch bumps streak.
+    // getMovies fetches /movie and /qualityprofile in parallel; the 500 on
+    // /movie is what fails the run, but /qualityprofile still needs a
+    // handler or it trips MSW's onUnhandledRequest guard.
     mswServer.use(
       http.get(`${radarrBase}/api/v3/movie`, () =>
         HttpResponse.json({ message: "boom" }, { status: 500 }),
+      ),
+      ...radarrHandlers(
+        { baseUrl: radarrBase },
+        { movies: [], movieFiles: [], qualityProfiles: [] },
       ),
     );
     const inst = await instanceService.create({

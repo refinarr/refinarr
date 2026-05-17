@@ -18,6 +18,11 @@ import { LogSource } from "@/shared/types/models";
 import { SCORE_FOR } from "@/shared/scoring-mode";
 import { isValidCronExpression } from "@/shared/cron";
 import { appLogger } from "./app-logger";
+import {
+  realScheduler,
+  type Scheduler,
+  type SchedulerHandle,
+} from "./scheduler";
 
 // HMR globals — declared on globalThis so the singleton survives module
 // reloads. Typing them here is what lets startInternal() / the module-init
@@ -346,7 +351,7 @@ export function pickAutoSearchMixedBatch<
 }
 
 class AutoRunner {
-  private timers = new Map<number, NodeJS.Timeout>();
+  private timers = new Map<number, SchedulerHandle>();
   private processing = new Set<number>();
   private generations = new Map<number, number>();
   // Dedupe: only log invalid-cron once per continuous invalid period.
@@ -358,6 +363,10 @@ class AutoRunner {
   // tick's DB writes settle and a subsequent setup's truncation transaction
   // collides with them. stop() drains this set before clearing state.
   private inFlight = new Set<Promise<void>>();
+
+  // Scheduler is injected so tests can swap the real timers for an inert
+  // (integration tests) or fake-timer-driven (this runner's own tests) one.
+  constructor(public scheduler: Scheduler = realScheduler) {}
 
   async start(): Promise<void> {
     if (this.started) return;
@@ -395,7 +404,8 @@ class AutoRunner {
   }
 
   async stop(): Promise<void> {
-    for (const handle of this.timers.values()) clearTimeout(handle);
+    for (const handle of this.timers.values())
+      this.scheduler.clearTimeout(handle);
     this.timers.clear();
     this.generations.clear();
     this.loggedInvalidCron.clear();
@@ -411,14 +421,15 @@ class AutoRunner {
     // (e.g. via an early-return branch in tick that reschedules), which
     // populates this.timers AFTER the first clear. Clear again before
     // declaring the runner truly quiescent.
-    for (const handle of this.timers.values()) clearTimeout(handle);
+    for (const handle of this.timers.values())
+      this.scheduler.clearTimeout(handle);
     this.timers.clear();
     this.processing.clear();
   }
 
   async refresh(instanceId: number): Promise<void> {
     const handle = this.timers.get(instanceId);
-    if (handle) clearTimeout(handle);
+    if (handle) this.scheduler.clearTimeout(handle);
     this.timers.delete(instanceId);
     this.loggedInvalidCron.delete(instanceId);
 
@@ -779,7 +790,7 @@ class AutoRunner {
   }
 
   private scheduleNext(instanceId: number, gen: number, delayMs: number): void {
-    const handle = setTimeout(() => {
+    const handle = this.scheduler.setTimeout(() => {
       const work = this.tick(instanceId, gen);
       this.inFlight.add(work);
       // Catch BEFORE finally so an unexpected rejection bubbling out of
@@ -798,13 +809,12 @@ class AutoRunner {
         )
         .finally(() => this.inFlight.delete(work));
     }, delayMs);
-    handle.unref?.();
     this.timers.set(instanceId, handle);
   }
 
   private cleanup(instanceId: number): void {
     const handle = this.timers.get(instanceId);
-    if (handle) clearTimeout(handle);
+    if (handle) this.scheduler.clearTimeout(handle);
     this.timers.delete(instanceId);
     this.generations.delete(instanceId);
   }

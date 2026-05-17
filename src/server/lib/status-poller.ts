@@ -11,6 +11,12 @@ import {
 import type { Instance } from "@/shared/types/models";
 import { LogSource } from "@/shared/types/models";
 import { appLogger } from "./app-logger";
+import {
+  realScheduler,
+  scheduleTrackedOnce,
+  type Scheduler,
+  type SchedulerHandle,
+} from "./scheduler";
 
 // Single global cadence — every enabled instance ticks at this rate
 // when healthy. 5 minutes is the sweet spot between "fast enough that
@@ -83,7 +89,12 @@ type TickOutcome = "missing" | "ok" | "failed";
  *     counter back to base cadence.
  */
 class StatusPoller {
-  private timers = new Map<number, NodeJS.Timeout>();
+  private timers = new Map<number, SchedulerHandle>();
+  // Handles for the 0ms immediate-refresh ticks. Tracked separately from
+  // the recurring `timers` so stop() can cancel a pending one — otherwise
+  // a quick stop()+start() reuses generation 1 and the stale one-shot
+  // would slip the generation guard and run in the new lifecycle.
+  private oneShotTimers = new Set<SchedulerHandle>();
   private processing = new Set<number>();
   private lastPolledAt = new Map<number, number>();
   // Per-instance count of consecutive ticks where BOTH polls failed.
@@ -107,6 +118,10 @@ class StatusPoller {
   private lastCommandFailureCause = new Map<number, string>();
   private started = false;
   private startPromise: Promise<void> | null = null;
+
+  // Scheduler is injected so tests can swap the real timers for an inert
+  // (integration tests) or fake-timer-driven (this poller's own tests) one.
+  constructor(public scheduler: Scheduler = realScheduler) {}
 
   async start(): Promise<void> {
     if (this.started) return;
@@ -136,8 +151,12 @@ class StatusPoller {
   }
 
   stop(): void {
-    for (const handle of this.timers.values()) clearTimeout(handle);
+    for (const handle of this.timers.values())
+      this.scheduler.clearTimeout(handle);
+    for (const handle of this.oneShotTimers)
+      this.scheduler.clearTimeout(handle);
     this.timers.clear();
+    this.oneShotTimers.clear();
     this.processing.clear();
     this.lastPolledAt.clear();
     this.consecutiveFailures.clear();
@@ -166,7 +185,7 @@ class StatusPoller {
   ): Promise<void> {
     const { immediate = true } = options;
     const handle = this.timers.get(instanceId);
-    if (handle) clearTimeout(handle);
+    if (handle) this.scheduler.clearTimeout(handle);
     this.timers.delete(instanceId);
     this.consecutiveFailures.delete(instanceId);
     // The user changed something (URL, key, enabled flag) or a
@@ -196,7 +215,15 @@ class StatusPoller {
     // Capture only the id; the tick re-reads instance + builds a
     // fresh ArrClient so config changes (URL, key) propagate without
     // an explicit refresh call.
-    const tick = async () => {
+    //
+    // `chained` controls self-rescheduling. The recurring timer invokes
+    // `tick` with no args (→ true) so the setTimeout chain continues.
+    // The immediate refresh tick passes `false`: it runs one poll but
+    // must NOT start a second chain — the recurring POLL_INTERVAL_MS
+    // timer registered below is the single canonical chain, and its
+    // handle is the one tracked in `this.timers`. A self-rescheduling
+    // immediate tick would orphan that handle and double the poll rate.
+    const tick = async (chained = true): Promise<void> => {
       // Stale closure guard — refresh() (or stop()) bumped the gen.
       if (this.generations.get(instanceId) !== gen) return;
 
@@ -230,11 +257,13 @@ class StatusPoller {
       // during the tick should still abort us before we schedule.
       if (this.generations.get(instanceId) !== gen) return;
 
+      // One-shot immediate tick — the recurring timer owns the chain.
+      if (!chained) return;
+
       const delay = computeBackoffMs(
         this.consecutiveFailures.get(instanceId) ?? 0,
       );
-      const next = setTimeout(tick, delay);
-      next.unref?.();
+      const next = this.scheduler.setTimeout(tick, delay);
       this.timers.set(instanceId, next);
     };
 
@@ -243,9 +272,16 @@ class StatusPoller {
       // test passed. Fire one tick now (fire-and-forget; the closure
       // serializes against subsequent ticks via the `processing`
       // guard) so lifecycle status updates within seconds rather than
-      // waiting one full POLL_INTERVAL_MS. The recurring timer below
-      // still arms normally.
-      void tick();
+      // waiting one full POLL_INTERVAL_MS. Passed `chained: false` so it
+      // fires exactly once and leaves the recurring chain to the timer
+      // below. Routed through the scheduler (not a direct call) so an
+      // inert scheduler keeps this dormant under test too, and tracked so
+      // stop() can cancel it before it slips the generation guard.
+      scheduleTrackedOnce(
+        this.scheduler,
+        this.oneShotTimers,
+        () => void tick(false),
+      );
     }
 
     // Don't fire immediately on bootstrap — many enabled instances
@@ -253,8 +289,7 @@ class StatusPoller {
     // worker's job is to observe state, not race the user's first
     // action. Refresh() opts in via `immediate=true` for the
     // single-instance case where waiting feels broken.
-    const handle = setTimeout(tick, POLL_INTERVAL_MS);
-    handle.unref?.();
+    const handle = this.scheduler.setTimeout(tick, POLL_INTERVAL_MS);
     this.timers.set(instanceId, handle);
   }
 
@@ -263,7 +298,7 @@ class StatusPoller {
     if (!instance || !instance.enabled) {
       // Instance went away mid-flight; drop our timer to match.
       const handle = this.timers.get(instanceId);
-      if (handle) clearTimeout(handle);
+      if (handle) this.scheduler.clearTimeout(handle);
       this.timers.delete(instanceId);
       this.lastPolledAt.delete(instanceId);
       this.consecutiveFailures.delete(instanceId);

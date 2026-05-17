@@ -5,6 +5,7 @@ import {
   POLL_INTERVAL_MS,
   statusPoller,
 } from "@/server/lib/status-poller";
+import { realScheduler } from "@/server/lib/scheduler";
 import { appLogger } from "@/server/lib/app-logger";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { instanceService } from "@/server/services/InstanceService";
@@ -21,6 +22,9 @@ const baseInstance = {
 };
 
 beforeEach(() => {
+  // setup.ts swaps in inertScheduler globally; this suite drives real
+  // timers via vitest fake timers, so restore the real scheduler.
+  statusPoller.scheduler = realScheduler;
   statusPoller.stop();
   vi.useRealTimers();
 });

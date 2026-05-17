@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from "vitest";
 import { searchWorker } from "@/server/lib/search-worker";
+import { realScheduler } from "@/server/lib/scheduler";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
@@ -37,6 +38,9 @@ async function makeSonarr() {
 }
 
 beforeEach(() => {
+  // setup.ts swaps in inertScheduler globally; this suite drives real
+  // timers via vitest fake timers, so restore the real scheduler.
+  searchWorker.scheduler = realScheduler;
   searchWorker.stop();
 });
 

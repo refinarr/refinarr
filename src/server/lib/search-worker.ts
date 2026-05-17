@@ -4,6 +4,12 @@ import { dispatchQueueEntry } from "@/server/arr/composition";
 import type { Instance, SearchQueueEntry } from "@/shared/types/models";
 import { LogSource } from "@/shared/types/models";
 import { appLogger } from "./app-logger";
+import {
+  realScheduler,
+  scheduleTrackedOnce,
+  type Scheduler,
+  type SchedulerHandle,
+} from "./scheduler";
 
 function parsePayload(raw: string | null | undefined): unknown {
   return raw ? JSON.parse(raw) : {};
@@ -22,11 +28,20 @@ function parsePayload(raw: string | null | undefined): unknown {
  * doesn't break the schedule for the next.
  */
 class SearchWorker {
-  private timers = new Map<number, NodeJS.Timeout>();
+  private timers = new Map<number, SchedulerHandle>();
+  // Handles for the 0ms one-shot drains scheduled by kick() and the
+  // startup tick. Tracked separately from the recurring `timers` so
+  // stop() can cancel a pending one-shot — otherwise the worker could
+  // dispatch one more search after it was meant to be dormant.
+  private oneShotTimers = new Set<SchedulerHandle>();
   private processing = new Set<number>();
   private lastProcessedAt = new Map<number, number>();
   private started = false;
   private startPromise: Promise<void> | null = null;
+
+  // Scheduler is injected so tests can swap the real timers for an inert
+  // (integration tests) or fake-timer-driven (this worker's own tests) one.
+  constructor(public scheduler: Scheduler = realScheduler) {}
 
   async start(): Promise<void> {
     if (this.started) return;
@@ -49,8 +64,12 @@ class SearchWorker {
   }
 
   stop(): void {
-    for (const handle of this.timers.values()) clearInterval(handle);
+    for (const handle of this.timers.values())
+      this.scheduler.clearInterval(handle);
+    for (const handle of this.oneShotTimers)
+      this.scheduler.clearTimeout(handle);
     this.timers.clear();
+    this.oneShotTimers.clear();
     this.processing.clear();
     this.lastProcessedAt.clear();
     this.started = false;
@@ -59,7 +78,7 @@ class SearchWorker {
   /** Restart the loop for one instance — used after the rate changes. */
   async refresh(instanceId: number): Promise<void> {
     const handle = this.timers.get(instanceId);
-    if (handle) clearInterval(handle);
+    if (handle) this.scheduler.clearInterval(handle);
     this.timers.delete(instanceId);
     const instance = await instanceRepository.findById(instanceId);
     if (instance && instance.enabled) {
@@ -86,7 +105,14 @@ class SearchWorker {
     const minDelayMs = 3_600_000 / Math.max(1, instance.searchesPerHour);
     const last = this.lastProcessedAt.get(instanceId) ?? 0;
     if (Date.now() < last + minDelayMs) return;
-    await this.processWithGuard(instance.id);
+    // Drain via the scheduler (0ms) rather than calling processWithGuard
+    // directly: kick() is enqueue-triggered background work and must obey
+    // the same gate as the timers, so an inert scheduler keeps it dormant.
+    scheduleTrackedOnce(
+      this.scheduler,
+      this.oneShotTimers,
+      () => void this.processWithGuard(instance.id),
+    );
   }
 
   private async processWithGuard(instanceId: number): Promise<void> {
@@ -133,12 +159,13 @@ class SearchWorker {
     const tick = () => {
       void this.processWithGuard(instanceId);
     };
-    const handle = setInterval(tick, minDelayMs);
-    handle.unref?.();
+    const handle = this.scheduler.setInterval(tick, minDelayMs);
     this.timers.set(instanceId, handle);
     // Fire one tick immediately so a fresh enqueue or restart drains right
-    // away rather than waiting up to minDelayMs for the first slot.
-    tick();
+    // away rather than waiting up to minDelayMs for the first slot. Routed
+    // through the scheduler (0ms) — a direct call would bypass an inert
+    // scheduler and drain the queue even when the worker is meant dormant.
+    scheduleTrackedOnce(this.scheduler, this.oneShotTimers, tick);
   }
 
   private async processOne(
