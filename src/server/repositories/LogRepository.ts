@@ -14,7 +14,7 @@ interface LogFilter {
   action?: ActionType;
 }
 
-export class LogRepository extends BaseRepository<ActionLog> {
+class LogRepository extends BaseRepository<ActionLog> {
   async findById(id: number): Promise<ActionLog | null> {
     return this.db.actionLog.findUnique({
       where: { id },

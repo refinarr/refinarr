@@ -14,7 +14,7 @@ export interface SearchDispatchResult {
   isDryRun: boolean;
 }
 
-export class SearchDispatcher {
+class SearchDispatcher {
   // ALWAYS routes through the queue, including in dry-run mode. This keeps
   // manual searches consistent with the auto-runner (which always enqueues)
   // and gives users a single, visible pipeline. The worker handles the

@@ -1,7 +1,7 @@
 import type { IgnoreEntry, MediaType } from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
 
-export class IgnoreRepository extends BaseRepository<IgnoreEntry> {
+class IgnoreRepository extends BaseRepository<IgnoreEntry> {
   async findById(id: number): Promise<IgnoreEntry | null> {
     return this.db.ignoreEntry.findUnique({
       where: { id },

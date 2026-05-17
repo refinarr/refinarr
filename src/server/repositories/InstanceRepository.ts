@@ -97,7 +97,7 @@ type CreateInstanceInput = Omit<
   autoSearchFailedStreak?: number;
 };
 
-export class InstanceRepository extends BaseRepository<Instance> {
+class InstanceRepository extends BaseRepository<Instance> {
   async findById(id: number): Promise<Instance | null> {
     const row = (await this.db.instance.findUnique({
       where: { id },

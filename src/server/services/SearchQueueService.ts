@@ -28,7 +28,7 @@ export interface QueueStatus {
   etaMs: number;
 }
 
-export class SearchQueueService {
+class SearchQueueService {
   async enqueue(input: EnqueueInput): Promise<SearchQueueEntry> {
     // dedupKeyFor also enforces (action ∈ owning arr's queueActions);
     // a mismatched pair throws here, before any DB write.

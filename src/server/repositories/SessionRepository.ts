@@ -3,7 +3,7 @@ import { BaseRepository } from "./BaseRepository";
 
 // `id` is a hex token (string), so the base number-keyed methods are
 // stubbed; real lookups go through `findByToken`.
-export class SessionRepository extends BaseRepository<Session> {
+class SessionRepository extends BaseRepository<Session> {
   async findById(_id: number): Promise<Session | null> {
     return null;
   }

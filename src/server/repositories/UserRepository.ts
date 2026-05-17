@@ -1,7 +1,7 @@
 import type { User } from "@prisma/client";
 import { BaseRepository } from "./BaseRepository";
 
-export class UserRepository extends BaseRepository<User> {
+class UserRepository extends BaseRepository<User> {
   async findById(id: number): Promise<User | null> {
     return this.db.user.findUnique({ where: { id } });
   }

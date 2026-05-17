@@ -47,7 +47,7 @@ export interface CreateResult {
   created: boolean;
 }
 
-export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
+class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
   async findById(id: number): Promise<SearchQueueEntry | null> {
     const row = await this.db.searchQueue.findUnique({ where: { id } });
     return row as SearchQueueEntry | null;

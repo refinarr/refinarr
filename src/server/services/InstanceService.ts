@@ -20,7 +20,7 @@ import type {
   ScoringMode,
 } from "@/shared/types/models";
 
-export class InstanceService {
+class InstanceService {
   // Catch helper for fire-and-forget worker refreshes. The instance
   // repository / worker rescheduling can throw (DB blip, transient
   // state) and a bare `void worker.refresh(id)` would surface as an

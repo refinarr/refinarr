@@ -1,7 +1,7 @@
 import { configRepository } from "@/server/repositories/ConfigRepository";
 import { ConfigKey } from "@/server/config/keys";
 
-export class DryRunService {
+class DryRunService {
   async isDryRun(): Promise<boolean> {
     return configRepository.getTyped(ConfigKey.DryRun);
   }
