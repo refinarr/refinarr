@@ -68,7 +68,7 @@ type ArrMetaInput<
 //     "flaggedMoviesNoun" instead of widening to `string`). The
 //     `meta: TMeta & ArrMetaInput<...>` intersection makes the
 //     NoInfer constraint apply at the parameter position too.
-export function defineArrMeta<
+function defineArrMeta<
   const TType extends ArrType,
   const TActions extends readonly SearchQueueAction[],
   const TMeta extends ArrMetaInput<TType, TActions>,

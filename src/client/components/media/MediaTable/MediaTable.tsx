@@ -17,7 +17,7 @@ import { MediaTableRow } from "./MediaTableRow";
 import { MediaTableSkeletonRow } from "./MediaTableSkeletonRow";
 import type { ColumnDef, SortDirection, SortKey } from "./types";
 
-export type { ColumnDef, SortDirection };
+export type { ColumnDef };
 
 const ROW_HEIGHT_PX = { compact: 36, cozy: 48 } as const;
 

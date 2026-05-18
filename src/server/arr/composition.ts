@@ -222,7 +222,7 @@ export function dedupKeyFor(
 }
 
 // Shared base shape every dispatch input carries.
-export interface SearchDispatchBase {
+interface SearchDispatchBase {
   mediaId: number;
   title: string;
   groupId?: string;

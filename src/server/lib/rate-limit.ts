@@ -52,12 +52,3 @@ export function startRateLimitCleanup(): void {
   }, 60_000);
   cleanupHandle.unref?.();
 }
-
-// Test hook — stop the timer so vitest can exit cleanly when the
-// rate-limiter is exercised in unit tests.
-export function stopRateLimitCleanup(): void {
-  if (cleanupHandle) {
-    clearInterval(cleanupHandle);
-    cleanupHandle = null;
-  }
-}

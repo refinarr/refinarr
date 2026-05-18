@@ -18,7 +18,7 @@ import type {
 // Rolling time window for both poll passes. ActionLog rows older than
 // this won't be re-correlated — the cost of an ancient grab silently
 // reaching us is tiny, the cost of unbounded scans isn't.
-export const POLL_LOOKBACK_MS = 24 * 60 * 60 * 1000;
+const POLL_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 
 // Synthetic completionMessage stamped when upstream's /command response
 // doesn't carry one (current Servarr versions) AND no `grabbed` event
@@ -26,7 +26,7 @@ export const POLL_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 // Reads as the answer to "did anything come of my search?" without
 // requiring a deprecated upstream field. Stays opaque + stable so the
 // idempotency check in `deriveCommandUpdate` keeps writes flat.
-export const NO_RELEASES_GRABBED_MESSAGE = "No releases grabbed";
+const NO_RELEASES_GRABBED_MESSAGE = "No releases grabbed";
 
 // Type guard at the upstream→state-machine boundary. Upstream may emit
 // eventTypes we don't act on (e.g. "movieFileRenamed", "downloadIgnored");

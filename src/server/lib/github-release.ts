@@ -1,7 +1,7 @@
 import { appLogger } from "@/server/lib/app-logger";
 import { LogSource } from "@/shared/types/models";
 
-export interface CachedRelease {
+interface CachedRelease {
   tag: string;
   htmlUrl: string;
   fetchedAtMs: number;

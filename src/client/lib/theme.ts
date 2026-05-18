@@ -1,7 +1,6 @@
 import {
   BRANDS,
   DEFAULT_BRAND,
-  DEFAULT_BRAND_ID,
   DEFAULT_MODE,
   getBrandById,
   getDefaultBrand,
@@ -18,7 +17,7 @@ const THEME_CHANGE_EVENT = "rfn:themechange";
 const TRANSITION_CLASS = "theme-transition";
 const TRANSITION_MS = 200;
 
-export interface ThemeChangeDetail {
+interface ThemeChangeDetail {
   brand: Brand;
   mode: Mode;
   surface: Surface;
@@ -169,5 +168,5 @@ export const THEME_EVENT = THEME_CHANGE_EVENT;
 export const THEME_BRAND_KEY = BRAND_KEY;
 export const THEME_MODE_KEY = MODE_KEY;
 export const THEME_LEGACY_KEY = LEGACY_THEME_KEY;
-export { BRANDS, DEFAULT_BRAND, DEFAULT_BRAND_ID, DEFAULT_MODE };
+export { BRANDS, DEFAULT_BRAND, DEFAULT_MODE };
 export type { Brand, BrandId, Mode, Surface };

@@ -175,30 +175,6 @@ export interface QueuedSearchResponse {
   isDryRun: boolean;
 }
 
-export interface SetConfigDto {
-  key: string;
-  value: string;
-}
-
-export interface SetPreferencesDto {
-  instanceId: number;
-  cfs: Array<{ cfId: number; cfName: string }>;
-}
-
-export interface BulkActionDto {
-  instanceId: number;
-  mediaIds: number[];
-  action: "search" | "delete" | "ignore";
-}
-
-export interface HistoryQuery {
-  instanceId?: number;
-  status?: string;
-  action?: string;
-  page?: number;
-  limit?: number;
-}
-
 export interface DashboardInstanceSummary {
   id: number;
   type: ArrType;
@@ -223,7 +199,7 @@ export interface DashboardInstanceSummary {
 // enabled instance warms. The dashboard renders
 // "{flaggedMovies} / {totalMovies}" (and same for series) so the user
 // sees how much of the library is flagged.
-export interface DashboardTotals {
+interface DashboardTotals {
   flaggedMovies: number | null;
   totalMovies: number | null;
   flaggedSeries: number | null;

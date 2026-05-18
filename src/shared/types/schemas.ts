@@ -225,5 +225,3 @@ export const clientErrorReportSchema = z.object({
   stack: z.string().max(8192).optional(),
   component: z.string().min(1).max(256).optional(),
 });
-
-export type CredentialsInput = z.infer<typeof credentialsSchema>;

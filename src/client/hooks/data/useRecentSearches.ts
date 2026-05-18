@@ -20,7 +20,7 @@ interface RecentSearchesResponse {
  * after the worker fires it; slow enough that the badge "Xm ago" label
  * stays close to honest without hammering the API.
  */
-export function useRecentSearches(instanceId: number) {
+function useRecentSearches(instanceId: number) {
   return useQuery({
     queryKey: queryKeys.recentSearches(instanceId),
     queryFn: () =>

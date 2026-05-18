@@ -41,7 +41,7 @@ interface CreateInput {
   groupId?: string | null;
 }
 
-export interface CreateResult {
+interface CreateResult {
   entry: SearchQueueEntry;
   /** false when the DB unique constraint fired and we returned the existing pending row */
   created: boolean;

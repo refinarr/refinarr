@@ -23,7 +23,7 @@ interface EnqueueInput {
   groupId?: string;
 }
 
-export interface QueueStatus {
+interface QueueStatus {
   pendingCount: number;
   etaMs: number;
 }

@@ -2,7 +2,7 @@ import { amber } from "./amber";
 import { teal } from "./teal";
 import type { Brand, BrandId, Mode } from "./types";
 
-export type { Brand, BrandId, BrandSwatch, Mode, Surface } from "./types";
+export type { Brand, BrandId, Mode, Surface } from "./types";
 
 export const DEFAULT_BRAND = amber;
 export const BRANDS: readonly Brand[] = [DEFAULT_BRAND, teal];

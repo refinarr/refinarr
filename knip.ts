@@ -17,8 +17,6 @@ const config: KnipConfig = {
     // Pino references this as a string ID (`transport.target`), invisible to
     // static analysis. Dev-only pretty printer.
     "pino-pretty",
-    // Used by the postcss/Tailwind build pipeline, not imported in code.
-    "tailwindcss",
   ],
 };
 

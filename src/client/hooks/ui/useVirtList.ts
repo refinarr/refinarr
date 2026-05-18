@@ -22,7 +22,7 @@ export interface UseVirtListOptions<T extends { id: number | string }> {
   prefetchAheadRows?: number;
 }
 
-export interface VirtListItem<T> {
+interface VirtListItem<T> {
   // undefined when the index points past loaded data — caller renders a
   // skeleton placeholder using `index` and `style`.
   row: T | undefined;

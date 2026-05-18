@@ -13,7 +13,7 @@ import { CronExpressionParser } from "cron-parser";
 
 const CRON_ALIAS_REGEX = /^@(yearly|annually|monthly|weekly|daily|hourly)$/i;
 
-export function isCronAlias(expr: string): boolean {
+function isCronAlias(expr: string): boolean {
   return CRON_ALIAS_REGEX.test(expr.trim());
 }
 

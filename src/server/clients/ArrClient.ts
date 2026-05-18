@@ -31,7 +31,7 @@ export function describeFetchError(e: unknown): string {
 // Subclassing Error keeps `instanceof Error` checks elsewhere intact;
 // the message format stays the same as the pre-typed throw so any
 // `ActionLog.error` strings that captured it remain stable.
-export class ArrHttpError extends Error {
+class ArrHttpError extends Error {
   constructor(
     message: string,
     readonly status: number,

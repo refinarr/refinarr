@@ -22,7 +22,7 @@ export interface MediaServiceDeps {
 // module's concrete service via the generic on ArrDefinition, so handlers
 // can call subclass-specific methods (e.g. `triggerSeasonSearch` on
 // SeriesService) without casts.
-export interface QueueHandlerContext<TService extends MediaServiceFacade> {
+interface QueueHandlerContext<TService extends MediaServiceFacade> {
   service: TService;
   instance: Instance;
   entry: SearchQueueEntry;

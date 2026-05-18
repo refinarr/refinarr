@@ -17,7 +17,7 @@ import type {
   ScoringMode,
 } from "@/shared/types/models";
 
-export interface MediaCacheService {
+interface MediaCacheService {
   /**
    * Returns the flagged-item count from cache if warm, or null if cold.
    * Used by the dashboard summary route's "X flagged" numerator.
@@ -48,7 +48,7 @@ export interface MediaCacheService {
   ): Promise<{ items: MediaItem[]; total: number }>;
 }
 
-export interface RetryableMediaService {
+interface RetryableMediaService {
   /**
    * Re-runs an ActionLog payload (search / delete). Each service knows how
    * to parse its own payload shape (movies use `fileId`, series use

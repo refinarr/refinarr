@@ -1,1 +1,1 @@
-export { MediaTable, type ColumnDef, type SortDirection } from "./MediaTable";
+export { MediaTable, type ColumnDef } from "./MediaTable";
