@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/client/components/ui/dropdown-menu";
 import { InstanceConnectionDot } from "@/client/components/common/InstanceConnectionDot";
+import { ARR_UI } from "@/client/lib/arr-ui";
 import { ShowAllMediaToggle } from "@/client/components/settings/ShowAllMediaToggle";
 import { ScoringModeSection } from "@/client/components/settings/InstanceCard/ScoringModeSection";
 import { AutoSearchSection } from "@/client/components/settings/InstanceCard/AutoSearchSection";
@@ -88,6 +89,8 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
     ? tAutoSearch("scoringModeProfile")
     : tAutoSearch("scoringModeManual");
 
+  const ArrIcon = ARR_UI[instance.type].Icon;
+
   return (
     <Card>
       <CardContent className="space-y-3 py-4">
@@ -105,12 +108,15 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
               <ChevronDown className="size-4" />
             )}
           </button>
-          <Badge variant="outline" className="gap-1.5 capitalize">
-            <InstanceConnectionDot instanceId={instance.id} />
-            {instance.type}
-          </Badge>
+          <ArrIcon
+            className="text-muted-foreground size-5 shrink-0"
+            aria-label={instance.type}
+          />
           <div className="min-w-0 flex-1">
-            <p className="font-medium">{instance.name}</p>
+            <p className="flex min-w-0 items-center gap-1.5 font-medium">
+              <InstanceConnectionDot instanceId={instance.id} />
+              <span className="truncate">{instance.name}</span>
+            </p>
             <p className="text-muted-foreground truncate text-xs">
               {instance.url}
             </p>
@@ -173,7 +179,7 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
                 action isn't a one-click neighbour of Test / Edit. */}
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="border-border bg-background hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex size-8 items-center justify-center rounded-lg border text-sm transition-all outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+                render={<Button variant="outline" size="icon" />}
                 aria-label={tCommon("moreActions")}
               >
                 <MoreVertical className="size-4" />
