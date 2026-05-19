@@ -543,14 +543,14 @@ function MediaListShellTopBar() {
       )}
 
       {/*
-        Search + density grouped at the right edge via `ml-auto`.
-        The search wrapper caps at 224px (`max-w-56`) but shrinks via
-        `min-w-0 flex-1` when the slot is narrow, so the row stays
-        single-line instead of wrapping. The TopHeader slot is
-        `flex-nowrap min-w-0`, which lets this shrink propagate.
+        Search stretches to fill the slot between the Profile control
+        and the density toggle (`flex-1` on both the group and the
+        search wrapper) so there's no dead gap. `min-w-0` lets it
+        shrink on a narrow slot instead of wrapping — the TopHeader
+        slot is `flex-nowrap min-w-0`, which lets the shrink propagate.
       */}
-      <div className="ml-auto flex min-w-0 items-center gap-2">
-        <div className="max-w-56 min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="min-w-0 flex-1">
           <MediaSearchBar
             filters={filters.filters}
             onChange={(next) =>

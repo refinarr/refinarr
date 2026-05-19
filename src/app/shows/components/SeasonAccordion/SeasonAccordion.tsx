@@ -53,11 +53,10 @@ export function SeasonAccordion({
           </div>
         </AccordionTrigger>
         {affectedCount > 0 && (
-          <div className="absolute top-1/2 right-9 z-10 flex -translate-y-1/2 items-center gap-1">
+          <div className="absolute top-1/2 right-2 z-10 flex -translate-y-1/2 items-center gap-1.5">
             <Button
               variant="ghost"
-              size="icon"
-              className="size-7"
+              size="icon-sm"
               title={t("searchSeasonAria", { season })}
               aria-label={t("searchSeasonAria", { season })}
               onClick={() => onSearch()}
@@ -66,8 +65,7 @@ export function SeasonAccordion({
             </Button>
             <Button
               variant="ghost"
-              size="icon"
-              className="size-7"
+              size="icon-sm"
               title={t("deleteSeasonAria", { season })}
               aria-label={t("deleteSeasonAria", { season })}
               onClick={() => onDelete(false)}
