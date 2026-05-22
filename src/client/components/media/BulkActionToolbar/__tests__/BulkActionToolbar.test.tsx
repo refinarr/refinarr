@@ -27,17 +27,14 @@ describe("BulkActionToolbar", () => {
     );
     // Previously this returned null on empty selection. The new
     // contract: the toolbar is always rendered so its row doesn't
-    // appear/disappear in the layout; the four action buttons are
+    // appear/disappear in the layout; the three action buttons are
     // disabled until a row is selected.
     expect(screen.getByRole("button", { name: /^search$/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /^ignore$/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /^delete$/i })).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: /delete and search/i }),
-    ).toBeDisabled();
   });
 
-  it("renders all four actions when count > 0", () => {
+  it("renders all three actions when count > 0", () => {
     renderWithProviders(
       <BulkActionToolbar
         selectedCount={3}
@@ -54,9 +51,6 @@ describe("BulkActionToolbar", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /^delete$/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /delete and search/i }),
     ).toBeInTheDocument();
   });
 

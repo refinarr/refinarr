@@ -44,9 +44,8 @@ function createBulkConfig<T extends MediaItem>(
     delete: {
       endpoint: endpoints.delete,
       isDeletable: logic.isDeletable,
-      body: (item, instId, search) => ({
+      body: (item, instId) => ({
         ...createBaseBody(item, instId),
-        search,
         ...logic.deleteExtras(item),
       }),
     },

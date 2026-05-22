@@ -12,7 +12,7 @@ interface Props {
   file: EpisodeFileEntry;
   scoringMode: ScoringMode;
   onSearch: () => Promise<unknown>;
-  onDelete: (search: boolean) => Promise<unknown>;
+  onDelete: () => Promise<unknown>;
 }
 
 export function EpisodeFileRow({
@@ -65,7 +65,7 @@ export function EpisodeFileRow({
               className="size-7"
               title={t("delete")}
               aria-label={t("delete")}
-              onClick={() => onDelete(false)}
+              onClick={() => onDelete()}
             >
               <Trash2 className="text-destructive size-3.5" />
             </Button>

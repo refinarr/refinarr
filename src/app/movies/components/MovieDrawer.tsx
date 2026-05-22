@@ -37,7 +37,7 @@ export function MovieDrawer({ item, ctx, close }: Props) {
           await ctx.runIgnore(item);
           close();
         }}
-        onDelete={async (_m, triggerSearch) => {
+        onDelete={async () => {
           if (!item) return;
           const ok = await askConfirm({
             title: tConfirmDeleteFile("title"),
@@ -45,7 +45,7 @@ export function MovieDrawer({ item, ctx, close }: Props) {
             destructive: true,
           });
           if (!ok) return;
-          await ctx.runDelete(item, triggerSearch);
+          await ctx.runDelete(item);
           close();
         }}
       />

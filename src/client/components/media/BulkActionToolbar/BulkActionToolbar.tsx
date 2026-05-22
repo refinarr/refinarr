@@ -10,7 +10,7 @@ import type { BulkProgress } from "./types";
 interface Props {
   selectedCount: number;
   onSearch: () => void;
-  onDelete: (search: boolean) => void;
+  onDelete: () => void;
   onIgnore: () => void;
   disabled?: boolean;
   progress?: BulkProgress | null;
@@ -28,8 +28,11 @@ interface Props {
 // the unified TopHeader's belowSlot. `md:static` overrides every
 // mobile-anchor rule below. qui-style: small selection-count badge
 // sits before the icon group.
+// Right-anchored on desktop (`md:ml-auto md:w-fit`) so the bar sits at
+// the right edge of its full-width belowSlot row, mirroring where the
+// search bar ends in the row above instead of orphaning to the left.
 const DESKTOP_INLINE =
-  "md:static md:inset-auto md:items-center md:gap-1 md:bg-transparent md:p-0";
+  "md:static md:inset-auto md:ml-auto md:w-fit md:items-center md:gap-1 md:bg-transparent md:p-0";
 const MOBILE_BASE =
   "fixed inset-x-0 z-30 flex items-center gap-3 bg-muted/95 px-4 py-4 backdrop-blur-md";
 const ANCHOR_ABOVE_FILTER =
@@ -143,21 +146,11 @@ export function BulkActionToolbar({
         <Button
           size="icon-touch"
           variant="ghost"
-          onClick={() => onDelete(false)}
+          onClick={() => onDelete()}
           disabled={actionsDisabled}
           title={t("delete")}
           aria-label={t("delete")}
           className="text-destructive hover:text-destructive"
-        >
-          <Trash2 />
-        </Button>
-        <Button
-          size="icon-touch"
-          variant="destructive"
-          onClick={() => onDelete(true)}
-          disabled={actionsDisabled}
-          title={t("deleteAndSearch")}
-          aria-label={t("deleteAndSearch")}
         >
           <Trash2 />
         </Button>

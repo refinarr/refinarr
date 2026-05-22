@@ -28,7 +28,7 @@ interface Props {
   profiles: QualityProfile[] | undefined;
   onSearch: (movie: MovieItem) => void;
   onIgnore: (movie: MovieItem) => void;
-  onDelete?: (movie: MovieItem, triggerSearch: boolean) => void;
+  onDelete?: (movie: MovieItem) => void;
 }
 
 export function MovieDetailDrawer({
@@ -116,24 +116,10 @@ export function MovieDetailDrawer({
             <EyeOff className="mr-1 size-4" /> {tCommon("ignore")}
           </Button>
           {onDelete && movie.hasFile && movie.movieFileId > 0 && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDelete(movie, false)}
-              >
-                <Trash2 className="text-destructive mr-1 size-4" />{" "}
-                {tCommon("delete")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDelete(movie, true)}
-              >
-                <Trash2 className="text-destructive mr-1 size-4" />{" "}
-                {tDrawer("deleteAndSearch")}
-              </Button>
-            </>
+            <Button variant="outline" size="sm" onClick={() => onDelete(movie)}>
+              <Trash2 className="text-destructive mr-1 size-4" />{" "}
+              {tCommon("delete")}
+            </Button>
           )}
           <Button size="sm" onClick={() => onSearch(movie)}>
             <Search className="mr-1 size-4" /> {tCommon("search")}

@@ -368,7 +368,6 @@ export class SeriesService
           data.mediaId,
           data.fileIds,
           data.title,
-          data.triggerSearch ?? false,
           opts,
         );
       default: {
@@ -383,11 +382,10 @@ export class SeriesService
     mediaId: number,
     fileIds: number[],
     title: string,
-    triggerSearch = false,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    // No SonarrClient cast — base ArrClient.deleteFile + triggerSearch
-    // cover everything this method needs.
+    // No SonarrClient cast — base ArrClient.deleteFile covers everything
+    // this method needs.
     const { instance, client } = await this.withClient(instanceId);
 
     return this.executeAction({
@@ -404,13 +402,11 @@ export class SeriesService
         mediaId,
         fileIds,
         title,
-        triggerSearch,
       },
       run: async () => {
         for (const fileId of fileIds) {
           await client.deleteFile(fileId);
         }
-        if (triggerSearch) await client.triggerSearch(mediaId);
       },
     });
   }

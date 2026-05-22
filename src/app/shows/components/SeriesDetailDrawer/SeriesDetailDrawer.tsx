@@ -43,13 +43,11 @@ interface Props {
     series: SeriesItem,
     seasonNumber: number,
     fileIds: number[],
-    search: boolean,
   ) => Promise<unknown>;
   onDeleteEpisode: (
     series: SeriesItem,
     fileId: number,
     label: string,
-    search: boolean,
   ) => Promise<unknown>;
 }
 
@@ -148,7 +146,7 @@ export function SeriesDetailDrawer({
                       files={files}
                       scoringMode={scoringMode}
                       onSearch={() => onSearchSeason(series, season)}
-                      onDelete={async (search) => {
+                      onDelete={async () => {
                         if (affectedFileIds.length === 0) return;
                         const ok = await askConfirm({
                           title: tSeason("title"),
@@ -159,17 +157,12 @@ export function SeriesDetailDrawer({
                           destructive: true,
                         });
                         if (!ok) return;
-                        await onDeleteSeason(
-                          series,
-                          season,
-                          affectedFileIds,
-                          search,
-                        );
+                        await onDeleteSeason(series, season, affectedFileIds);
                       }}
                       onSearchFile={(fileId, relativePath) =>
                         onSearchEpisode(series, fileId, filename(relativePath))
                       }
-                      onDeleteFile={async (fileId, relativePath, search) => {
+                      onDeleteFile={async (fileId, relativePath) => {
                         const label = filename(relativePath);
                         const ok = await askConfirm({
                           title: tEpisode("title"),
@@ -177,7 +170,7 @@ export function SeriesDetailDrawer({
                           destructive: true,
                         });
                         if (!ok) return;
-                        await onDeleteEpisode(series, fileId, label, search);
+                        await onDeleteEpisode(series, fileId, label);
                       }}
                       affectedCount={affectedFileIds.length}
                     />

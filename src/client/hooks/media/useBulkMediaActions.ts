@@ -17,10 +17,6 @@ export interface BulkVars<T> {
   signal?: AbortSignal;
 }
 
-export interface DeleteVars<T> extends BulkVars<T> {
-  search: boolean;
-}
-
 interface EndpointConfig<T> {
   endpoint: string;
   body: (item: T, instId: number) => Record<string, unknown>;
@@ -29,7 +25,7 @@ interface EndpointConfig<T> {
 interface DeleteEndpointConfig<T> {
   endpoint: string;
   isDeletable: (item: T) => boolean;
-  body: (item: T, instId: number, search: boolean) => Record<string, unknown>;
+  body: (item: T, instId: number) => Record<string, unknown>;
 }
 
 export interface BulkActionsConfig<T> {
@@ -78,10 +74,6 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
 
   const deleteDone =
     mediaType === "movie" ? tDelete("fileDone") : tDelete("filesDone");
-  const deleteDoneAndSearch =
-    mediaType === "movie"
-      ? tDelete("fileDoneAndSearch")
-      : tDelete("filesDoneAndSearch");
   const deleteFailed =
     mediaType === "movie" ? tDelete("fileFailed") : tDelete("filesFailed");
 
@@ -131,19 +123,19 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async ({ items, search, isBulk, signal }: DeleteVars<T>) => {
+    mutationFn: async ({ items, isBulk, signal }: BulkVars<T>) => {
       const deletable = items.filter(config.delete.isDeletable);
       const groupId = groupIdForBulk(isBulk, deletable.length);
       const results = await runBulk(
         deletable,
         (item) =>
           api.post<ActionLog>(config.delete.endpoint, {
-            ...config.delete.body(item, instanceId, search),
+            ...config.delete.body(item, instanceId),
             ...(groupId ? { groupId } : {}),
           }),
         { isBulk, signal, action: "delete", setProgress },
       );
-      return { results, search };
+      return { results };
     },
     onSuccess: ({ results }) => {
       if (!results.some((r) => r.isDryRun)) void refetch();
@@ -162,18 +154,8 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
     success: tIgnore("done"),
     error: (e) => (isAbortError(e) ? tBulk("cancelled") : tIgnore("failed")),
   });
-  const getDeleteSuccessMessage = ({
-    results,
-    search,
-  }: {
-    results: ActionLog[];
-    search: boolean;
-  }) => {
-    if (results.some((r) => r.isDryRun)) {
-      if (search) return tDelete("queuedAndSearchDryRun");
-      return tDelete("queuedDryRun");
-    }
-    if (search) return deleteDoneAndSearch;
+  const getDeleteSuccessMessage = ({ results }: { results: ActionLog[] }) => {
+    if (results.some((r) => r.isDryRun)) return tDelete("queuedDryRun");
     return deleteDone;
   };
   const deleteWithToast = withToast(deleteMutation, {

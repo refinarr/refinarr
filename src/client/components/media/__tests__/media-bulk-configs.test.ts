@@ -71,12 +71,11 @@ describe("MOVIE_BULK_CONFIG", () => {
   });
 
   it("delete.body includes fileId from movieFileId", () => {
-    const body = MOVIE_BULK_CONFIG.delete.body(baseMovie, 1, true);
+    const body = MOVIE_BULK_CONFIG.delete.body(baseMovie, 1);
     expect(body).toMatchObject({
       instanceId: 1,
       mediaId: 7,
       title: "Test Movie",
-      search: true,
       fileId: 42,
     });
   });
@@ -107,12 +106,11 @@ describe("SERIES_BULK_CONFIG", () => {
   });
 
   it("delete.body includes fileIds derived from episodeFiles", () => {
-    const body = SERIES_BULK_CONFIG.delete.body(baseSeries, 2, false);
+    const body = SERIES_BULK_CONFIG.delete.body(baseSeries, 2);
     expect(body).toMatchObject({
       instanceId: 2,
       mediaId: 9,
       title: "Test Series",
-      search: false,
       fileIds: [100, 101],
     });
   });

@@ -105,7 +105,6 @@ export const radarrDeleteSchema = z.object({
   mediaId: z.number().int().positive(),
   fileId: z.number().int().positive(),
   title: z.string().min(1).max(512),
-  search: z.boolean().optional(),
   groupId: groupIdField,
 });
 
@@ -137,7 +136,6 @@ export const sonarrDeleteSchema = z.object({
   mediaId: z.number().int().positive(),
   fileIds: z.array(z.number().int().positive()).min(1).max(2000),
   title: z.string().min(1).max(512),
-  search: z.boolean().optional(),
   groupId: groupIdField,
 });
 
@@ -165,22 +163,13 @@ const baseRetryFields = {
 };
 
 // Movies: action="search" stores no extra fields; action="delete" carries
-// fileId + optional triggerSearch. The legacy "delete_blacklist" payload
-// label is preserved for old rows whose payload was stamped before the
-// action column became the canonical record.
+// fileId.
 export const movieRetryPayloadSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("search"), ...baseRetryFields }),
   z.object({
     action: z.literal("delete"),
     ...baseRetryFields,
     fileId: z.number().int().positive(),
-    triggerSearch: z.boolean().optional(),
-  }),
-  z.object({
-    action: z.literal("delete_blacklist"),
-    ...baseRetryFields,
-    fileId: z.number().int().positive(),
-    triggerSearch: z.boolean().optional(),
   }),
 ]);
 
@@ -202,7 +191,6 @@ export const seriesRetryPayloadSchema = z.discriminatedUnion("action", [
     action: z.literal("delete"),
     ...baseRetryFields,
     fileIds: z.array(z.number().int().positive()).min(1).max(2000),
-    triggerSearch: z.boolean().optional(),
   }),
 ]);
 

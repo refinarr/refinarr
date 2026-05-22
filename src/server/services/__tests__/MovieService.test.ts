@@ -960,7 +960,7 @@ describe("MovieService.retryFromPayload", () => {
     expect(log.status).toBe("searched");
   });
 
-  test("dispatches delete payloads to deleteFile (default triggerSearch=true)", async () => {
+  test("dispatches delete payloads to deleteFile (delete-only, no search)", async () => {
     const instance = await instanceService.create(baseInstance);
     setupRadarrMocks({ movies: [], files: [], profiles: [] });
     const log = await movieService.retryFromPayload({
@@ -969,22 +969,6 @@ describe("MovieService.retryFromPayload", () => {
       mediaId: 1,
       fileId: 100,
       title: "A",
-    });
-    expect(log.action).toBe("delete");
-    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((u) => u.includes("/command"))).toBe(true);
-  });
-
-  test("dispatches delete_blacklist payloads with triggerSearch=false", async () => {
-    const instance = await instanceService.create(baseInstance);
-    setupRadarrMocks({ movies: [], files: [], profiles: [] });
-    const log = await movieService.retryFromPayload({
-      action: "delete_blacklist",
-      instanceId: instance.id,
-      mediaId: 1,
-      fileId: 100,
-      title: "A",
-      triggerSearch: false,
     });
     expect(log.action).toBe("delete");
     // Filter POSTs only — GET /command also fires from statusPoller's
@@ -1011,24 +995,16 @@ describe("MovieService.retryFromPayload", () => {
 });
 
 describe("MovieService.deleteFile", () => {
-  test("deletes the file and triggers a follow-up search by default", async () => {
+  test("deletes the file without a follow-up search", async () => {
     const instance = await instanceService.create(baseInstance);
     setupRadarrMocks({ movies: [], files: [], profiles: [] });
     const log = await movieService.deleteFile(instance.id, 1, 100, "A");
     expect(log.status).toBe("success");
     expect(log.action).toBe("delete");
-    // Verify both DELETE and command were issued.
+    // The DELETE is issued; no search command is POSTed (delete is
+    // a standalone action).
     const calls = fetchMock.mock.calls.map((c) => c[0] as string);
     expect(calls.some((u) => u.includes("/moviefile/100"))).toBe(true);
-    expect(calls.some((u) => u.includes("/command"))).toBe(true);
-  });
-
-  test("skips the follow-up search when triggerSearch=false", async () => {
-    const instance = await instanceService.create(baseInstance);
-    setupRadarrMocks({ movies: [], files: [], profiles: [] });
-    await movieService.deleteFile(instance.id, 1, 100, "A", false);
-    // Filter POSTs only — GET /command from statusPoller's refresh
-    // tick is unrelated. Contract: no search command was POSTed.
     const commandPosts = fetchMock.mock.calls.filter(
       ([url, init]) =>
         (url as string).includes("/command") &&

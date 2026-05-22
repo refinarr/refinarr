@@ -16,13 +16,9 @@ interface Props {
   scoringMode: ScoringMode;
   affectedCount: number;
   onSearch: () => Promise<unknown>;
-  onDelete: (search: boolean) => Promise<unknown>;
+  onDelete: () => Promise<unknown>;
   onSearchFile: (fileId: number, relativePath: string) => Promise<unknown>;
-  onDeleteFile: (
-    fileId: number,
-    relativePath: string,
-    search: boolean,
-  ) => Promise<unknown>;
+  onDeleteFile: (fileId: number, relativePath: string) => Promise<unknown>;
 }
 
 export function SeasonAccordion({
@@ -68,7 +64,7 @@ export function SeasonAccordion({
               size="icon-sm"
               title={t("deleteSeasonAria", { season })}
               aria-label={t("deleteSeasonAria", { season })}
-              onClick={() => onDelete(false)}
+              onClick={() => onDelete()}
             >
               <Trash2 className="text-destructive size-3.5" />
             </Button>
@@ -83,7 +79,7 @@ export function SeasonAccordion({
               file={f}
               scoringMode={scoringMode}
               onSearch={() => onSearchFile(f.id, f.relativePath)}
-              onDelete={(search) => onDeleteFile(f.id, f.relativePath, search)}
+              onDelete={() => onDeleteFile(f.id, f.relativePath)}
             />
           ))}
         </div>

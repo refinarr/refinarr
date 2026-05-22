@@ -61,7 +61,6 @@ function makeActions(
       items: Item[];
       isBulk: boolean;
       signal?: AbortSignal;
-      search: boolean;
     }) => Promise<unknown>;
   }>,
 ): BulkHandlerActions<Item> {
@@ -109,7 +108,7 @@ describe("useBulkHandlers", () => {
     expect(selection.clear).not.toHaveBeenCalled();
   });
 
-  it("handleDelete uses deletableSelected (not selectedItems) and propagates the search flag", async () => {
+  it("handleDelete uses deletableSelected (not selectedItems)", async () => {
     const selection = makeSelection({
       selectedItems: items,
       deletableSelected: [items[0], items[2]],
@@ -120,13 +119,12 @@ describe("useBulkHandlers", () => {
       return useBulkHandlers({ selection, abort, actions });
     });
     await act(async () => {
-      await result.current.handleDelete(true);
+      await result.current.handleDelete();
     });
     expect(actions.deleteMutation.mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({
         items: [items[0], items[2]],
         isBulk: true,
-        search: true,
       }),
     );
     expect(selection.clear).toHaveBeenCalledTimes(1);

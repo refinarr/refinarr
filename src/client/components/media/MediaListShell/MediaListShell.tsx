@@ -89,7 +89,7 @@ export interface MediaListShellRenderCtx<T extends MediaItem> {
   refetch: () => unknown;
   runSearch: (item: T) => Promise<unknown>;
   runIgnore: (item: T) => Promise<unknown>;
-  runDelete: (item: T, triggerSearch: boolean) => Promise<unknown>;
+  runDelete: (item: T) => Promise<unknown>;
   // Filter state + patch setter exposed so column defs can render
   // per-column funnel popovers (e.g. CfColumnFunnel) that mutate the
   // same filter slice MediaSearchBar reads from.
@@ -341,11 +341,10 @@ function Root<T extends MediaItem>({
       actions.searchMutation.mutateAsync({ items: [item], isBulk: false }),
     runIgnore: (item) =>
       actions.ignoreWithToast({ items: [item], isBulk: false }),
-    runDelete: (item, triggerSearch) =>
+    runDelete: (item) =>
       actions.deleteMutation.mutateAsync({
         items: [item],
         isBulk: false,
-        search: triggerSearch,
       }),
     filters: filters.filters,
     onFilterChange: (patch) =>
@@ -476,7 +475,7 @@ function MediaListShellBulkBar() {
       onCancel={abort.cancel}
       onSearch={handlers.handleSearch}
       onIgnore={handlers.handleIgnore}
-      onDelete={async (search) => {
+      onDelete={async () => {
         const items = selection.deletableSelected;
         if (!items.length) return;
         const ok = await askConfirm({
@@ -484,7 +483,7 @@ function MediaListShellBulkBar() {
           body: tConfirmDeleteBulk("body", { count: items.length }),
           destructive: true,
         });
-        if (ok) handlers.handleDelete(search);
+        if (ok) handlers.handleDelete();
       }}
     />
   );

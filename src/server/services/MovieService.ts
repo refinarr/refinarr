@@ -213,10 +213,7 @@ export class MovieService
 
   // Re-runs a stored ActionLog payload. Movies-specific fields:
   //   - search: { instanceId, mediaId, title }
-  //   - delete: { instanceId, mediaId, fileId, title, triggerSearch? }
-  //     (legacy rows stamped action="delete_blacklist" inside the payload;
-  //     the schema still accepts them, the migration backfills them to
-  //     "delete" so the action-parity guard passes)
+  //   - delete: { instanceId, mediaId, fileId, title }
   async retryFromPayload(
     payload: Record<string, unknown>,
     opts: RetryActionOptions = {},
@@ -237,13 +234,11 @@ export class MovieService
           opts,
         );
       case "delete":
-      case "delete_blacklist":
         return this.deleteFile(
           data.instanceId,
           data.mediaId,
           data.fileId,
           data.title,
-          data.triggerSearch ?? true,
           opts,
         );
       default: {
@@ -279,7 +274,6 @@ export class MovieService
     mediaId: number,
     fileId: number,
     title: string,
-    triggerSearch = true,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
     const { instance, client } = await this.withClient(instanceId);
@@ -298,11 +292,9 @@ export class MovieService
         mediaId,
         fileId,
         title,
-        triggerSearch,
       },
       run: async () => {
         await client.deleteFile(fileId);
-        if (triggerSearch) await client.triggerSearch(mediaId);
       },
     });
   }

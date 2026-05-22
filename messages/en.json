@@ -200,8 +200,7 @@
       "hasFile": "Has file",
       "customFormats": "Custom Formats",
       "noFileDownloaded": "No file downloaded.",
-      "noCfData": "No custom format data.",
-      "deleteAndSearch": "Delete + Search"
+      "noCfData": "No custom format data."
     }
   },
   "shows": {
@@ -329,7 +328,6 @@
     "search": "Search",
     "ignore": "Ignore",
     "delete": "Delete",
-    "deleteAndSearch": "Delete and search",
     "progress": {
       "search": "Searching {current}/{total}",
       "ignore": "Ignoring {current}/{total}",
@@ -777,13 +775,9 @@
     },
     "delete": {
       "fileDone": "File deleted",
-      "fileDoneAndSearch": "File deleted; search started",
       "filesDone": "Files deleted",
-      "filesDoneAndSearch": "Files deleted; search started",
       "seasonDone": "Season files deleted",
-      "seasonDoneAndSearch": "Season files deleted; search started",
       "queuedDryRun": "Delete queued (dry run)",
-      "queuedAndSearchDryRun": "Delete and search queued (dry run)",
       "fileFailed": "Couldn't delete file",
       "filesFailed": "Couldn't delete files",
       "seasonFailed": "Couldn't delete season files"

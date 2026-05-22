@@ -542,7 +542,7 @@ describe("SeriesService — actions", () => {
     expect(log.error).toMatch(/not found/i);
   });
 
-  test("deleteFiles deletes each fileId and optionally triggers a search", async () => {
+  test("deleteFiles deletes each fileId without triggering a search", async () => {
     const instance = await instanceService.create(baseInstance);
     setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
     const log = await seriesService.deleteFiles(
@@ -550,18 +550,10 @@ describe("SeriesService — actions", () => {
       1,
       [10, 11],
       "Show",
-      true,
     );
     expect(log.status).toBe("success");
     const calls = fetchMock.mock.calls.map((c) => c[0] as string);
     expect(calls.filter((u) => u.includes("/episodefile/")).length).toBe(2);
-    expect(calls.some((u) => u.includes("/command"))).toBe(true);
-  });
-
-  test("deleteFiles skips the search by default", async () => {
-    const instance = await instanceService.create(baseInstance);
-    setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
-    await seriesService.deleteFiles(instance.id, 1, [10], "Show");
     // Filter POSTs only — GET /command from statusPoller's refresh
     // tick is unrelated. Contract: no search command was POSTed.
     const commandPosts = fetchMock.mock.calls.filter(
@@ -837,7 +829,7 @@ describe("SeriesService.retryFromPayload", () => {
     expect(log.status).toBe("searched");
   });
 
-  test("dispatches delete payloads to deleteFiles with triggerSearch=true", async () => {
+  test("dispatches delete payloads to deleteFiles (delete-only, no search)", async () => {
     const instance = await instanceService.create(baseInstance);
     setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
     const log = await seriesService.retryFromPayload({
@@ -846,11 +838,16 @@ describe("SeriesService.retryFromPayload", () => {
       mediaId: 1,
       fileIds: [10, 11],
       title: "S",
-      triggerSearch: true,
     });
     expect(log.action).toBe("delete");
-    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((u) => u.includes("/command"))).toBe(true);
+    // Filter POSTs only — GET /command from statusPoller's refresh
+    // tick is unrelated. Contract: no search command was POSTed.
+    const commandPosts = fetchMock.mock.calls.filter(
+      ([url, init]) =>
+        (url as string).includes("/command") &&
+        (init as RequestInit | undefined)?.method === "POST",
+    );
+    expect(commandPosts).toHaveLength(0);
   });
 
   test("throws on unknown action", async () => {

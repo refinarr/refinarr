@@ -5,11 +5,9 @@ import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/client/components/ui/badge";
 import type { ActionType } from "@/shared/types/models";
 
-// "delete_blacklist" is a legacy payload-internal label that may still
-// appear in the action column on old ActionLog rows; it shares the delete
-// presentation. The Record<…> type below makes a missing ActionType case
-// a compile error so adding to ActionType forces a badge update here.
-type BadgeKey = ActionType | "delete_blacklist";
+// The Record<…> type below makes a missing ActionType case a compile
+// error so adding to ActionType forces a badge update here.
+type BadgeKey = ActionType;
 
 const SEARCH_CLASSES = "bg-info-soft text-info border-info/30";
 const DELETE_CLASSES = "bg-warning-soft text-warning border-warning/30";
@@ -31,11 +29,6 @@ const meta: Record<
     classes: SEARCH_CLASSES,
   },
   delete: { labelKey: "delete", icon: Trash2, classes: DELETE_CLASSES },
-  delete_blacklist: {
-    labelKey: "delete",
-    icon: Trash2,
-    classes: DELETE_CLASSES,
-  },
   ignore: { labelKey: "ignore", icon: EyeOff, classes: NEUTRAL_CLASSES },
 };
 

@@ -62,3 +62,4 @@ plan-v1.md
 # Claude Code runtime state
 .claude/*.lock
 .claude/
+HANDOFF.md
