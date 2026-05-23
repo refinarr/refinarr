@@ -400,11 +400,7 @@ function Root<T extends MediaItem>({
         AND the user scrolls a long list (vertical scroll also inside
         the wrapper). main becomes a non-scrolling flex column.
       */}
-      <AppShell
-        scrollMode="viewport"
-        topHeaderSlot={<MediaListShellTopBar />}
-        topHeaderBelowSlot={<MediaListShellBulkBar />}
-      >
+      <AppShell scrollMode="viewport" topHeaderSlot={<MediaListShellTopBar />}>
         <PageErrorBoundary>
           {/*
             Flex-col fills main's available height. Chips take their
@@ -414,10 +410,10 @@ function Root<T extends MediaItem>({
             table's `border-y` top edge handles the visual separator,
             so the chip strip reads as the table's filter row rather
             than a floating section above it (Linear / Stripe / GitHub
-            pattern). No reserved bottom padding either — the mobile
-            chrome (TabBar, FilterBar, BulkActionToolbar) is fixed +
-            translucent and auto-hides on scroll-down, so reserving
-            space would leave an empty band below the last row.
+            pattern). The floating BulkActionToolbar overlays the last
+            row(s) when active rather than pushing them up — the pill
+            is content-width so row content stays visible to either
+            side; matches Linear / Notion / Reminders.
           */}
           <div className="flex min-h-0 flex-1 flex-col">{children}</div>
           <MobileFilterBar
@@ -430,17 +426,11 @@ function Root<T extends MediaItem>({
             }
           />
           {/*
-            Mobile bulk action bar — the desktop instance lives in
-            MediaListShellTopBar (inside AppShell's topHeaderSlot, which
-            is `hidden md:flex`). On mobile the slot is invisible, so we
-            render a second instance here gated `md:hidden`.
-            BulkActionToolbar already has a fixed-bottom mobile visual;
-            wiring this second mount makes it reachable. Returns null
-            when nothing is selected, so it's free when idle.
+            Single bulk-action toolbar mount for both viewports — v2
+            renders through a portal to <body> and floats centered at
+            the viewport bottom, so it needs no per-viewport gate.
           */}
-          <div className="md:hidden">
-            <MediaListShellBulkBar />
-          </div>
+          <MediaListShellBulkBar />
           {confirmDialog}
         </PageErrorBoundary>
       </AppShell>
@@ -449,13 +439,10 @@ function Root<T extends MediaItem>({
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// MediaListShellBulkBar — extracts the BulkActionToolbar bindings so
-// the component can be rendered in TWO places:
-//   • Inside the top bar slot (desktop visual — `hidden md:flex`).
-//   • Inside the Root, gated `md:hidden` (mobile fixed-bottom visual).
-// BulkActionToolbar already branches between these visuals internally;
-// it just needs to be reachable from mobile, which it wasn't when the
-// only render lived inside the desktop-only slot.
+// MediaListShellBulkBar — wires the floating BulkActionToolbar (v2) to
+// the shell's selection + bulk-handler context. v2 renders through a
+// portal to <body> and handles its own positioning, so this is just a
+// thin bindings layer.
 // ─────────────────────────────────────────────────────────────────────
 
 function MediaListShellBulkBar() {
@@ -473,6 +460,7 @@ function MediaListShellBulkBar() {
       selectedCount={selection.selected.size}
       progress={bulkProgress}
       onCancel={abort.cancel}
+      onClearSelection={selection.clear}
       onSearch={handlers.handleSearch}
       onIgnore={handlers.handleIgnore}
       onDelete={async () => {

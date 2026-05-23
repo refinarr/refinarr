@@ -69,6 +69,13 @@ export function MobileFilterBar({
           // still get the layout affordance without the animation.
           prefersReducedMotion ? "" : "transition-transform duration-200",
           hidden && "translate-y-[calc(100%+var(--spacing-bottom-bar))]",
+          // Selection mode: when the floating BulkActionToolbar is open
+          // (`<html data-bulk-bar="open">`), slide this bar out too —
+          // it sits above the now-hidden tab bar, so leaving it visible
+          // strands a "Filters" pill in mid-air above the floating
+          // pill. Matches the MobileTabBar treatment so the entire
+          // bottom UI gives way to the selection bar.
+          "[html[data-bulk-bar=open]_&]:pointer-events-none [html[data-bulk-bar=open]_&]:translate-y-[calc(100%+var(--spacing-bottom-bar)+env(safe-area-inset-bottom))]",
         )}
       >
         <button

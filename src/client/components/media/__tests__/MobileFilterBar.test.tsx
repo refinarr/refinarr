@@ -119,30 +119,40 @@ describe("MobileFilterBar — auto-hide", () => {
   it("stays visible when scroll direction is null (initial)", () => {
     mockDirection = null;
     renderWithProviders(<MobileFilterBar {...baseProps} onChange={vi.fn()} />);
-    expect(getBar().className).not.toContain("translate-y");
+    expect(getBar().className).not.toContain(
+      "translate-y-[calc(100%+var(--spacing-bottom-bar))]",
+    );
   });
 
   it("stays visible when scrolling up", () => {
     mockDirection = "up";
     renderWithProviders(<MobileFilterBar {...baseProps} onChange={vi.fn()} />);
-    expect(getBar().className).not.toContain("translate-y");
+    expect(getBar().className).not.toContain(
+      "translate-y-[calc(100%+var(--spacing-bottom-bar))]",
+    );
   });
 
   it("hides via translate-y when scrolling down", () => {
     mockDirection = "down";
     renderWithProviders(<MobileFilterBar {...baseProps} onChange={vi.fn()} />);
-    expect(getBar().className).toMatch(/translate-y/);
+    expect(getBar().className).toContain(
+      "translate-y-[calc(100%+var(--spacing-bottom-bar))]",
+    );
   });
 
   it("stays visible when scrolling down WHILE the sheet is open", async () => {
     mockDirection = "down";
     renderWithProviders(<MobileFilterBar {...baseProps} onChange={vi.fn()} />);
     // First the bar should be hidden (sheet is closed).
-    expect(getBar().className).toMatch(/translate-y/);
+    expect(getBar().className).toContain(
+      "translate-y-[calc(100%+var(--spacing-bottom-bar))]",
+    );
     // Open the sheet — the auto-hide must release so the trigger
     // doesn't slip out from under the user's finger.
     await userEvent.click(screen.getByRole("button", { name: /filters/i }));
-    expect(getBar().className).not.toMatch(/translate-y/);
+    expect(getBar().className).not.toContain(
+      "translate-y-[calc(100%+var(--spacing-bottom-bar))]",
+    );
   });
 
   it("applies a transition class when motion is allowed", () => {
@@ -155,5 +165,22 @@ describe("MobileFilterBar — auto-hide", () => {
     mockReducedMotion = true;
     renderWithProviders(<MobileFilterBar {...baseProps} onChange={vi.fn()} />);
     expect(getBar().className).not.toContain("transition-transform");
+  });
+
+  // The bulk-mode hide is a CSS-only ancestor variant
+  // (`[html[data-bulk-bar=open]_&]:...`), so it doesn't react to a
+  // runtime data-attribute toggle inside happy-dom. What we can verify
+  // is the contract — that the component declares both halves of the
+  // variant in its className — so any future regression that drops one
+  // of them shows up here rather than as a silent visual bug.
+  it("declares the bulk-mode ancestor variants so MobileTabBar's hide pattern composes", () => {
+    renderWithProviders(<MobileFilterBar {...baseProps} onChange={vi.fn()} />);
+    const className = getBar().className;
+    expect(className).toContain(
+      "[html[data-bulk-bar=open]_&]:pointer-events-none",
+    );
+    expect(className).toContain(
+      "[html[data-bulk-bar=open]_&]:translate-y-[calc(100%+var(--spacing-bottom-bar)+env(safe-area-inset-bottom))]",
+    );
   });
 });

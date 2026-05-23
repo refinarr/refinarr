@@ -328,6 +328,8 @@
     "search": "Search",
     "ignore": "Ignore",
     "delete": "Delete",
+    "clearSelection": "Clear selection",
+    "moreActions": "More actions",
     "progress": {
       "search": "Searching {current}/{total}",
       "ignore": "Ignoring {current}/{total}",

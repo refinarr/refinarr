@@ -82,6 +82,12 @@ export function MobileTabBar({ onMoreClick, moreOpen }: Props) {
         // affordance without the animation.
         prefersReducedMotion ? "" : "transition-transform duration-200",
         hidden && "translate-y-full",
+        // Selection mode: when the floating BulkActionToolbar is open
+        // (it sets `<html data-bulk-bar="open">`), slide the nav out so
+        // the bulk pill is the sole bottom UI. Removes the awkward
+        // "stacked bottoms" overlap. Pointer-events-none too so a click
+        // through the hidden bar doesn't hit a stale nav button.
+        "[html[data-bulk-bar=open]_&]:pointer-events-none [html[data-bulk-bar=open]_&]:translate-y-full",
       )}
     >
       <div className="h-bottom-bar flex items-stretch">

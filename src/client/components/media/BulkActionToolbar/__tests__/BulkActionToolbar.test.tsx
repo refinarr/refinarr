@@ -1,48 +1,65 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import userEvent from "@testing-library/user-event";
+import { act } from "@testing-library/react";
 import { renderWithProviders, screen } from "@/test/render";
-
-// Stub the scroll-direction hook so anchor-swap behavior is testable
-// without needing to drive a real scroll event in jsdom/happy-dom.
-let mockDirection: "up" | "down" | null = null;
-vi.mock("@/client/hooks/ui/useScrollDirection", () => ({
-  useScrollDirection: () => mockDirection,
-}));
 
 import { BulkActionToolbar } from "../BulkActionToolbar";
 
-describe("BulkActionToolbar", () => {
-  beforeEach(() => {
-    mockDirection = null;
+// happy-dom doesn't always settle the requestAnimationFrame the v2 bar
+// uses to flip `opening → open`. Drive it synchronously so assertions
+// don't have to await frame ticks.
+beforeEach(() => {
+  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback): number => {
+    cb(0);
+    return 0;
   });
-  it("renders the toolbar with disabled buttons when nothing is selected", () => {
+  vi.stubGlobal("cancelAnimationFrame", () => {});
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  // Reset the data-attribute the bar publishes so leakage between
+  // tests doesn't confuse a future assertion that depends on it.
+  delete document.documentElement.dataset.bulkBar;
+});
+
+describe("BulkActionToolbar (v2 floating)", () => {
+  it("is NOT in the DOM when nothing is selected and no progress is running", () => {
     renderWithProviders(
       <BulkActionToolbar
         selectedCount={0}
         onSearch={vi.fn()}
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
+        onClearSelection={vi.fn()}
       />,
     );
-    // Previously this returned null on empty selection. The new
-    // contract: the toolbar is always rendered so its row doesn't
-    // appear/disappear in the layout; the three action buttons are
-    // disabled until a row is selected.
-    expect(screen.getByRole("button", { name: /^search$/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /^ignore$/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /^delete$/i })).toBeDisabled();
+    // v2: no layout footprint while idle. None of the three actions
+    // and no selection-count label should be reachable.
+    expect(
+      screen.queryByRole("button", { name: /^search$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^ignore$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^delete$/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/selected/i)).not.toBeInTheDocument();
   });
 
-  it("renders all three actions when count > 0", () => {
+  it("appears with all three actions + clear + count when count > 0", () => {
     renderWithProviders(
       <BulkActionToolbar
         selectedCount={3}
         onSearch={vi.fn()}
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
+        onClearSelection={vi.fn()}
       />,
     );
+    expect(screen.getByText(/3 selected/i)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /^search$/i }),
     ).toBeInTheDocument();
@@ -52,67 +69,80 @@ describe("BulkActionToolbar", () => {
     expect(
       screen.getByRole("button", { name: /^delete$/i }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^clear selection$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^more actions$/i }),
+    ).toBeInTheDocument();
   });
 
-  it("anchors above the filter bar on mobile (top of the 3-stack) by default", () => {
+  it("clicking the × clear button fires onClearSelection", async () => {
+    const onClearSelection = vi.fn();
+    renderWithProviders(
+      <BulkActionToolbar
+        selectedCount={2}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+        onClearSelection={onClearSelection}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /^clear selection$/i }),
+    );
+    expect(onClearSelection).toHaveBeenCalledTimes(1);
+  });
+
+  it("ESC dismisses the bar via onClearSelection while open", async () => {
+    const onClearSelection = vi.fn();
     renderWithProviders(
       <BulkActionToolbar
         selectedCount={1}
         onSearch={vi.fn()}
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
+        onClearSelection={onClearSelection}
       />,
     );
-    const toolbar = screen.getByText(/1 selected/i).parentElement!;
-    expect(toolbar.className).toContain("fixed");
-    // Default mobile anchor — above the tab bar + filter bar +
-    // safe-area. The three bars stack from viewport bottom upwards:
-    // tab → filter → bulk.
-    expect(toolbar.className).toContain(
-      "bottom-[calc(var(--spacing-bottom-bar)+var(--spacing-mobile-filter-bar)+env(safe-area-inset-bottom))]",
-    );
-    expect(toolbar.className).toContain("z-30");
-    // Desktop drops sticky in favour of inline flow (qui pattern) — two
-    // sticky elements (this bar + MediaTableHeader) caused layout
-    // jumping when this one mounted/unmounted. md:static reverts to
-    // normal flow so the bar slots into the page chrome.
-    expect(toolbar.className).toContain("md:static");
-    expect(toolbar.className).not.toContain("md:sticky");
+    await userEvent.keyboard("{Escape}");
+    expect(onClearSelection).toHaveBeenCalledTimes(1);
   });
 
-  it("drops to the viewport bottom anchor when the user scrolls down with a selection", () => {
-    mockDirection = "down";
+  it("the three action buttons fire their respective callbacks", async () => {
+    const onSearch = vi.fn();
+    const onIgnore = vi.fn();
+    const onDelete = vi.fn();
     renderWithProviders(
+      <BulkActionToolbar
+        selectedCount={4}
+        onSearch={onSearch}
+        onIgnore={onIgnore}
+        onDelete={onDelete}
+        onClearSelection={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^search$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^ignore$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    expect(onSearch).toHaveBeenCalledTimes(1);
+    expect(onIgnore).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it("publishes data-bulk-bar='open' on <html> while open and clears it after unmount", () => {
+    const { unmount } = renderWithProviders(
       <BulkActionToolbar
         selectedCount={1}
         onSearch={vi.fn()}
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
+        onClearSelection={vi.fn()}
       />,
     );
-    const toolbar = screen.getByText(/1 selected/i).parentElement!;
-    // Anchor swap: tab + filter just slid off-screen, bulk slides down
-    // into the slot they vacated. Bottom is now just env(safe-area).
-    expect(toolbar.className).toContain("bottom-[env(safe-area-inset-bottom)]");
-    expect(toolbar.className).not.toContain(
-      "bottom-[calc(var(--spacing-bottom-bar)+var(--spacing-mobile-filter-bar)+env(safe-area-inset-bottom))]",
-    );
-  });
-
-  it("returns to the above-filter anchor when scroll direction flips back to up", () => {
-    mockDirection = "up";
-    renderWithProviders(
-      <BulkActionToolbar
-        selectedCount={1}
-        onSearch={vi.fn()}
-        onDelete={vi.fn()}
-        onIgnore={vi.fn()}
-      />,
-    );
-    const toolbar = screen.getByText(/1 selected/i).parentElement!;
-    expect(toolbar.className).toContain(
-      "bottom-[calc(var(--spacing-bottom-bar)+var(--spacing-mobile-filter-bar)+env(safe-area-inset-bottom))]",
-    );
+    expect(document.documentElement.dataset.bulkBar).toBe("open");
+    unmount();
+    expect(document.documentElement.dataset.bulkBar).toBeUndefined();
   });
 
   it("renders an aria-live progress UI in place of action buttons when progress is provided", () => {
@@ -123,6 +153,7 @@ describe("BulkActionToolbar", () => {
         onSearch={vi.fn()}
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
+        onClearSelection={vi.fn()}
       />,
     );
     const status = screen.getByRole("status");
@@ -134,7 +165,7 @@ describe("BulkActionToolbar", () => {
     expect(screen.queryByText(/5 selected/i)).not.toBeInTheDocument();
   });
 
-  it("still renders the toolbar with progress when nothing is selected (final tick after clearing)", () => {
+  it("keeps the bar mounted with progress even when selectedCount drops to 0", () => {
     renderWithProviders(
       <BulkActionToolbar
         selectedCount={0}
@@ -142,6 +173,7 @@ describe("BulkActionToolbar", () => {
         onSearch={vi.fn()}
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
+        onClearSelection={vi.fn()}
       />,
     );
     expect(screen.getByRole("status")).toHaveTextContent(/deleting 5\/5/i);
@@ -156,6 +188,7 @@ describe("BulkActionToolbar", () => {
         onSearch={vi.fn()}
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
+        onClearSelection={vi.fn()}
         onCancel={onCancel}
       />,
     );
@@ -173,10 +206,47 @@ describe("BulkActionToolbar", () => {
         onSearch={vi.fn()}
         onDelete={vi.fn()}
         onIgnore={vi.fn()}
+        onClearSelection={vi.fn()}
       />,
     );
     expect(
       screen.queryByRole("button", { name: /^cancel$/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("unmounts after the exit animation when the selection drops to 0", async () => {
+    vi.useFakeTimers();
+    const { rerender } = renderWithProviders(
+      <BulkActionToolbar
+        selectedCount={2}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+        onClearSelection={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: /^search$/i }),
+    ).toBeInTheDocument();
+
+    rerender(
+      <BulkActionToolbar
+        selectedCount={0}
+        onSearch={vi.fn()}
+        onDelete={vi.fn()}
+        onIgnore={vi.fn()}
+        onClearSelection={vi.fn()}
+      />,
+    );
+
+    // While `closing`, the bar is still mounted (still in DOM) so the
+    // exit transition can play. After the 150ms timeout, it unmounts.
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(
+      screen.queryByRole("button", { name: /^search$/i }),
+    ).not.toBeInTheDocument();
+    vi.useRealTimers();
   });
 });
