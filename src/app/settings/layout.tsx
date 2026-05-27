@@ -36,6 +36,10 @@ export default function SettingsLayout({ children }: Props) {
   const showDiagnostics = config?.debugMode ?? false;
 
   const items = useMemo<SettingsRailItem[]>(() => {
+    // Order: operational first (General sets app defaults, Instances
+    // wires Sonarr/Radarr — the app's core), then cosmetic
+    // (Appearance), then admin-y (API Access, System), then auth
+    // (Account), then dev-only (Diagnostics) last.
     const list: SettingsRailItem[] = [
       {
         id: "general",
@@ -44,16 +48,16 @@ export default function SettingsLayout({ children }: Props) {
         href: "/settings/general",
       },
       {
-        id: "appearance",
-        label: t("sections.appearance"),
-        icon: Palette,
-        href: "/settings/appearance",
-      },
-      {
         id: "instances",
         label: t("sections.instances"),
         icon: Server,
         href: "/settings/instances",
+      },
+      {
+        id: "appearance",
+        label: t("sections.appearance"),
+        icon: Palette,
+        href: "/settings/appearance",
       },
       {
         id: "api-access",
@@ -68,20 +72,20 @@ export default function SettingsLayout({ children }: Props) {
         href: "/settings/system",
       },
     ];
-    if (showDiagnostics) {
-      list.push({
-        id: "diagnostics",
-        label: t("sections.diagnostics"),
-        icon: Activity,
-        href: "/settings/diagnostics",
-      });
-    }
     if (showAccount) {
       list.push({
         id: "account",
         label: t("sections.account"),
         icon: User,
         href: "/settings/account",
+      });
+    }
+    if (showDiagnostics) {
+      list.push({
+        id: "diagnostics",
+        label: t("sections.diagnostics"),
+        icon: Activity,
+        href: "/settings/diagnostics",
       });
     }
     return list;
