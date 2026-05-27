@@ -30,6 +30,7 @@ import {
 } from "@/client/components/media/MediaTable";
 import { ActiveFilterChips } from "@/client/components/common/ActiveFilterChips";
 import { RowHoverActions } from "@/client/components/common/RowHoverActions";
+import { ScrollToTopButton } from "@/client/components/common/ScrollToTopButton";
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { MediaErrorCard } from "@/client/components/states/MediaErrorCard";
 import {
@@ -431,6 +432,12 @@ function Root<T extends MediaItem>({
             the viewport bottom, so it needs no per-viewport gate.
           */}
           <MediaListShellBulkBar />
+          {/*
+            Back-to-top pill. Finds whichever data-scroll-root is
+            mounted (MediaTable on desktop / MediaCardList on mobile);
+            same portal pattern as the bulk bar.
+          */}
+          <ScrollToTopButton />
           {confirmDialog}
         </PageErrorBoundary>
       </AppShell>

@@ -61,7 +61,8 @@
     "off": "Off",
     "expand": "Expand",
     "collapse": "Collapse",
-    "moreActions": "More actions"
+    "moreActions": "More actions",
+    "scrollToTop": "Scroll to top"
   },
   "dialog": {
     "close": "Close"
