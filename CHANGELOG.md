@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/iHX-Labs/refinarr/compare/v0.2.1...v0.2.2) (2026-05-29)
+
+
+### Bug Fixes
+
+* **docker:** copy prisma/ before yarn install in deps stage ([#161](https://github.com/iHX-Labs/refinarr/issues/161)) ([b3a027d](https://github.com/iHX-Labs/refinarr/commit/b3a027d0fd7cf94d3d00b3e30887b3538062c926))
+
 ## [0.2.1](https://github.com/iHX-Labs/refinarr/compare/v0.2.0...v0.2.1) (2026-05-29)
 
 
