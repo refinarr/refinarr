@@ -69,6 +69,24 @@ function getServerVisibility(): boolean {
   return false;
 }
 
+// Hydration-safe "is on the client" probe. useSyncExternalStore
+// returns the server snapshot during hydration and the client
+// snapshot afterwards, so SSR + first client render both see
+// `false` (matching null output) and a post-hydration re-render
+// flips it to `true` to mount the portal. This avoids the classic
+// `if (typeof document === "undefined") return null` mismatch
+// without setting state in a useEffect (forbidden by
+// react-hooks/set-state-in-effect).
+function subscribeMount(): () => void {
+  return () => {};
+}
+function getMounted(): boolean {
+  return true;
+}
+function getServerMounted(): boolean {
+  return false;
+}
+
 /**
  * Portal-rendered "back to top" pill. Finds whichever
  * `data-scroll-root` is currently mounted (MediaTable on desktop /
@@ -86,13 +104,18 @@ function getServerVisibility(): boolean {
  */
 export function ScrollToTopButton() {
   const t = useTranslations("common");
+  const mounted = useSyncExternalStore(
+    subscribeMount,
+    getMounted,
+    getServerMounted,
+  );
   const visible = useSyncExternalStore(
     subscribe,
     getVisibility,
     getServerVisibility,
   );
 
-  if (typeof document === "undefined") return null;
+  if (!mounted) return null;
 
   return createPortal(
     <Button
