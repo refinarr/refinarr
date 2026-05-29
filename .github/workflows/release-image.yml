@@ -46,7 +46,13 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
+  # GHCR / Docker image names MUST be lowercase, but the repo
+  # owner `iHX-Labs` contains uppercase letters. `${{ github.repository }}`
+  # preserves the original casing, so hardcode the lowercase form
+  # here. docker/metadata-action's `images:` input auto-lowercases,
+  # but the raw `outputs: name=...` on docker/build-push-action and
+  # the `imagetools create` command in the manifest job do not.
+  REGISTRY_IMAGE: ghcr.io/ihx-labs/refinarr
 
 jobs:
   # Gate job that runs once before the build matrix fans out — fast
