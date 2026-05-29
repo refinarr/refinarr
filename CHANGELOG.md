@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/iHX-Labs/refinarr/compare/v0.2.0...v0.2.1) (2026-05-29)
+
+
+### Bug Fixes
+
+* **ci:** make release-image workflow_dispatch accept tag input ([#159](https://github.com/iHX-Labs/refinarr/issues/159)) ([3f7e99d](https://github.com/iHX-Labs/refinarr/commit/3f7e99d01aec7160bc5ab2385a6e5480fa2ecc29))
+
 ## [0.2.0](https://github.com/iHX-Labs/refinarr/compare/v0.1.2...v0.2.0) (2026-05-29)
 
 
