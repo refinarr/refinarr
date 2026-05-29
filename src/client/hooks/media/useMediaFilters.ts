@@ -1,6 +1,9 @@
 import { useState } from "react";
-import { isManualMode } from "@/shared/scoring-mode";
-import type { ScoringMode } from "@/shared/types/models";
+import type {
+  MonitorStatus,
+  ScoringMode,
+  Severity,
+} from "@/shared/types/models";
 import { useDebouncedValue } from "../ui/useDebouncedValue";
 
 export type MatchMode = "any" | "all";
@@ -8,18 +11,38 @@ export type MatchMode = "any" | "all";
 export interface MediaFilters {
   sortBy: "score" | "title" | "added" | "size";
   order: "asc" | "desc";
-  maxScore: number;
+  // Score range — manual mode 0..1, profile mode raw integer score.
+  // null = no bound on that side. Bounds for the UI slider come from
+  // the active mode/profiles via the column funnel, not from here.
+  minScore: number | null;
+  maxScore: number | null;
+  // Size range in bytes. null = no bound.
+  minSize: number | null;
+  maxSize: number | null;
   q: string;
-  profileId: number | null;
+  // Exact-match radarr/sonarr id. Set by history/dashboard deep-link
+  // links; bypasses every other filter so the linked item is found
+  // even if a stale severity/flagged filter would have excluded it.
+  // `null` = no filter.
+  mediaId: number | null;
+  profileIds: number[];
+  severities: Severity[];
   missingCfIds: number[];
   missingCfMatch: MatchMode;
   hasNegativeCfIds: number[];
   hasNegativeCfMatch: MatchMode;
-  onlyMissing: boolean;
+  // Monitor-state filter. "all" (default) leaves the upstream untouched.
+  // The other three values map 1:1 to the server's MonitorStatus filter
+  // already enforced by parse-media-query + MediaService.
+  monitorStatus: MonitorStatus;
+  // Page-level view mode. true shows only flagged items; false includes
+  // all media. Instance.showAllMedia supplies the per-instance default,
+  // and the server still enforces flaggedOnly=true when that setting is off.
+  flaggedOnly: boolean;
 }
 
 // Hook query input — every field optional, plus scoringMode. useMovies /
-// useSeries / useFlaggedMediaData accept this so they don't each redeclare
+// useSeries / useMediaData accept this so they don't each redeclare
 // their own near-identical filter type.
 export type MediaQueryFilters = Partial<MediaFilters> & {
   scoringMode?: ScoringMode;
@@ -28,25 +51,39 @@ export type MediaQueryFilters = Partial<MediaFilters> & {
 export const defaultMediaFilters: MediaFilters = {
   sortBy: "score",
   order: "asc",
-  maxScore: 1,
+  minScore: null,
+  maxScore: null,
+  minSize: null,
+  maxSize: null,
   q: "",
-  profileId: null,
+  mediaId: null,
+  profileIds: [],
+  severities: [],
   missingCfIds: [],
   missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
-  onlyMissing: false,
+  flaggedOnly: true,
+  monitorStatus: "all",
 };
+
+function mediaFiltersForInstance(showAllMedia: boolean): MediaFilters {
+  return { ...defaultMediaFilters, flaggedOnly: !showAllMedia };
+}
 
 export interface MediaFiltersResult {
   filters: MediaFilters;
   setFilters: React.Dispatch<React.SetStateAction<MediaFilters>>;
-  // maxScore is only meaningful in manual mode (a 0–1 coverage fraction).
-  // In profile mode the score is a raw integer (-1000…cutoff) and the
-  // slider isn't rendered, so omit the field so we don't accidentally
-  // filter the page down to "score ≤ 1" on the API side.
-  forQuery: Omit<MediaFilters, "maxScore"> & {
+  // null bounds are dropped on serialization — appendFilterParams skips
+  // null/undefined, so the URL only carries actually-set bounds.
+  forQuery: Omit<
+    MediaFilters,
+    "minScore" | "maxScore" | "minSize" | "maxSize"
+  > & {
+    minScore?: number;
     maxScore?: number;
+    minSize?: number;
+    maxSize?: number;
     scoringMode: ScoringMode;
   };
 }
@@ -54,11 +91,20 @@ export interface MediaFiltersResult {
 export function useMediaFilters(
   scoringMode: ScoringMode,
   instanceId: number,
+  showAllMedia = false,
 ): MediaFiltersResult {
-  const [filters, setFilters] = useState<MediaFilters>(defaultMediaFilters);
+  const [filters, setFilters] = useState<MediaFilters>(() =>
+    mediaFiltersForInstance(showAllMedia),
+  );
+  const debouncedMinScore = useDebouncedValue(filters.minScore, 400);
   const debouncedMaxScore = useDebouncedValue(filters.maxScore, 400);
+  const debouncedMinSize = useDebouncedValue(filters.minSize, 400);
+  const debouncedMaxSize = useDebouncedValue(filters.maxSize, 400);
   const debouncedQ = useDebouncedValue(filters.q, 300);
 
+  // Score bounds change shape between manual and profile modes (0..1 vs
+  // raw integer), so a value the user picked in one mode is meaningless
+  // after switching. CF / penalty selections are also mode-specific.
   const [trackedMode, setTrackedMode] = useState(scoringMode);
   if (trackedMode !== scoringMode) {
     setTrackedMode(scoringMode);
@@ -68,24 +114,36 @@ export function useMediaFilters(
       missingCfMatch: "all",
       hasNegativeCfIds: [],
       hasNegativeCfMatch: "all",
-      maxScore: 1,
+      minScore: null,
+      maxScore: null,
     }));
   }
 
   // CF IDs and quality-profile IDs are per-instance, so switching instance
   // leaves stale IDs in the filter that point at unrelated entities. Clear
   // them when the active instance changes.
-  const [trackedInstance, setTrackedInstance] = useState(instanceId);
-  if (trackedInstance !== instanceId) {
-    setTrackedInstance(instanceId);
+  const [trackedInstance, setTrackedInstance] = useState({
+    id: instanceId,
+    showAllMedia,
+  });
+  if (trackedInstance.id !== instanceId) {
+    setTrackedInstance({ id: instanceId, showAllMedia });
     setFilters((f) => ({
       ...f,
-      profileId: null,
+      // mediaId is instance-scoped (radarr/sonarr ids don't cross
+      // instances). Leaving it set would short-circuit the server
+      // filter to an empty result on the new instance.
+      mediaId: null,
+      profileIds: [],
       missingCfIds: [],
       missingCfMatch: "all",
       hasNegativeCfIds: [],
       hasNegativeCfMatch: "all",
+      flaggedOnly: !showAllMedia,
     }));
+  } else if (trackedInstance.showAllMedia !== showAllMedia) {
+    setTrackedInstance({ id: instanceId, showAllMedia });
+    setFilters((f) => ({ ...f, flaggedOnly: !showAllMedia }));
   }
 
   return {
@@ -93,7 +151,10 @@ export function useMediaFilters(
     setFilters,
     forQuery: {
       ...filters,
-      maxScore: isManualMode(scoringMode) ? debouncedMaxScore : undefined,
+      minScore: debouncedMinScore ?? undefined,
+      maxScore: debouncedMaxScore ?? undefined,
+      minSize: debouncedMinSize ?? undefined,
+      maxSize: debouncedMaxSize ?? undefined,
       q: debouncedQ,
       scoringMode,
     },

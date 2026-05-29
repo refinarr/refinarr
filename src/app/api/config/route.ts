@@ -6,10 +6,13 @@ import { ConfigKey } from "@/server/config/keys";
 import { configUpdateSchema } from "@/shared/types/schemas";
 
 export const GET = createApiHandler(async () => {
-  const dryRun = await configRepository.getTyped(ConfigKey.DryRun);
+  const [dryRun, debugMode] = await Promise.all([
+    configRepository.getTyped(ConfigKey.DryRun),
+    configRepository.getTyped(ConfigKey.DebugMode),
+  ]);
   // Note: apiKey is intentionally NOT returned here. Use GET /api/config/api-key
   // (re-auth required) to fetch it for scripted access.
-  return NextResponse.json({ dryRun });
+  return NextResponse.json({ dryRun, debugMode });
 });
 
 export const PUT = createApiHandler(async (req: NextRequest) => {

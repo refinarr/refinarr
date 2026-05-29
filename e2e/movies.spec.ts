@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 import type { PaginatedResponse } from "@/shared/types/api";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MovieItem } from "@/shared/types/models";
 
 test.use({ storageState: "e2e/.auth/user.json" });
 
 // Fake movie returned by the mocked /api/radarr/movies endpoint.
 // The browser calls this Next.js route directly — mock it here, not /api/v3/*.
-const FAKE_MOVIE: FlaggedMovie = {
+const FAKE_MOVIE: MovieItem = {
   id: 1,
   title: "The Missing Format",
   year: 2024,
@@ -19,9 +19,13 @@ const FAKE_MOVIE: FlaggedMovie = {
   missingFormats: [{ id: 99, name: "HDR" }],
   unwantedFormats: [],
   sizeOnDisk: 5_000_000_000,
+  monitored: true,
+  existingFileCount: 1,
+  totalFileCount: 1,
+  flagged: true,
 };
 
-const FAKE_RESPONSE: PaginatedResponse<FlaggedMovie> = {
+const FAKE_RESPONSE: PaginatedResponse<MovieItem> = {
   items: [FAKE_MOVIE],
   total: 1,
   page: 1,
@@ -118,9 +122,12 @@ test("search action in dry-run mode shows queued toast", async ({ page }) => {
     .getByText("The Missing Format")
     .waitFor({ timeout: 10_000 });
 
+  // MediaTableRow renders `<div role="row">` (the table is a div-based
+  // grid, not an HTML <table>) so the locator targets the role, not the
+  // `tr` tag.
   const movieRow = page
     .getByTestId("media-table-body")
-    .locator("tr")
+    .getByRole("row")
     .filter({ hasText: "The Missing Format" });
   const searchBtn = movieRow.getByRole("button", { name: /search/i }).first();
 

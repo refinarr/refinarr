@@ -8,7 +8,7 @@ const baseLog = {
   mediaId: 100,
   title: "Movie 100",
   isDryRun: false,
-  status: "success" as ActionStatus,
+  status: "searched" as ActionStatus,
   error: null,
   payload: null,
 };
@@ -31,7 +31,7 @@ describe("LogRepository", () => {
   });
 
   test("findPaginated applies status + action + instanceId filters", async () => {
-    await logRepository.create({ ...baseLog, status: "success" });
+    await logRepository.create({ ...baseLog, status: "searched" });
     await logRepository.create({ ...baseLog, status: "failed", error: "Boom" });
     await logRepository.create({ ...baseLog, instanceId: 2, status: "failed" });
 
@@ -42,6 +42,19 @@ describe("LogRepository", () => {
     );
     expect(failedInst1.total).toBe(1);
     expect(failedInst1.items[0].error).toBe("Boom");
+  });
+
+  test("findPaginated applies the action filter independently", async () => {
+    await logRepository.create({ ...baseLog, action: "search" });
+    await logRepository.create({ ...baseLog, action: "delete" });
+    await logRepository.create({ ...baseLog, action: "ignore" });
+    const deletes = await logRepository.findPaginated(
+      { action: "delete" },
+      1,
+      50,
+    );
+    expect(deletes.total).toBe(1);
+    expect(deletes.items[0].action).toBe("delete");
   });
 
   test("findPaginated paginates correctly", async () => {
@@ -56,7 +69,7 @@ describe("LogRepository", () => {
   });
 
   test("findFailedByInstance returns only failed rows for the instance", async () => {
-    await logRepository.create({ ...baseLog, status: "success" });
+    await logRepository.create({ ...baseLog, status: "searched" });
     await logRepository.create({ ...baseLog, status: "failed", error: "x" });
     await logRepository.create({
       ...baseLog,
@@ -72,7 +85,7 @@ describe("LogRepository", () => {
     const before = new Date(Date.now() - 60_000);
     await logRepository.create({ ...baseLog, status: "failed" });
     await logRepository.create({ ...baseLog, status: "failed" });
-    await logRepository.create({ ...baseLog, status: "success" });
+    await logRepository.create({ ...baseLog, status: "searched" });
     expect(await logRepository.countByStatusSince("failed", before)).toBe(2);
     expect(await logRepository.countByStatusSince("dry_run", before)).toBe(0);
   });
@@ -161,7 +174,7 @@ describe("LogRepository", () => {
       expect(results).toHaveLength(0);
     });
 
-    test("excludes failed and isDryRun rows — only non-dry success counts as 'searched'", async () => {
+    test("excludes failed and isDryRun rows — only non-dry post-dispatch rows count", async () => {
       await logRepository.create({
         ...baseLog,
         mediaId: 1,
@@ -171,7 +184,7 @@ describe("LogRepository", () => {
       await logRepository.create({
         ...baseLog,
         mediaId: 2,
-        status: "success",
+        status: "searched",
         isDryRun: true,
       });
       const results = await logRepository.findRecentSearches(1, 60_000);
@@ -184,6 +197,392 @@ describe("LogRepository", () => {
       expect(await logRepository.findRecentSearches(1, 60_000)).toHaveLength(1);
       expect(await logRepository.findRecentSearches(2, 60_000)).toHaveLength(1);
       expect(await logRepository.findRecentSearches(3, 60_000)).toHaveLength(0);
+    });
+  });
+
+  // === statusPoller correlation queries ============================
+  describe("findOpenCommandsByInstance — command-sync target rows", () => {
+    test("returns rows with non-null commandId at searched/grabbed within the window", async () => {
+      const a = await logRepository.create({
+        ...baseLog,
+        commandId: 7777,
+        status: "searched",
+      });
+      const b = await logRepository.create({
+        ...baseLog,
+        mediaId: 101,
+        commandId: 7778,
+        status: "grabbed",
+      });
+      // Excluded: no commandId.
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 102,
+        status: "searched",
+      });
+      // Excluded: terminal status.
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 103,
+        commandId: 7779,
+        status: "downloaded",
+      });
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 104,
+        commandId: 7780,
+        status: "failed",
+        error: "x",
+      });
+
+      const open = await logRepository.findOpenCommandsByInstance(1, 60_000);
+      const ids = open.map((r) => r.id).sort();
+      expect(ids).toEqual([a.id, b.id].sort());
+    });
+
+    test("excludes rows older than the window (memory bound for long-running instances)", async () => {
+      vi.useFakeTimers({ now: Date.now() - 10_000 });
+      try {
+        await logRepository.create({
+          ...baseLog,
+          commandId: 7777,
+          status: "searched",
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+      const open = await logRepository.findOpenCommandsByInstance(1, 1_000);
+      expect(open).toHaveLength(0);
+    });
+
+    test("scopes to the given instance (no cross-instance leak)", async () => {
+      await logRepository.create({
+        ...baseLog,
+        instanceId: 1,
+        commandId: 7777,
+        status: "searched",
+      });
+      await logRepository.create({
+        ...baseLog,
+        instanceId: 2,
+        commandId: 7777,
+        status: "searched",
+      });
+      expect(
+        (await logRepository.findOpenCommandsByInstance(1, 60_000)).map(
+          (r) => r.instanceId,
+        ),
+      ).toEqual([1]);
+    });
+
+    test("excludes 'searched' rows whose completionMessage is already stamped", async () => {
+      // Unstamped — still needs command-sync observation.
+      const a = await logRepository.create({
+        ...baseLog,
+        commandId: 7777,
+        status: "searched",
+      });
+      // Already observed — command-sync has nothing more to do.
+      // History-sync handles the searched → grabbed transition via
+      // mediaId-keyed correlation, which doesn't read this query.
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 101,
+        commandId: 7778,
+        status: "searched",
+        completionMessage: "0 releases found",
+      });
+      const open = await logRepository.findOpenCommandsByInstance(1, 60_000);
+      expect(open.map((r) => r.id)).toEqual([a.id]);
+    });
+
+    test("keeps 'grabbed' rows even when completionMessage is stamped (heal path)", async () => {
+      // A 'grabbed' row carrying the synthesized "No releases grabbed"
+      // message is a known race: history-sync advanced the row past
+      // 'searched' AFTER command-sync synthesized the message. The
+      // next command-sync tick must reach this row to clear the stale
+      // text — so the filter MUST keep 'grabbed' rows even with a
+      // stamped completionMessage.
+      const a = await logRepository.create({
+        ...baseLog,
+        commandId: 7777,
+        status: "grabbed",
+        completionMessage: "No releases grabbed",
+      });
+      const open = await logRepository.findOpenCommandsByInstance(1, 60_000);
+      expect(open.map((r) => r.id)).toEqual([a.id]);
+    });
+  });
+
+  describe("findCorrelatableByMedia — history-sync fuzzy match", () => {
+    test("returns the most recent matching row by createdAt", async () => {
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 42,
+        status: "searched",
+      });
+      await new Promise((r) => setTimeout(r, 5));
+      const newer = await logRepository.create({
+        ...baseLog,
+        mediaId: 42,
+        status: "searched",
+      });
+      const found = await logRepository.findCorrelatableByMedia({
+        instanceId: 1,
+        mediaId: 42,
+        actions: ["search"],
+        statusFloor: ["searched", "grabbed"],
+        sinceMs: 60_000,
+      });
+      expect(found?.id).toBe(newer.id);
+    });
+
+    test("respects status floor — won't match a downloaded row", async () => {
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 42,
+        status: "downloaded",
+      });
+      const found = await logRepository.findCorrelatableByMedia({
+        instanceId: 1,
+        mediaId: 42,
+        actions: ["search"],
+        statusFloor: ["searched", "grabbed"],
+        sinceMs: 60_000,
+      });
+      expect(found).toBeNull();
+    });
+
+    test("respects action filter — episode events don't match series rows", async () => {
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 42,
+        action: "search",
+      });
+      const found = await logRepository.findCorrelatableByMedia({
+        instanceId: 1,
+        mediaId: 42,
+        actions: ["search_episode"],
+        statusFloor: ["searched", "grabbed"],
+        sinceMs: 60_000,
+      });
+      expect(found).toBeNull();
+    });
+
+    test("excludes dry-run rows (real history events shouldn't touch previews)", async () => {
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 42,
+        status: "dry_run",
+        isDryRun: true,
+      });
+      const found = await logRepository.findCorrelatableByMedia({
+        instanceId: 1,
+        mediaId: 42,
+        actions: ["search"],
+        statusFloor: ["searched", "grabbed", "dry_run"],
+        sinceMs: 60_000,
+      });
+      expect(found).toBeNull();
+    });
+
+    test("scopes to the given instance", async () => {
+      await logRepository.create({
+        ...baseLog,
+        instanceId: 1,
+        mediaId: 42,
+      });
+      await logRepository.create({
+        ...baseLog,
+        instanceId: 2,
+        mediaId: 42,
+      });
+      const found1 = await logRepository.findCorrelatableByMedia({
+        instanceId: 1,
+        mediaId: 42,
+        actions: ["search"],
+        statusFloor: ["searched", "grabbed"],
+        sinceMs: 60_000,
+      });
+      const found2 = await logRepository.findCorrelatableByMedia({
+        instanceId: 2,
+        mediaId: 42,
+        actions: ["search"],
+        statusFloor: ["searched", "grabbed"],
+        sinceMs: 60_000,
+      });
+      expect(found1?.instanceId).toBe(1);
+      expect(found2?.instanceId).toBe(2);
+    });
+  });
+
+  describe("findLastSearchedAtByMedia", () => {
+    test("returns empty map when no search actions exist", async () => {
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      expect(result.size).toBe(0);
+    });
+
+    test("returns max createdAt per mediaId for search actions", async () => {
+      // Two search entries for mediaId=10; one older, one newer.
+      const older = await logRepository.create({
+        ...baseLog,
+        mediaId: 10,
+        action: "search",
+      });
+      await new Promise((r) => setTimeout(r, 5));
+      const newer = await logRepository.create({
+        ...baseLog,
+        mediaId: 10,
+        action: "search",
+      });
+
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      const entry = result.get(10)!;
+      expect(entry).toBeDefined();
+      // Should be the newer row's createdAt, not the older one.
+      expect(entry.at.getTime()).toBeGreaterThanOrEqual(
+        newer.createdAt.getTime(),
+      );
+      expect(entry.at.getTime()).toBeGreaterThan(older.createdAt.getTime());
+    });
+
+    test("scoped to instanceId — other instances excluded", async () => {
+      await logRepository.create({
+        ...baseLog,
+        instanceId: 1,
+        mediaId: 1,
+        action: "search",
+      });
+      await logRepository.create({
+        ...baseLog,
+        instanceId: 2,
+        mediaId: 2,
+        action: "search",
+      });
+
+      const result1 = await logRepository.findLastSearchedAtByMedia(1);
+      expect(result1.has(1)).toBe(true);
+      expect(result1.has(2)).toBe(false);
+
+      const result2 = await logRepository.findLastSearchedAtByMedia(2);
+      expect(result2.has(2)).toBe(true);
+      expect(result2.has(1)).toBe(false);
+    });
+
+    test("failed flag: most recent row failed → entry.failed=true", async () => {
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 7,
+        action: "search",
+        status: "searched",
+      });
+      await new Promise((r) => setTimeout(r, 5));
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 7,
+        action: "search",
+        status: "failed",
+        error: "no results",
+      });
+
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      const entry = result.get(7)!;
+      expect(entry).toBeDefined();
+      expect(entry.failed).toBe(true);
+    });
+
+    test("failed flag: most recent row succeeded → entry.failed=false", async () => {
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 8,
+        action: "search",
+        status: "failed",
+        error: "old failure",
+      });
+      await new Promise((r) => setTimeout(r, 5));
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 8,
+        action: "search",
+        status: "searched",
+      });
+
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      const entry = result.get(8)!;
+      expect(entry).toBeDefined();
+      expect(entry.failed).toBe(false);
+    });
+
+    test("non-search actions are excluded", async () => {
+      await logRepository.create({ ...baseLog, mediaId: 5, action: "delete" });
+      await logRepository.create({ ...baseLog, mediaId: 5, action: "ignore" });
+
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      expect(result.has(5)).toBe(false);
+    });
+
+    test("multiple mediaIds each get their own max timestamp", async () => {
+      await logRepository.create({ ...baseLog, mediaId: 1, action: "search" });
+      await new Promise((r) => setTimeout(r, 5));
+      await logRepository.create({ ...baseLog, mediaId: 2, action: "search" });
+
+      const result = await logRepository.findLastSearchedAtByMedia(1);
+      expect(result.size).toBe(2);
+      expect(result.get(1)!.at.getTime()).toBeLessThan(
+        result.get(2)!.at.getTime(),
+      );
+    });
+  });
+
+  describe("findGroupSummaries", () => {
+    test("empty groupIds returns empty object without a DB round-trip", async () => {
+      const result = await logRepository.findGroupSummaries([]);
+      expect(result).toEqual({});
+    });
+
+    test("aggregates per-status counts and reports action for a single group", async () => {
+      const { prisma } = await import("@/server/lib/db");
+      const groupId = "g-1";
+      await prisma.actionLog.createMany({
+        data: [
+          { ...baseLog, mediaId: 1, status: "searched", groupId },
+          { ...baseLog, mediaId: 2, status: "searched", groupId },
+          { ...baseLog, mediaId: 3, status: "failed", groupId },
+        ],
+      });
+
+      const result = await logRepository.findGroupSummaries([groupId]);
+      expect(result[groupId]).toEqual({
+        groupId,
+        total: 3,
+        statusCounts: { searched: 2, failed: 1 },
+        action: "search",
+      });
+    });
+
+    test("omits groupIds with zero matching rows", async () => {
+      const result = await logRepository.findGroupSummaries(["does-not-exist"]);
+      expect(result).toEqual({});
+    });
+
+    test("returns one entry per groupId requested when multiple exist", async () => {
+      const { prisma } = await import("@/server/lib/db");
+      await prisma.actionLog.createMany({
+        data: [
+          { ...baseLog, mediaId: 10, status: "success", groupId: "alpha" },
+          {
+            ...baseLog,
+            mediaId: 11,
+            status: "searched",
+            groupId: "beta",
+            action: "search_season",
+          },
+        ],
+      });
+      const result = await logRepository.findGroupSummaries(["alpha", "beta"]);
+      expect(Object.keys(result).sort()).toEqual(["alpha", "beta"]);
+      expect(result.alpha.action).toBe("search");
+      expect(result.beta.action).toBe("search_season");
     });
   });
 });

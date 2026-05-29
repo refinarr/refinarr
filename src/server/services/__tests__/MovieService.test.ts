@@ -1,11 +1,11 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import { movieService } from "@/server/services/MovieService";
+import { movieService } from "@/server/arr/composition";
 import { instanceService } from "@/server/services/InstanceService";
 import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
 import { configRepository } from "@/server/repositories/ConfigRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 import type { ScoringMode } from "@/shared/types/models";
 
 // Tests are explicit about scoringMode rather than relying on the column
@@ -39,6 +39,9 @@ interface RadarrMovie {
   qualityProfileId: number;
   hasFile: boolean;
   movieFileId: number;
+  // Optional in test fixtures — defaulted to `true` by `setupRadarrMocks`
+  // so existing seeds don't need to be touched.
+  monitored?: boolean;
 }
 
 interface RadarrFile {
@@ -69,8 +72,15 @@ function setupRadarrMocks(opts: {
   files: RadarrFile[];
   profiles: RadarrProfile[];
 }) {
+  // Default `monitored: true` for every seeded movie so existing tests
+  // don't need to spell it out. Tests that need an unmonitored movie
+  // can set `monitored: false` explicitly on the seed.
+  const moviesWithDefaults = opts.movies.map((m) => ({
+    monitored: true,
+    ...m,
+  }));
   fetchMock.mockImplementation(async (url: string) => {
-    if (url.endsWith("/api/v3/movie")) return jsonResponse(opts.movies);
+    if (url.endsWith("/api/v3/movie")) return jsonResponse(moviesWithDefaults);
     if (url.includes("/api/v3/qualityprofile"))
       return jsonResponse(opts.profiles);
     if (url.includes("/api/v3/moviefile?")) {
@@ -99,11 +109,11 @@ const profile: RadarrProfile = {
   ],
 };
 
-describe("MovieService.getFlaggedMovies — manual mode", () => {
+describe("MovieService.getMovies — manual mode", () => {
   test("returns empty when no preferences are configured", async () => {
     const instance = await createInstance("manual");
     setupRadarrMocks({ movies: [], files: [], profiles: [] });
-    const result = await movieService.getFlaggedMovies(instance.id, {
+    const result = await movieService.getMovies(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -155,7 +165,7 @@ describe("MovieService.getFlaggedMovies — manual mode", () => {
       ],
       profiles: [profile],
     });
-    const result = await movieService.getFlaggedMovies(instance.id, {
+    const result = await movieService.getMovies(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -185,7 +195,7 @@ describe("MovieService.getFlaggedMovies — manual mode", () => {
       files: [],
       profiles: [profile],
     });
-    const result = await movieService.getFlaggedMovies(instance.id, {
+    const result = await movieService.getMovies(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -229,7 +239,7 @@ describe("MovieService.getFlaggedMovies — manual mode", () => {
       ],
       profiles: [profile],
     });
-    const result = await movieService.getFlaggedMovies(instance.id, {
+    const result = await movieService.getMovies(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -239,7 +249,7 @@ describe("MovieService.getFlaggedMovies — manual mode", () => {
   });
 });
 
-describe("MovieService.getFlaggedMovies — profile mode", () => {
+describe("MovieService.getMovies — profile mode", () => {
   test("flags movies whose customFormatScore is below cutoffFormatScore", async () => {
     const instance = await createInstance("profile");
     setupRadarrMocks({
@@ -279,7 +289,7 @@ describe("MovieService.getFlaggedMovies — profile mode", () => {
       ],
       profiles: [profile],
     });
-    const result = await movieService.getFlaggedMovies(instance.id, {
+    const result = await movieService.getMovies(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -288,6 +298,46 @@ describe("MovieService.getFlaggedMovies — profile mode", () => {
     expect(result.items).toHaveLength(1);
     expect(result.items[0].title).toBe("Low");
     expect(result.items[0].minProfileScore).toBe(100);
+  });
+
+  test("missingFormats carry their profile score (matches the CustomFormat type)", async () => {
+    const instance = await createInstance("profile");
+    setupRadarrMocks({
+      movies: [
+        {
+          id: 1,
+          title: "M",
+          year: 2024,
+          qualityProfileId: 1,
+          hasFile: true,
+          movieFileId: 100,
+        },
+      ],
+      // File has none of the profile's positive CFs → both HDR (50) and
+      // Atmos (30) should land in missingFormats with their scores.
+      files: [
+        {
+          id: 100,
+          movieId: 1,
+          size: 1024,
+          customFormats: [],
+          customFormatScore: 0,
+        },
+      ],
+      profiles: [profile],
+    });
+    const result = await movieService.getMovies(instance.id, {
+      page: 1,
+      limit: 50,
+      sortBy: "score",
+      order: "asc",
+    });
+    expect(result.items[0].missingFormats).toEqual(
+      expect.arrayContaining([
+        { id: 10, name: "HDR", score: 50 },
+        { id: 11, name: "Atmos", score: 30 },
+      ]),
+    );
   });
 
   test("populates unwantedFormats from negative-scoring CFs in the file", async () => {
@@ -314,7 +364,7 @@ describe("MovieService.getFlaggedMovies — profile mode", () => {
       ],
       profiles: [profile],
     });
-    const result = await movieService.getFlaggedMovies(instance.id, {
+    const result = await movieService.getMovies(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -326,7 +376,7 @@ describe("MovieService.getFlaggedMovies — profile mode", () => {
   });
 });
 
-describe("MovieService.getFlaggedMovies — applyQuery", () => {
+describe("MovieService.getMovies — applyQuery", () => {
   beforeEach(async () => {
     const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [
@@ -388,7 +438,7 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
 
   test("paginates results", async () => {
     const inst = (await instanceService.getAll())[0];
-    const page1 = await movieService.getFlaggedMovies(inst.id, {
+    const page1 = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 2,
       sortBy: "title",
@@ -396,7 +446,7 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
     });
     expect(page1.items).toHaveLength(2);
     expect(page1.total).toBe(3);
-    const page2 = await movieService.getFlaggedMovies(inst.id, {
+    const page2 = await movieService.getMovies(inst.id, {
       page: 2,
       limit: 2,
       sortBy: "title",
@@ -407,7 +457,7 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
 
   test("filters by query string against title", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -419,7 +469,7 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
 
   test("filters by query string against missingFormats names", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -431,7 +481,7 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
 
   test("sorts by size descending", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "size",
@@ -446,7 +496,7 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
 
   test("filters by maxScore", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -457,21 +507,21 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
     expect(result.items.every((m) => m.cfScore <= 0.5)).toBe(true);
   });
 
-  test("filters by profileId", async () => {
+  test("filters by profileIds", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
       order: "asc",
-      profileId: 999,
+      profileIds: [999],
     });
     expect(result.items).toEqual([]);
   });
 
   test("filters by missingCfIds (single id)", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -483,7 +533,7 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
 
   test("filters by missingCfIds (multiple ids — ALL match, default)", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -496,7 +546,7 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
 
   test("filters by missingCfIds (multiple ids — ANY match)", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -509,10 +559,10 @@ describe("MovieService.getFlaggedMovies — applyQuery", () => {
   });
 });
 
-describe("MovieService.getFlaggedMovies — error paths", () => {
+describe("MovieService.getMovies — error paths", () => {
   test("throws when instance is missing", async () => {
     await expect(
-      movieService.getFlaggedMovies(99999, {
+      movieService.getMovies(99999, {
         page: 1,
         limit: 50,
         sortBy: "score",
@@ -522,7 +572,93 @@ describe("MovieService.getFlaggedMovies — error paths", () => {
   });
 });
 
-describe("MovieService.getFlaggedMovies — sort edge cases", () => {
+describe("MovieService.getMovies — showAllMedia capability gate", () => {
+  // Defense-in-depth: even if a request reaches the endpoint with
+  // `?flaggedOnly=false`, the server must override that to true unless
+  // the instance has Advanced mode enabled. The UI hides the toggle
+  // when off, but X-Api-Key holders could still try the URL directly.
+  beforeEach(async () => {
+    setupRadarrMocks({
+      movies: [
+        {
+          id: 1,
+          title: "Already Good",
+          year: 2024,
+          qualityProfileId: 1,
+          hasFile: true,
+          movieFileId: 1,
+        },
+        {
+          id: 2,
+          title: "Missing CF",
+          year: 2024,
+          qualityProfileId: 1,
+          hasFile: true,
+          movieFileId: 2,
+        },
+      ],
+      files: [
+        // Movie 1 has the wanted CF — flagged=false in manual mode.
+        {
+          id: 1,
+          movieId: 1,
+          size: 0,
+          customFormats: [{ id: 10, name: "HDR" }],
+          customFormatScore: 0,
+        },
+        // Movie 2 missing — flagged=true.
+        {
+          id: 2,
+          movieId: 2,
+          size: 0,
+          customFormats: [],
+          customFormatScore: 0,
+        },
+      ],
+      profiles: [],
+    });
+  });
+
+  test("showAllMedia=false forces flaggedOnly=true regardless of request", async () => {
+    const instance = await instanceService.create({
+      ...baseInstance,
+      scoringMode: "manual",
+      showAllMedia: false,
+    });
+    await preferenceRepository.setForInstance(instance.id, [
+      { cfId: 10, cfName: "HDR" },
+    ]);
+    const result = await movieService.getMovies(instance.id, {
+      page: 1,
+      limit: 50,
+      sortBy: "score",
+      order: "asc",
+      flaggedOnly: false,
+    });
+    expect(result.items.map((m) => m.id)).toEqual([2]);
+  });
+
+  test("showAllMedia=true respects flaggedOnly=false", async () => {
+    const instance = await instanceService.create({
+      ...baseInstance,
+      scoringMode: "manual",
+      showAllMedia: true,
+    });
+    await preferenceRepository.setForInstance(instance.id, [
+      { cfId: 10, cfName: "HDR" },
+    ]);
+    const result = await movieService.getMovies(instance.id, {
+      page: 1,
+      limit: 50,
+      sortBy: "score",
+      order: "asc",
+      flaggedOnly: false,
+    });
+    expect(result.items.map((m) => m.id).sort()).toEqual([1, 2]);
+  });
+});
+
+describe("MovieService.getMovies — sort edge cases", () => {
   beforeEach(async () => {
     const instance = await createInstance("manual");
     await preferenceRepository.setForInstance(instance.id, [
@@ -570,7 +706,7 @@ describe("MovieService.getFlaggedMovies — sort edge cases", () => {
 
   test("score sort pushes fileless movies to the end", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -581,7 +717,7 @@ describe("MovieService.getFlaggedMovies — sort edge cases", () => {
 
   test("size sort puts fileless movies last with two no-files comparing as equal", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "size",
@@ -592,7 +728,7 @@ describe("MovieService.getFlaggedMovies — sort edge cases", () => {
 
   test("'added' sort uses default no-op comparator", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "added",
@@ -603,7 +739,7 @@ describe("MovieService.getFlaggedMovies — sort edge cases", () => {
 
   test("hasNegativeCfIds filter excludes movies without any unwanted CF", async () => {
     const inst = (await instanceService.getAll())[0];
-    const result = await movieService.getFlaggedMovies(inst.id, {
+    const result = await movieService.getMovies(inst.id, {
       page: 1,
       limit: 50,
       sortBy: "title",
@@ -642,14 +778,14 @@ describe("MovieService — cache reuse", () => {
       ],
       profiles: [profile],
     });
-    await movieService.getFlaggedMovies(instance.id, {
+    await movieService.getMovies(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
       order: "asc",
     });
     const callsAfterFirst = fetchMock.mock.calls.length;
-    await movieService.getFlaggedMovies(instance.id, {
+    await movieService.getMovies(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
@@ -660,11 +796,11 @@ describe("MovieService — cache reuse", () => {
   });
 });
 
-describe("MovieService.getCachedFlaggedTotal", () => {
+describe("MovieService.getCachedFlaggedCount", () => {
   test("returns null when cache is cold", async () => {
     const instance = await createInstance("manual");
     expect(
-      movieService.getCachedFlaggedTotal(instance.id, "manual"),
+      movieService.getCachedFlaggedCount(instance.id, "manual"),
     ).toBeNull();
   });
 
@@ -711,29 +847,29 @@ describe("MovieService.getCachedFlaggedTotal", () => {
       profiles: [profile],
     });
     // Warm the cache via the normal path.
-    await movieService.getFlaggedMovies(instance.id, {
+    await movieService.getMovies(instance.id, {
       page: 1,
       limit: 50,
       sortBy: "score",
       order: "asc",
     });
-    expect(movieService.getCachedFlaggedTotal(instance.id, "manual")).toBe(2);
+    expect(movieService.getCachedFlaggedCount(instance.id, "manual")).toBe(2);
   });
 
   test("does not trigger any upstream fetch on a cold call", async () => {
     const instance = await createInstance("manual");
     const callsBefore = fetchMock.mock.calls.length;
-    movieService.getCachedFlaggedTotal(instance.id, "manual");
+    movieService.getCachedFlaggedCount(instance.id, "manual");
     expect(fetchMock.mock.calls.length).toBe(callsBefore);
   });
 });
 
 describe("MovieService.triggerSearch", () => {
-  test("creates a successful action log when live", async () => {
+  test("creates a searched action log when live", async () => {
     const instance = await instanceService.create(baseInstance);
     setupRadarrMocks({ movies: [], files: [], profiles: [] });
     const log = await movieService.triggerSearch(instance.id, 1, "A");
-    expect(log.status).toBe("success");
+    expect(log.status).toBe("searched");
     expect(log.action).toBe("search");
   });
 
@@ -821,10 +957,10 @@ describe("MovieService.retryFromPayload", () => {
       title: "A",
     });
     expect(log.action).toBe("search");
-    expect(log.status).toBe("success");
+    expect(log.status).toBe("searched");
   });
 
-  test("dispatches delete payloads to deleteFile (default triggerSearch=true)", async () => {
+  test("dispatches delete payloads to deleteFile (delete-only, no search)", async () => {
     const instance = await instanceService.create(baseInstance);
     setupRadarrMocks({ movies: [], files: [], profiles: [] });
     const log = await movieService.retryFromPayload({
@@ -835,24 +971,15 @@ describe("MovieService.retryFromPayload", () => {
       title: "A",
     });
     expect(log.action).toBe("delete");
-    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((u) => u.includes("/command"))).toBe(true);
-  });
-
-  test("dispatches delete_blacklist payloads with triggerSearch=false", async () => {
-    const instance = await instanceService.create(baseInstance);
-    setupRadarrMocks({ movies: [], files: [], profiles: [] });
-    const log = await movieService.retryFromPayload({
-      action: "delete_blacklist",
-      instanceId: instance.id,
-      mediaId: 1,
-      fileId: 100,
-      title: "A",
-      triggerSearch: false,
-    });
-    expect(log.action).toBe("delete");
-    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((u) => u.includes("/command"))).toBe(false);
+    // Filter POSTs only — GET /command also fires from statusPoller's
+    // command-sync tick on instance refresh, which we don't care about
+    // here. The contract under test is "no search command was POSTed."
+    const commandPosts = fetchMock.mock.calls.filter(
+      ([url, init]) =>
+        (url as string).includes("/command") &&
+        (init as RequestInit | undefined)?.method === "POST",
+    );
+    expect(commandPosts).toHaveLength(0);
   });
 
   test("throws on unknown action", async () => {
@@ -868,24 +995,22 @@ describe("MovieService.retryFromPayload", () => {
 });
 
 describe("MovieService.deleteFile", () => {
-  test("deletes the file and triggers a follow-up search by default", async () => {
+  test("deletes the file without a follow-up search", async () => {
     const instance = await instanceService.create(baseInstance);
     setupRadarrMocks({ movies: [], files: [], profiles: [] });
     const log = await movieService.deleteFile(instance.id, 1, 100, "A");
     expect(log.status).toBe("success");
     expect(log.action).toBe("delete");
-    // Verify both DELETE and command were issued.
+    // The DELETE is issued; no search command is POSTed (delete is
+    // a standalone action).
     const calls = fetchMock.mock.calls.map((c) => c[0] as string);
     expect(calls.some((u) => u.includes("/moviefile/100"))).toBe(true);
-    expect(calls.some((u) => u.includes("/command"))).toBe(true);
-  });
-
-  test("skips the follow-up search when triggerSearch=false", async () => {
-    const instance = await instanceService.create(baseInstance);
-    setupRadarrMocks({ movies: [], files: [], profiles: [] });
-    await movieService.deleteFile(instance.id, 1, 100, "A", false);
-    const calls = fetchMock.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((u) => u.includes("/command"))).toBe(false);
+    const commandPosts = fetchMock.mock.calls.filter(
+      ([url, init]) =>
+        (url as string).includes("/command") &&
+        (init as RequestInit | undefined)?.method === "POST",
+    );
+    expect(commandPosts).toHaveLength(0);
   });
 
   test("throws when instance is missing", async () => {

@@ -1,20 +1,86 @@
+import { instanceRepository } from "@/server/repositories/InstanceRepository";
+import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
+import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
+import type { ArrClient } from "@/server/clients/ArrClient";
+import type { ClientFor } from "@/server/arr/composition";
+import type { MediaServiceDeps } from "@/server/arr/definition";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 import {
   dataCache,
   CACHE_STALE_MS,
   CACHE_TTL_MS,
-} from "@/server/lib/DataCache";
-import { SCORE_FOR } from "@/shared/scoring-mode";
+} from "@/server/lib/data-cache";
+import { LogSource } from "@/shared/types/models";
+import { isProfileMode, SCORE_FOR } from "@/shared/scoring-mode";
+import { getSeverity } from "@/shared/severity";
 import type {
   ActionLog,
   ActionType,
-  FlaggedMedia,
+  CustomFormat,
+  ArrType,
+  MediaItem,
+  Instance,
   MediaQuery,
+  MediaType,
+  QualityProfile,
   ScoringMode,
 } from "@/shared/types/models";
 import { dryRunService } from "./DryRunService";
+
+interface ProfileMaps {
+  byId: Map<number, QualityProfile>;
+  scoresByProfile: Map<number, Map<number, number>>;
+  positiveByProfile: Map<number, CustomFormat[]>;
+}
+
+interface DecorateArgs {
+  fileCfs: Array<{ id: number; name: string }>;
+  cfScoreMap: Map<number, number>;
+  positiveProfileCfs: CustomFormat[];
+}
+
+interface DecorateResult {
+  customFormats: CustomFormat[];
+  missingFormats: CustomFormat[];
+  unwantedFormats: CustomFormat[];
+}
+
+interface ProfileItemContext<TUpstream, TFile> {
+  item: TUpstream;
+  file: TFile;
+  profile: QualityProfile;
+  cfScoreMap: Map<number, number>;
+  positiveProfileCfs: CustomFormat[];
+}
+
+interface ManualItemContext<TUpstream, TFile> {
+  item: TUpstream;
+  file: TFile;
+  profileMaps: ProfileMaps;
+  wantedIds: number[];
+  wantedCfs: Array<{ id: number; name: string }>;
+}
+
+interface BuildPipelineArgs<TUpstream extends UpstreamItem, TFile, TItem> {
+  instance: Instance;
+  mode: ScoringMode;
+  mediaType: MediaType;
+  items: TUpstream[];
+  profiles: QualityProfile[];
+  filesFor: (item: TUpstream) => TFile;
+  toProfileItem: (ctx: ProfileItemContext<TUpstream, TFile>) => TItem;
+  toManualItem: (ctx: ManualItemContext<TUpstream, TFile>) => TItem;
+}
+
+// Minimal shape every *arr upstream item satisfies — used as the
+// `extends` constraint on `runBuildPipeline`'s TUpstream so the
+// orchestrator can consult `id` + `qualityProfileId` without forcing
+// the subclass to thread its concrete payload type through here.
+interface UpstreamItem {
+  id: number;
+  qualityProfileId: number;
+}
 
 interface ExecuteActionOptions {
   instanceId: number;
@@ -24,7 +90,14 @@ interface ExecuteActionOptions {
   title: string;
   actionLogId?: number;
   payload?: Record<string, unknown>;
-  run: () => Promise<void>;
+  // UUID linking sibling rows from one bulk submission. Stamped on the
+  // ActionLog row at write time. Undefined for single-item dispatches.
+  groupId?: string;
+  // Run the upstream effect. Optionally returns { commandId } from the
+  // *arr response — when present, it's stamped on the ActionLog row
+  // alongside the success transition. Non-search actions (delete,
+  // ignore) keep returning void.
+  run: () => Promise<void | { commandId: number }>;
 }
 
 interface ReadWithSwrOptions<TCached> {
@@ -53,20 +126,28 @@ function logContext(opts: ExecuteActionOptions, isDryRun: boolean) {
   };
 }
 
-function compareMedia<T extends FlaggedMedia>(
+// True iff the item has at least one file on disk. Replaces the
+// per-subclass `hasFile` callback that used to be threaded through
+// applyQuery / compareMedia / getSeverity. Field-based check fixes the
+// long-standing bug where a Sonarr series with 1-of-100 episodes
+// downloaded reported `hasFile=true`.
+function itemHasFile(item: MediaItem): boolean {
+  return item.existingFileCount > 0;
+}
+
+function compareMedia<T extends MediaItem>(
   a: T,
   b: T,
   sortBy: MediaQuery["sortBy"],
   mode: ScoringMode,
   dir: 1 | -1,
-  hasFile: (item: T) => boolean,
 ): number {
   if (sortBy === "added") return 0;
   if (sortBy === "title") return a.title.localeCompare(b.title) * dir;
   // Items without a file sink to the bottom regardless of sort direction so
   // the "worst N" view is never polluted by entries with no on-disk reference.
-  const aHas = hasFile(a);
-  const bHas = hasFile(b);
+  const aHas = itemHasFile(a);
+  const bHas = itemHasFile(b);
   if (aHas !== bHas) return aHas ? -1 : 1;
   if (!aHas) return 0;
   if (sortBy === "score") {
@@ -77,33 +158,255 @@ function compareMedia<T extends FlaggedMedia>(
   return (a.sizeOnDisk - b.sizeOnDisk) * dir;
 }
 
-export abstract class MediaService<TFlagged extends FlaggedMedia> {
+// Match a list of CF ids against the CFs an item carries on a given
+// axis (missingFormats / unwantedFormats). Used twice in `applyQuery`
+// — extracted here so the per-axis filter is a single line at the
+// call site and applyQuery's cognitive-complexity stays under threshold.
+function filterByCfList<T extends MediaItem>(
+  items: T[],
+  wanted: number[],
+  match: "any" | "all",
+  axis: (item: T) => CustomFormat[],
+): T[] {
+  const matchAll = match === "all";
+  return items.filter((m) => {
+    const have = new Set(axis(m).map((cf) => cf.id));
+    return matchAll
+      ? wanted.every((id) => have.has(id))
+      : wanted.some((id) => have.has(id));
+  });
+}
+
+// Three small filter passes split by axis so each function stays under
+// the cognitive-complexity threshold and applyQuery's pipeline reads as
+// a sequence of named steps.
+function filterMedia<T extends MediaItem>(
+  source: T[],
+  query: MediaQuery,
+  mode: ScoringMode,
+): T[] {
+  // Exact-id filter short-circuits every other axis — used by deep-links
+  // from /history and dashboard to land on a single specific item.
+  // Bypasses flaggedOnly/severity/etc. so the linked item is found even
+  // if other filters would normally exclude it. `!= null` (loose
+  // equality) rejects BOTH null and undefined — the client's `null`
+  // sentinel reaches here unchanged when callers spread MediaFilters
+  // straight into MediaQuery, and an `=== null` filter call would
+  // silently match nothing.
+  if (query.mediaId != null) {
+    return source.filter((m) => m.id === query.mediaId);
+  }
+  const visibility = applyVisibilityFilters(source, query);
+  const ranges = applyRangeFilters(visibility, query, mode);
+  return applyMatchFilters(ranges, query);
+}
+
+// Show-or-hide filters: flagged-only, monitor status, only-missing.
+// Drive what enters the user's view (vs. composing on the score axis).
+function applyVisibilityFilters<T extends MediaItem>(
+  source: T[],
+  query: MediaQuery,
+): T[] {
+  let out = source;
+  // Default-on flagged-only filter preserves the original contract
+  // ("flagged items only"). Set query.flaggedOnly === false for
+  // "Show all".
+  if (query.flaggedOnly !== false) out = out.filter((m) => m.flagged);
+  if (query.monitorStatus && query.monitorStatus !== "all") {
+    const status = query.monitorStatus;
+    out = out.filter((m) => matchesMonitor(m, status));
+  }
+  return out;
+}
+
+// Numeric / enum ranges: score, size, severity. All evaluate a per-item
+// scalar against the query bounds.
+function applyRangeFilters<T extends MediaItem>(
+  source: T[],
+  query: MediaQuery,
+  mode: ScoringMode,
+): T[] {
+  const scoreOf = SCORE_FOR[mode];
+  let out = source;
+  if (query.minScore !== undefined) {
+    const min = query.minScore;
+    out = out.filter((m) => scoreOf(m) >= min);
+  }
+  if (query.maxScore !== undefined) {
+    const max = query.maxScore;
+    out = out.filter((m) => scoreOf(m) <= max);
+  }
+  if (query.minSize !== undefined) {
+    const min = query.minSize;
+    out = out.filter((m) => m.sizeOnDisk >= min);
+  }
+  if (query.maxSize !== undefined) {
+    const max = query.maxSize;
+    out = out.filter((m) => m.sizeOnDisk <= max);
+  }
+  if (query.severities && query.severities.length > 0) {
+    const wanted = new Set(query.severities);
+    out = out.filter((m) =>
+      wanted.has(
+        getSeverity(scoreOf(m), m.minProfileScore, mode, itemHasFile(m)),
+      ),
+    );
+  }
+  return out;
+}
+
+// Identity / set-membership filters: query string, profile ids, CF lists.
+function applyMatchFilters<T extends MediaItem>(
+  source: T[],
+  query: MediaQuery,
+): T[] {
+  let out = source;
+  if (query.q) {
+    const q = query.q.toLowerCase();
+    out = out.filter(
+      (m) =>
+        m.title.toLowerCase().includes(q) ||
+        m.missingFormats.some((cf) => cf.name.toLowerCase().includes(q)),
+    );
+  }
+  if (query.profileIds && query.profileIds.length > 0) {
+    const wanted = new Set(query.profileIds);
+    out = out.filter((m) => wanted.has(m.qualityProfileId));
+  }
+  if (query.missingCfIds && query.missingCfIds.length > 0) {
+    out = filterByCfList(
+      out,
+      query.missingCfIds,
+      query.missingCfMatch ?? "all",
+      (m) => m.missingFormats,
+    );
+  }
+  if (query.hasNegativeCfIds && query.hasNegativeCfIds.length > 0) {
+    out = filterByCfList(
+      out,
+      query.hasNegativeCfIds,
+      query.hasNegativeCfMatch ?? "all",
+      (m) => m.unwantedFormats,
+    );
+  }
+  return out;
+}
+
+// Predicate matching a MediaQuery `monitorStatus` value against an item's
+// monitor + file-count state. "missing" means monitored AND at least one
+// expected file is absent.
+function matchesMonitor(
+  item: MediaItem,
+  status: NonNullable<MediaQuery["monitorStatus"]>,
+): boolean {
+  switch (status) {
+    case "all":
+      return true;
+    case "monitored":
+      return item.monitored;
+    case "unmonitored":
+      return !item.monitored;
+    case "missing":
+      return item.monitored && item.existingFileCount < item.totalFileCount;
+  }
+}
+
+export abstract class MediaService<TItem extends MediaItem> {
   protected abstract readonly cacheNamespace: string;
 
-  protected abstract getFlaggedForWarm(
+  // DI dependencies — currently only the universal createClient factory.
+  // Injected by the composition root so MediaService doesn't reach for
+  // ArrClientFactory statically, which kept the old factory→service
+  // cycle latent. Subclasses inherit this constructor as-is; per-arr
+  // factories pass deps through the composition root.
+  constructor(protected readonly deps: MediaServiceDeps) {}
+
+  // Tracks the timestamp of the most recent failed cache rebuild per key.
+  // getCachedFlaggedCount / getCachedTotalCount return 0 (not null) for
+  // BUILD_FAILURE_COOLDOWN_MS after a failure so the dashboard stops the
+  // 5-second skeleton-poll loop while the instance is unreachable.
+  private readonly buildFailures = new Map<string, number>();
+  private static readonly BUILD_FAILURE_COOLDOWN_MS = 60_000;
+
+  protected abstract getForWarm(
     instanceId: number,
     query: MediaQuery,
-  ): Promise<{ items: TFlagged[]; total: number }>;
+  ): Promise<{ items: TItem[]; total: number }>;
 
-  protected flaggedCacheKey(instanceId: number, mode: ScoringMode): string {
+  protected mediaCacheKey(instanceId: number, mode: ScoringMode): string {
     return `${this.cacheNamespace}:${instanceId}:${mode}`;
   }
 
-  getCachedFlaggedTotal(instanceId: number, mode: ScoringMode): number | null {
-    const cached = dataCache.get<{ flagged: TFlagged[] }>(
-      this.flaggedCacheKey(instanceId, mode),
-      CACHE_TTL_MS,
+  // Flagged subset of the cache (per-item `flagged === true`). The
+  // dashboard reads this for the "X flagged" KPI; before this PR the
+  // method returned `cached.items.length`, which made a 1,000-movie
+  // library show as "1,000 flagged" once any item entered the cache.
+  //
+  // Reads from the full TTL+STALE window so the dashboard count tracks
+  // whatever the actual `/api/<arr>/<media>` path would serve. With the
+  // strict TTL here, an unrelated mutation (e.g. changing another
+  // instance's scoring mode 6 minutes after page load) would cause this
+  // instance's KPI to flip to skeleton even though its endpoint still
+  // returns data from the SWR stale window.
+  getCachedFlaggedCount(instanceId: number, mode: ScoringMode): number | null {
+    const key = this.mediaCacheKey(instanceId, mode);
+    const cached = dataCache.get<{ items: TItem[] }>(
+      key,
+      CACHE_TTL_MS + CACHE_STALE_MS,
     );
-    return cached?.flagged.length ?? null;
+    if (cached !== null) return cached.items.filter((m) => m.flagged).length;
+    return this.failureFallback(key);
   }
 
-  warmFlaggedCache(instanceId: number): Promise<unknown> {
-    return this.getFlaggedForWarm(instanceId, {
+  // Visible-library size (cache row count). Used as the denominator
+  // in the dashboard's "X / Y" KPI. Same TTL+STALE window as
+  // `getCachedFlaggedCount` so both counts surface or skeleton in lockstep.
+  getCachedTotalCount(instanceId: number, mode: ScoringMode): number | null {
+    const key = this.mediaCacheKey(instanceId, mode);
+    const cached = dataCache.get<{ items: TItem[] }>(
+      key,
+      CACHE_TTL_MS + CACHE_STALE_MS,
+    );
+    if (cached !== null) return cached.items.length;
+    return this.failureFallback(key);
+  }
+
+  // Returns 0 while a rebuild failure cooldown is active, null otherwise.
+  // 0 signals "data unavailable" to the dashboard without triggering the
+  // fast 5s polling loop that null causes.
+  private failureFallback(key: string): number | null {
+    const failedAt = this.buildFailures.get(key);
+    if (
+      failedAt !== undefined &&
+      Date.now() - failedAt < MediaService.BUILD_FAILURE_COOLDOWN_MS
+    ) {
+      return 0;
+    }
+    return null;
+  }
+
+  private markBuildFailure(key: string): void {
+    this.buildFailures.set(key, Date.now());
+  }
+
+  private clearBuildFailure(key: string): void {
+    this.buildFailures.delete(key);
+  }
+
+  warmMediaCache(instanceId: number): Promise<unknown> {
+    return this.getForWarm(instanceId, {
       page: 1,
       limit: 1,
       sortBy: "score",
       order: "asc",
     });
+  }
+
+  getItems(
+    instanceId: number,
+    query: MediaQuery,
+  ): Promise<{ items: TItem[]; total: number }> {
+    return this.getForWarm(instanceId, query);
   }
 
   protected async readWithSwr<TCached>({
@@ -132,85 +435,245 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
       // dataCache.rebuild guard ensures concurrent stale reads share one
       // rebuild rather than firing parallel upstream calls.
       if (!dataCache.isRebuilding(cacheKey)) {
-        void dataCache.rebuild(cacheKey, build).catch((err) => {
-          appLogger.error(backgroundErrorMessage, {
-            source: logSource,
-            err,
-            context: { instanceId, cacheKey },
-          });
-        });
+        void dataCache.rebuild(cacheKey, build).then(
+          () => {
+            this.clearBuildFailure(cacheKey);
+          },
+          (err) => {
+            this.markBuildFailure(cacheKey);
+            appLogger.error(backgroundErrorMessage, {
+              source: logSource,
+              err,
+              context: { instanceId, cacheKey },
+            });
+          },
+        );
       }
       return result.value;
     }
 
     // Miss — block on rebuild. Concurrent miss callers share the same
     // promise via dataCache.rebuild.
-    return dataCache.rebuild(cacheKey, build);
+    try {
+      const value = await dataCache.rebuild(cacheKey, build);
+      this.clearBuildFailure(cacheKey);
+      return value;
+    } catch (err) {
+      this.markBuildFailure(cacheKey);
+      throw err;
+    }
   }
 
-  protected applyQuery<T extends FlaggedMedia>(
+  // Resolves an instance + creates its ArrClient. Optional `expectedType`
+  // runtime-checks `instance.type` so a misuse (e.g. asking for "sonarr"
+  // with a radarr id) throws here, not at first method call.
+  //
+  // Overloads: when `expectedType` is supplied, the returned client is
+  // narrowed to the matching concrete subclass via `ClientFor<T>` (from
+  // the arr composition root). That removes the per-call `as SonarrClient`
+  // casts in subclass services. Without `expectedType`, the type stays
+  // `ArrClient` — callers that don't need narrowing pay nothing.
+  protected async withClient<T extends ArrType>(
+    instanceId: number,
+    expectedType: T,
+  ): Promise<{ instance: Instance; client: ClientFor<T> }>;
+  protected async withClient(
+    instanceId: number,
+  ): Promise<{ instance: Instance; client: ArrClient }>;
+  protected async withClient(
+    instanceId: number,
+    expectedType?: ArrType,
+  ): Promise<{ instance: Instance; client: ArrClient }> {
+    const instance = await instanceRepository.findById(instanceId);
+    if (!instance) throw new Error(`Instance ${instanceId} not found`);
+    if (expectedType && instance.type !== expectedType) {
+      throw new Error(
+        `Instance ${instanceId} is type ${instance.type}, expected ${expectedType}`,
+      );
+    }
+    return { instance, client: this.deps.createClient(instance) };
+  }
+
+  // Typed variant of `withClient` for callers that already hold the
+  // instance (e.g. internal `build*` methods called from `getMovies` /
+  // `getSeries`). Runtime-checks `instance.type` against `expectedType`
+  // and returns the narrowed concrete client via `ClientFor<T>` — no
+  // extra repo round-trip, no `as SonarrClient` cast at the call site.
+  //
+  // Throws a plain `Error` on mismatch — this method is only reachable
+  // from internal `build*` paths where the arr-type is established by
+  // construction (the per-arr service is wired to its own type via
+  // composition root). A mismatch firing here means a programmer bug,
+  // not user input, so a 500 is the correct surfaced status. Route
+  // handlers that take user-supplied `instanceId` validate the type
+  // *before* getting here via `assertArrType` in `api-errors.ts`.
+  protected clientFromInstance<T extends ArrType>(
+    instance: Instance,
+    expectedType: T,
+  ): ClientFor<T> {
+    if (instance.type !== expectedType) {
+      throw new Error(
+        `Instance ${instance.id} is type ${instance.type}, expected ${expectedType}`,
+      );
+    }
+    return this.deps.createClient(instance) as ClientFor<T>;
+  }
+
+  // Build the three profile-derived maps every *arr build needs:
+  //   byId — profile lookup, also used to drop items pointing at a
+  //     deleted profile (broken upstream state).
+  //   scoresByProfile — per-profile cfId → score, used to enrich
+  //     `customFormats` and partition `unwantedFormats`.
+  //   positiveByProfile — per-profile profile-rewarded CFs as
+  //     `CustomFormat[]` (carrying score), used as the `missingFormats`
+  //     candidate set in profile mode.
+  protected buildProfileMaps(profiles: QualityProfile[]): ProfileMaps {
+    const byId = new Map(profiles.map((p) => [p.id, p]));
+    const scoresByProfile = new Map<number, Map<number, number>>();
+    const positiveByProfile = new Map<number, CustomFormat[]>();
+    for (const p of profiles) {
+      const cfMap = new Map<number, number>();
+      for (const item of p.formatItems) cfMap.set(item.format, item.score);
+      scoresByProfile.set(p.id, cfMap);
+      positiveByProfile.set(
+        p.id,
+        p.formatItems
+          .filter((item) => item.score > 0)
+          .map((item) => ({
+            id: item.format,
+            name: item.name,
+            score: item.score,
+          })),
+      );
+    }
+    return { byId, scoresByProfile, positiveByProfile };
+  }
+
+  // Resolve the set of media ids the user has marked "ignore" for this
+  // instance. Filtered to the caller's mediaType because IgnoreEntry rows
+  // share the table across all media types.
+  protected async findIgnoredMediaIds(
+    instanceId: number,
+    mediaType: MediaType,
+  ): Promise<Set<number>> {
+    const entries = await ignoreRepository.findByInstance(instanceId);
+    return new Set(
+      entries.filter((e) => e.mediaType === mediaType).map((e) => e.mediaId),
+    );
+  }
+
+  // Partition a file's CFs into the three shapes downstream code reads:
+  //   customFormats — every CF the file carries, enriched with the
+  //     profile's score for that CF (so the UI can colour by score).
+  //   missingFormats — profile-rewarded CFs the file does NOT carry.
+  //   unwantedFormats — CFs the file carries that score < 0 in the profile.
+  // Pure function over its inputs; no IO or state.
+  protected decorateCustomFormats({
+    fileCfs,
+    cfScoreMap,
+    positiveProfileCfs,
+  }: DecorateArgs): DecorateResult {
+    const fileCfIds = new Set(fileCfs.map((cf) => cf.id));
+    const customFormats: CustomFormat[] = fileCfs.map((cf) => ({
+      id: cf.id,
+      name: cf.name,
+      score: cfScoreMap.get(cf.id),
+    }));
+    const missingFormats = positiveProfileCfs.filter(
+      (cf) => !fileCfIds.has(cf.id),
+    );
+    const unwantedFormats: CustomFormat[] = fileCfs
+      .filter((cf) => (cfScoreMap.get(cf.id) ?? 0) < 0)
+      .map((cf) => ({
+        id: cf.id,
+        name: cf.name,
+        score: cfScoreMap.get(cf.id),
+      }));
+    return { customFormats, missingFormats, unwantedFormats };
+  }
+
+  // Template-method orchestrator for the build pipeline. The subclass
+  // provides the upstream items + per-item file resolver + per-mode
+  // adapters; this method handles the cross-arr concerns:
+  //   1. Build profile maps.
+  //   2. Skip ignored items.
+  //   3. In profile mode: skip items pointing at a deleted profile
+  //      (broken upstream state, can't be scored).
+  //   4. In manual mode: load wanted-CF prefs once.
+  //   5. Dispatch to the per-mode adapter for each visible item.
+  //
+  // TUpstream / TFile are method-scoped generics so the class itself
+  // stays single-generic on TItem (test subclasses don't need to
+  // thread types they never use).
+  protected async runBuildPipeline<TUpstream extends UpstreamItem, TFile>(
+    args: BuildPipelineArgs<TUpstream, TFile, TItem>,
+  ): Promise<TItem[]> {
+    const { instance, mode, mediaType, items, profiles, filesFor } = args;
+    const profileMaps = this.buildProfileMaps(profiles);
+    const ignoredSet = await this.findIgnoredMediaIds(instance.id, mediaType);
+    const visible = items.filter((i) => !ignoredSet.has(i.id));
+
+    if (isProfileMode(mode)) {
+      return visible
+        .filter((i) => profileMaps.byId.has(i.qualityProfileId))
+        .map((item) => {
+          const profile = profileMaps.byId.get(item.qualityProfileId)!;
+          const cfScoreMap =
+            profileMaps.scoresByProfile.get(item.qualityProfileId) ??
+            new Map<number, number>();
+          const positiveProfileCfs =
+            profileMaps.positiveByProfile.get(item.qualityProfileId) ?? [];
+          return args.toProfileItem({
+            item,
+            file: filesFor(item),
+            profile,
+            cfScoreMap,
+            positiveProfileCfs,
+          });
+        });
+    }
+
+    const prefs = await preferenceRepository.findByInstance(instance.id);
+    const wantedIds = prefs.map((p) => p.cfId);
+    const wantedCfs = prefs.map((p) => ({ id: p.cfId, name: p.cfName }));
+
+    return visible.map((item) =>
+      args.toManualItem({
+        item,
+        file: filesFor(item),
+        profileMaps,
+        wantedIds,
+        wantedCfs,
+      }),
+    );
+  }
+
+  protected applyQuery<T extends MediaItem>(
     source: T[],
     query: MediaQuery,
     mode: ScoringMode,
-    hasFile: (item: T) => boolean,
   ): { items: T[]; total: number } {
-    let flagged = source;
-
-    if (query.onlyMissing) {
-      flagged = flagged.filter((m) => !hasFile(m));
-    }
-
-    const maxScore = query.maxScore;
-    if (maxScore !== undefined) {
-      // Filter against the same accessor the score sort uses, so the
-      // "max score" slider behaves consistently across modes.
-      const scoreOf = SCORE_FOR[mode];
-      flagged = flagged.filter((m) => scoreOf(m) <= maxScore);
-    }
-
-    if (query.q) {
-      const q = query.q.toLowerCase();
-      flagged = flagged.filter(
-        (m) =>
-          m.title.toLowerCase().includes(q) ||
-          m.missingFormats.some((cf) => cf.name.toLowerCase().includes(q)),
-      );
-    }
-
-    if (query.profileId !== undefined) {
-      flagged = flagged.filter((m) => m.qualityProfileId === query.profileId);
-    }
-
-    if (query.missingCfIds && query.missingCfIds.length > 0) {
-      const wanted = query.missingCfIds;
-      const matchAll = (query.missingCfMatch ?? "all") === "all";
-      flagged = flagged.filter((m) => {
-        const have = new Set(m.missingFormats.map((cf) => cf.id));
-        return matchAll
-          ? wanted.every((id) => have.has(id))
-          : wanted.some((id) => have.has(id));
-      });
-    }
-
-    if (query.hasNegativeCfIds && query.hasNegativeCfIds.length > 0) {
-      const wanted = query.hasNegativeCfIds;
-      const matchAll = (query.hasNegativeCfMatch ?? "all") === "all";
-      flagged = flagged.filter((m) => {
-        const have = new Set(m.unwantedFormats.map((cf) => cf.id));
-        return matchAll
-          ? wanted.every((id) => have.has(id))
-          : wanted.some((id) => have.has(id));
-      });
-    }
-
+    const filtered = filterMedia(source, query, mode);
     const dir = query.order === "asc" ? 1 : -1;
-    const sorted = [...flagged].sort((a, b) =>
-      compareMedia(a, b, query.sortBy, mode, dir, hasFile),
+    const sorted = [...filtered].sort((a, b) =>
+      compareMedia(a, b, query.sortBy, mode, dir),
     );
-
     const total = sorted.length;
     const start = (query.page - 1) * query.limit;
     return { items: sorted.slice(start, start + query.limit), total };
+  }
+
+  // Defense-in-depth normalization. The page-level "Show all" toggle is
+  // gated by Instance.showAllMedia — a per-instance opt-in. When the
+  // instance has the flag off, force `flaggedOnly = true` regardless of
+  // what the request asks. The UI also hides the toggle, but an attacker
+  // / curious user with the X-Api-Key could still hit `?flaggedOnly=false`
+  // directly; this layer makes the flag a real capability gate.
+  protected enforceShowAllMedia(
+    query: MediaQuery,
+    instance: Instance,
+  ): MediaQuery {
+    return instance.showAllMedia ? query : { ...query, flaggedOnly: true };
   }
 
   protected async executeAction(
@@ -227,6 +690,8 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
       status: isDryRun ? "dry_run" : "pending",
       error: null,
       payload: opts.payload ? JSON.stringify(opts.payload) : null,
+      groupId: opts.groupId ?? null,
+      commandId: null,
     } satisfies Omit<ActionLog, "id" | "createdAt" | "lastRetriedAt">;
 
     // Retry path keeps the original createdAt so the History UI can show
@@ -249,7 +714,7 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
     }
 
     try {
-      await opts.run();
+      const result = await opts.run();
       // Bust the flagged-media cache so the UI sees the post-action state on
       // the next read (deleted/searched item gone) instead of the previous
       // 5-minute snapshot. Dry runs and failed actions don't invalidate —
@@ -259,7 +724,17 @@ export abstract class MediaService<TFlagged extends FlaggedMedia> {
         source: LogSource.MediaAction,
         context: logContext(opts, false),
       });
-      return logRepository.update(logEntry.id, { status: "success" });
+      // Stamp the upstream commandId when the run returned one (search
+      // actions) and use the "searched" status so the row reads as
+      // "search command queued upstream" rather than the misleading
+      // "success" — actual outcome lands later via statusPoller. For
+      // delete/ignore (no commandId), "success" remains accurate
+      // because there's no post-dispatch lifecycle to wait on.
+      const successUpdate: Partial<ActionLog> =
+        result && "commandId" in result
+          ? { status: "searched", commandId: result.commandId }
+          : { status: "success" };
+      return logRepository.update(logEntry.id, successUpdate);
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       appLogger.error(`Media action failed: ${describe(opts)}`, {

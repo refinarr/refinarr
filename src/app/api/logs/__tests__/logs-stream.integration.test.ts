@@ -70,6 +70,7 @@ function makeEntry(
     message,
     source: null,
     context: null,
+    instanceId: null,
     createdAt: new Date(),
   };
 }

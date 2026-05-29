@@ -1,5 +1,14 @@
 import { encryptSecret, decryptSecret, isEncrypted } from "@/server/lib/crypto";
-import type { Instance, ScoringMode } from "@/shared/types/models";
+import { isAutoSearchScoringMode } from "@/shared/scoring-mode";
+import type {
+  ArrType,
+  AutoSearchPickStrategy,
+  AutoSearchScheduleMode,
+  AutoSearchScope,
+  AutoSearchScoringMode,
+  Instance,
+  ScoringMode,
+} from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
 
 interface RawInstanceRow {
@@ -11,24 +20,84 @@ interface RawInstanceRow {
   enabled: boolean;
   scoringMode: string;
   searchesPerHour: number;
+  showAllMedia: boolean;
   createdAt: Date;
+  autoSearchEnabled: boolean;
+  autoSearchScheduleMode: string;
+  autoSearchIntervalMinutes: number;
+  autoSearchCronExpression: string;
+  autoSearchBatchLimit: number;
+  autoSearchLastRunAt: Date | null;
+  autoSearchMonitoredOnly: boolean;
+  autoSearchScope: string;
+  autoSearchPickStrategy: string;
+  autoSearchCooldownHours: number;
+  autoSearchPausedUntil: Date | null;
+  autoSearchScoringMode: string;
+  autoSearchFailedStreak: number;
+}
+
+function toAutoSearchScoringMode(v: string): AutoSearchScoringMode {
+  return isAutoSearchScoringMode(v) ? v : "inherit";
 }
 
 function toInstance(row: RawInstanceRow): Instance {
-  return { ...row, apiKey: decryptSecret(row.apiKey) } as Instance;
+  return {
+    ...row,
+    apiKey: decryptSecret(row.apiKey),
+    type: row.type as ArrType,
+    scoringMode: row.scoringMode as ScoringMode,
+    autoSearchScheduleMode:
+      row.autoSearchScheduleMode as AutoSearchScheduleMode,
+    autoSearchScope: row.autoSearchScope as AutoSearchScope,
+    autoSearchPickStrategy:
+      row.autoSearchPickStrategy as AutoSearchPickStrategy,
+    autoSearchScoringMode: toAutoSearchScoringMode(row.autoSearchScoringMode),
+  };
 }
 
-// Both columns have DB-level defaults, so callers don't need to provide
-// them on create — the column will fill in.
+// Columns with DB-level defaults are optional on create — Prisma fills
+// them in. Keeps test fixtures from having to spell them out.
 type CreateInstanceInput = Omit<
   Instance,
-  "id" | "createdAt" | "scoringMode" | "searchesPerHour"
+  | "id"
+  | "createdAt"
+  | "scoringMode"
+  | "searchesPerHour"
+  | "showAllMedia"
+  | "autoSearchEnabled"
+  | "autoSearchScheduleMode"
+  | "autoSearchIntervalMinutes"
+  | "autoSearchCronExpression"
+  | "autoSearchBatchLimit"
+  | "autoSearchLastRunAt"
+  | "autoSearchMonitoredOnly"
+  | "autoSearchScope"
+  | "autoSearchPickStrategy"
+  | "autoSearchCooldownHours"
+  | "autoSearchPausedUntil"
+  | "autoSearchScoringMode"
+  | "autoSearchFailedStreak"
 > & {
   scoringMode?: ScoringMode;
   searchesPerHour?: number;
+  showAllMedia?: boolean;
+  autoSearchEnabled?: boolean;
+  autoSearchScheduleMode?: AutoSearchScheduleMode;
+  autoSearchIntervalMinutes?: number;
+  autoSearchCronExpression?: string;
+  autoSearchBatchLimit?: number;
+  autoSearchLastRunAt?: Date | null;
+  autoSearchMonitoredOnly?: boolean;
+  autoSearchScope?: AutoSearchScope;
+  autoSearchPickStrategy?: AutoSearchPickStrategy;
+  autoSearchCooldownHours?: number;
+  autoSearchPausedUntil?: Date | null;
+  autoSearchScoringMode?: AutoSearchScoringMode;
+  autoSearchFailedStreak?: number;
 };
 
-export class InstanceRepository extends BaseRepository<Instance> {
+class InstanceRepository extends BaseRepository<Instance> {
   async findById(id: number): Promise<Instance | null> {
     const row = (await this.db.instance.findUnique({
       where: { id },
@@ -72,6 +141,27 @@ export class InstanceRepository extends BaseRepository<Instance> {
 
   async delete(id: number): Promise<void> {
     await this.db.instance.delete({ where: { id } });
+  }
+
+  async stampLastRunAt(id: number, when: Date): Promise<void> {
+    await this.db.instance.update({
+      where: { id },
+      data: { autoSearchLastRunAt: when },
+    });
+  }
+
+  async resetFailedStreak(id: number): Promise<void> {
+    await this.db.instance.update({
+      where: { id },
+      data: { autoSearchFailedStreak: 0 },
+    });
+  }
+
+  async bumpFailedStreak(id: number): Promise<void> {
+    await this.db.instance.update({
+      where: { id },
+      data: { autoSearchFailedStreak: { increment: 1 } },
+    });
   }
 
   async migrateUnencrypted(): Promise<number> {

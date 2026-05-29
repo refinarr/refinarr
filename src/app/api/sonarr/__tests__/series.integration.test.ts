@@ -37,7 +37,7 @@ const profile = {
 };
 
 describe("GET /api/sonarr/series", () => {
-  test("returns paginated FlaggedSeries wrapper", async () => {
+  test("returns paginated SeriesItem wrapper", async () => {
     const instanceId = await makeInstance();
     await preferenceRepository.setForInstance(instanceId, [
       { cfId: 10, cfName: "HDR" },
@@ -112,7 +112,7 @@ describe("POST /api/sonarr/series/search", () => {
 });
 
 describe("POST /api/sonarr/series/delete", () => {
-  test("deletes each fileId inline and enqueues the optional search", async () => {
+  test("deletes each fileId inline without enqueuing a search", async () => {
     const instanceId = await makeInstance();
     const deletedFiles: number[] = [];
     let commandHit = false;
@@ -136,7 +136,6 @@ describe("POST /api/sonarr/series/delete", () => {
           mediaId: 1,
           fileIds: [10, 11],
           title: "Show",
-          search: true,
         }),
       }),
       ctxNone,
@@ -144,12 +143,10 @@ describe("POST /api/sonarr/series/delete", () => {
     expect(res.status).toBe(200);
     expect((await res.json()).status).toBe("success");
     expect(deletedFiles.sort()).toEqual([10, 11]);
-    // Search is queued for the worker — route does not dispatch it inline.
+    // Delete is a standalone action — no search command, nothing queued.
     expect(commandHit).toBe(false);
     const queued =
       await searchQueueRepository.findPendingByInstance(instanceId);
-    expect(queued).toHaveLength(1);
-    expect(queued[0].mediaId).toBe(1);
-    expect(queued[0].action).toBe("series");
+    expect(queued).toHaveLength(0);
   });
 });

@@ -96,22 +96,6 @@ describe("useFilterChips", () => {
     expect(chip).toBeTruthy();
   });
 
-  it("emits an onlyMissing chip when toggled on", () => {
-    const { result } = renderHook(
-      () => {
-        const filters = useMediaFilters("manual", 1);
-        return { filters, ...useFilterChips({ filters, prefs, profiles }) };
-      },
-      { wrapper },
-    );
-    act(() =>
-      result.current.filters.setFilters((f) => ({ ...f, onlyMissing: true })),
-    );
-    expect(result.current.chips.some((c) => c.key === "onlyMissing")).toBe(
-      true,
-    );
-  });
-
   it("clearActiveFilters resets value-bearing filters but keeps sort + match modes", () => {
     let captured!: MediaFiltersResult["filters"];
     const { result } = renderHook(
@@ -126,11 +110,14 @@ describe("useFilterChips", () => {
       result.current.filters.setFilters((f) => ({
         ...f,
         q: "x",
-        profileId: 100,
+        profileIds: [100],
+        severities: ["critical"],
         missingCfIds: [10],
         hasNegativeCfIds: [50],
+        minScore: 0,
         maxScore: 0.5,
-        onlyMissing: true,
+        minSize: 0,
+        maxSize: 1_000_000_000,
         sortBy: "title",
         order: "desc",
         missingCfMatch: "any",
@@ -139,11 +126,14 @@ describe("useFilterChips", () => {
     act(() => result.current.clearActiveFilters());
     captured = result.current.filters.filters;
     expect(captured.q).toBe("");
-    expect(captured.profileId).toBe(null);
+    expect(captured.profileIds).toEqual([]);
+    expect(captured.severities).toEqual([]);
     expect(captured.missingCfIds).toEqual([]);
     expect(captured.hasNegativeCfIds).toEqual([]);
-    expect(captured.maxScore).toBe(1);
-    expect(captured.onlyMissing).toBe(false);
+    expect(captured.minScore).toBeNull();
+    expect(captured.maxScore).toBeNull();
+    expect(captured.minSize).toBeNull();
+    expect(captured.maxSize).toBeNull();
     // Preferences preserved
     expect(captured.sortBy).toBe("title");
     expect(captured.order).toBe("desc");

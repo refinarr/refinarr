@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi } from "vitest";
-import type { FlaggedMovie, QualityProfile } from "@/shared/types/models";
+import type { MovieItem, QualityProfile } from "@/shared/types/models";
 import { renderWithProviders, screen } from "@/test/render";
 import { MovieDetailDrawer } from "../MovieDetailDrawer";
 
-const movie: FlaggedMovie = {
+const movie: MovieItem = {
   id: 1,
   title: "Fearless",
   year: 2020,
@@ -17,6 +17,10 @@ const movie: FlaggedMovie = {
   missingFormats: [],
   unwantedFormats: [],
   sizeOnDisk: 1024 * 1024 * 1024,
+  monitored: true,
+  existingFileCount: 1,
+  totalFileCount: 1,
+  flagged: true,
 };
 
 const profiles: QualityProfile[] = [

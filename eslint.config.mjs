@@ -8,6 +8,23 @@ import sonarjs from "eslint-plugin-sonarjs";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // react-hooks rules. `rules-of-hooks` and `exhaustive-deps` are already
+  // active via eslint-config-next/core-web-vitals; these additions surface
+  // React 19 purity / state-mutation anti-patterns that the preset omits.
+  {
+    rules: {
+      // Components and hooks must be idempotent: no Date.now(), Math.random(),
+      // crypto.randomUUID() etc. during render. Catch it early before Strict
+      // Mode double-invocation exposes the bug in production.
+      "react-hooks/purity": "warn",
+      // setState called synchronously inside an effect body causes a second
+      // render before the browser paints. Derive the value from existing state
+      // instead, or subscribe to an external store.
+      // setState called during render (not in an event handler or effect) runs
+      // synchronously and causes an immediate re-render loop.
+      "react-hooks/set-state-in-render": "warn",
+    },
+  },
   // Cherry-picked sonarjs rules for finding real code smells (complexity,
   // duplication, likely bugs). The recommended preset bundles many style
   // rules that don't fit this codebase — those are intentionally omitted.
@@ -72,23 +89,24 @@ const eslintConfig = defineConfig([
       "sonarjs/prefer-immediate-return": "warn",
       // Forbid comparing against the ArrType / ScoringMode literals directly
       // (e.g. `inst.type === "radarr"` or `mode === "profile"`). Use a
-      // type-keyed registry instead — see mediaServiceFor, ArrClientFactory,
-      // SCORE_FOR / ISSUES_FOR in src/shared/scoring-mode.ts. Adding a new
-      // arr or scoring mode then needs one entry per registry; no
-      // conditional churn across the codebase.
+      // type-keyed registry instead — see mediaServiceFor / createArrClient /
+      // dispatchQueueEntry in src/server/arr/composition.ts, or SCORE_FOR /
+      // ISSUES_FOR in src/shared/scoring-mode.ts. Adding a new arr or
+      // scoring mode then needs one entry per registry; no conditional
+      // churn across the codebase.
       "no-restricted-syntax": [
         "warn",
         {
           selector:
             "BinaryExpression[operator='==='] > Literal[value='radarr']",
           message:
-            'Do not compare against the "radarr" literal. Use a type-keyed registry (mediaServiceFor / ArrClientFactory / a Record<ArrType, …>).',
+            'Do not compare against the "radarr" literal. Use a type-keyed registry (mediaServiceFor / createArrClient / a Record<ArrType, …>).',
         },
         {
           selector:
             "BinaryExpression[operator='==='] > Literal[value='sonarr']",
           message:
-            'Do not compare against the "sonarr" literal. Use a type-keyed registry (mediaServiceFor / ArrClientFactory / a Record<ArrType, …>).',
+            'Do not compare against the "sonarr" literal. Use a type-keyed registry (mediaServiceFor / createArrClient / a Record<ArrType, …>).',
         },
         {
           selector:
@@ -101,6 +119,12 @@ const eslintConfig = defineConfig([
             "BinaryExpression[operator='==='] > Literal[value='manual']",
           message:
             'Do not compare against the "manual" scoring-mode literal. Use SCORE_FOR / ISSUES_FOR / ISSUES_HEADER_KEY from @/shared/scoring-mode.',
+        },
+        {
+          selector:
+            "TSAsExpression > TSAsExpression[typeAnnotation.type='TSUnknownKeyword']:not([expression.type='Identifier'][expression.name='globalThis'])",
+          message:
+            "'as unknown as T' bypasses type safety. Expose a typed accessor or use a type guard instead. (Exception: 'globalThis as unknown as …' is allowed for HMR singleton wiring.)",
         },
       ],
     },
@@ -119,15 +143,18 @@ const eslintConfig = defineConfig([
       "no-restricted-syntax": "off",
     },
   },
-  // Registry / factory files legitimately reference the literals as keys
-  // and must enumerate them. The forbidden pattern is comparing AGAINST
-  // them, which these files don't do.
+  // Registry / module / facade files legitimately reference the literals
+  // as keys and must enumerate them. The forbidden pattern is comparing
+  // AGAINST them, which these files don't do — they index, switch via
+  // typed dispatch, or declare meta objects keyed by the literal.
   {
     files: [
-      "src/server/services/media-services.ts",
-      "src/server/clients/ArrClientFactory.ts",
+      "src/server/arr/composition.ts",
+      "src/server/arr/radarr.module.ts",
+      "src/server/arr/sonarr.module.ts",
+      "src/shared/arr-meta.ts",
       "src/shared/scoring-mode.ts",
-      "src/shared/arr-type.ts",
+      "src/client/lib/arr-ui.ts",
     ],
     rules: {
       "no-restricted-syntax": "off",
@@ -140,6 +167,16 @@ const eslintConfig = defineConfig([
     rules: {
       "sonarjs/no-nested-conditional": "off",
       "sonarjs/cognitive-complexity": "off",
+    },
+  },
+  // Theme surface vars are intentionally repeated oklch literals — that's
+  // the whole point of the file (one place where every CSS-var value lives).
+  // The duplicate-string rule fires by design; silence it here so noise
+  // doesn't drown out real warnings on other files.
+  {
+    files: ["src/client/themes/_surface-vars.ts"],
+    rules: {
+      "sonarjs/no-duplicate-string": "off",
     },
   },
   // Tailwind class-name correctness for our own components. Catches:

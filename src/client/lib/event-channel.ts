@@ -1,6 +1,6 @@
 "use client";
 
-import type { ServerEvent } from "@/server/lib/event-bus";
+import type { ServerEvent } from "@/shared/types/api";
 
 type Incoming = ServerEvent | { type: "ready" };
 type Listener = (event: Incoming) => void;

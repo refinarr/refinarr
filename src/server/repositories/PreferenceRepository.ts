@@ -1,7 +1,7 @@
 import type { CfPreference } from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
 
-export class PreferenceRepository extends BaseRepository<CfPreference> {
+class PreferenceRepository extends BaseRepository<CfPreference> {
   async findById(id: number): Promise<CfPreference | null> {
     return this.db.cfPreference.findUnique({
       where: { id },

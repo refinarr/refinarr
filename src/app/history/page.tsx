@@ -67,11 +67,24 @@ function HistoryContent() {
   };
 
   const allLogs: ActionLog[] = data?.pages.flatMap((p) => p.items) ?? [];
+  // Merge per-page groupSummaries — same groupId across pages carries an
+  // identical aggregate (server-side computed), so naive Object.assign
+  // collision is intentional.
+  const groupSummaries = Object.assign(
+    {},
+    ...(data?.pages ?? []).map((p) => p.groupSummaries),
+  );
 
   const statusLabel = (key: string) => {
     switch (key) {
       case "success":
         return tStatus("success");
+      case "searched":
+        return tStatus("searched");
+      case "grabbed":
+        return tStatus("grabbed");
+      case "downloaded":
+        return tStatus("downloaded");
       case "failed":
         return tStatus("failed");
       case "dry_run":
@@ -135,6 +148,11 @@ function HistoryContent() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">{tCommon("all")}</SelectItem>
+              <SelectItem value="searched">{tStatus("searched")}</SelectItem>
+              <SelectItem value="grabbed">{tStatus("grabbed")}</SelectItem>
+              <SelectItem value="downloaded">
+                {tStatus("downloaded")}
+              </SelectItem>
               <SelectItem value="success">{tStatus("success")}</SelectItem>
               <SelectItem value="failed">{tStatus("failed")}</SelectItem>
               <SelectItem value="dry_run">{tStatus("dryRun")}</SelectItem>
@@ -175,7 +193,9 @@ function HistoryContent() {
 
       {isLoading && <MediaTableSkeleton />}
       {!isLoading && allLogs.length === 0 && <EmptyLogs />}
-      {allLogs.length > 0 && <HistoryTable logs={allLogs} />}
+      {allLogs.length > 0 && (
+        <HistoryTable logs={allLogs} groupSummaries={groupSummaries} />
+      )}
 
       <div ref={sentinelRef} className="h-4" />
       {isFetchingNextPage && <MediaTableSkeleton rows={3} />}
@@ -190,7 +210,12 @@ export default function HistoryPage() {
     <AppShell>
       <PageErrorBoundary>
         <div className="space-y-4">
-          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <div>
+            <h1 className="text-2xl font-bold">{t("title")}</h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {t("subtitle")}
+            </p>
+          </div>
           <Suspense fallback={<MediaTableSkeleton />}>
             <HistoryContent />
           </Suspense>

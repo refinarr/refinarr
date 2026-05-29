@@ -15,7 +15,23 @@ model Instance {
   enabled         Boolean  @default(true)
   scoringMode     String   @default("profile")
   searchesPerHour Int      @default(20)
+  showAllMedia    Boolean  @default(false)
   createdAt       DateTime @default(now())
+
+  // Auto-search scheduler fields
+  autoSearchEnabled         Boolean   @default(false)
+  autoSearchScheduleMode    String    @default("interval")
+  autoSearchIntervalMinutes Int       @default(1440)
+  autoSearchCronExpression  String    @default("0 3 * * *")
+  autoSearchBatchLimit      Int       @default(5)
+  autoSearchLastRunAt       DateTime?
+  autoSearchMonitoredOnly   Boolean   @default(true)
+  autoSearchScope           String    @default("flagged")
+  autoSearchPickStrategy    String    @default("balanced")
+  autoSearchCooldownHours   Int       @default(0)
+  autoSearchPausedUntil     DateTime?
+  autoSearchScoringMode     String    @default("inherit")
+  autoSearchFailedStreak    Int       @default(0)
 }
 
 model AppConfig {
@@ -53,23 +69,57 @@ model ActionLog {
   status        String
   error         String?
   payload       String?
+  // Hex UUID linking sibling rows that came from one bulk action. Null for
+  // single-item searches (renders flat in history). All N rows from a bulk
+  // submission share the same value so the History UI can collapse them
+  // under one "Batch search · N items" parent.
+  groupId       String?
+  // Upstream Radarr/Sonarr command id captured from the POST /command
+  // response. Per-item: each ActionLog row has its own commandId. Used
+  // as the join key for future lifecycle status updates from webhooks
+  // or per-instance history polling.
+  commandId     Int?
+  // Command-sync poll captures upstream `body.completionMessage` from
+  // the /command record once the search task finishes. Older Servarr
+  // populated it with "0 releases found" / "Sent 1 release(s) to
+  // download client" / "No indexers available" — the answer to
+  // "did anything actually happen". Current Servarr leaves it null on
+  // search commands; statusPoller falls back to synthesizing
+  // "No releases grabbed" from the absence of a grab event in the
+  // same /history window. Status stays at "searched" for the
+  // queued-upstream semantic; this field disambiguates "still
+  // pending" from "completed but found nothing".
+  completionMessage String?
   createdAt     DateTime  @default(now())
   lastRetriedAt DateTime?
 
   @@index([lastRetriedAt])
   @@index([instanceId, lastRetriedAt])
+  @@index([groupId])
+  // Composite (instanceId, commandId) — Radarr/Sonarr command ids are
+  // unique per-instance only, not globally. The future webhook /
+  // polling lifecycle update path looks up rows by commandId; pairing
+  // with instanceId prevents cross-instance false matches when two
+  // instances happen to issue the same id.
+  @@index([instanceId, commandId])
 }
 
 model AppLog {
-  id        Int      @id @default(autoincrement())
-  level     String
-  message   String
-  source    String?
-  context   String?
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  level      String
+  message    String
+  source     String?
+  context    String?
+  // Lifted from `context.instanceId` by app-logger on insert so the
+  // /logs viewer can filter by instance without JSON-extract scans.
+  // Old rows (pre-migration) are backfilled from existing context JSON.
+  instanceId Int?
+  createdAt  DateTime @default(now())
 
   @@index([level])
   @@index([createdAt])
+  @@index([instanceId])
+  @@index([instanceId, createdAt])
 }
 
 model User {
@@ -86,23 +136,44 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([expiresAt])
+  // sessionRepository.deleteAllForUser / deleteOtherSessionsForUser
+  // filter by userId. Without this index those deleteMany calls are
+  // full-table scans — fine for solo users, awful when sessions grow
+  // (each password rotation prunes; without the index, the prune is
+  // O(n) on the whole session table).
+  @@index([userId])
 }
 
 model SearchQueue {
-  id           Int       @id @default(autoincrement())
-  instanceId   Int
-  action       String
-  mediaId      Int
-  payload      String
-  title        String
-  status       String    @default("pending")
-  error        String?
-  createdAt    DateTime  @default(now())
-  processedAt  DateTime?
-  seasonNumber Int       @default(0)
-  fileId       Int       @default(0)
+  id          Int       @id @default(autoincrement())
+  instanceId  Int
+  action      String
+  mediaId     Int
+  // JSON blob — per-action data parsed by each per-arr module's
+  // queueHandler at drain time (see `sonarr.module.ts` for the zod
+  // schemas). Stays arr-agnostic — adding Lidarr's `{ albumId }`
+  // shape needs no schema change.
+  payload     String
+  title       String
+  status      String    @default("pending")
+  error       String?
+  // Hex UUID propagated to the ActionLog row when this entry drains.
+  // Same value across every queue row that came from one bulk action.
+  groupId     String?
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+  // Per-action disambiguator computed by each per-arr module's
+  // `dedupKey(action, payload)` function (see `ArrDefinition` in
+  // `src/server/arr/definition.ts`). Used by the partial UNIQUE
+  // INDEX `SearchQueue_pending_dedup` below to scope dedup correctly
+  // for arrs whose actions need extra keys (Sonarr's season → ":3",
+  // episode → ":file:42"; Radarr's movie → ""). Replaced the
+  // previous Sonarr-shaped `seasonNumber` + `fileId` columns so the
+  // table stays arr-agnostic.
+  dedupKey    String    @default("")
 
   @@index([instanceId, status, createdAt])
-  // SearchQueue_pending_dedup: partial UNIQUE index (WHERE status='pending') is
-  // hand-written in the migration SQL — Prisma does not support WHERE-clause indexes.
+  // SearchQueue_pending_dedup: partial UNIQUE index (WHERE status='pending')
+  // on (instanceId, action, mediaId, dedupKey) is hand-written in the
+  // migration SQL — Prisma does not support WHERE-clause indexes.
 }

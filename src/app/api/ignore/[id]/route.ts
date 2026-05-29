@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { positiveInt } from "@/server/lib/api-errors";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 
 export const DELETE = createApiHandler(async (_req, ctx) => {
   const id = positiveInt(ctx.params.id, "id");

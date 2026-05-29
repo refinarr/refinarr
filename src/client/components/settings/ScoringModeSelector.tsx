@@ -21,12 +21,14 @@ import {
 
 interface Props {
   instanceId: number;
-  // Compact mode drops the inline "Scoring Mode" label and shrinks the
-  // trigger so the selector fits inline with other status-bar controls.
-  compact?: boolean;
+  // When true, render the Select alone (no leading "Scoring Mode" label).
+  // The top bar uses this to save horizontal space — the current mode
+  // is still visible in the SelectTrigger. Settings page leaves it false
+  // so the form field keeps its descriptive label.
+  hideLabel?: boolean;
 }
 
-export function ScoringModeSelector({ instanceId, compact = false }: Props) {
+export function ScoringModeSelector({ instanceId, hideLabel }: Props) {
   const t = useTranslations("settings");
   const tToast = useTranslations("toast");
   const { data: instances } = useInstances();
@@ -35,34 +37,22 @@ export function ScoringModeSelector({ instanceId, compact = false }: Props) {
     instances?.find((i) => i.id === instanceId)?.scoringMode ??
     DEFAULT_SCORING_MODE;
 
-  const handleChange = async (value: string) => {
-    if (!isScoringMode(value)) return;
-    const scoringMode = value;
+  const handleChange = async (value: string | null) => {
+    if (!value || !isScoringMode(value)) return;
     const updateScoringMode = withToast(updateInstance, {
       success: tToast("scoringMode", {
-        mode: t(`scoringModeOptions.${scoringMode}`),
+        mode: t(`scoringModeOptions.${value}`),
       }),
     });
-
-    await updateScoringMode({
-      id: instanceId,
-      data: { scoringMode },
-    });
+    await updateScoringMode({ id: instanceId, data: { scoringMode: value } });
   };
 
   const select = (
-    <Select
-      value={mode}
-      onValueChange={(v) => {
-        if (v) handleChange(v);
-      }}
-    >
+    <Select value={mode} onValueChange={handleChange}>
       <SelectTrigger
-        className={
-          compact
-            ? "hover:bg-primary/10 h-7 w-auto gap-1.5 border-none bg-transparent px-2 text-sm font-medium focus:ring-0"
-            : "w-36"
-        }
+        id="scoring-mode"
+        aria-label={hideLabel ? t("scoringMode") : undefined}
+        className="w-36"
       >
         <SelectValue>{t(`scoringModeOptions.${mode}`)}</SelectValue>
       </SelectTrigger>
@@ -76,11 +66,11 @@ export function ScoringModeSelector({ instanceId, compact = false }: Props) {
     </Select>
   );
 
-  if (compact) return select;
+  if (hideLabel) return select;
 
   return (
     <div className="flex items-center gap-3">
-      <Label>{t("scoringMode")}</Label>
+      <Label htmlFor="scoring-mode">{t("scoringMode")}</Label>
       {select}
     </div>
   );

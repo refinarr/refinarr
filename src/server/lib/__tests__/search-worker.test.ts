@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from "vitest";
 import { searchWorker } from "@/server/lib/search-worker";
+import { realScheduler } from "@/server/lib/scheduler";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
@@ -37,6 +38,9 @@ async function makeSonarr() {
 }
 
 beforeEach(() => {
+  // setup.ts swaps in inertScheduler globally; this suite drives real
+  // timers via vitest fake timers, so restore the real scheduler.
+  searchWorker.scheduler = realScheduler;
   searchWorker.stop();
 });
 
@@ -55,7 +59,7 @@ describe("SearchWorker", () => {
       ),
     );
     const queued = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 42,
       title: "X",
@@ -80,7 +84,7 @@ describe("SearchWorker", () => {
     const ours = logs.filter((l) => l.instanceId === inst.id);
     expect(ours).toHaveLength(1);
     expect(ours[0].action).toBe("search");
-    expect(ours[0].status).toBe("success");
+    expect(ours[0].status).toBe("searched");
     expect(ours[0].title).toBe("X");
   });
 
@@ -95,7 +99,7 @@ describe("SearchWorker", () => {
       ...sonarrHandlers({ baseUrl: sonarrBase }),
     );
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "series",
       mediaId: 7,
       title: "Show",
@@ -118,7 +122,7 @@ describe("SearchWorker", () => {
       ...sonarrHandlers({ baseUrl: sonarrBase }),
     );
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "season",
       mediaId: 7,
       title: "Show",
@@ -145,7 +149,7 @@ describe("SearchWorker", () => {
       ),
     );
     const queued = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 1,
       title: "X",
@@ -179,8 +183,7 @@ describe("SearchWorker", () => {
       mediaId: 1,
       payload: "{}",
       title: "Ghost",
-      seasonNumber: 0,
-      fileId: 0,
+      dedupKey: "",
     });
 
     await vi.waitFor(
@@ -211,7 +214,7 @@ describe("SearchWorker", () => {
       ...sonarrHandlers({ baseUrl: sonarrBase }),
     );
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "episode",
       mediaId: 7,
       title: "Show — S01E02",
@@ -235,7 +238,7 @@ describe("SearchWorker", () => {
     const { prisma } = await import("@/server/lib/db");
     await prisma.instance.delete({ where: { id: inst.id } });
     const queued = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 1,
       title: "ghost",
@@ -261,8 +264,7 @@ describe("SearchWorker", () => {
       mediaId: 1,
       payload: "{}",
       title: "ghost",
-      seasonNumber: 0,
-      fileId: 0,
+      dedupKey: "",
     });
     mswServer.use(...radarrHandlers({ baseUrl: radarrBase }));
 
@@ -271,7 +273,7 @@ describe("SearchWorker", () => {
       async () => {
         const refetched = await searchQueueRepository.findById(queued.id);
         expect(refetched?.status).toBe("failed");
-        expect(refetched?.error).toMatch(/Unknown queue action/);
+        expect(refetched?.error).toMatch(/Unsupported queue action/);
       },
       { timeout: 3000 },
     );
@@ -303,7 +305,7 @@ describe("SearchWorker", () => {
     // Now enqueue. enqueue() pokes kick(); since no real drain happened,
     // kick() should fire processOne immediately and dispatch this search.
     const enqueued = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 7,
       title: "Late Arrival",

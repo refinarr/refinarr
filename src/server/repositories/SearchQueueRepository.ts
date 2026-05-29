@@ -1,5 +1,5 @@
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
+import { LogSource } from "@/shared/types/models";
 import type {
   SearchQueueAction,
   SearchQueueEntry,
@@ -29,17 +29,25 @@ interface CreateInput {
   mediaId: number;
   payload: string;
   title: string;
-  seasonNumber: number;
-  fileId: number;
+  // Per-action disambiguator computed by the owning per-arr module's
+  // `dedupKey(action, payload)`. Drives the partial UNIQUE INDEX
+  // `SearchQueue_pending_dedup` on
+  // `(instanceId, action, mediaId, dedupKey) WHERE status = 'pending'`.
+  // Callers go through `SearchQueueService.enqueue`, which derives
+  // this via `dedupKeyFor` in `@/server/arr/composition`.
+  dedupKey: string;
+  // Optional — defaults to null for ad-hoc / test fixtures that don't
+  // care about grouping. The bulk-action client supplies a UUID.
+  groupId?: string | null;
 }
 
-export interface CreateResult {
+interface CreateResult {
   entry: SearchQueueEntry;
   /** false when the DB unique constraint fired and we returned the existing pending row */
   created: boolean;
 }
 
-export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
+class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
   async findById(id: number): Promise<SearchQueueEntry | null> {
     const row = await this.db.searchQueue.findUnique({ where: { id } });
     return row as SearchQueueEntry | null;
@@ -79,8 +87,7 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
             instanceId: data.instanceId,
             action: data.action,
             mediaId: data.mediaId,
-            seasonNumber: data.seasonNumber,
-            fileId: data.fileId,
+            dedupKey: data.dedupKey,
             status: "pending",
           },
         });
@@ -138,6 +145,28 @@ export class SearchQueueRepository extends BaseRepository<SearchQueueEntry> {
     return this.db.searchQueue.count({
       where: { instanceId, status: "pending" },
     });
+  }
+
+  // Per-group pending counts. Used by /api/history to fold queued-but-
+  // not-yet-dispatched rows into batch GroupSummary totals so a fresh
+  // bulk op shows its full size in the batch header immediately.
+  async findPendingCountByGroup(
+    groupIds: string[],
+  ): Promise<Record<string, number>> {
+    if (groupIds.length === 0) return {};
+    const rows = await this.db.searchQueue.groupBy({
+      by: ["groupId"],
+      where: { groupId: { in: groupIds }, status: "pending" },
+      _count: { _all: true },
+    });
+    // The where-clause excludes null groupIds, so r.groupId is non-null
+    // for every returned row; assert that to TS (Prisma's generated
+    // types stay nullable regardless of the filter).
+    const out: Record<string, number> = {};
+    for (const r of rows) {
+      out[r.groupId as string] = r._count._all;
+    }
+    return out;
   }
 
   async findLastProcessedAt(instanceId: number): Promise<Date | null> {

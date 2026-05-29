@@ -1,0 +1,53 @@
+name: Setup deps
+description: Node 22 + Corepack/yarn + node_modules/Prisma cache + ensure Prisma client
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        # NB: no `cache: yarn` here. setup-node's built-in cache calls
+        # `yarn` to resolve the cache dir, which doesn't exist yet on
+        # self-hosted runners (myoung34/github-runner ships without
+        # yarn — only GitHub-hosted images preinstall it). Corepack
+        # below activates yarn first; we cache node_modules directly
+        # instead, which makes the yarn-cache-dir cache redundant.
+
+    # Corepack ships with Node 22 but the shims aren't on PATH by
+    # default. `enable` adds them; `prepare --activate` pins the yarn
+    # version so all runs use the same one.
+    - name: Enable Corepack + yarn
+      shell: bash
+      run: |
+        corepack enable
+        corepack prepare yarn@1.22.22 --activate
+
+    # actions/cache for node_modules + the generated Prisma client.
+    # Runs on every runner: GitHub-hosted resolves to GitHub's cache
+    # service, self-hosted to the homelab falcondev cache server
+    # (ACTIONS_RESULTS_URL on the patched runner) — LAN-speed, no ISP
+    # round-trip, which is why this is no longer gated to hosted-only.
+    - name: Cache node_modules + Prisma client
+      id: cache-deps
+      uses: actions/cache@v5
+      with:
+        path: |
+          node_modules
+          node_modules/.prisma
+        key: ${{ runner.os }}-node22-deps-${{ hashFiles('yarn.lock', 'prisma/schema.prisma') }}
+
+    # Always install — idempotent. On a cache hit it's a fast verify
+    # (node_modules already restored by the cache step above); on a
+    # miss it's a full install. Either way ends with a known-good
+    # node_modules.
+    - name: Install dependencies
+      shell: bash
+      run: yarn install --frozen-lockfile
+
+    # Postinstall runs prisma generate normally, but if yarn install
+    # was a no-op (everything already correct on disk) the client
+    # might be stale — force a generate to be safe.
+    - name: Ensure Prisma client is up to date
+      shell: bash
+      run: yarn db:generate

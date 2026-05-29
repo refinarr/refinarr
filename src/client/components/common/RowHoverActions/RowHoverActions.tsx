@@ -18,26 +18,26 @@ export function RowHoverActions({
 }: Props) {
   const t = useTranslations("common");
   return (
-    <div className="inline-flex items-center gap-1">
+    <div className="inline-flex items-center gap-0.5">
       <Button
         variant="ghost"
-        size="icon-sm"
+        size="icon-xs"
         title={t("search")}
         aria-label={t("search")}
         disabled={searchPending}
         onClick={onSearch}
       >
-        <Search className="size-3.5" />
+        <Search />
       </Button>
       <Button
         variant="ghost"
-        size="icon-sm"
+        size="icon-xs"
         title={t("ignore")}
         aria-label={t("ignore")}
         disabled={ignorePending}
         onClick={onIgnore}
       >
-        <EyeOff className="size-3.5" />
+        <EyeOff />
       </Button>
     </div>
   );

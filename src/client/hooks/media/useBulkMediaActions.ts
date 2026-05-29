@@ -7,6 +7,7 @@ import type {
   BulkAction,
   BulkProgress,
 } from "@/client/components/media/BulkActionToolbar";
+import type { QueuedSearchResponse } from "@/shared/types/api";
 import type { ActionLog, MediaType } from "@/shared/types/models";
 import { isAbortError } from "./useBulkAbort";
 
@@ -14,10 +15,6 @@ export interface BulkVars<T> {
   items: T[];
   isBulk: boolean;
   signal?: AbortSignal;
-}
-
-export interface DeleteVars<T> extends BulkVars<T> {
-  search: boolean;
 }
 
 interface EndpointConfig<T> {
@@ -28,7 +25,7 @@ interface EndpointConfig<T> {
 interface DeleteEndpointConfig<T> {
   endpoint: string;
   isDeletable: (item: T) => boolean;
-  body: (item: T, instId: number, search: boolean) => Record<string, unknown>;
+  body: (item: T, instId: number) => Record<string, unknown>;
 }
 
 export interface BulkActionsConfig<T> {
@@ -77,55 +74,68 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
 
   const deleteDone =
     mediaType === "movie" ? tDelete("fileDone") : tDelete("filesDone");
-  const deleteDoneAndSearch =
-    mediaType === "movie"
-      ? tDelete("fileDoneAndSearch")
-      : tDelete("filesDoneAndSearch");
   const deleteFailed =
     mediaType === "movie" ? tDelete("fileFailed") : tDelete("filesFailed");
 
+  // Generate a groupId only when the bulk submission actually fires
+  // multiple items. A 1-item "bulk" is functionally identical to a
+  // single-item ad-hoc action — grouping it under a "Batch · 1 item"
+  // parent in history would be visual noise. The threshold is the
+  // post-filter count for delete (where non-deletable items get
+  // dropped) and the raw items length for search/ignore.
+  const groupIdForBulk = (isBulk: boolean, count: number) =>
+    isBulk && count > 1 ? crypto.randomUUID() : undefined;
+
   const searchMutation = useMutation({
-    mutationFn: ({ items, isBulk, signal }: BulkVars<T>) =>
-      runBulk(
+    mutationFn: ({ items, isBulk, signal }: BulkVars<T>) => {
+      const groupId = groupIdForBulk(isBulk, items.length);
+      // Manual searches always queue (live OR dry-run); the worker
+      // writes the dry_run ActionLog row when it drains, so the
+      // response is always the queued shape.
+      return runBulk(
         items,
         (item) =>
-          api.post<ActionLog>(
-            config.search.endpoint,
-            config.search.body(item, instanceId),
-          ),
+          api.post<QueuedSearchResponse>(config.search.endpoint, {
+            ...config.search.body(item, instanceId),
+            ...(groupId ? { groupId } : {}),
+          }),
         { isBulk, signal, action: "search", setProgress },
-      ),
+      );
+    },
     onSettled: () => setProgress(null),
   });
 
   const ignoreMutation = useMutation({
-    mutationFn: ({ items, isBulk, signal }: BulkVars<T>) =>
-      runBulk(
+    mutationFn: ({ items, isBulk, signal }: BulkVars<T>) => {
+      const groupId = groupIdForBulk(isBulk, items.length);
+      return runBulk(
         items,
         (item) =>
-          api.post(
-            config.ignore.endpoint,
-            config.ignore.body(item, instanceId),
-          ),
+          api.post(config.ignore.endpoint, {
+            ...config.ignore.body(item, instanceId),
+            ...(groupId ? { groupId } : {}),
+          }),
         { isBulk, signal, action: "ignore", setProgress },
-      ),
+      );
+    },
     onSuccess: () => refetch(),
     onSettled: () => setProgress(null),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async ({ items, search, isBulk, signal }: DeleteVars<T>) => {
+    mutationFn: async ({ items, isBulk, signal }: BulkVars<T>) => {
       const deletable = items.filter(config.delete.isDeletable);
+      const groupId = groupIdForBulk(isBulk, deletable.length);
       const results = await runBulk(
         deletable,
         (item) =>
-          api.post<ActionLog>(
-            config.delete.endpoint,
-            config.delete.body(item, instanceId, search),
-          ),
+          api.post<ActionLog>(config.delete.endpoint, {
+            ...config.delete.body(item, instanceId),
+            ...(groupId ? { groupId } : {}),
+          }),
         { isBulk, signal, action: "delete", setProgress },
       );
-      return { results, search };
+      return { results };
     },
     onSuccess: ({ results }) => {
       if (!results.some((r) => r.isDryRun)) void refetch();
@@ -144,18 +154,8 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
     success: tIgnore("done"),
     error: (e) => (isAbortError(e) ? tBulk("cancelled") : tIgnore("failed")),
   });
-  const getDeleteSuccessMessage = ({
-    results,
-    search,
-  }: {
-    results: ActionLog[];
-    search: boolean;
-  }) => {
-    if (results.some((r) => r.isDryRun)) {
-      if (search) return tDelete("queuedAndSearchDryRun");
-      return tDelete("queuedDryRun");
-    }
-    if (search) return deleteDoneAndSearch;
+  const getDeleteSuccessMessage = ({ results }: { results: ActionLog[] }) => {
+    if (results.some((r) => r.isDryRun)) return tDelete("queuedDryRun");
     return deleteDone;
   };
   const deleteWithToast = withToast(deleteMutation, {

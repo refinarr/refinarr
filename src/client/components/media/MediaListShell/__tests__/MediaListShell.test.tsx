@@ -1,11 +1,28 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import type { FlaggedMediaQueryHook } from "@/client/hooks/media/useFlaggedMediaData";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MediaDataQueryHook } from "@/client/hooks/media/useMediaData";
+import type { MovieItem } from "@/shared/types/models";
 import { renderWithProviders } from "@/test/render";
 import { MOVIE_BULK_CONFIG } from "../../media-bulk-configs";
+
+// Tests interact with the Card render path inside MediaTable, which
+// gates desktop vs mobile via matchMedia. Force mobile so the Card prop
+// (renderCard) is invoked — the assertions here are about ctx wiring,
+// not which layout path renders.
+beforeEach(() => {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+});
 
 // Mock heavy data/state hooks used inside the shell so the component is
 // rendered in isolation without spinning up a TanStack QueryClient or DB.
@@ -77,7 +94,7 @@ vi.mock("@/client/hooks/media/useBulkHandlers", () => ({
 
 import { MediaListShell } from "../MediaListShell";
 
-const baseMovie: FlaggedMovie = {
+const baseMovie: MovieItem = {
   id: 7,
   title: "Test Movie",
   year: 2024,
@@ -90,11 +107,13 @@ const baseMovie: FlaggedMovie = {
   missingFormats: [],
   unwantedFormats: [],
   sizeOnDisk: 0,
+  monitored: true,
+  existingFileCount: 1,
+  totalFileCount: 1,
+  flagged: true,
 };
 
-function makeUseQuery(
-  items: FlaggedMovie[] = [],
-): FlaggedMediaQueryHook<FlaggedMovie> {
+function makeUseQuery(items: MovieItem[] = []): MediaDataQueryHook<MovieItem> {
   return () => ({
     data:
       items.length > 0
@@ -120,11 +139,12 @@ describe("MediaListShell", () => {
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
       >
-        <MediaListShell.Body<FlaggedMovie>
+        <MediaListShell.Body<MovieItem>
+          tableId="test"
           columns={() => []}
           Card={() => null}
         />
-        <MediaListShell.Drawer<FlaggedMovie> as={() => null} />
+        <MediaListShell.Drawer<MovieItem> as={() => null} />
       </MediaListShell>,
     );
     expect(screen.getByText(/all clear/i)).toBeInTheDocument();
@@ -142,7 +162,11 @@ describe("MediaListShell", () => {
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
       >
-        <MediaListShell.Body<FlaggedMovie> columns={columns} Card={Card} />
+        <MediaListShell.Body<MovieItem>
+          tableId="test"
+          columns={columns}
+          Card={Card}
+        />
       </MediaListShell>,
     );
 
@@ -168,7 +192,7 @@ describe("MediaListShell", () => {
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
       >
-        <MediaListShell.Drawer<FlaggedMovie> as={Drawer} />
+        <MediaListShell.Drawer<MovieItem> as={Drawer} />
       </MediaListShell>,
     );
 

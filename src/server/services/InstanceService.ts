@@ -1,16 +1,40 @@
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
-import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
+import { createArrClient } from "@/server/arr/composition";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 import { assertSafeArrUrl } from "@/server/lib/url-guard";
 import { searchWorker } from "@/server/lib/search-worker";
+import { statusPoller } from "@/server/lib/status-poller";
+import { autoRunner } from "@/server/lib/auto-runner";
 import { searchQueueService } from "@/server/services/SearchQueueService";
-import { arrRateLimiter } from "@/server/lib/ArrRateLimiter";
+import { arrRateLimiter } from "@/server/lib/arr-rate-limiter";
 import { eventBus } from "@/server/lib/event-bus";
+import { LogSource } from "@/shared/types/models";
 import { DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
-import type { Instance, ArrType, ScoringMode } from "@/shared/types/models";
+import type {
+  AutoSearchPickStrategy,
+  AutoSearchScheduleMode,
+  AutoSearchScope,
+  AutoSearchScoringMode,
+  Instance,
+  ArrType,
+  ScoringMode,
+} from "@/shared/types/models";
 
-export class InstanceService {
+class InstanceService {
+  // Catch helper for fire-and-forget worker refreshes. The instance
+  // repository / worker rescheduling can throw (DB blip, transient
+  // state) and a bare `void worker.refresh(id)` would surface as an
+  // unhandled promise rejection, which Node 18+ treats as fatal. We
+  // keep the call non-blocking but route any failure into /logs.
+  private logRefreshError(worker: string, instanceId: number) {
+    return (err: unknown) =>
+      appLogger.warn(`${worker}.refresh failed`, {
+        source: LogSource.InstanceService,
+        err,
+        context: { instanceId },
+      });
+  }
+
   async getAll(): Promise<Instance[]> {
     return instanceRepository.findAll();
   }
@@ -27,6 +51,18 @@ export class InstanceService {
     enabled?: boolean;
     scoringMode?: ScoringMode;
     searchesPerHour?: number;
+    showAllMedia?: boolean;
+    autoSearchEnabled?: boolean;
+    autoSearchScheduleMode?: AutoSearchScheduleMode;
+    autoSearchIntervalMinutes?: number;
+    autoSearchCronExpression?: string;
+    autoSearchBatchLimit?: number;
+    autoSearchLastRunAt?: Date | null;
+    autoSearchMonitoredOnly?: boolean;
+    autoSearchScope?: AutoSearchScope;
+    autoSearchPickStrategy?: AutoSearchPickStrategy;
+    autoSearchCooldownHours?: number;
+    autoSearchScoringMode?: AutoSearchScoringMode;
   }): Promise<Instance> {
     assertSafeArrUrl(data.url);
     const created = await instanceRepository.create({
@@ -36,7 +72,18 @@ export class InstanceService {
     // Start a worker tick for the new instance — bootstrap already ran with
     // the previous (smaller) set of enabled instances, so without this the
     // queue would never drain for instances added after first request.
-    void searchWorker.refresh(created.id);
+    // statusPoller skips its immediate-tick on create: a brand-new instance
+    // has no ActionLog rows to update yet, so the upstream fetch would be
+    // wasted I/O. The recurring timer still arms normally.
+    searchWorker
+      .refresh(created.id)
+      .catch(this.logRefreshError("searchWorker", created.id));
+    statusPoller
+      .refresh(created.id, { immediate: false })
+      .catch(this.logRefreshError("statusPoller", created.id));
+    autoRunner
+      .refresh(created.id)
+      .catch(this.logRefreshError("autoRunner", created.id));
     appLogger.info("Instance created", {
       source: LogSource.InstanceService,
       context: { id: created.id, name: created.name, type: created.type },
@@ -44,12 +91,22 @@ export class InstanceService {
     return created;
   }
 
-  async update(id: number, data: Partial<Instance>): Promise<Instance> {
+  // `type` is omitted from the input — instance.type is immutable
+  // after create. See `instanceUpdateSchema` for the route-level gate
+  // and the WHY (pending SearchQueue rows resolve arr-type at drain
+  // time from the live instance, so a Radarr↔Sonarr swap would
+  // strand them).
+  async update(
+    id: number,
+    data: Omit<Partial<Instance>, "type">,
+  ): Promise<Instance> {
     if (typeof data.url === "string") assertSafeArrUrl(data.url);
     const updated = await instanceRepository.update(id, data);
     // Restart the worker loop for this instance so a new searchesPerHour
     // (or enabled flag) takes effect immediately rather than after restart.
-    void searchWorker.refresh(id);
+    searchWorker.refresh(id).catch(this.logRefreshError("searchWorker", id));
+    statusPoller.refresh(id).catch(this.logRefreshError("statusPoller", id));
+    autoRunner.refresh(id).catch(this.logRefreshError("autoRunner", id));
     appLogger.info("Instance updated", {
       source: LogSource.InstanceService,
       context: { id: updated.id, name: updated.name, type: updated.type },
@@ -62,7 +119,9 @@ export class InstanceService {
     await searchQueueService.clearPending(id);
     await instanceRepository.delete(id);
     arrRateLimiter.evict(id);
-    void searchWorker.refresh(id);
+    searchWorker.refresh(id).catch(this.logRefreshError("searchWorker", id));
+    statusPoller.refresh(id).catch(this.logRefreshError("statusPoller", id));
+    autoRunner.refresh(id).catch(this.logRefreshError("autoRunner", id));
     eventBus.emit({ type: "queue-changed", instanceId: id });
     appLogger.info("Instance deleted", {
       source: LogSource.InstanceService,
@@ -73,7 +132,7 @@ export class InstanceService {
   async testConnection(id: number): Promise<boolean> {
     const instance = await instanceRepository.findById(id);
     if (!instance) return false;
-    const client = ArrClientFactory.createArrClient(instance);
+    const client = createArrClient(instance);
     const result = await client.testConnection();
     const log = result.ok ? appLogger.info : appLogger.error;
     log.call(appLogger, "Connection test", {
@@ -105,9 +164,23 @@ export class InstanceService {
       enabled: true,
       scoringMode: DEFAULT_SCORING_MODE,
       searchesPerHour: 20,
+      showAllMedia: false,
       createdAt: new Date(),
+      autoSearchEnabled: false,
+      autoSearchScheduleMode: "interval",
+      autoSearchIntervalMinutes: 1440,
+      autoSearchCronExpression: "0 3 * * *",
+      autoSearchBatchLimit: 5,
+      autoSearchLastRunAt: null,
+      autoSearchMonitoredOnly: true,
+      autoSearchScope: "flagged",
+      autoSearchPickStrategy: "balanced",
+      autoSearchCooldownHours: 0,
+      autoSearchPausedUntil: null,
+      autoSearchScoringMode: "inherit",
+      autoSearchFailedStreak: 0,
     };
-    const client = ArrClientFactory.createArrClient(transient);
+    const client = createArrClient(transient);
     const result = await client.testConnection();
     const log = result.ok ? appLogger.info : appLogger.error;
     log.call(appLogger, "Credentials test", {

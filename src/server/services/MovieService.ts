@@ -1,11 +1,15 @@
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
-import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
-import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
-import { ArrClientFactory } from "@/server/clients/ArrClientFactory";
-import { RadarrClient } from "@/server/clients/RadarrClient";
+import type {
+  RadarrClient,
+  RadarrMovieFile,
+} from "@/server/clients/RadarrClient";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 import { badRequest } from "@/server/lib/api-errors";
+import type {
+  MediaServiceFacade,
+  RetryActionOptions,
+} from "@/server/arr/media-service-facade";
+import { LogSource } from "@/shared/types/models";
 import {
   isMissingWantedFormats,
   getMissingFormats,
@@ -13,96 +17,105 @@ import {
   isBelowProfileScore,
   scoreProfileCoverage,
 } from "@/shared/scoring";
-import { isProfileMode } from "@/shared/scoring-mode";
 import { movieRetryPayloadSchema } from "@/shared/types/schemas";
 import type {
-  FlaggedMovie,
+  CustomFormat,
+  MovieItem,
   ActionLog,
   MediaQuery,
   ScoringMode,
 } from "@/shared/types/models";
 import { MediaService } from "./MediaService";
-import type { RetryActionOptions } from "./media-services";
 
-export class MovieService extends MediaService<FlaggedMovie> {
+// Local shorthand for the RadarrMovie shape — derived from the client's
+// return type since `RadarrMovie` is internal to `RadarrClient.ts`.
+type RadarrMovie = Awaited<ReturnType<RadarrClient["getMovies"]>>[number];
+
+type ProfileCtx = {
+  item: RadarrMovie;
+  file: RadarrMovieFile | undefined;
+  profile: { cutoffFormatScore: number };
+  cfScoreMap: Map<number, number>;
+  positiveProfileCfs: CustomFormat[];
+};
+
+type ManualCtx = {
+  item: RadarrMovie;
+  file: RadarrMovieFile | undefined;
+  wantedIds: number[];
+  wantedCfs: Array<{ id: number; name: string }>;
+};
+
+export class MovieService
+  extends MediaService<MovieItem>
+  implements MediaServiceFacade
+{
   protected readonly cacheNamespace = "movies";
 
-  protected getFlaggedForWarm(
+  protected getForWarm(
     instanceId: number,
     query: MediaQuery,
-  ): Promise<{ items: FlaggedMovie[]; total: number }> {
-    return this.getFlaggedMovies(instanceId, query);
+  ): Promise<{ items: MovieItem[]; total: number }> {
+    return this.getMovies(instanceId, query);
   }
 
-  async getFlaggedMovies(
+  async getMovies(
     instanceId: number,
     query: MediaQuery,
-  ): Promise<{ items: FlaggedMovie[]; total: number }> {
+  ): Promise<{ items: MovieItem[]; total: number }> {
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
-    const mode = instance.scoringMode;
-    const cacheKey = this.flaggedCacheKey(instanceId, mode);
-    const cached = await this.readWithSwr<{ flagged: FlaggedMovie[] }>({
+    const mode = query.scoringModeOverride ?? instance.scoringMode;
+    const cacheKey = this.mediaCacheKey(instanceId, mode);
+    const cached = await this.readWithSwr<{ items: MovieItem[] }>({
       cacheKey,
       instanceId: instance.id,
       logSource: LogSource.MovieService,
-      backgroundErrorMessage: "Background flagged-movies rebuild failed",
-      build: () => this.buildFlaggedAndLog(instance.id, instance, mode),
+      backgroundErrorMessage: "Background movies rebuild failed",
+      build: () => this.buildAndLog(instance.id, instance, mode),
     });
-    return this.applyQuery(cached.flagged, query, mode, (m) => m.hasFile);
+    return this.applyQuery(
+      cached.items,
+      this.enforceShowAllMedia(query, instance),
+      mode,
+    );
   }
 
-  private async buildFlaggedAndLog(
+  private async buildAndLog(
     instanceId: number,
     instance: NonNullable<
       Awaited<ReturnType<typeof instanceRepository.findById>>
     >,
     mode: ScoringMode,
-  ): Promise<{ flagged: FlaggedMovie[] }> {
+  ): Promise<{ items: MovieItem[] }> {
     const startedAt = Date.now();
-    const flagged = await this.buildFlaggedMovies(instanceId, instance, mode);
-    appLogger.debug("Built flagged movies cache", {
+    const items = await this.buildMovies(instance, mode);
+    appLogger.debug("Built movies cache", {
       source: LogSource.MovieService,
       context: {
         instanceId,
         instanceName: instance.name,
         mode,
-        flagged: flagged.length,
+        items: items.length,
+        flagged: items.filter((m) => m.flagged).length,
         durationMs: Date.now() - startedAt,
       },
     });
-    return { flagged };
+    return { items };
   }
 
-  private async buildFlaggedMovies(
-    instanceId: number,
-    instance: Awaited<ReturnType<typeof instanceRepository.findById>>,
+  private async buildMovies(
+    instance: NonNullable<
+      Awaited<ReturnType<typeof instanceRepository.findById>>
+    >,
     mode: ScoringMode,
-  ): Promise<FlaggedMovie[]> {
-    const client = ArrClientFactory.createArrClient(instance!) as RadarrClient;
+  ): Promise<MovieItem[]> {
+    const client = this.clientFromInstance(instance, "radarr");
     const [movies, profiles] = await Promise.all([
       client.getMovies(),
       client.getQualityProfiles(),
     ]);
-
-    const profileMap = new Map(profiles.map((p) => [p.id, p]));
-    const profileScoreMap = new Map<number, Map<number, number>>();
-    const profileFormatMap = new Map<
-      number,
-      Array<{ id: number; name: string }>
-    >();
-    for (const p of profiles) {
-      const cfMap = new Map<number, number>();
-      for (const item of p.formatItems) cfMap.set(item.format, item.score);
-      profileScoreMap.set(p.id, cfMap);
-      profileFormatMap.set(
-        p.id,
-        p.formatItems
-          .filter((item) => item.score > 0)
-          .map((item) => ({ id: item.format, name: item.name })),
-      );
-    }
 
     const fileIds = movies
       .filter((m) => m.hasFile && m.movieFileId > 0)
@@ -110,111 +123,97 @@ export class MovieService extends MediaService<FlaggedMovie> {
     const movieFiles = await client.getMovieFilesByIds(fileIds);
     const fileMap = new Map(movieFiles.map((f) => [f.movieId, f]));
 
-    const ignoredSet = new Set(
-      (await ignoreRepository.findByInstance(instanceId))
-        .filter((e) => e.mediaType === "movie")
-        .map((e) => e.mediaId),
-    );
+    return this.runBuildPipeline<RadarrMovie, RadarrMovieFile | undefined>({
+      instance,
+      mode,
+      mediaType: "movie",
+      items: movies,
+      profiles,
+      filesFor: (m) => fileMap.get(m.id),
+      toProfileItem: (ctx) => this.toMovieProfileItem(ctx),
+      toManualItem: (ctx) =>
+        this.toMovieManualItem({
+          item: ctx.item,
+          file: ctx.file,
+          wantedIds: ctx.wantedIds,
+          wantedCfs: ctx.wantedCfs,
+        }),
+    });
+  }
 
-    if (isProfileMode(mode)) {
-      return movies
-        .filter((m) => !ignoredSet.has(m.id))
-        .filter((m) => {
-          const profile = profileMap.get(m.qualityProfileId);
-          if (!profile) return false;
-          const score = fileMap.get(m.id)?.customFormatScore ?? 0;
-          return isBelowProfileScore(score, profile.cutoffFormatScore);
-        })
-        .map((m) => {
-          const profile = profileMap.get(m.qualityProfileId)!;
-          const file = fileMap.get(m.id);
-          const score = file?.customFormatScore ?? 0;
-          const cfScores =
-            profileScoreMap.get(m.qualityProfileId) ??
-            new Map<number, number>();
-          const positiveProfileCfs =
-            profileFormatMap.get(m.qualityProfileId) ?? [];
-          const fileCfs = file?.customFormats ?? [];
-          const fileCfIds = new Set(fileCfs.map((cf) => cf.id));
-          const unwantedFormats = fileCfs
-            .filter((cf) => (cfScores.get(cf.id) ?? 0) < 0)
-            .map((cf) => ({
-              id: cf.id,
-              name: cf.name,
-              score: cfScores.get(cf.id),
-            }));
-          return {
-            id: m.id,
-            title: m.title,
-            year: m.year,
-            qualityProfileId: m.qualityProfileId,
-            movieFileId: m.movieFileId,
-            customFormats: fileCfs.map((cf) => ({
-              id: cf.id,
-              name: cf.name,
-              score: cfScores.get(cf.id),
-            })),
-            customFormatScore: score,
-            hasFile: m.hasFile,
-            cfScore: scoreProfileCoverage(score, profile.cutoffFormatScore),
-            missingFormats: positiveProfileCfs.filter(
-              (cf) => !fileCfIds.has(cf.id),
-            ),
-            unwantedFormats,
-            minProfileScore: profile.cutoffFormatScore,
-            sizeOnDisk: file?.size ?? 0,
-          };
-        });
-    }
-
-    const prefs = await preferenceRepository.findByInstance(instanceId);
-    if (prefs.length === 0) return [];
-
-    const wantedIds = prefs.map((p) => p.cfId);
-    const wantedCfs = prefs.map((p) => ({ id: p.cfId, name: p.cfName }));
-
-    return movies
-      .filter((m) => !ignoredSet.has(m.id))
-      .filter((m) => {
-        if (!m.hasFile) return true;
-        return isMissingWantedFormats(
-          fileMap.get(m.id)?.customFormats ?? [],
-          wantedIds,
-        );
-      })
-      .map((m) => {
-        const file = fileMap.get(m.id);
-        const cfScores =
-          profileScoreMap.get(m.qualityProfileId) ?? new Map<number, number>();
-        const formats =
-          file?.customFormats?.map((cf) => ({
-            id: cf.id,
-            name: cf.name,
-            score: cfScores.get(cf.id),
-          })) ?? [];
-        return {
-          id: m.id,
-          title: m.title,
-          year: m.year,
-          qualityProfileId: m.qualityProfileId,
-          movieFileId: m.movieFileId,
-          customFormats: formats,
-          customFormatScore: file?.customFormatScore ?? 0,
-          hasFile: m.hasFile,
-          cfScore: m.hasFile ? scoreCfCoverage(formats, wantedIds) : 0,
-          missingFormats: getMissingFormats(formats, wantedCfs),
-          unwantedFormats: [],
-          sizeOnDisk: file?.size ?? 0,
-        };
+  private toMovieProfileItem(ctx: ProfileCtx): MovieItem {
+    const { item, file, profile, cfScoreMap, positiveProfileCfs } = ctx;
+    const score = file?.customFormatScore ?? 0;
+    const fileCfs = file?.customFormats ?? [];
+    const { customFormats, missingFormats, unwantedFormats } =
+      this.decorateCustomFormats({
+        fileCfs,
+        cfScoreMap,
+        positiveProfileCfs,
       });
+    return {
+      id: item.id,
+      title: item.title,
+      year: item.year,
+      qualityProfileId: item.qualityProfileId,
+      movieFileId: item.movieFileId,
+      customFormats,
+      customFormatScore: score,
+      hasFile: item.hasFile,
+      cfScore: scoreProfileCoverage(score, profile.cutoffFormatScore),
+      missingFormats,
+      unwantedFormats,
+      minProfileScore: profile.cutoffFormatScore,
+      sizeOnDisk: file?.size ?? 0,
+      monitored: item.monitored,
+      existingFileCount: item.hasFile ? 1 : 0,
+      totalFileCount: 1,
+      flagged: isBelowProfileScore(score, profile.cutoffFormatScore),
+    };
+  }
+
+  private toMovieManualItem(ctx: ManualCtx): MovieItem {
+    const { item, file, wantedIds, wantedCfs } = ctx;
+    const fileCfs = file?.customFormats ?? [];
+    // Manual mode doesn't decorate against a profile's positive CFs —
+    // missingFormats is computed against the user's wanted-CF prefs.
+    // We only enrich each file CF with score=undefined (no profile
+    // context to source it from).
+    const formats = fileCfs.map((cf) => ({
+      id: cf.id,
+      name: cf.name,
+      score: undefined,
+    }));
+    // Manual-mode flagged predicate: no file at all OR file is missing
+    // any of the user's wanted CFs. With zero prefs configured no
+    // movie can be flagged — flagged stays false for every item, but
+    // they all still appear in the cache for the "Show all" view.
+    const flagged =
+      wantedIds.length > 0 &&
+      (!item.hasFile || isMissingWantedFormats(fileCfs, wantedIds));
+    return {
+      id: item.id,
+      title: item.title,
+      year: item.year,
+      qualityProfileId: item.qualityProfileId,
+      movieFileId: item.movieFileId,
+      customFormats: formats,
+      customFormatScore: file?.customFormatScore ?? 0,
+      hasFile: item.hasFile,
+      cfScore: item.hasFile ? scoreCfCoverage(formats, wantedIds) : 0,
+      missingFormats: getMissingFormats(formats, wantedCfs),
+      unwantedFormats: [],
+      sizeOnDisk: file?.size ?? 0,
+      monitored: item.monitored,
+      existingFileCount: item.hasFile ? 1 : 0,
+      totalFileCount: 1,
+      flagged,
+    };
   }
 
   // Re-runs a stored ActionLog payload. Movies-specific fields:
   //   - search: { instanceId, mediaId, title }
-  //   - delete: { instanceId, mediaId, fileId, title, triggerSearch? }
-  //     (legacy rows stamped action="delete_blacklist" inside the payload;
-  //     the schema still accepts them, the migration backfills them to
-  //     "delete" so the action-parity guard passes)
+  //   - delete: { instanceId, mediaId, fileId, title }
   async retryFromPayload(
     payload: Record<string, unknown>,
     opts: RetryActionOptions = {},
@@ -235,13 +234,11 @@ export class MovieService extends MediaService<FlaggedMovie> {
           opts,
         );
       case "delete":
-      case "delete_blacklist":
         return this.deleteFile(
           data.instanceId,
           data.mediaId,
           data.fileId,
           data.title,
-          data.triggerSearch ?? true,
           opts,
         );
       default: {
@@ -257,9 +254,7 @@ export class MovieService extends MediaService<FlaggedMovie> {
     title: string,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as RadarrClient;
+    const { instance, client } = await this.withClient(instanceId);
 
     return this.executeAction({
       instanceName: instance.name,
@@ -268,6 +263,7 @@ export class MovieService extends MediaService<FlaggedMovie> {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
+      groupId: opts.groupId,
       payload: { instanceId, action: "search", mediaId, title },
       run: () => client.triggerSearch(mediaId),
     });
@@ -278,12 +274,9 @@ export class MovieService extends MediaService<FlaggedMovie> {
     mediaId: number,
     fileId: number,
     title: string,
-    triggerSearch = true,
     opts: RetryActionOptions = {},
   ): Promise<ActionLog> {
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance) throw new Error(`Instance ${instanceId} not found`);
-    const client = ArrClientFactory.createArrClient(instance) as RadarrClient;
+    const { instance, client } = await this.withClient(instanceId);
 
     return this.executeAction({
       instanceName: instance.name,
@@ -292,20 +285,22 @@ export class MovieService extends MediaService<FlaggedMovie> {
       mediaId,
       title,
       actionLogId: opts.actionLogId,
+      groupId: opts.groupId,
       payload: {
         instanceId,
         action: "delete",
         mediaId,
         fileId,
         title,
-        triggerSearch,
       },
       run: async () => {
         await client.deleteFile(fileId);
-        if (triggerSearch) await client.triggerSearch(mediaId);
       },
     });
   }
 }
 
-export const movieService = new MovieService();
+// Singleton lives in `@/server/arr/composition` (along with the
+// sonarr/series counterpart) so it can be wired with the DI deps the
+// MediaService base now requires. Consumers import `movieService` from
+// there instead of from this file.

@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/client/components/ui/card";
+import { Skeleton } from "@/client/components/ui/skeleton";
 import { KpiCardSkeleton } from "@/client/components/states/KpiCardSkeleton";
 
 type Tone = "default" | "warning" | "destructive";
@@ -16,7 +17,14 @@ interface Props {
   value: ReactNode;
   href?: string;
   tone?: Tone;
+  // True during the initial dashboard fetch — render the whole-card
+  // skeleton (label + value placeholders).
   loading?: boolean;
+  // True once the summary has loaded but this card's value is still
+  // resolving (e.g. a per-type total is null because at least one
+  // instance is cold). Keeps the label + chrome and only swaps the
+  // numeric value for a Skeleton.
+  valueLoading?: boolean;
 }
 
 const toneClasses: Record<Tone, string> = {
@@ -31,6 +39,7 @@ export function KpiCard({
   href,
   tone = "default",
   loading,
+  valueLoading,
 }: Props) {
   if (loading) return <KpiCardSkeleton />;
   const inner = (
@@ -45,9 +54,13 @@ export function KpiCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className={`text-3xl font-bold tabular-nums ${toneClasses[tone]}`}>
-          {value}
-        </p>
+        {valueLoading ? (
+          <Skeleton className="h-9 w-16" />
+        ) : (
+          <p className={`text-3xl font-bold tabular-nums ${toneClasses[tone]}`}>
+            {value}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

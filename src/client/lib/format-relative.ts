@@ -1,4 +1,6 @@
-type T = (key: string, values?: Record<string, string | number>) => string;
+import type { useTranslations } from "next-intl";
+
+type T = ReturnType<typeof useTranslations<"time">>;
 
 function toMs(date: Date | string | number): number {
   if (typeof date === "number") return date;
@@ -23,6 +25,12 @@ export function formatRelative(date: Date | string | number, t: T): string {
   if (hours < 24) return t("hoursAgo", { n: hours });
   const days = Math.floor(hours / 24);
   return t("daysAgo", { n: days });
+}
+
+/** Milliseconds until an ISO timestamp; 0 if it's already past or invalid. */
+export function msUntil(isoString: string): number {
+  const t = new Date(isoString).getTime();
+  return Number.isFinite(t) ? Math.max(0, t - Date.now()) : 0;
 }
 
 /**

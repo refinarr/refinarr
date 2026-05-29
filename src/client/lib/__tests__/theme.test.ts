@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { BRANDS, getBrandById } from "@/client/themes";
 import {
   applyBrandMode,
   getCurrentBrand,
@@ -13,7 +14,6 @@ import {
   THEME_LEGACY_KEY,
   THEME_MODE_KEY,
 } from "../theme";
-import { BRANDS, getBrandById } from "@/client/themes";
 
 const AMBER = getBrandById("amber")!;
 const TEAL = getBrandById("teal")!;

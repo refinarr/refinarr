@@ -1,12 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
 import { Copy, Eye, EyeOff, Loader2, RefreshCw } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/client/components/ui/card";
+import { Card, CardContent } from "@/client/components/ui/card";
 import { Button } from "@/client/components/ui/button";
 import { Input } from "@/client/components/ui/input";
 import { FormField } from "@/client/components/ui/form-field";
@@ -20,7 +15,6 @@ import {
 import { useApiKeyActions } from "./useApiKeyActions";
 
 export function ApiKeyCard() {
-  const t = useTranslations("settings");
   const tk = useTranslations("settings.apiKey");
   const tCommon = useTranslations("common");
   const tLogin = useTranslations("auth.login");
@@ -42,9 +36,6 @@ export function ApiKeyCard() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{t("apiAccess")}</CardTitle>
-      </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-muted-foreground text-xs">{tk("description")}</p>
         <div className="flex items-center gap-2">
@@ -62,7 +53,7 @@ export function ApiKeyCard() {
                 onClick={hide}
                 aria-label={tk("hide")}
               >
-                <EyeOff className="size-4" />
+                <EyeOff />
               </Button>
               <Button
                 variant="outline"
@@ -70,7 +61,7 @@ export function ApiKeyCard() {
                 onClick={copy}
                 aria-label={tk("copy")}
               >
-                <Copy className="size-4" />
+                <Copy />
               </Button>
             </>
           ) : (
@@ -84,7 +75,7 @@ export function ApiKeyCard() {
             onClick={() => ask("rotate")}
             aria-label={tk("rotate")}
           >
-            <RefreshCw className="size-4" />
+            <RefreshCw />
           </Button>
         </div>
       </CardContent>
@@ -118,7 +109,7 @@ export function ApiKeyCard() {
                 {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={submitting}>
-                {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
+                {submitting && <Loader2 className="mr-2 animate-spin" />}
                 {pending === "rotate" ? tk("rotate") : tk("reveal")}
               </Button>
             </DialogFooter>

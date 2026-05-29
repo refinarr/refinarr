@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { unauthorized } from "@/server/lib/api-errors";
-import { prisma } from "@/server/lib/db";
+import { userRepository } from "@/server/repositories/UserRepository";
 import { getSession, SESSION_COOKIE } from "@/server/lib/auth";
 
 export const GET = createApiHandler(async (req: NextRequest) => {
@@ -18,7 +18,7 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   if (!sessionId) throw unauthorized();
   const session = await getSession(sessionId);
   if (!session) throw unauthorized();
-  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  const user = await userRepository.findById(session.userId);
   if (!user) throw unauthorized();
   return NextResponse.json({ username: user.username, source: "session" });
 });

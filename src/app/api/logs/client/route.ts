@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseJson, tooManyRequests } from "@/server/lib/api-errors";
 import { appLogger } from "@/server/lib/app-logger";
 import { createApiHandler } from "@/server/lib/handler";
-import { LogSource } from "@/server/lib/log-sources";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { redactString } from "@/server/lib/redact";
+import { LogSource } from "@/shared/types/models";
 import { clientErrorReportSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {

@@ -1,11 +1,11 @@
 import { test, expect } from "@playwright/test";
 import type { PaginatedResponse } from "@/shared/types/api";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MovieItem } from "@/shared/types/models";
 
 // Reuse the session created by auth.spec.ts — avoids extra login API calls.
 test.use({ storageState: "e2e/.auth/user.json" });
 
-const FAKE_MOVIE: FlaggedMovie = {
+const FAKE_MOVIE: MovieItem = {
   id: 2,
   title: "Ignorable Film",
   year: 2023,
@@ -18,6 +18,10 @@ const FAKE_MOVIE: FlaggedMovie = {
   missingFormats: [{ id: 99, name: "HDR" }],
   unwantedFormats: [],
   sizeOnDisk: 1_000_000_000,
+  monitored: true,
+  existingFileCount: 1,
+  totalFileCount: 1,
+  flagged: true,
 };
 
 const FAKE_INSTANCE = {
@@ -34,14 +38,14 @@ test.beforeEach(async () => {
 });
 
 test("ignoring a movie removes it from the flagged list", async ({ page }) => {
-  const moviesResponse: PaginatedResponse<FlaggedMovie> = {
+  const moviesResponse: PaginatedResponse<MovieItem> = {
     items: [FAKE_MOVIE],
     total: 1,
     page: 1,
     limit: 50,
     hasMore: false,
   };
-  const emptyResponse: PaginatedResponse<FlaggedMovie> = {
+  const emptyResponse: PaginatedResponse<MovieItem> = {
     items: [],
     total: 0,
     page: 1,
@@ -86,7 +90,14 @@ test("ignoring a movie removes it from the flagged list", async ({ page }) => {
     .getByText("Ignorable Film")
     .waitFor({ timeout: 10_000 });
 
-  const ignoreBtn = page.getByRole("button", { name: "Ignore" }).first();
+  // Scope to the table body so we hit the row's Ignore button — the
+  // BulkActionToolbar also exposes an Ignore button but it's disabled
+  // until something is selected, and an unscoped `first()` was hitting
+  // that disabled button.
+  const ignoreBtn = page
+    .getByTestId("media-table-body")
+    .getByRole("button", { name: "Ignore" })
+    .first();
   if (await ignoreBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
     await ignoreBtn.click();
 

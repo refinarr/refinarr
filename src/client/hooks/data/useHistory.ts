@@ -8,7 +8,7 @@ import {
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
 import type { ActionLog } from "@/shared/types/models";
-import type { PaginatedResponse } from "@/shared/types/api";
+import type { HistoryResponse } from "@/shared/types/api";
 
 interface HistoryFilters {
   instanceId?: number;
@@ -28,9 +28,7 @@ export function useHistory(filters: HistoryFilters = {}) {
   return useInfiniteQuery({
     queryKey: queryKeys.history(filters),
     queryFn: ({ pageParam = 1 }) =>
-      api.get<PaginatedResponse<ActionLog>>(
-        `/history?${params}&page=${pageParam}&limit=50`,
-      ),
+      api.get<HistoryResponse>(`/history?${params}&page=${pageParam}&limit=50`),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
   });

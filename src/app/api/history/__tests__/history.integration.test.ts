@@ -14,7 +14,7 @@ const baseLog = {
   mediaId: 100,
   title: "Movie",
   isDryRun: false,
-  status: "success" as const,
+  status: "searched" as const,
   error: null,
   payload: null,
 };
@@ -57,7 +57,7 @@ describe("GET /api/history", () => {
   });
 
   test("filter by status returns only matching rows", async () => {
-    await logRepository.create({ ...baseLog, status: "success" });
+    await logRepository.create({ ...baseLog, status: "searched" });
     await logRepository.create({ ...baseLog, status: "failed", error: "boom" });
     const res = await GET(getReq("status=failed"), ctxNone);
     const body = await res.json();
@@ -71,6 +71,77 @@ describe("GET /api/history", () => {
     const res = await GET(getReq("instanceId=1"), ctxNone);
     const body = await res.json();
     expect(body.total).toBe(1);
+  });
+
+  test("groupSummaries reports the true batch total across paginated pages", async () => {
+    // Use prisma directly to bypass logRepository.create's trim (capped at
+    // 5 rows in tests) so we can stage a batch larger than one page.
+    const groupId = "batch-abc";
+    const rowsPerStatus: Array<{ status: "searched" | "failed"; n: number }> = [
+      { status: "searched", n: 4 },
+      { status: "failed", n: 2 },
+    ];
+    const { prisma } = await import("@/server/lib/db");
+    let mediaId = 0;
+    for (const { status, n } of rowsPerStatus) {
+      for (let i = 0; i < n; i += 1) {
+        await prisma.actionLog.create({
+          data: { ...baseLog, mediaId: ++mediaId, status, groupId },
+        });
+      }
+    }
+
+    const page1 = await GET(getReq("page=1&limit=3"), ctxNone);
+    const body1 = await page1.json();
+    expect(body1.items).toHaveLength(3);
+    expect(body1.groupSummaries[groupId]).toEqual({
+      groupId,
+      total: 6,
+      statusCounts: { searched: 4, failed: 2 },
+      action: "search",
+    });
+
+    const page2 = await GET(getReq("page=2&limit=3"), ctxNone);
+    const body2 = await page2.json();
+    expect(body2.items).toHaveLength(3);
+    // Same aggregate regardless of which page is loaded.
+    expect(body2.groupSummaries[groupId]).toEqual(
+      body1.groupSummaries[groupId],
+    );
+  });
+
+  test("groupSummaries folds pending SearchQueue rows into the batch count", async () => {
+    const groupId = "batch-queued";
+    const { prisma } = await import("@/server/lib/db");
+    // Two completed rows in ActionLog…
+    for (let i = 0; i < 2; i += 1) {
+      await prisma.actionLog.create({
+        data: { ...baseLog, mediaId: i, status: "success", groupId },
+      });
+    }
+    // …plus three pending queue rows for the same group.
+    for (let i = 10; i < 13; i += 1) {
+      await prisma.searchQueue.create({
+        data: {
+          instanceId: 1,
+          action: "movie",
+          mediaId: i,
+          title: `Pending ${i}`,
+          status: "pending",
+          payload: "{}",
+          groupId,
+        },
+      });
+    }
+
+    const res = await GET(getReq("page=1&limit=50"), ctxNone);
+    const body = await res.json();
+    expect(body.groupSummaries[groupId]).toEqual({
+      groupId,
+      total: 5,
+      statusCounts: { success: 2, pending: 3 },
+      action: "search",
+    });
   });
 });
 

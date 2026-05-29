@@ -25,11 +25,12 @@ export default function MoviesPage() {
         i18nNamespace="movies"
         confirmDeleteBulkKey="confirm.deleteMovies"
       >
-        <MediaListShell.Header />
-        <MediaListShell.SearchBar />
         <MediaListShell.Chips />
-        <MediaListShell.BulkBar />
-        <MediaListShell.Body columns={movieColumns} Card={MovieCard} />
+        <MediaListShell.Body
+          tableId="movies"
+          columns={movieColumns}
+          Card={MovieCard}
+        />
         <MediaListShell.Drawer as={MovieDrawer} />
       </MediaListShell>
     </Suspense>

@@ -3,8 +3,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
-  Film,
-  Tv2,
   LayoutDashboard,
   History,
   Settings,
@@ -16,14 +14,19 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/client/lib/utils";
 import { useMe, useLogout } from "@/client/hooks/data/useMe";
-import { ARR_LIBRARY_ROUTE } from "@/shared/arr-type";
+import { ARR_UI } from "@/client/lib/arr-ui";
+import { ARR_LIBRARY_ROUTE, ALL_ARR_TYPES } from "@/shared/arr-meta";
+
+// Per-arr nav label keys come from ARR_UI (one source for the icon +
+// i18n key per arr). Adding Lidarr / Whisparr drops a row in arr-ui.ts
+// and this union widens automatically.
+type ArrNavKey = (typeof ARR_UI)[keyof typeof ARR_UI]["navLabelKey"];
 
 interface NavLink {
   href: string;
   key:
     | "dashboard"
-    | "movies"
-    | "shows"
+    | ArrNavKey
     | "ignored"
     | "queue"
     | "history"
@@ -34,8 +37,13 @@ interface NavLink {
 
 const links: NavLink[] = [
   { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
-  { href: ARR_LIBRARY_ROUTE.radarr, key: "movies", icon: Film },
-  { href: ARR_LIBRARY_ROUTE.sonarr, key: "shows", icon: Tv2 },
+  ...ALL_ARR_TYPES.map(
+    (type): NavLink => ({
+      href: ARR_LIBRARY_ROUTE[type],
+      key: ARR_UI[type].navLabelKey,
+      icon: ARR_UI[type].Icon,
+    }),
+  ),
   { href: "/ignored", key: "ignored", icon: EyeOff },
   { href: "/queue", key: "queue", icon: Hourglass },
   { href: "/history", key: "history", icon: History },
@@ -45,33 +53,43 @@ const links: NavLink[] = [
 
 interface Props {
   onNavigate?: () => void;
+  // Hide nav links whose `key` is in this set. Used by the mobile More
+  // drawer to skip routes already represented in the bottom tab bar.
+  excludeKeys?: ReadonlySet<NavLink["key"]>;
 }
 
-export function NavContent({ onNavigate }: Props) {
+export function NavContent({ onNavigate, excludeKeys }: Props) {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const tAuth = useTranslations("auth");
   const { data: me } = useMe();
   const logout = useLogout();
+  const visibleLinks = excludeKeys
+    ? links.filter((l) => !excludeKeys.has(l.key))
+    : links;
   return (
     <>
       <nav className="flex flex-col gap-1">
-        {links.map(({ href, key, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            onClick={onNavigate}
-            className={cn(
-              "focus-visible:ring-ring focus-visible:ring-offset-background flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-              pathname === href
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-            )}
-          >
-            <Icon className="size-4" />
-            {t(key)}
-          </Link>
-        ))}
+        {visibleLinks.map(({ href, key, icon: Icon }) => {
+          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <Link
+              key={href}
+              href={href}
+              onClick={onNavigate}
+              aria-current={isActive ? "page" : undefined}
+              className={cn(
+                "focus-visible:ring-ring focus-visible:ring-offset-background flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              )}
+            >
+              <Icon className="size-4" />
+              {t(key)}
+            </Link>
+          );
+        })}
       </nav>
       <div className="border-border mt-auto border-t px-3 pt-4">
         {me && (

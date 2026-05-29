@@ -2,12 +2,12 @@
 import { useTranslations } from "next-intl";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MovieItem } from "@/shared/types/models";
 import { MovieDetailDrawer } from "./MovieDetailDrawer";
 
 interface Props {
-  item: FlaggedMovie | null;
-  ctx: MediaListShellRenderCtx<FlaggedMovie>;
+  item: MovieItem | null;
+  ctx: MediaListShellRenderCtx<MovieItem>;
   close: () => void;
 }
 
@@ -37,7 +37,7 @@ export function MovieDrawer({ item, ctx, close }: Props) {
           await ctx.runIgnore(item);
           close();
         }}
-        onDelete={async (_m, triggerSearch) => {
+        onDelete={async () => {
           if (!item) return;
           const ok = await askConfirm({
             title: tConfirmDeleteFile("title"),
@@ -45,7 +45,7 @@ export function MovieDrawer({ item, ctx, close }: Props) {
             destructive: true,
           });
           if (!ok) return;
-          await ctx.runDelete(item, triggerSearch);
+          await ctx.runDelete(item);
           close();
         }}
       />

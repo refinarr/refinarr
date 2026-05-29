@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import type { FlaggedMovie, FlaggedSeries } from "@/shared/types/models";
+import type { MovieItem, SeriesItem } from "@/shared/types/models";
 import { MOVIE_BULK_CONFIG, SERIES_BULK_CONFIG } from "../media-bulk-configs";
 
-const baseMovie: FlaggedMovie = {
+const baseMovie: MovieItem = {
   id: 7,
   title: "Test Movie",
   year: 2024,
@@ -15,9 +15,13 @@ const baseMovie: FlaggedMovie = {
   missingFormats: [],
   unwantedFormats: [],
   sizeOnDisk: 0,
+  monitored: true,
+  existingFileCount: 1,
+  totalFileCount: 1,
+  flagged: true,
 };
 
-const baseSeries: FlaggedSeries = {
+const baseSeries: SeriesItem = {
   id: 9,
   title: "Test Series",
   year: 2024,
@@ -52,6 +56,10 @@ const baseSeries: FlaggedSeries = {
     },
   ],
   sizeOnDisk: 0,
+  monitored: true,
+  existingFileCount: 2,
+  totalFileCount: 5,
+  flagged: true,
 };
 
 describe("MOVIE_BULK_CONFIG", () => {
@@ -63,12 +71,11 @@ describe("MOVIE_BULK_CONFIG", () => {
   });
 
   it("delete.body includes fileId from movieFileId", () => {
-    const body = MOVIE_BULK_CONFIG.delete.body(baseMovie, 1, true);
+    const body = MOVIE_BULK_CONFIG.delete.body(baseMovie, 1);
     expect(body).toMatchObject({
       instanceId: 1,
       mediaId: 7,
       title: "Test Movie",
-      search: true,
       fileId: 42,
     });
   });
@@ -99,12 +106,11 @@ describe("SERIES_BULK_CONFIG", () => {
   });
 
   it("delete.body includes fileIds derived from episodeFiles", () => {
-    const body = SERIES_BULK_CONFIG.delete.body(baseSeries, 2, false);
+    const body = SERIES_BULK_CONFIG.delete.body(baseSeries, 2);
     expect(body).toMatchObject({
       instanceId: 2,
       mediaId: 9,
       title: "Test Series",
-      search: false,
       fileIds: [100, 101],
     });
   });

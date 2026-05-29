@@ -2,7 +2,7 @@ export type Surface = "light" | "dark";
 export type Mode = "light" | "dark" | "system";
 export type BrandId = "amber" | "teal";
 
-export interface BrandSwatch {
+interface BrandSwatch {
   brand: string;
   surfaceLight: string;
   surfaceDark: string;

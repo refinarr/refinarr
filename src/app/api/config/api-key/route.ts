@@ -50,6 +50,6 @@ export const POST = createApiHandler(async (req: NextRequest) => {
   }
 
   const apiKey = await configRepository.getTyped(ConfigKey.ApiKey);
-  if (!apiKey) throw internal("API key not initialized");
+  if (!apiKey) throw internal("API key not initialized", { expose: true });
   return NextResponse.json({ apiKey });
 });

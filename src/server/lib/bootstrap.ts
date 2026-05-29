@@ -2,9 +2,12 @@ import crypto from "crypto";
 import { configRepository } from "@/server/repositories/ConfigRepository";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ConfigKey } from "@/server/config/keys";
-import { LogSource } from "./log-sources";
+import { LogSource } from "@/shared/types/models";
 import { appLogger } from "./app-logger";
 import { searchWorker } from "./search-worker";
+import { statusPoller } from "./status-poller";
+import { autoRunner } from "./auto-runner";
+import { startRateLimitCleanup } from "./rate-limit";
 
 let seeded = false;
 let seedPromise: Promise<void> | null = null;
@@ -28,6 +31,13 @@ export async function seedDefaults(): Promise<void> {
   }
 
   await searchWorker.start();
+  // Per-instance lifecycle status polling. Both workers share the
+  // findAllEnabled() snapshot above (each is idempotent on its own),
+  // so they run independently — one feeding queue drains, the other
+  // observing upstream lifecycle for already-dispatched commands.
+  await statusPoller.start();
+  await autoRunner.start();
+  startRateLimitCleanup();
 }
 
 export async function ensureSeeded(): Promise<void> {

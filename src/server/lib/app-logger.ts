@@ -34,11 +34,22 @@ function persist(
 
   const ctx = context ?? {};
 
+  // Lift `context.instanceId` to an indexed column so the /logs viewer
+  // can filter without JSON-extract scans. Workers (auto-runner, status
+  // poller, search-worker) stamp it consistently in their contexts.
+  const liftedInstanceId =
+    typeof ctx.instanceId === "number" &&
+    Number.isInteger(ctx.instanceId) &&
+    ctx.instanceId > 0
+      ? ctx.instanceId
+      : null;
+
   const data = {
     level,
     message,
     source: fields?.source ?? null,
     context: Object.keys(ctx).length ? JSON.stringify(ctx) : null,
+    instanceId: liftedInstanceId,
   };
 
   // Dynamic import sidesteps the AppLogRepository → BaseRepository → prisma

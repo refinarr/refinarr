@@ -1,4 +1,6 @@
 import { describe, test, expect, vi } from "vitest";
+import { appLogger } from "@/server/lib/app-logger";
+import { prisma } from "@/server/lib/db";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 
 async function enqueue(
@@ -12,8 +14,7 @@ async function enqueue(
     mediaId,
     title: `t-${mediaId}`,
     payload: "{}",
-    seasonNumber: 0,
-    fileId: 0,
+    dedupKey: "",
   });
   return entry;
 }
@@ -24,6 +25,84 @@ describe("SearchQueueRepository", () => {
     const fetched = await searchQueueRepository.findById(row.id);
     expect(fetched?.id).toBe(row.id);
     expect(fetched?.status).toBe("pending");
+  });
+
+  test("plain create() inserts a row without dedup", async () => {
+    // The non-deduping create() bypasses the partial unique index path —
+    // used by callers that don't want createUnique's idempotency.
+    const entry = await searchQueueRepository.create({
+      instanceId: 1,
+      action: "movie",
+      mediaId: 200,
+      title: "plain",
+      payload: "{}",
+      dedupKey: "",
+      status: "pending",
+      error: null,
+      processedAt: null,
+      groupId: null,
+    });
+    expect(entry.id).toBeGreaterThan(0);
+    expect(entry.title).toBe("plain");
+    const fetched = await searchQueueRepository.findById(entry.id);
+    expect(fetched?.title).toBe("plain");
+  });
+
+  test("createUnique swallows trim() rejections via appLogger.warn (defence in depth)", async () => {
+    // The fire-and-forget trim() inside createUnique catches its own
+    // rejection and warns instead of bubbling — so a hot insert path
+    // never throws because retention bookkeeping hit a transient DB
+    // error. Spy on prisma.searchQueue.count so trim() always rejects.
+    const countSpy = vi
+      .spyOn(prisma.searchQueue, "count")
+      .mockRejectedValueOnce(new Error("DB unavailable"));
+    const warnSpy = vi.spyOn(appLogger, "warn").mockImplementation(() => {});
+    try {
+      const { entry } = await searchQueueRepository.createUnique({
+        instanceId: 1,
+        action: "movie",
+        mediaId: 500,
+        title: "trim-fault",
+        payload: "{}",
+        dedupKey: "",
+      });
+      expect(entry.id).toBeGreaterThan(0);
+      // Allow the fire-and-forget catch to settle.
+      await vi.waitFor(() => expect(warnSpy).toHaveBeenCalled(), {
+        timeout: 200,
+      });
+      const [msg] = warnSpy.mock.calls[0];
+      expect(msg).toMatch(/trim failed/i);
+    } finally {
+      countSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
+  });
+
+  test("createUnique re-throws errors that are not unique-constraint violations", async () => {
+    // Stub the underlying insert with a sentinel non-P2002 error so the
+    // assertion is decoupled from Prisma's payload validation. If
+    // payload normalization or schema changes later swallow what we
+    // used to trigger an error, this test still proves that
+    // createUnique's error path (anything but P2002) bubbles unchanged.
+    const sentinel = new Error("simulated FK violation");
+    const createSpy = vi
+      .spyOn(prisma.searchQueue, "create")
+      .mockRejectedValueOnce(sentinel);
+    try {
+      await expect(
+        searchQueueRepository.createUnique({
+          instanceId: 1,
+          action: "movie",
+          mediaId: 1,
+          title: "X",
+          payload: "{}",
+          dedupKey: "",
+        }),
+      ).rejects.toBe(sentinel);
+    } finally {
+      createSpy.mockRestore();
+    }
   });
 
   test("findNextPending returns the oldest pending row for the instance", async () => {
@@ -149,8 +228,7 @@ describe("SearchQueueRepository", () => {
         mediaId: 42,
         title: "X",
         payload: "{}",
-        seasonNumber: 0,
-        fileId: 0,
+        dedupKey: "",
       });
     const { entry: second, created: c2 } =
       await searchQueueRepository.createUnique({
@@ -159,8 +237,7 @@ describe("SearchQueueRepository", () => {
         mediaId: 42,
         title: "X",
         payload: "{}",
-        seasonNumber: 0,
-        fileId: 0,
+        dedupKey: "",
       });
     expect(c1).toBe(true);
     expect(c2).toBe(false);
@@ -175,8 +252,7 @@ describe("SearchQueueRepository", () => {
       mediaId: 7,
       title: "S",
       payload: "{}",
-      seasonNumber: 2,
-      fileId: 0,
+      dedupKey: ":2",
     });
     const { entry: second, created } = await searchQueueRepository.createUnique(
       {
@@ -185,8 +261,7 @@ describe("SearchQueueRepository", () => {
         mediaId: 7,
         title: "S",
         payload: "{}",
-        seasonNumber: 2,
-        fileId: 0,
+        dedupKey: ":2",
       },
     );
     expect(created).toBe(false);
@@ -200,8 +275,7 @@ describe("SearchQueueRepository", () => {
       mediaId: 7,
       title: "S1",
       payload: "{}",
-      seasonNumber: 1,
-      fileId: 0,
+      dedupKey: ":1",
     });
     const { entry: s2 } = await searchQueueRepository.createUnique({
       instanceId: 1,
@@ -209,8 +283,7 @@ describe("SearchQueueRepository", () => {
       mediaId: 7,
       title: "S2",
       payload: "{}",
-      seasonNumber: 2,
-      fileId: 0,
+      dedupKey: ":2",
     });
     expect(s1.id).not.toBe(s2.id);
     expect(await searchQueueRepository.countPending(1)).toBe(2);
@@ -223,8 +296,7 @@ describe("SearchQueueRepository", () => {
       mediaId: 99,
       title: "M",
       payload: "{}",
-      seasonNumber: 0,
-      fileId: 0,
+      dedupKey: "",
     });
     await searchQueueRepository.setStatus(first.id, "done");
     // Done row is outside the partial index scope — new pending row is allowed.
@@ -235,8 +307,7 @@ describe("SearchQueueRepository", () => {
         mediaId: 99,
         title: "M",
         payload: "{}",
-        seasonNumber: 0,
-        fileId: 0,
+        dedupKey: "",
       },
     );
     expect(created).toBe(true);
@@ -256,5 +327,96 @@ describe("SearchQueueRepository", () => {
     expect(await searchQueueRepository.countPending(2)).toBe(1);
     // Terminal row for instance 1 stays put.
     expect(await searchQueueRepository.findById(c.id)).not.toBeNull();
+  });
+
+  describe("findPendingCountByGroup", () => {
+    test("empty groupIds returns empty object", async () => {
+      const result = await searchQueueRepository.findPendingCountByGroup([]);
+      expect(result).toEqual({});
+    });
+
+    test("counts pending rows per group, ignores non-pending", async () => {
+      // Two pending in group "alpha", one done in "alpha", three pending in
+      // "beta", and one row with null groupId (should be excluded).
+      await prisma.searchQueue.createMany({
+        data: [
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 1,
+            title: "a1",
+            payload: "{}",
+            status: "pending",
+            groupId: "alpha",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 2,
+            title: "a2",
+            payload: "{}",
+            status: "pending",
+            groupId: "alpha",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 3,
+            title: "a3",
+            payload: "{}",
+            status: "done",
+            groupId: "alpha",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 4,
+            title: "b1",
+            payload: "{}",
+            status: "pending",
+            groupId: "beta",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 5,
+            title: "b2",
+            payload: "{}",
+            status: "pending",
+            groupId: "beta",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 6,
+            title: "b3",
+            payload: "{}",
+            status: "pending",
+            groupId: "beta",
+          },
+          {
+            instanceId: 1,
+            action: "movie",
+            mediaId: 7,
+            title: "solo",
+            payload: "{}",
+            status: "pending",
+            groupId: null,
+          },
+        ],
+      });
+      const result = await searchQueueRepository.findPendingCountByGroup([
+        "alpha",
+        "beta",
+      ]);
+      expect(result).toEqual({ alpha: 2, beta: 3 });
+    });
+
+    test("groupId requested but no pending rows → not included in result", async () => {
+      const result = await searchQueueRepository.findPendingCountByGroup([
+        "nope",
+      ]);
+      expect(result).toEqual({});
+    });
   });
 });

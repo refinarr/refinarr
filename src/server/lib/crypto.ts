@@ -6,7 +6,7 @@ import {
   chmodSync,
   mkdirSync,
 } from "fs";
-import { dirname } from "path";
+import { dirname, join } from "path";
 
 const ALGO = "aes-256-gcm";
 const KEY_LEN = 32;
@@ -16,10 +16,12 @@ const PREFIX = "v1:";
 
 function defaultKeyPath(): string {
   // Mirrors the DB path logic in db.ts: /data in production, project dir in dev.
+  // Anchored to process.cwd() so Turbopack's NFT doesn't try to trace
+  // the relative `./local/...` form as a project-local module.
   if (process.env.ENCRYPTION_KEY_PATH) return process.env.ENCRYPTION_KEY_PATH;
   return process.env.NODE_ENV === "production"
     ? "/data/.encryption-key"
-    : "./local/.encryption-key";
+    : join(process.cwd(), "local", ".encryption-key");
 }
 
 function loadOrGenerateKey(): Buffer {
@@ -33,9 +35,14 @@ function loadOrGenerateKey(): Buffer {
     }
     return buf;
   }
+  // `path` is a runtime, env-driven location. The /* turbopackIgnore: true */
+  // markers stop Turbopack's file tracer (output: "standalone" NFT) from
+  // trying to follow it — without them it cannot bound the path, over-traces
+  // the whole project into .next/standalone, and warns. Markers are
+  // build-time only; they do not affect runtime behavior.
   const path = defaultKeyPath();
-  if (existsSync(path)) {
-    const buf = readFileSync(path);
+  if (existsSync(/* turbopackIgnore: true */ path)) {
+    const buf = readFileSync(/* turbopackIgnore: true */ path);
     if (buf.length !== KEY_LEN) {
       throw new Error(
         `Encryption key at ${path} is corrupt (length ${buf.length}, expected ${KEY_LEN}).`,
@@ -45,11 +52,12 @@ function loadOrGenerateKey(): Buffer {
   }
   // Generate on first run.
   const dir = dirname(path);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  if (!existsSync(/* turbopackIgnore: true */ dir))
+    mkdirSync(/* turbopackIgnore: true */ dir, { recursive: true });
   const key = randomBytes(KEY_LEN);
-  writeFileSync(path, key, { mode: 0o600 });
+  writeFileSync(/* turbopackIgnore: true */ path, key, { mode: 0o600 });
   try {
-    chmodSync(path, 0o600);
+    chmodSync(/* turbopackIgnore: true */ path, 0o600);
   } catch {
     /* best-effort on Windows */
   }

@@ -1,40 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
-import { parseJson } from "@/server/lib/api-errors";
-import { seriesService } from "@/server/services/SeriesService";
-import { searchQueueService } from "@/server/services/SearchQueueService";
-import { dryRunService } from "@/server/services/DryRunService";
-import { dataCache } from "@/server/lib/DataCache";
+import { assertArrType, notFound, parseJson } from "@/server/lib/api-errors";
+import { seriesService } from "@/server/arr/composition";
+import { instanceRepository } from "@/server/repositories/InstanceRepository";
+import { dataCache } from "@/server/lib/data-cache";
 import { sonarrDeleteSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
-  const {
-    instanceId,
-    mediaId,
-    fileIds,
-    title,
-    search = false,
-  } = await parseJson(req, sonarrDeleteSchema, "Invalid delete payload");
+  const { instanceId, mediaId, fileIds, title, groupId } = await parseJson(
+    req,
+    sonarrDeleteSchema,
+    "Invalid delete payload",
+  );
+  const instance = await instanceRepository.findById(instanceId);
+  if (!instance) throw notFound("Instance not found");
+  assertArrType(instance, "sonarr");
 
   const result = await seriesService.deleteFiles(
     instanceId,
     mediaId,
     fileIds,
     title,
-    false,
+    { groupId },
   );
-  if (search && result.status !== "failed") {
-    if (await dryRunService.isDryRun()) {
-      await seriesService.triggerSearch(instanceId, mediaId, title);
-    } else {
-      await searchQueueService.enqueue({
-        instanceId,
-        action: "series",
-        mediaId,
-        title,
-      });
-    }
-  }
   dataCache.invalidate(instanceId);
   return NextResponse.json(result);
 });

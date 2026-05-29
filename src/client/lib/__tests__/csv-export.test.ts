@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { exportMoviesCsv, exportSeriesCsv } from "@/client/lib/csv-export";
-import type { FlaggedMovie, FlaggedSeries } from "@/shared/types/models";
+import type { MovieItem, SeriesItem } from "@/shared/types/models";
 
 const blobs: Blob[] = [];
 const clicks: HTMLAnchorElement[] = [];
@@ -36,7 +36,7 @@ async function blobToText(b: Blob): Promise<string> {
   return new Response(b).text();
 }
 
-const movie: FlaggedMovie = {
+const movie: MovieItem = {
   id: 1,
   title: "Movie A",
   year: 2024,
@@ -52,22 +52,31 @@ const movie: FlaggedMovie = {
   ],
   unwantedFormats: [],
   sizeOnDisk: 1024,
+  monitored: true,
+  existingFileCount: 1,
+  totalFileCount: 1,
+  flagged: true,
 };
 
-const series: FlaggedSeries = {
+const series: SeriesItem = {
   id: 11,
   title: "Show A",
   year: 2023,
   qualityProfileId: 1,
   customFormats: [],
   customFormatScore: 0,
-  hasFile: true,
   cfScore: 0.75,
   missingFormats: [{ id: 99, name: "Atmos" }],
   unwantedFormats: [],
-  episodeFileCount: 12,
-  episodeCount: 12,
-} as unknown as FlaggedSeries;
+  sizeOnDisk: 5_000_000_000,
+  monitored: true,
+  existingFileCount: 12,
+  totalFileCount: 12,
+  flagged: true,
+  affectedEpisodeCount: 0,
+  totalEpisodeCount: 12,
+  episodeFiles: [],
+};
 
 describe("exportMoviesCsv", () => {
   test("creates a CSV with title/year/score/missing/hasFile columns and triggers download", async () => {

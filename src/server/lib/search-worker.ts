@@ -1,59 +1,19 @@
-import { z } from "zod";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
-import { movieService } from "@/server/services/MovieService";
-import { seriesService } from "@/server/services/SeriesService";
-import type {
-  ActionLog,
-  Instance,
-  SearchQueueAction,
-  SearchQueueEntry,
-} from "@/shared/types/models";
+import { dispatchQueueEntry } from "@/server/arr/composition";
+import type { Instance, SearchQueueEntry } from "@/shared/types/models";
+import { LogSource } from "@/shared/types/models";
 import { appLogger } from "./app-logger";
-import { LogSource } from "./log-sources";
+import {
+  realScheduler,
+  scheduleTrackedOnce,
+  type Scheduler,
+  type SchedulerHandle,
+} from "./scheduler";
 
 function parsePayload(raw: string | null | undefined): unknown {
   return raw ? JSON.parse(raw) : {};
 }
-
-const seasonPayload = z.object({
-  seasonNumber: z.number().int().nonnegative(),
-});
-const episodePayload = z.object({ fileId: z.number().int().positive() });
-
-type SearchHandler = (
-  instance: Instance,
-  entry: SearchQueueEntry,
-  payload: unknown,
-) => Promise<ActionLog>;
-
-// One handler per queue action. Record<Union, …> makes TypeScript flag a
-// missing handler the moment a new SearchQueueAction is added — no runtime
-// "unknown action" branch needed.
-const SEARCH_HANDLERS: Record<SearchQueueAction, SearchHandler> = {
-  movie: (instance, entry) =>
-    movieService.triggerSearch(instance.id, entry.mediaId, entry.title),
-  series: (instance, entry) =>
-    seriesService.triggerSearch(instance.id, entry.mediaId, entry.title),
-  season: (instance, entry, payload) => {
-    const { seasonNumber } = seasonPayload.parse(payload);
-    return seriesService.triggerSeasonSearch(
-      instance.id,
-      entry.mediaId,
-      seasonNumber,
-      entry.title,
-    );
-  },
-  episode: (instance, entry, payload) => {
-    const { fileId } = episodePayload.parse(payload);
-    return seriesService.triggerEpisodeFileSearch(
-      instance.id,
-      entry.mediaId,
-      fileId,
-      entry.title,
-    );
-  },
-};
 
 /**
  * Per-instance loop that drains SearchQueue at the configured rate.
@@ -68,11 +28,20 @@ const SEARCH_HANDLERS: Record<SearchQueueAction, SearchHandler> = {
  * doesn't break the schedule for the next.
  */
 class SearchWorker {
-  private timers = new Map<number, NodeJS.Timeout>();
+  private timers = new Map<number, SchedulerHandle>();
+  // Handles for the 0ms one-shot drains scheduled by kick() and the
+  // startup tick. Tracked separately from the recurring `timers` so
+  // stop() can cancel a pending one-shot — otherwise the worker could
+  // dispatch one more search after it was meant to be dormant.
+  private oneShotTimers = new Set<SchedulerHandle>();
   private processing = new Set<number>();
   private lastProcessedAt = new Map<number, number>();
   private started = false;
   private startPromise: Promise<void> | null = null;
+
+  // Scheduler is injected so tests can swap the real timers for an inert
+  // (integration tests) or fake-timer-driven (this worker's own tests) one.
+  constructor(public scheduler: Scheduler = realScheduler) {}
 
   async start(): Promise<void> {
     if (this.started) return;
@@ -95,8 +64,12 @@ class SearchWorker {
   }
 
   stop(): void {
-    for (const handle of this.timers.values()) clearInterval(handle);
+    for (const handle of this.timers.values())
+      this.scheduler.clearInterval(handle);
+    for (const handle of this.oneShotTimers)
+      this.scheduler.clearTimeout(handle);
     this.timers.clear();
+    this.oneShotTimers.clear();
     this.processing.clear();
     this.lastProcessedAt.clear();
     this.started = false;
@@ -105,7 +78,7 @@ class SearchWorker {
   /** Restart the loop for one instance — used after the rate changes. */
   async refresh(instanceId: number): Promise<void> {
     const handle = this.timers.get(instanceId);
-    if (handle) clearInterval(handle);
+    if (handle) this.scheduler.clearInterval(handle);
     this.timers.delete(instanceId);
     const instance = await instanceRepository.findById(instanceId);
     if (instance && instance.enabled) {
@@ -132,20 +105,39 @@ class SearchWorker {
     const minDelayMs = 3_600_000 / Math.max(1, instance.searchesPerHour);
     const last = this.lastProcessedAt.get(instanceId) ?? 0;
     if (Date.now() < last + minDelayMs) return;
-    await this.processWithGuard(instance.id);
+    // Drain via the scheduler (0ms) rather than calling processWithGuard
+    // directly: kick() is enqueue-triggered background work and must obey
+    // the same gate as the timers, so an inert scheduler keeps it dormant.
+    scheduleTrackedOnce(
+      this.scheduler,
+      this.oneShotTimers,
+      () => void this.processWithGuard(instance.id),
+    );
   }
 
   private async processWithGuard(instanceId: number): Promise<void> {
     if (this.processing.has(instanceId)) return;
     this.processing.add(instanceId);
     let drained = false;
+    let inFlight: SearchQueueEntry | null = null;
     try {
-      drained = await this.processOne(instanceId);
+      drained = await this.processOne(instanceId, (entry) => {
+        inFlight = entry;
+      });
     } catch (e) {
       appLogger.error("Search worker tick failed", {
         source: LogSource.SearchWorker,
         err: e,
-        context: { instanceId },
+        context: {
+          instanceId,
+          ...(inFlight
+            ? {
+                queueId: (inFlight as SearchQueueEntry).id,
+                action: (inFlight as SearchQueueEntry).action,
+                mediaId: (inFlight as SearchQueueEntry).mediaId,
+              }
+            : {}),
+        },
       });
     } finally {
       this.processing.delete(instanceId);
@@ -154,10 +146,6 @@ class SearchWorker {
       // behind "queue keeps growing after it empties" reports.
       if (drained) {
         this.lastProcessedAt.set(instanceId, Date.now());
-        appLogger.debug("Search worker drained", {
-          source: LogSource.SearchWorker,
-          context: { instanceId, drained },
-        });
       }
     }
   }
@@ -171,17 +159,22 @@ class SearchWorker {
     const tick = () => {
       void this.processWithGuard(instanceId);
     };
-    const handle = setInterval(tick, minDelayMs);
-    handle.unref?.();
+    const handle = this.scheduler.setInterval(tick, minDelayMs);
     this.timers.set(instanceId, handle);
     // Fire one tick immediately so a fresh enqueue or restart drains right
-    // away rather than waiting up to minDelayMs for the first slot.
-    tick();
+    // away rather than waiting up to minDelayMs for the first slot. Routed
+    // through the scheduler (0ms) — a direct call would bypass an inert
+    // scheduler and drain the queue even when the worker is meant dormant.
+    scheduleTrackedOnce(this.scheduler, this.oneShotTimers, tick);
   }
 
-  private async processOne(instanceId: number): Promise<boolean> {
+  private async processOne(
+    instanceId: number,
+    onEntry?: (entry: SearchQueueEntry) => void,
+  ): Promise<boolean> {
     const next = await searchQueueService.findNextPending(instanceId);
     if (!next) return false;
+    onEntry?.(next);
 
     const instance = await instanceRepository.findById(instanceId);
     if (!instance || !instance.enabled) {
@@ -195,11 +188,12 @@ class SearchWorker {
     try {
       await this.runSearch(instance, next);
       await searchQueueService.markDone(next.id);
-      appLogger.info("Search dispatched", {
+      appLogger.info(`Search dispatched: ${next.title} [${instance.name}]`, {
         source: LogSource.SearchWorker,
         context: {
           queueId: next.id,
           instanceId,
+          instanceName: instance.name,
           action: next.action,
           mediaId: next.mediaId,
           title: next.title,
@@ -208,17 +202,21 @@ class SearchWorker {
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       await searchQueueService.markFailed(next.id, message);
-      appLogger.error("Search dispatch failed", {
-        source: LogSource.SearchWorker,
-        err: e,
-        context: {
-          queueId: next.id,
-          instanceId,
-          action: next.action,
-          mediaId: next.mediaId,
-          title: next.title,
+      appLogger.error(
+        `Search dispatch failed: ${next.title} [${instance.name}]`,
+        {
+          source: LogSource.SearchWorker,
+          err: e,
+          context: {
+            queueId: next.id,
+            instanceId,
+            instanceName: instance.name,
+            action: next.action,
+            mediaId: next.mediaId,
+            title: next.title,
+          },
         },
-      });
+      );
     }
     return true;
   }
@@ -227,15 +225,12 @@ class SearchWorker {
     instance: Instance,
     entry: SearchQueueEntry,
   ): Promise<void> {
-    // Route through the service layer so executeAction writes the ActionLog
-    // row + invalidates the data cache. Calling client.triggerSearch directly
-    // would skip both and the user would see nothing in History.
+    // Dispatch through the arr composition root so per-arr modules own
+    // their handler vocabulary (incl. zod payload schemas). search-worker
+    // stays arr-agnostic; adding a new arr is one module file + the
+    // BUILTIN_MODULES row, never an edit here.
     const payload = parsePayload(entry.payload);
-    // Lookup is type-safe at compile time, but the DB can hold any string
-    // in the action column — guard against a corrupt/legacy row.
-    const handler = SEARCH_HANDLERS[entry.action];
-    if (!handler) throw new Error(`Unknown queue action: ${entry.action}`);
-    const log = await handler(instance, entry, payload);
+    const log = await dispatchQueueEntry(instance, entry, payload);
     // executeAction returns the ActionLog rather than throwing on upstream
     // failure. Re-throw so the queue row gets marked failed (and not done).
     if (log.status === "failed") {

@@ -1,10 +1,13 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
+import type { useTranslations } from "next-intl";
 import { formatRelative, formatEta } from "@/client/lib/format-relative";
+
+type TimeTranslator = ReturnType<typeof useTranslations<"time">>;
 
 const NOW = 1_700_000_000_000;
 
 // Minimal stand-in for useTranslations("time") that mirrors en.json exactly.
-function t(key: string, values?: Record<string, string | number>): string {
+const t = ((key: string, values?: Record<string, string | number>): string => {
   const n = values?.n;
   const m = values?.m;
   switch (key) {
@@ -31,7 +34,7 @@ function t(key: string, values?: Record<string, string | number>): string {
     default:
       return key;
   }
-}
+}) as unknown as TimeTranslator;
 
 describe("formatRelative", () => {
   beforeEach(() => {

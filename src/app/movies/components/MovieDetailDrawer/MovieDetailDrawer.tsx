@@ -15,20 +15,20 @@ import { SeverityDot } from "@/client/components/common/SeverityDot";
 import { getSeverity } from "@/client/lib/severity";
 import { SCORE_FOR } from "@/shared/scoring-mode";
 import type {
-  FlaggedMovie,
+  MovieItem,
   QualityProfile,
   ScoringMode,
 } from "@/shared/types/models";
 
 interface Props {
-  movie: FlaggedMovie | null;
+  movie: MovieItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   scoringMode: ScoringMode;
   profiles: QualityProfile[] | undefined;
-  onSearch: (movie: FlaggedMovie) => void;
-  onIgnore: (movie: FlaggedMovie) => void;
-  onDelete?: (movie: FlaggedMovie, triggerSearch: boolean) => void;
+  onSearch: (movie: MovieItem) => void;
+  onIgnore: (movie: MovieItem) => void;
+  onDelete?: (movie: MovieItem) => void;
 }
 
 export function MovieDetailDrawer({
@@ -116,24 +116,10 @@ export function MovieDetailDrawer({
             <EyeOff className="mr-1 size-4" /> {tCommon("ignore")}
           </Button>
           {onDelete && movie.hasFile && movie.movieFileId > 0 && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDelete(movie, false)}
-              >
-                <Trash2 className="text-destructive mr-1 size-4" />{" "}
-                {tCommon("delete")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDelete(movie, true)}
-              >
-                <Trash2 className="text-destructive mr-1 size-4" />{" "}
-                {tDrawer("deleteAndSearch")}
-              </Button>
-            </>
+            <Button variant="outline" size="sm" onClick={() => onDelete(movie)}>
+              <Trash2 className="text-destructive mr-1 size-4" />{" "}
+              {tCommon("delete")}
+            </Button>
           )}
           <Button size="sm" onClick={() => onSearch(movie)}>
             <Search className="mr-1 size-4" /> {tCommon("search")}

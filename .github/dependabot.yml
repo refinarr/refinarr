@@ -1,0 +1,85 @@
+version: 2
+updates:
+  # JavaScript dependencies
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    target-branch: develop
+    labels:
+      - dependencies
+    # Group related deps so we get fewer noisy PRs.
+    groups:
+      types:
+        patterns:
+          - "@types/*"
+      tanstack:
+        patterns:
+          - "@tanstack/*"
+      next:
+        patterns:
+          - "next"
+          - "next-*"
+          - "@next/*"
+      prisma:
+        patterns:
+          - "prisma"
+          - "@prisma/*"
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "@testing-library/*"
+          - "@playwright/*"
+          - "playwright"
+          - "msw"
+      eslint-prettier:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@eslint/*"
+          - "prettier"
+          - "prettier-*"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+    # Block eslint major bumps until Next.js ships an eslint-config-next
+    # whose bundled plugins (eslint-plugin-react / -jsx-a11y / -import)
+    # peer-dep eslint >= 10. Until then v10 throws
+    # `contextOrFilename.getFilename is not a function` from
+    # eslint-plugin-react at lint time. Drop this entry when Next.js
+    # publishes a compatible config-next.
+    ignore:
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions — workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    target-branch: develop
+    labels:
+      - dependencies
+      - github-actions
+
+  # GitHub Actions — composite actions. Dependabot's default
+  # `directory: /` only scans .github/workflows/*.yml; composite
+  # action definitions at .github/actions/**/action.yml need to be
+  # listed explicitly or version bumps for actions they use will
+  # silently stop being raised.
+  - package-ecosystem: github-actions
+    directory: /.github/actions/setup-deps
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    target-branch: develop
+    labels:
+      - dependencies
+      - github-actions

@@ -1,36 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
-import { parseJson } from "@/server/lib/api-errors";
-import { seriesService } from "@/server/services/SeriesService";
-import { searchQueueService } from "@/server/services/SearchQueueService";
-import { dryRunService } from "@/server/services/DryRunService";
+import { assertArrType, notFound, parseJson } from "@/server/lib/api-errors";
+import { respondToSearchDispatch } from "@/server/lib/search-dispatch-response";
+import { instanceRepository } from "@/server/repositories/InstanceRepository";
+import { searchDispatcher } from "@/server/services/SearchDispatcher";
 import { sonarrSeasonSearchSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
-  const { instanceId, mediaId, seasonNumber, title } = await parseJson(
+  const { instanceId, mediaId, seasonNumber, title, groupId } = await parseJson(
     req,
     sonarrSeasonSearchSchema,
     "Invalid search payload",
   );
-
-  if (await dryRunService.isDryRun()) {
-    const result = await seriesService.triggerSeasonSearch(
-      instanceId,
+  const instance = await instanceRepository.findById(instanceId);
+  if (!instance) throw notFound("Instance not found");
+  assertArrType(instance, "sonarr");
+  return respondToSearchDispatch(
+    await searchDispatcher.dispatch({
+      instance,
+      action: "season",
       mediaId,
       seasonNumber,
       title,
-    );
-    return NextResponse.json(result);
-  }
-  const entry = await searchQueueService.enqueue({
-    instanceId,
-    action: "season",
-    mediaId,
-    title,
-    payload: { seasonNumber },
-  });
-  return NextResponse.json(
-    { queued: true, queueId: entry.id },
-    { status: 202 },
+      groupId,
+    }),
   );
 });

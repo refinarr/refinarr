@@ -2,10 +2,10 @@ import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import type { ApiErrorResponse } from "@/shared/types/api";
+import { LogSource } from "@/shared/types/models";
 import { ensureSeeded } from "./bootstrap";
 import { appLogger } from "./app-logger";
 import { HttpError, ZodPayloadError } from "./api-errors";
-import { LogSource } from "./log-sources";
 import { UnsafeUrlError } from "./url-guard";
 
 export type RouteContext = { params: Promise<Record<string, string>> };
@@ -19,7 +19,11 @@ type RouteHandler = (
 
 export function createApiHandler(handler: RouteHandler) {
   return async (req: NextRequest, ctx?: RouteContext) => {
-    const traceId = randomUUID();
+    // Reuse the traceId the proxy minted (forwarded as `x-trace-id`)
+    // so a single request has one ID across edge + handler logs. Falls
+    // back to a fresh UUID for paths that bypass the proxy (e.g. direct
+    // imports inside tests).
+    const traceId = req.headers.get("x-trace-id") ?? randomUUID();
     const requestContext = {
       traceId,
       method: req.method,

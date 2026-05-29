@@ -5,32 +5,11 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const isDev = process.env.NODE_ENV !== "production";
 
-// Next.js dev mode (Fast Refresh, error overlay, callstack reconstruction)
-// requires `'unsafe-eval'`. React itself never uses eval() in production.
-// We only relax script-src in dev; production stays strict.
-const scriptSrc = isDev
-  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-  : "script-src 'self' 'unsafe-inline'";
-
-// In dev, the Next.js HMR websocket uses ws://; allow it but only in dev.
-const connectSrc = isDev ? "connect-src 'self' ws: wss:" : "connect-src 'self'";
-
-const csp = [
-  "default-src 'self'",
-  scriptSrc,
-  // shadcn/Tailwind use inline styles for theming.
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  connectSrc,
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-].join("; ");
-
+// Content-Security-Policy is owned by the proxy (see src/proxy.ts) — it's
+// the single source of truth and runs on every document/API response.
+// Headers below are the ones that should also reach static assets
+// (`_next/static/*`, `favicon.ico`) which the proxy matcher skips.
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "no-referrer" },

@@ -1,8 +1,23 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { render, screen } from "@testing-library/react";
+import { renderWithProviders as render, screen } from "@/test/render";
 import { MediaTable, type ColumnDef } from "../MediaTable";
+
+// Helper to control the media query MediaTable uses to pick desktop vs
+// mobile rendering. Default to desktop unless a test opts into mobile.
+function mockMatchMedia(isDesktop: boolean): void {
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: query === "(min-width: 1024px)" ? isDesktop : false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}
 
 interface Row {
   id: number;
@@ -15,7 +30,14 @@ const rows: Row[] = [
 ];
 
 const columns: ColumnDef<Row>[] = [
-  { key: "title", header: "Title", sortKey: "title", render: (r) => r.title },
+  {
+    id: "title",
+    accessorFn: (r) => r.title,
+    header: () => "Title",
+    size: 200,
+    meta: { sortKey: "title" },
+    cell: ({ row: { original: r } }) => r.title,
+  },
 ];
 
 const baseProps = {
@@ -27,31 +49,52 @@ const baseProps = {
   sortBy: "title" as const,
   order: "asc" as const,
   onSortChange: vi.fn(),
+  allSelected: false,
+  someSelected: false,
+  onToggleAll: vi.fn(),
+  tableId: "test",
 };
 
 describe("MediaTable", () => {
+  beforeEach(() => {
+    mockMatchMedia(true);
+  });
+
   it("renders only the table when renderCard is not provided", () => {
     render(<MediaTable {...baseProps} />);
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 
-  it("renders both card list (lg:hidden) and table (hidden lg:block) when renderCard is provided", () => {
+  it("desktop viewport renders only the table (not the mobile cards)", () => {
+    mockMatchMedia(true);
     render(
       <MediaTable
         {...baseProps}
         renderCard={(r) => <span data-testid={`card-${r.id}`}>{r.title}</span>}
       />,
     );
-    const list = screen.getByRole("list");
-    expect(list.className).toContain("lg:hidden");
-    expect(screen.getByTestId("card-1")).toHaveTextContent("Alpha");
-    expect(screen.getByTestId("card-2")).toHaveTextContent("Bravo");
-    const tableWrapper = screen.getByRole("table").parentElement!;
-    expect(tableWrapper.className).toContain("hidden lg:block");
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("card-1")).not.toBeInTheDocument();
   });
 
-  it("fires onRowClick when a card body is clicked", async () => {
+  it("mobile viewport renders only the card list (not the table)", () => {
+    mockMatchMedia(false);
+    render(
+      <MediaTable
+        {...baseProps}
+        renderCard={(r) => <span data-testid={`card-${r.id}`}>{r.title}</span>}
+      />,
+    );
+    expect(screen.getByRole("list")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByTestId("card-1")).toHaveTextContent("Alpha");
+    expect(screen.getByTestId("card-2")).toHaveTextContent("Bravo");
+  });
+
+  it("fires onRowClick when a card body is clicked (mobile)", async () => {
+    mockMatchMedia(false);
     const onRowClick = vi.fn();
     render(
       <MediaTable
@@ -64,7 +107,8 @@ describe("MediaTable", () => {
     expect(onRowClick).toHaveBeenCalledWith(2);
   });
 
-  it("stops click propagation from the checkbox so onRowClick is not triggered", async () => {
+  it("stops click propagation from the checkbox so onRowClick is not triggered (mobile)", async () => {
+    mockMatchMedia(false);
     const onRowClick = vi.fn();
     render(
       <MediaTable
@@ -77,5 +121,42 @@ describe("MediaTable", () => {
     const checkbox = cards[0].querySelector('button[role="checkbox"]')!;
     await userEvent.click(checkbox);
     expect(onRowClick).not.toHaveBeenCalled();
+  });
+
+  it("renders meta.filter inline next to the header label", () => {
+    const columnsWithFilter: ColumnDef<Row>[] = [
+      {
+        id: "title",
+        accessorFn: (r) => r.title,
+        header: () => "Title",
+        size: 200,
+        meta: {
+          sortKey: "title",
+          filter: <button data-testid="title-funnel">funnel</button>,
+        },
+        cell: ({ row: { original: r } }) => r.title,
+      },
+    ];
+    render(<MediaTable {...baseProps} columns={columnsWithFilter} />);
+    const funnel = screen.getByTestId("title-funnel");
+    expect(funnel).toBeInTheDocument();
+    const header = funnel.closest('[role="columnheader"]')!;
+    expect(header.textContent).toMatch(/title/i);
+  });
+
+  it("applies density-driven row height (cozy default)", () => {
+    render(<MediaTable {...baseProps} />);
+    const dataRows = screen
+      .getByTestId("media-table-body")
+      .querySelectorAll('[role="row"]');
+    expect(dataRows[0].className).toContain("h-row-cozy");
+  });
+
+  it("applies compact row height when density='compact'", () => {
+    render(<MediaTable {...baseProps} density="compact" />);
+    const dataRows = screen
+      .getByTestId("media-table-body")
+      .querySelectorAll('[role="row"]');
+    expect(dataRows[0].className).toContain("h-row-compact");
   });
 });

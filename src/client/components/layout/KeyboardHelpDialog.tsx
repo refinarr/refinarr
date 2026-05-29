@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/client/components/ui/dialog";
+import { isTypingTarget } from "@/client/lib/utils";
 
 const SHORTCUTS = [
   { keys: ["⌘", "K"], descKey: "openPalette" as const },
@@ -15,13 +16,6 @@ const SHORTCUTS = [
   { keys: ["?"], descKey: "showHelp" as const },
   { keys: ["Esc"], descKey: "closeDialog" as const },
 ];
-
-function isTypingTarget(target: EventTarget | null): boolean {
-  if (!target || !(target instanceof HTMLElement)) return false;
-  if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return true;
-  if (target.isContentEditable) return true;
-  return false;
-}
 
 export function KeyboardHelpDialog() {
   const [open, setOpen] = useState(false);

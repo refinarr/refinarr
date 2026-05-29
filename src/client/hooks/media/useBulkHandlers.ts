@@ -18,7 +18,7 @@ type BulkMutate<T> = UseMutationResult<
 type DeleteMutate<T> = UseMutationResult<
   unknown,
   unknown,
-  { items: T[]; isBulk: boolean; signal?: AbortSignal; search: boolean },
+  { items: T[]; isBulk: boolean; signal?: AbortSignal },
   unknown
 >;
 
@@ -37,7 +37,7 @@ export interface BulkHandlersArgs<T extends HasId> {
 export interface BulkHandlers {
   handleSearch: () => Promise<void>;
   handleIgnore: () => Promise<void>;
-  handleDelete: (search: boolean) => Promise<void>;
+  handleDelete: () => Promise<void>;
 }
 
 // Wraps the runWithAbort + selection.clear() pattern used by the three bulk
@@ -70,13 +70,12 @@ export function useBulkHandlers<T extends HasId>({
     });
   };
 
-  const handleDelete = async (search: boolean) => {
+  const handleDelete = async () => {
     if (!selection.deletableSelected.length) return;
     const items = selection.deletableSelected;
     await runWithAbort(abort, async (signal) => {
       await actions.deleteMutation.mutateAsync({
         items,
-        search,
         isBulk: true,
         signal,
       });

@@ -6,7 +6,7 @@ interface AppConfig {
   value: string;
 }
 
-export class ConfigRepository extends BaseRepository<AppConfig> {
+class ConfigRepository extends BaseRepository<AppConfig> {
   async findById(_id: number): Promise<AppConfig | null> {
     return null;
   }

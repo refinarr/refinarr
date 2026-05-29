@@ -1,58 +1,53 @@
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
+import { dedupKeyFor } from "@/server/arr/composition";
 import { searchWorker } from "@/server/lib/search-worker";
 import { eventBus } from "@/server/lib/event-bus";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
+import { LogSource } from "@/shared/types/models";
 import type {
+  Instance,
   SearchQueueAction,
   SearchQueueEntry,
 } from "@/shared/types/models";
 
 interface EnqueueInput {
-  instanceId: number;
+  // Pair passed together so (id, type) can't disagree. Routes should
+  // assertArrType (from @/server/lib/api-errors) before constructing.
+  instance: Pick<Instance, "id" | "type">;
   action: SearchQueueAction;
   mediaId: number;
   title: string;
   payload?: Record<string, unknown>;
+  // Bulk-submission UUID; propagated to ActionLog.groupId on drain.
+  groupId?: string;
 }
 
-export interface QueueStatus {
+interface QueueStatus {
   pendingCount: number;
   etaMs: number;
 }
 
-export class SearchQueueService {
+class SearchQueueService {
   async enqueue(input: EnqueueInput): Promise<SearchQueueEntry> {
-    if (
-      input.action === "season" &&
-      typeof input.payload?.seasonNumber !== "number"
-    ) {
-      throw new Error("season action requires numeric seasonNumber in payload");
-    }
-    if (
-      input.action === "episode" &&
-      typeof input.payload?.fileId !== "number"
-    ) {
-      throw new Error("episode action requires numeric fileId in payload");
-    }
-    const seasonNumber =
-      input.action === "season" ? (input.payload!.seasonNumber as number) : 0;
-    const fileId =
-      input.action === "episode" ? (input.payload!.fileId as number) : 0;
+    // dedupKeyFor also enforces (action ∈ owning arr's queueActions);
+    // a mismatched pair throws here, before any DB write.
+    const { id: instanceId, type: arrType } = input.instance;
+    const payload = input.payload ?? {};
+    const dedupKey = dedupKeyFor(arrType, input.action, payload);
 
     const { entry, created } = await searchQueueRepository.createUnique({
-      instanceId: input.instanceId,
+      instanceId,
       action: input.action,
       mediaId: input.mediaId,
       title: input.title,
-      payload: JSON.stringify(input.payload ?? {}),
-      seasonNumber,
-      fileId,
+      payload: JSON.stringify(payload),
+      dedupKey,
+      groupId: input.groupId ?? null,
     });
 
     if (!created) {
-      appLogger.info("Search enqueue deduped", {
+      appLogger.info(`Search enqueue deduped: ${entry.title}`, {
         source: LogSource.SearchQueue,
         context: {
           existingId: entry.id,
@@ -65,7 +60,7 @@ export class SearchQueueService {
       return entry;
     }
 
-    appLogger.info("Search enqueued", {
+    appLogger.info(`Search enqueued: ${entry.title}`, {
       source: LogSource.SearchQueue,
       context: {
         id: entry.id,
@@ -73,15 +68,16 @@ export class SearchQueueService {
         action: entry.action,
         mediaId: entry.mediaId,
         title: entry.title,
+        groupId: entry.groupId,
       },
     });
-    searchWorker.kick(input.instanceId).catch((err) =>
+    searchWorker.kick(instanceId).catch((err) =>
       appLogger.error("searchWorker.kick failed", {
         source: LogSource.SearchQueue,
-        context: { instanceId: input.instanceId, err: String(err) },
+        context: { instanceId, err: String(err) },
       }),
     );
-    eventBus.emit({ type: "queue-changed", instanceId: input.instanceId });
+    eventBus.emit({ type: "queue-changed", instanceId });
     return entry;
   }
 

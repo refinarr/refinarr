@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/server/lib/db";
+import { userRepository } from "@/server/repositories/UserRepository";
 import {
   verifyPassword,
   createSession,
@@ -8,13 +8,13 @@ import {
 } from "@/server/lib/auth";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
-import { LogSource } from "@/server/lib/log-sources";
 import { createApiHandler } from "@/server/lib/handler";
 import {
   parseJson,
   tooManyRequests,
   unauthorized,
 } from "@/server/lib/api-errors";
+import { LogSource } from "@/shared/types/models";
 import { credentialsSchema } from "@/shared/types/schemas";
 
 export const POST = createApiHandler(async (req: NextRequest) => {
@@ -31,7 +31,7 @@ export const POST = createApiHandler(async (req: NextRequest) => {
     credentialsSchema,
     "Invalid credentials",
   );
-  const user = await prisma.user.findUnique({ where: { username } });
+  const user = await userRepository.findByUsername(username);
   if (!user || !verifyPassword(password, user.passwordHash)) {
     const usernameHash = createHash("sha256")
       .update(username)

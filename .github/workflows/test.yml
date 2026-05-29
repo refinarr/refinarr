@@ -1,10 +1,30 @@
 name: test
 
+# ──────────────────────────────────────────────────────────────────────
+# ⚠️  RUNNER CHOICE — controlled by the `RUNNER_LABEL` repository
+# variable AND the actor check below.
+#
+#   To self-hosted:  gh variable set RUNNER_LABEL --body "self-hosted" --repo iHX-Labs/refinarr
+#   Back to hosted:  gh variable delete RUNNER_LABEL --repo iHX-Labs/refinarr
+#
+# ACTOR GATE: only `github.actor == 'iHunterX'` (the maintainer) gets
+# routed to RUNNER_LABEL. Everyone else — collaborators, fork PR
+# authors, dependabot, etc. — runs on `ubuntu-latest`. Fork code can
+# never touch the homelab regardless of RUNNER_LABEL. Safe to keep
+# RUNNER_LABEL=self-hosted permanently, even after the repo is public.
+# ──────────────────────────────────────────────────────────────────────
+
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - "**.md"
+      - "messages/**"
+      - "plans/**"
+      - ".vscode/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,21 +33,11 @@ concurrency:
 jobs:
   unit:
     name: lint + tsc + vitest
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.actor == 'iHunterX' && (vars.RUNNER_LABEL || 'ubuntu-latest') || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: yarn
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: yarn prisma generate
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-deps
 
       - name: Lint
         run: yarn lint
@@ -38,9 +48,17 @@ jobs:
       - name: Unit + integration tests (with coverage)
         run: yarn test:coverage
 
+      # Catches RSC boundary violations that lint and tsc don't see
+      # (e.g. importing a "use client" component into a Server Component
+      # tree, or a server-only module reaching a client bundle). The
+      # dev-checklist requires running this locally too; CI is the
+      # safety net.
+      - name: Production build
+        run: yarn build
+
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage/
@@ -48,23 +66,30 @@ jobs:
 
   e2e:
     name: playwright
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.actor == 'iHunterX' && (vars.RUNNER_LABEL || 'ubuntu-latest') || 'ubuntu-latest' }}
     timeout-minutes: 15
+    # Skip e2e on draft PRs to save minutes during in-flight iteration.
+    # When the PR is marked ready_for_review, the workflow re-runs and
+    # this job picks up. Pushes to main/develop always run e2e.
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-deps
 
-      - uses: actions/setup-node@v5
+      # actions/cache for Playwright browsers — runs on every runner.
+      # Self-hosted resolves to the homelab falcondev cache server;
+      # hosted to GitHub's cache service.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
         with:
-          node-version: 22
-          cache: yarn
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package.json', 'yarn.lock') }}
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: yarn prisma generate
-
-      - name: Install Playwright browsers
+      # Always run install — idempotent: ~1-2s no-op when browsers
+      # already exist (self-hosted bind mount, or hosted cache hit
+      # above), ~30s download otherwise. Single step means no
+      # half-installed state regardless of runner type.
+      - name: Install Playwright browsers + OS deps
         run: yarn playwright install --with-deps chromium
 
       - name: Run E2E tests
@@ -72,7 +97,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: playwright-report/

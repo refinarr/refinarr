@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import type { PaginatedResponse } from "@/shared/types/api";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MovieItem } from "@/shared/types/models";
 
 test.use({
   storageState: "e2e/.auth/user.json",
@@ -16,7 +16,7 @@ const FAKE_INSTANCE = {
   createdAt: new Date().toISOString(),
 };
 
-const FAKE_MOVIE: FlaggedMovie = {
+const FAKE_MOVIE: MovieItem = {
   id: 1,
   title: "The Missing Format",
   year: 2024,
@@ -29,9 +29,13 @@ const FAKE_MOVIE: FlaggedMovie = {
   missingFormats: [{ id: 99, name: "HDR" }],
   unwantedFormats: [],
   sizeOnDisk: 5_000_000_000,
+  monitored: true,
+  existingFileCount: 1,
+  totalFileCount: 1,
+  flagged: true,
 };
 
-const FAKE_RESPONSE: PaginatedResponse<FlaggedMovie> = {
+const FAKE_RESPONSE: PaginatedResponse<MovieItem> = {
   items: [FAKE_MOVIE],
   total: 1,
   page: 1,
@@ -57,22 +61,32 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test("topbar hamburger replaces the sidebar on mobile and opens the nav sheet", async ({
+test("mobile bottom tab bar exposes primary nav and the More button opens the secondary-nav sheet", async ({
   page,
 }) => {
   await page.goto("/dashboard");
-  // The desktop sidebar is hidden below md, and the dashboard nav links
-  // are not in the DOM until the sheet opens.
-  await expect(page.getByRole("link", { name: /movies/i })).toHaveCount(0);
 
-  await page.getByRole("button", { name: /open navigation menu/i }).click();
-  await expect(page.getByRole("link", { name: /movies/i })).toBeVisible({
+  // Primary destinations live in the always-visible MobileTabBar. The
+  // sidebar's hamburger is hidden below md, so the tab bar is the only
+  // entry point on mobile.
+  const tabBar = page.getByRole("navigation", { name: /primary navigation/i });
+  await expect(tabBar).toBeVisible({ timeout: 5_000 });
+  await expect(tabBar.getByRole("link", { name: /movies/i })).toBeVisible();
+  await expect(tabBar.getByRole("link", { name: /shows/i })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /open navigation menu/i }),
+  ).toBeHidden();
+
+  // Secondary routes (Settings / Logs / etc.) live behind the More
+  // button, which opens a sheet containing the rest of NavContent.
+  await tabBar.getByRole("button", { name: /open more menu/i }).click();
+  await expect(page.getByRole("link", { name: /settings/i })).toBeVisible({
     timeout: 5_000,
   });
-  await expect(page.getByRole("link", { name: /shows/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /logs/i })).toBeVisible();
 });
 
-test("movies page renders cards and the filter pills are visible on mobile", async ({
+test("movies page renders cards and the MobileFilterBar exposes the Filters trigger", async ({
   page,
 }) => {
   await page.goto("/movies");
@@ -83,26 +97,13 @@ test("movies page renders cards and the filter pills are visible on mobile", asy
   await expect(cardList).toBeVisible({ timeout: 10_000 });
   await expect(cardList.getByText("The Missing Format")).toBeVisible();
 
-  // Filter pills wrap naturally on mobile — no separate sheet trigger.
-  // The Only-missing toggle is the always-visible quick filter.
+  // MobileFilterBar is fixed at the bottom. The Only-missing pill was
+  // removed (severity:"missing" is the canonical "no file" filter and
+  // lives in the FilterSheet's Severity section now); the bar's only
+  // trigger is the Filters sheet button.
+  const filterBar = page.getByRole("toolbar", { name: /filter toolbar/i });
+  await expect(filterBar).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /only missing/i }),
+    filterBar.getByRole("button", { name: /^filters/i }),
   ).toBeVisible();
-});
-
-test("only-missing pill toggles to active state when tapped", async ({
-  page,
-}) => {
-  await page.goto("/movies");
-  await page
-    .getByTestId("media-card-list")
-    .getByText("The Missing Format")
-    .waitFor({ timeout: 10_000 });
-
-  const toggle = page.getByRole("button", { name: /only missing/i });
-  await toggle.click();
-  // After tapping, a "Clear all" link appears since at least one filter is now active.
-  await expect(page.getByRole("button", { name: /clear all/i })).toBeVisible({
-    timeout: 5_000,
-  });
 });

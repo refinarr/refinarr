@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import type { PaginatedResponse } from "@/shared/types/api";
-import type { FlaggedMovie } from "@/shared/types/models";
+import type { MovieItem } from "@/shared/types/models";
 
 test.use({ storageState: "e2e/.auth/user.json" });
 
@@ -23,7 +23,7 @@ const FAKE_INSTANCES = [
   },
 ];
 
-function makeMovie(instanceTag: string, id: number): FlaggedMovie {
+function makeMovie(instanceTag: string, id: number): MovieItem {
   return {
     id,
     title: `Movie ${id} (${instanceTag})`,
@@ -37,7 +37,11 @@ function makeMovie(instanceTag: string, id: number): FlaggedMovie {
     missingFormats: [{ id: 99, name: "HDR" }],
     unwantedFormats: [],
     sizeOnDisk: 1_000_000_000,
-  } as unknown as FlaggedMovie;
+    monitored: true,
+    existingFileCount: 1,
+    totalFileCount: 1,
+    flagged: true,
+  };
 }
 
 test.beforeEach(async ({ page }) => {
@@ -57,7 +61,7 @@ test.beforeEach(async ({ page }) => {
         json: { error: "missing instanceId" },
       });
     const tag = instanceId === "1" ? "Main" : "4K";
-    const body: PaginatedResponse<FlaggedMovie> = {
+    const body: PaginatedResponse<MovieItem> = {
       items: [makeMovie(tag, Number(instanceId) * 100)],
       total: 1,
       page: 1,
@@ -85,11 +89,11 @@ test("instance switcher reloads the table with the chosen instance's movies", as
     page.getByTestId("media-table-body").getByText(/Movie 100 \(Main\)/),
   ).toBeVisible({ timeout: 10_000 });
 
-  // Open the instance Select and switch to Radarr-4K. The header banner
-  // also renders the instance name above the dropdown — target the trigger
-  // by testid to disambiguate.
+  // Open the instance dropdown and switch to Radarr-4K. InstancePicker
+  // is built on DropdownMenu (not Select) so the items expose role
+  // `menuitem`, not `option`.
   await page.getByTestId("instance-switcher").click();
-  await page.getByRole("option", { name: "Radarr-4K" }).click();
+  await page.getByRole("menuitem", { name: "Radarr-4K" }).click();
 
   // Table now reflects Radarr-4K only — no "All" view exists.
   await expect(

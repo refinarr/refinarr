@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { ZodError, type ZodType } from "zod";
+import type { ArrType, Instance } from "@/shared/types/models";
 
 type ApiErrorLogLevel = "warn" | "error";
 
@@ -64,16 +65,41 @@ export function tooManyRequests(
   return new HttpError({ status: 429, message, headers, code });
 }
 
+// 503 for server-side capacity / availability limits. Distinct from
+// `tooManyRequests` (429) which is *per-caller* throttling — 503 says
+// "server is full", not "you specifically sent too many".
+export function serviceUnavailable(
+  message: string,
+  retryAfterMs?: number,
+  code?: string,
+): HttpError {
+  const headers: Record<string, string> = {};
+  if (retryAfterMs !== undefined) {
+    headers["Retry-After"] = String(Math.ceil(retryAfterMs / 1000));
+  }
+  return new HttpError({ status: 503, message, headers, code });
+}
+
+// 500 helper. Defaults to `expose: false` so a future caller doing
+// `throw internal("DB conn failed: " + cause)` can't leak the raw
+// message to the client. Pass `{ expose: true }` explicitly when the
+// message is intentional user-facing copy (e.g. "API key not
+// initialized" — see config/api-key route).
 export function internal(
   message = "Internal server error",
-  context?: Record<string, unknown>,
+  options: {
+    context?: Record<string, unknown>;
+    expose?: boolean;
+    code?: string;
+  } = {},
 ): HttpError {
   return new HttpError({
     status: 500,
     message,
-    expose: true,
+    code: options.code,
+    expose: options.expose ?? false,
     logLevel: "error",
-    context,
+    context: options.context,
   });
 }
 
@@ -102,6 +128,31 @@ export function positiveInt(value: string | undefined, name: string): number {
     throw badRequest(`Invalid ${name}`);
   }
   return numericValue;
+}
+
+// Assertion predicate for route handlers that take a user-supplied
+// `instanceId` and need the resolved instance to be a specific arr type
+// (e.g. `/api/radarr/*` routes require a radarr instance). Throws
+// `badRequest` so a sonarr id sent to a radarr route surfaces as a 400,
+// not a cryptic 500 at the first upstream call.
+//
+// Lives in api-errors.ts (not composition.ts) so the arr composition
+// root stays HTTP-free — HTTP status / 4xx semantics belong at the
+// API tier alongside the other route guards (parseJson, positiveInt).
+//
+// `asserts instance is Instance & { type: T }` narrows TS in the
+// caller after the call, so a subsequent `createTypedClient(instance,
+// "radarr")` is sound without any local cast.
+export function assertArrType<T extends ArrType>(
+  instance: Instance,
+  expectedType: T,
+): asserts instance is Instance & { type: T } {
+  if (instance.type !== expectedType) {
+    throw badRequest(
+      `Instance ${instance.id} is type ${instance.type}, expected ${expectedType}`,
+      "ARR_TYPE_MISMATCH",
+    );
+  }
 }
 
 export class ZodPayloadError extends Error {

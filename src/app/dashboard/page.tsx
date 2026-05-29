@@ -14,13 +14,18 @@ import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary"
 import { useInstances } from "@/client/hooks/data/useInstances";
 import { useDashboardSummary } from "@/client/hooks/data/useDashboardSummary";
 import { useConfig } from "@/client/hooks/data/useConfig";
+import { AutoSearchFleetPanel } from "@/app/dashboard/components/AutoSearchFleetPanel";
 
 export default function DashboardPage() {
   const router = useRouter();
   const t = useTranslations("dashboard");
   const tDryRun = useTranslations("settings.dryRun");
   const { data: instances, isLoading: loadingInstances } = useInstances();
-  const { data: summary, isLoading: loadingSummary } = useDashboardSummary();
+  const {
+    data: summary,
+    isLoading: loadingSummary,
+    isError: summaryError,
+  } = useDashboardSummary();
   const { data: config } = useConfig();
 
   if (!loadingInstances && (instances?.length ?? 0) === 0) {
@@ -56,12 +61,14 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-3">
               {config && (
-                <Badge variant={config.dryRun ? "outline" : "destructive"}>
+                <Badge
+                  size="md"
+                  variant={config.dryRun ? "outline" : "destructive"}
+                >
                   {config.dryRun ? tDryRun("badgeOn") : tDryRun("badgeOff")}
                 </Badge>
               )}
               <Button
-                size="sm"
                 variant="outline"
                 onClick={() => router.push("/settings")}
               >
@@ -82,6 +89,9 @@ export default function DashboardPage() {
               href="/movies"
               tone={(flaggedMovies ?? 0) > 0 ? "warning" : "default"}
               loading={loadingSummary}
+              valueLoading={
+                !loadingSummary && !summaryError && flaggedMovies === null
+              }
             />
             <KpiCard
               label={t("kpi.flaggedSeries")}
@@ -89,6 +99,9 @@ export default function DashboardPage() {
               href="/shows"
               tone={(flaggedSeries ?? 0) > 0 ? "warning" : "default"}
               loading={loadingSummary}
+              valueLoading={
+                !loadingSummary && !summaryError && flaggedSeries === null
+              }
             />
             <KpiCard
               label={t("kpi.failed24h")}
@@ -114,6 +127,8 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
+
+          <AutoSearchFleetPanel instances={summary?.perInstance ?? []} />
 
           <RecentActivityList logs={summary?.recentActivity ?? []} />
         </div>

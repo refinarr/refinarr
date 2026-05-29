@@ -2,22 +2,33 @@ import { describe, test, expect } from "vitest";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { instanceService } from "@/server/services/InstanceService";
 
-const baseInstance = {
+const baseRadarr = {
   type: "radarr" as const,
   name: "Test Radarr",
   url: "http://192.168.1.10:7878",
   apiKey: "abcd1234abcd1234abcd1234abcd1234",
 };
 
+const baseSonarr = {
+  type: "sonarr" as const,
+  name: "Test Sonarr",
+  url: "http://192.168.1.20:8989",
+  apiKey: "abcd1234abcd1234abcd1234abcd1234",
+};
+
 async function makeInstance(searchesPerHour = 20) {
-  return instanceService.create({ ...baseInstance, searchesPerHour });
+  return instanceService.create({ ...baseRadarr, searchesPerHour });
+}
+
+async function makeSonarrInstance(searchesPerHour = 20) {
+  return instanceService.create({ ...baseSonarr, searchesPerHour });
 }
 
 describe("SearchQueueService", () => {
   test("enqueue persists a pending row", async () => {
     const inst = await makeInstance();
     const row = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 42,
       title: "X",
@@ -28,9 +39,9 @@ describe("SearchQueueService", () => {
   });
 
   test("enqueue serializes the payload object", async () => {
-    const inst = await makeInstance();
+    const inst = await makeSonarrInstance();
     const row = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "season",
       mediaId: 7,
       title: "S",
@@ -42,13 +53,13 @@ describe("SearchQueueService", () => {
   test("enqueue dedupes against an existing pending movie row", async () => {
     const inst = await makeInstance();
     const first = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 42,
       title: "X",
     });
     const second = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 42,
       title: "X",
@@ -60,14 +71,14 @@ describe("SearchQueueService", () => {
   test("enqueue does NOT dedupe after the previous row reached a terminal state", async () => {
     const inst = await makeInstance();
     const first = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 42,
       title: "X",
     });
     await searchQueueService.markDone(first.id);
     const second = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 42,
       title: "X",
@@ -77,16 +88,16 @@ describe("SearchQueueService", () => {
   });
 
   test("enqueue does NOT dedupe across distinct seasons of the same series", async () => {
-    const inst = await makeInstance();
+    const inst = await makeSonarrInstance();
     const s1 = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "season",
       mediaId: 7,
       title: "S",
       payload: { seasonNumber: 1 },
     });
     const s2 = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "season",
       mediaId: 7,
       title: "S",
@@ -97,16 +108,16 @@ describe("SearchQueueService", () => {
   });
 
   test("enqueue dedupes the same season of the same series", async () => {
-    const inst = await makeInstance();
+    const inst = await makeSonarrInstance();
     const a = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "season",
       mediaId: 7,
       title: "S",
       payload: { seasonNumber: 1 },
     });
     const b = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "season",
       mediaId: 7,
       title: "S",
@@ -117,16 +128,16 @@ describe("SearchQueueService", () => {
   });
 
   test("enqueue dedupes the same episode but allows distinct fileIds", async () => {
-    const inst = await makeInstance();
+    const inst = await makeSonarrInstance();
     const a = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "episode",
       mediaId: 7,
       title: "E",
       payload: { fileId: 100 },
     });
     const dup = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "episode",
       mediaId: 7,
       title: "E",
@@ -135,7 +146,7 @@ describe("SearchQueueService", () => {
     expect(dup.id).toBe(a.id);
 
     const other = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "episode",
       mediaId: 7,
       title: "E",
@@ -154,19 +165,19 @@ describe("SearchQueueService", () => {
   test("getStatus computes eta from searchesPerHour and pending count", async () => {
     const inst = await makeInstance(20);
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 1,
       title: "a",
     });
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 2,
       title: "b",
     });
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 3,
       title: "c",
@@ -181,7 +192,7 @@ describe("SearchQueueService", () => {
   test("markDone and markFailed update the row terminal status", async () => {
     const inst = await makeInstance();
     const row = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 1,
       title: "a",
@@ -190,7 +201,7 @@ describe("SearchQueueService", () => {
     expect(await searchQueueService.findNextPending(inst.id)).toBeNull();
 
     const row2 = await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 2,
       title: "b",
@@ -202,13 +213,13 @@ describe("SearchQueueService", () => {
   test("listPending returns all pending rows for an instance", async () => {
     const inst = await makeInstance();
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 1,
       title: "a",
     });
     await searchQueueService.enqueue({
-      instanceId: inst.id,
+      instance: inst,
       action: "movie",
       mediaId: 2,
       title: "b",
@@ -220,15 +231,15 @@ describe("SearchQueueService", () => {
 
   test("listAllPending returns rows across all instances", async () => {
     const a = await makeInstance();
-    const b = await makeInstance();
+    const b = await makeSonarrInstance();
     await searchQueueService.enqueue({
-      instanceId: a.id,
+      instance: a,
       action: "movie",
       mediaId: 1,
       title: "a1",
     });
     await searchQueueService.enqueue({
-      instanceId: b.id,
+      instance: b,
       action: "series",
       mediaId: 1,
       title: "b1",
@@ -241,19 +252,19 @@ describe("SearchQueueService", () => {
     const a = await makeInstance();
     const b = await makeInstance();
     await searchQueueService.enqueue({
-      instanceId: a.id,
+      instance: a,
       action: "movie",
       mediaId: 1,
       title: "a1",
     });
     await searchQueueService.enqueue({
-      instanceId: a.id,
+      instance: a,
       action: "movie",
       mediaId: 2,
       title: "a2",
     });
     const otherRow = await searchQueueService.enqueue({
-      instanceId: b.id,
+      instance: b,
       action: "movie",
       mediaId: 1,
       title: "b1",
@@ -264,5 +275,26 @@ describe("SearchQueueService", () => {
     expect(removed).toBe(2);
     expect(await searchQueueService.listPending(a.id)).toHaveLength(0);
     expect(await searchQueueService.listAllPending()).toHaveLength(0);
+  });
+
+  // Guard the (instance, action) pairing invariant. The new
+  // `instance: Pick<Instance, "id" | "type">` shape on EnqueueInput
+  // makes a mismatched arrType impossible structurally, but the
+  // service ALSO performs a defensive check via `dedupKeyFor`: when
+  // the resolved arr-type doesn't own the requested action, throw
+  // before writing a row that would later fail at drain time. This
+  // test pins that behavior so future regressions surface here.
+  test("enqueue rejects an action the resolved arr-type doesn't own", async () => {
+    const radarrInst = await makeInstance();
+    await expect(
+      searchQueueService.enqueue({
+        instance: radarrInst, // type: "radarr"
+        action: "season", // sonarr-only action
+        mediaId: 1,
+        title: "Mismatch",
+        payload: { seasonNumber: 1 },
+      }),
+    ).rejects.toThrow(/does not handle queue action "season"/);
+    expect(await searchQueueService.listPending(radarrInst.id)).toHaveLength(0);
   });
 });

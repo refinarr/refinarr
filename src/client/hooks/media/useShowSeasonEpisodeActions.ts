@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
 import { withToast } from "@/client/lib/with-toast";
-import type { ActionLog, FlaggedSeries } from "@/shared/types/models";
+import type { ActionLog, SeriesItem } from "@/shared/types/models";
 
 export interface SeasonEpisodeConfig {
   instanceId: number;
@@ -26,7 +26,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       series,
       seasonNumber,
     }: {
-      series: FlaggedSeries;
+      series: SeriesItem;
       seasonNumber: number;
     }) =>
       api.post<ActionLog>(`/sonarr/series/season-search`, {
@@ -46,7 +46,7 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       fileId,
       label,
     }: {
-      series: FlaggedSeries;
+      series: SeriesItem;
       fileId: number;
       label: string;
     }) =>
@@ -66,22 +66,18 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       series,
       seasonNumber,
       fileIds,
-      search,
     }: {
-      series: FlaggedSeries;
+      series: SeriesItem;
       seasonNumber: number;
       fileIds: number[];
-      search: boolean;
     }) =>
       api.post<ActionLog>(`/sonarr/series/delete`, {
         instanceId,
         mediaId: series.id,
         fileIds,
         title: `${series.title} — Season ${seasonNumber}`,
-        search,
       }),
-    onSuccess: (r, vars) => {
-      if (vars.search) invalidateQueue();
+    onSuccess: (r) => {
       if (!r.isDryRun) void refetch();
     },
   });
@@ -91,22 +87,18 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       series,
       fileId,
       label,
-      search,
     }: {
-      series: FlaggedSeries;
+      series: SeriesItem;
       fileId: number;
       label: string;
-      search: boolean;
     }) =>
       api.post<ActionLog>(`/sonarr/series/delete`, {
         instanceId,
         mediaId: series.id,
         fileIds: [fileId],
         title: `${series.title} — ${label}`,
-        search,
       }),
-    onSuccess: (r, vars) => {
-      if (vars.search) invalidateQueue();
+    onSuccess: (r) => {
       if (!r.isDryRun) void refetch();
     },
   });
@@ -121,18 +113,12 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
       r.isDryRun ? tSearch("episodeQueuedDryRun") : tSearch("episodeStarted"),
     error: (e) => (e instanceof Error ? e.message : tSearch("episodeFailed")),
   });
-  const getDryRunDeleteMessage = (search: boolean) => {
-    if (search) return tDelete("queuedAndSearchDryRun");
-    return tDelete("queuedDryRun");
-  };
-  const getSeasonDeleteMessage = (r: ActionLog, vars: { search: boolean }) => {
-    if (r.isDryRun) return getDryRunDeleteMessage(vars.search);
-    if (vars.search) return tDelete("seasonDoneAndSearch");
+  const getSeasonDeleteMessage = (r: ActionLog) => {
+    if (r.isDryRun) return tDelete("queuedDryRun");
     return tDelete("seasonDone");
   };
-  const getEpisodeDeleteMessage = (r: ActionLog, vars: { search: boolean }) => {
-    if (r.isDryRun) return getDryRunDeleteMessage(vars.search);
-    if (vars.search) return tDelete("fileDoneAndSearch");
+  const getEpisodeDeleteMessage = (r: ActionLog) => {
+    if (r.isDryRun) return tDelete("queuedDryRun");
     return tDelete("fileDone");
   };
   const deleteSeasonWithToast = withToast(seasonDelete, {
@@ -145,21 +131,16 @@ export function useShowSeasonEpisodeActions(config: SeasonEpisodeConfig) {
   });
 
   return {
-    runSearchSeason: (series: FlaggedSeries, seasonNumber: number) =>
+    runSearchSeason: (series: SeriesItem, seasonNumber: number) =>
       searchSeasonWithToast({ series, seasonNumber }),
-    runSearchEpisode: (series: FlaggedSeries, fileId: number, label: string) =>
+    runSearchEpisode: (series: SeriesItem, fileId: number, label: string) =>
       searchEpisodeWithToast({ series, fileId, label }),
     runDeleteSeason: (
-      series: FlaggedSeries,
+      series: SeriesItem,
       seasonNumber: number,
       fileIds: number[],
-      search: boolean,
-    ) => deleteSeasonWithToast({ series, seasonNumber, fileIds, search }),
-    runDeleteEpisode: (
-      series: FlaggedSeries,
-      fileId: number,
-      label: string,
-      search: boolean,
-    ) => deleteEpisodeWithToast({ series, fileId, label, search }),
+    ) => deleteSeasonWithToast({ series, seasonNumber, fileIds }),
+    runDeleteEpisode: (series: SeriesItem, fileId: number, label: string) =>
+      deleteEpisodeWithToast({ series, fileId, label }),
   };
 }

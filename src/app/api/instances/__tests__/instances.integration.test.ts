@@ -2,7 +2,7 @@ import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/server/lib/db";
 import { isEncrypted } from "@/server/lib/crypto";
-import { dataCache } from "@/server/lib/DataCache";
+import { dataCache } from "@/server/lib/data-cache";
 import { GET as getOne, PUT, DELETE } from "@/app/api/instances/[id]/route";
 import { GET, POST } from "@/app/api/instances/route";
 
@@ -47,7 +47,7 @@ describe("GET /api/instances", () => {
     expect(await res.json()).toEqual([]);
   });
 
-  test("returns InstanceListItem[] without apiKey", async () => {
+  test("returns PublicInstance[] without apiKey", async () => {
     await POST(postReq(valid), { params: Promise.resolve({}) });
     const res = await GET(getReq(), { params: Promise.resolve({}) });
     const body = await res.json();
@@ -157,6 +157,22 @@ describe("GET / PUT / DELETE /api/instances/[id]", () => {
     expect(res.status).toBe(400);
   });
 
+  test("PUT silently drops `type` field — instance.type is immutable", async () => {
+    // Pending SearchQueue rows resolve arr-type at drain time from the
+    // live instance, so a Radarr↔Sonarr swap would strand sonarr-action
+    // rows on a now-Radarr instance and fail them at dispatch. The
+    // update schema omits `type`; zod's default object drops unknown
+    // keys, so the request succeeds with the field ignored. Delete +
+    // recreate is the intended path for arr-type changes.
+    const created = await POST(postReq(valid), { params: Promise.resolve({}) });
+    const { id, type } = await created.json();
+    const otherType = type === "radarr" ? "sonarr" : "radarr";
+    const res = await PUT(putReq(id, { type: otherType }), ctxFor(id));
+    expect(res.status).toBe(200);
+    const after = await prisma.instance.findUnique({ where: { id } });
+    expect(after?.type).toBe(type); // ← unchanged: the guarantee that matters
+  });
+
   test("DELETE removes the row", async () => {
     const created = await POST(postReq(valid), { params: Promise.resolve({}) });
     const { id } = await created.json();
@@ -203,5 +219,91 @@ describe("GET / PUT / DELETE /api/instances/[id]", () => {
     expect(res.status).toBe(200);
     expect(dataCache.get(`movies:${id}:manual`, 60_000)).toBeNull();
     expect(dataCache.get(`movies:9999:manual`, 60_000)).toEqual(["other"]);
+  });
+});
+
+describe("POST /api/instances — auto-search fields", () => {
+  test("auto-search defaults applied when fields omitted", async () => {
+    const res = await POST(postReq(valid), { params: Promise.resolve({}) });
+    const body = await res.json();
+    expect(body.autoSearchEnabled).toBe(false);
+    expect(body.autoSearchScheduleMode).toBe("interval");
+    expect(body.autoSearchIntervalMinutes).toBe(1440);
+    expect(body.autoSearchBatchLimit).toBe(5);
+    expect(body.autoSearchMonitoredOnly).toBe(true);
+    expect(body.autoSearchScope).toBe("flagged");
+  });
+
+  test("auto-search fields persisted when provided", async () => {
+    const res = await POST(
+      postReq({
+        ...valid,
+        autoSearchEnabled: true,
+        autoSearchScheduleMode: "interval",
+        autoSearchIntervalMinutes: 60,
+        autoSearchBatchLimit: 3,
+        autoSearchMonitoredOnly: false,
+        autoSearchScope: "missing",
+      }),
+      { params: Promise.resolve({}) },
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.autoSearchEnabled).toBe(true);
+    expect(body.autoSearchIntervalMinutes).toBe(60);
+    expect(body.autoSearchBatchLimit).toBe(3);
+    expect(body.autoSearchScope).toBe("missing");
+  });
+
+  test("invalid cron expression returns 400 INVALID_CRON", async () => {
+    const res = await POST(
+      postReq({
+        ...valid,
+        autoSearchScheduleMode: "cron",
+        autoSearchCronExpression: "not a cron",
+      }),
+      { params: Promise.resolve({}) },
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("INVALID_CRON");
+  });
+
+  test("valid cron expression is accepted", async () => {
+    const res = await POST(
+      postReq({
+        ...valid,
+        autoSearchScheduleMode: "cron",
+        autoSearchCronExpression: "0 3 * * *",
+      }),
+      { params: Promise.resolve({}) },
+    );
+    expect(res.status).toBe(201);
+  });
+});
+
+describe("PUT /api/instances/[id] — auto-search fields", () => {
+  test("can update auto-search batch limit via PUT", async () => {
+    const created = await POST(postReq(valid), { params: Promise.resolve({}) });
+    const { id } = await created.json();
+    const res = await PUT(putReq(id, { autoSearchBatchLimit: 10 }), ctxFor(id));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.autoSearchBatchLimit).toBe(10);
+  });
+
+  test("PUT with invalid cron returns 400 INVALID_CRON", async () => {
+    const created = await POST(postReq(valid), { params: Promise.resolve({}) });
+    const { id } = await created.json();
+    const res = await PUT(
+      putReq(id, {
+        autoSearchScheduleMode: "cron",
+        autoSearchCronExpression: "bad cron",
+      }),
+      ctxFor(id),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("INVALID_CRON");
   });
 });

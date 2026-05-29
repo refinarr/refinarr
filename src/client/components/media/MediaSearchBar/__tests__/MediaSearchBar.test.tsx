@@ -5,116 +5,63 @@ import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 import { renderWithProviders, screen } from "@/test/render";
 import { MediaSearchBar } from "../MediaSearchBar";
 
-// vi.mock is hoisted by vitest, so position relative to imports doesn't
-// affect execution order.
-vi.mock("@/client/hooks/data/useQualityProfiles", () => ({
-  useQualityProfiles: () => ({ data: [] }),
-}));
-
-vi.mock("@/client/hooks/data/usePreferences", () => ({
-  usePreferences: () => ({ data: [] }),
-}));
-
 const baseFilters: MediaFilters = {
   sortBy: "score",
   order: "asc",
-  maxScore: 1,
+  minScore: null,
+  maxScore: null,
+  minSize: null,
+  maxSize: null,
   q: "",
-  profileId: null,
+  mediaId: null,
+  profileIds: [],
+  severities: [],
   missingCfIds: [],
   missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
-  onlyMissing: false,
+  flaggedOnly: true,
+  monitorStatus: "all",
 };
 
 describe("MediaSearchBar", () => {
-  it("renders the search input and the Only missing toggle pill", () => {
+  it("renders the search input", () => {
     renderWithProviders(
-      <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
-        filters={baseFilters}
-        onChange={vi.fn()}
-      />,
+      <MediaSearchBar filters={baseFilters} onChange={vi.fn()} />,
     );
     expect(screen.getByPlaceholderText(/search title/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /only missing/i }),
-    ).toBeInTheDocument();
   });
 
-  it("invokes onChange when the Only missing pill is toggled", async () => {
-    const onChange = vi.fn();
+  it("does not render a Clear all button (lives in ActiveFilterChips)", () => {
     renderWithProviders(
       <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
-        filters={baseFilters}
-        onChange={onChange}
-      />,
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: /only missing/i }),
-    );
-    expect(onChange).toHaveBeenCalledWith({ onlyMissing: true });
-  });
-
-  it("shows Clear all only when at least one filter is active", async () => {
-    const { rerender } = renderWithProviders(
-      <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
-        filters={baseFilters}
+        filters={{ ...baseFilters, q: "x" }}
         onChange={vi.fn()}
       />,
     );
     expect(
       screen.queryByRole("button", { name: /clear all/i }),
     ).not.toBeInTheDocument();
+  });
 
-    rerender(
+  it("does not render a Show all pill (driven by Instance.showAllMedia)", () => {
+    renderWithProviders(
       <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
-        filters={{ ...baseFilters, onlyMissing: true }}
+        filters={{ ...baseFilters, flaggedOnly: false }}
         onChange={vi.fn()}
       />,
     );
     expect(
-      screen.getByRole("button", { name: /clear all/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /show all/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it("Clear all resets every value-bearing filter", async () => {
+  it("invokes onChange when the search input changes", async () => {
     const onChange = vi.fn();
     renderWithProviders(
-      <MediaSearchBar
-        arrType="radarr"
-        instanceId={1}
-        scoringMode="manual"
-        filters={{
-          ...baseFilters,
-          profileId: 1,
-          maxScore: 0.5,
-          onlyMissing: true,
-          q: "x",
-        }}
-        onChange={onChange}
-      />,
+      <MediaSearchBar filters={baseFilters} onChange={onChange} />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /clear all/i }));
-    expect(onChange).toHaveBeenCalledWith({
-      q: "",
-      profileId: null,
-      missingCfIds: [],
-      hasNegativeCfIds: [],
-      maxScore: 1,
-      onlyMissing: false,
-    });
+    await userEvent.type(screen.getByPlaceholderText(/search title/i), "x");
+    expect(onChange).toHaveBeenCalledWith({ q: "x" });
   });
 });

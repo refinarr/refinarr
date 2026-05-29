@@ -117,6 +117,28 @@ describe("redactContext — reserved keys", () => {
       passwordhash: "***",
     });
   });
+
+  test("token key is scrubbed", () => {
+    expect(redactContext({ token: "abc" })).toEqual({ token: "***" });
+  });
+
+  test("bearer key is scrubbed (case-insensitive)", () => {
+    expect(redactContext({ Bearer: "abc" })).toEqual({ Bearer: "***" });
+  });
+
+  test("jwt key is scrubbed", () => {
+    expect(redactContext({ jwt: "eyJ..." })).toEqual({ jwt: "***" });
+  });
+
+  test("secret key is scrubbed", () => {
+    expect(redactContext({ secret: "shh" })).toEqual({ secret: "***" });
+  });
+
+  test("credentials key is scrubbed", () => {
+    expect(redactContext({ credentials: "u:p" })).toEqual({
+      credentials: "***",
+    });
+  });
 });
 
 describe("redactContext — string values run through redactString", () => {
@@ -151,13 +173,56 @@ describe("redactContext — nested objects", () => {
   });
 });
 
-describe("redactContext — non-redacted types", () => {
-  test("array values pass through unchanged", () => {
+describe("redactContext — array recursion", () => {
+  test("clean string array passes through unchanged", () => {
     expect(redactContext({ tags: ["one", "two"] })).toEqual({
       tags: ["one", "two"],
     });
   });
 
+  test("array of strings: each element runs through redactString", () => {
+    const result = redactContext({
+      msgs: [
+        "ok",
+        "token deadbeef1234567890abcdef12345678 rejected",
+        "?apikey=leak",
+      ],
+    });
+    expect(result?.msgs).toEqual(["ok", "token *** rejected", "?apikey=***"]);
+  });
+
+  test("array of objects: each element recurses, reserved keys scrubbed", () => {
+    const result = redactContext({
+      events: [
+        { type: "login", password: "shh" },
+        { type: "rotate", apikey: "abc" },
+      ],
+    });
+    expect(result?.events).toEqual([
+      { type: "login", password: "***" },
+      { type: "rotate", apikey: "***" },
+    ]);
+  });
+
+  test("nested arrays recurse all the way down", () => {
+    const result = redactContext({
+      batches: [[{ token: "abc" }], [{ password: "shh" }]],
+    });
+    expect(result?.batches).toEqual([
+      [{ token: "***" }],
+      [{ password: "***" }],
+    ]);
+  });
+
+  test("mixed array (strings + objects) handles each kind", () => {
+    const result = redactContext({
+      mixed: ["?apikey=leak", { token: "abc" }, 42],
+    });
+    expect(result?.mixed).toEqual(["?apikey=***", { token: "***" }, 42]);
+  });
+});
+
+describe("redactContext — non-redacted types", () => {
   test("number values pass through unchanged", () => {
     expect(redactContext({ count: 42 })).toEqual({ count: 42 });
   });

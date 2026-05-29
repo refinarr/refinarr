@@ -19,14 +19,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/client/components/ui/select";
-import type { ArrType, Instance } from "@/shared/types/models";
-import { ALL_ARR_TYPES, isArrType } from "@/shared/arr-type";
+import type { PublicInstance } from "@/shared/types/api";
+import type { ArrType } from "@/shared/types/models";
+import { ALL_ARR_TYPES, isArrType } from "@/shared/arr-meta";
 import { useAddInstanceForm } from "./useAddInstanceForm";
 
-// Per-arr-type i18n keys for the type-specific placeholders. Display
-// labels live in messages/en.json under settings.instanceForm.types.*
-// so non-English locales render correctly.
-const PLACEHOLDER_KEYS: Record<ArrType, { name: string; url: string }> = {
+type InstanceFormKey = Parameters<
+  ReturnType<typeof useTranslations<"settings.instanceForm">>
+>[0];
+
+const PLACEHOLDER_KEYS: Record<
+  ArrType,
+  { name: InstanceFormKey; url: InstanceFormKey }
+> = {
   radarr: { name: "namePlaceholder", url: "urlPlaceholder" },
   sonarr: { name: "namePlaceholderSonarr", url: "urlPlaceholderSonarr" },
 };
@@ -34,12 +39,11 @@ const PLACEHOLDER_KEYS: Record<ArrType, { name: string; url: string }> = {
 interface Props {
   open: boolean;
   onClose: () => void;
-  editing?: Instance | null;
+  editing?: PublicInstance | null;
 }
 
 export function AddInstanceDialog({ open, onClose, editing }: Props) {
   const t = useTranslations("settings.instanceForm");
-  const tTypes = useTranslations("settings.instanceForm.types");
   const tCommon = useTranslations("common");
 
   const {
@@ -62,6 +66,7 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
           <DialogTitle>{editing ? t("editTitle") : t("addTitle")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="flex flex-col gap-4">
+          {/* Connection */}
           <div className="flex flex-col gap-1.5">
             <Label>{t("type")}</Label>
             <Select
@@ -69,18 +74,24 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
               onValueChange={(v) => {
                 if (v && isArrType(v)) onChangeType(v);
               }}
+              disabled={isEdit}
             >
               <SelectTrigger>
-                <SelectValue>{tTypes(selectedType)}</SelectValue>
+                <SelectValue>{t(`types.${selectedType}`)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {ALL_ARR_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>
-                    {tTypes(type)}
+                    {t(`types.${type}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {isEdit && (
+              <p className="text-muted-foreground text-xs">
+                {t("typeImmutableHint")}
+              </p>
+            )}
           </div>
           <FormField
             id="instance-name"
@@ -115,20 +126,25 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
               }
             />
           </FormField>
-          <FormField
-            id="instance-sph"
-            label={t("searchesPerHour")}
-            error={errors.searchesPerHour?.message}
-            description={t("searchesPerHourHelp")}
-          >
-            <Input
-              {...register("searchesPerHour", { valueAsNumber: true })}
-              type="number"
-              min={1}
-              max={1000}
-              inputMode="numeric"
-            />
-          </FormField>
+
+          {/* Performance */}
+          <div className="pt-subgroup border-t">
+            <FormField
+              id="instance-sph"
+              label={t("searchesPerHour")}
+              error={errors.searchesPerHour?.message}
+              description={t("searchesPerHourHelp")}
+            >
+              <Input
+                {...register("searchesPerHour", { valueAsNumber: true })}
+                type="number"
+                min={1}
+                max={1000}
+                inputMode="numeric"
+              />
+            </FormField>
+          </div>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               {tCommon("cancel")}
@@ -140,14 +156,14 @@ export function AddInstanceDialog({ open, onClose, editing }: Props) {
               disabled={!canTest || testing}
             >
               {testing ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
+                <Loader2 className="mr-2 animate-spin" />
               ) : (
-                <Plug className="mr-2 size-4" />
+                <Plug className="mr-2" />
               )}
               {t("testConnection")}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {submitting && <Loader2 className="mr-2 animate-spin" />}
               {tCommon("save")}
             </Button>
           </DialogFooter>

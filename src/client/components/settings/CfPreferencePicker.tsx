@@ -18,10 +18,10 @@ import {
   useSetPreferences,
 } from "@/client/hooks/data/usePreferences";
 import { withToast } from "@/client/lib/with-toast";
-import type { Instance } from "@/shared/types/models";
+import type { PublicInstance } from "@/shared/types/api";
 
 interface Props {
-  instance: Instance;
+  instance: PublicInstance;
 }
 
 export function CfPreferencePicker({ instance }: Props) {

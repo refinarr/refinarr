@@ -82,6 +82,29 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Layout tokens — semantic spacing scale beyond Tailwind's numeric one.
+     Use these for vertical rhythm so retuning a level (e.g. tightening
+     `space-y-section` from 1rem → 0.875rem) updates the entire app at
+     once. Each --spacing-* extends Tailwind's spacing scale, so all
+     spacing utilities work: space-y-{name}, gap-{name}, p-{name},
+     m-{name}, h-{name}, w-{name}, size-{name}, scroll-mt-{name}, … */
+  --spacing-page: 1.5rem; /* between page-level chunks (header, content blocks) */
+  --spacing-section: 1rem; /* inside a content section */
+  --spacing-content-top: 1rem; /* top padding when a page has no pageHeader slot */
+  --spacing-subgroup: 0.75rem; /* inside subgroups (e.g. per-instance configs) */
+  --spacing-header: 1.25rem; /* sticky header bar inset padding (mobile-friendly) */
+  --spacing-menu-item: 0.625rem; /* vertical padding for dropdown / menu items (Select, DropdownMenu) */
+  --spacing-control-xs: 1.75rem; /* extra-dense / compact inline controls */
+  --spacing-control-sm: 2.45rem; /* dense inline controls (badge-like, default Select trigger) */
+  --spacing-control: 2.75rem; /* prominent form control height — iOS 44pt touch target */
+  --spacing-control-lg: 3.25rem; /* primary CTA / hero pickers */
+  --spacing-bottom-bar: 4rem; /* mobile bottom tab bar height (excludes safe-area inset) */
+  --spacing-mobile-filter-bar: 3rem; /* mobile filter toolbar height (sits above the tab bar) */
+  --spacing-row-compact: 2.25rem; /* compact MediaTable row (~36px) */
+  --spacing-row-cozy: 3rem; /* cozy MediaTable row (~48px, default) */
+  --spacing-card-gap: 0.5rem; /* inter-card spacing in mobile MediaCard list (~8px) */
+  --spacing-card-min: 9.75rem; /* virtualizer estimate / skeleton min height for mobile cards (~156px to match the rendered card with actions row) */
 }
 
 /* First-paint safety: surface is keyed on the .dark class (toggled by
@@ -206,10 +229,67 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Lock html + body to viewport height with no overflow so iOS Safari /
+   * Chrome can't rubber-band the body and drag sticky headers past the
+   * browser chrome. Scrolling lives inside <main> in AppShell. */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
   body {
     @apply bg-background text-foreground;
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* Hide scrollbars on mobile — content still scrolls, just no chrome.
+ * Outside @layer base so the wildcard rule is not shadowed by base
+ * resets that follow. */
+@media (max-width: 767px) {
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+}
+
+/* Media row focus pulse — triggered when a deep-link from /history or
+ * the dashboard navigates the user to /movies?focus=ID. Ring-only so
+ * card content stays readable (no background flood). The outer glow
+ * makes the highlight catch the eye even when the card is below the
+ * fold during the pre-scroll moment. */
+@keyframes media-row-focus-pulse {
+  0% {
+    box-shadow:
+      inset 0 0 0 2px var(--brand),
+      0 0 0 4px color-mix(in srgb, var(--brand) 35%, transparent);
+  }
+  60% {
+    box-shadow:
+      inset 0 0 0 2px var(--brand),
+      0 0 0 0 transparent;
+  }
+  100% {
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+}
+.media-row-focused {
+  animation: media-row-focus-pulse 1.4s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .media-row-focused {
+    animation: none;
+    box-shadow: inset 0 0 0 2px var(--brand);
   }
 }

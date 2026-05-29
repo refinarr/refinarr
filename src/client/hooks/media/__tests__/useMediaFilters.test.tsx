@@ -26,6 +26,7 @@ describe("useMediaFilters", () => {
         missingCfMatch: "any",
         hasNegativeCfIds: [20],
         hasNegativeCfMatch: "any",
+        minScore: 0,
         maxScore: 0.5,
       }));
     });
@@ -38,7 +39,8 @@ describe("useMediaFilters", () => {
     expect(result.current.filters.hasNegativeCfIds).toEqual([]);
     expect(result.current.filters.missingCfMatch).toBe("all");
     expect(result.current.filters.hasNegativeCfMatch).toBe("all");
-    expect(result.current.filters.maxScore).toBe(1);
+    expect(result.current.filters.minScore).toBeNull();
+    expect(result.current.filters.maxScore).toBeNull();
   });
 
   it("preserves non-mode-specific filter fields across mode changes", () => {
@@ -47,38 +49,65 @@ describe("useMediaFilters", () => {
       { initialProps: { mode: "manual" } },
     );
     act(() => {
-      result.current.setFilters((f) => ({ ...f, q: "alpha", profileId: 5 }));
+      result.current.setFilters((f) => ({ ...f, q: "alpha", profileIds: [5] }));
     });
     rerender({ mode: "profile" });
     expect(result.current.filters.q).toBe("alpha");
-    expect(result.current.filters.profileId).toBe(5);
+    // profileIds are per-instance, not mode-scoped — they survive a mode flip.
+    expect(result.current.filters.profileIds).toEqual([5]);
   });
 
-  it("resets per-instance filters (profile + CF ids + match modes) when instanceId changes", () => {
+  it("resets per-instance filters using the next instance show-all setting when instanceId changes", () => {
     const { result, rerender } = renderHook(
-      ({ id }: { id: number }) => useMediaFilters("profile", id),
-      { initialProps: { id: 1 } },
+      ({ id, showAllMedia }: { id: number; showAllMedia: boolean }) =>
+        useMediaFilters("profile", id, showAllMedia),
+      { initialProps: { id: 1, showAllMedia: false } },
     );
     act(() => {
       result.current.setFilters((f) => ({
         ...f,
-        profileId: 7,
+        profileIds: [7, 8],
         missingCfIds: [10],
         missingCfMatch: "any",
         hasNegativeCfIds: [20, 21],
         hasNegativeCfMatch: "any",
+        flaggedOnly: false,
         q: "stay",
       }));
     });
-    expect(result.current.filters.profileId).toBe(7);
+    expect(result.current.filters.profileIds).toEqual([7, 8]);
 
-    rerender({ id: 2 });
-    expect(result.current.filters.profileId).toBeNull();
+    rerender({ id: 2, showAllMedia: true });
+    expect(result.current.filters.profileIds).toEqual([]);
     expect(result.current.filters.missingCfIds).toEqual([]);
     expect(result.current.filters.hasNegativeCfIds).toEqual([]);
     expect(result.current.filters.missingCfMatch).toBe("all");
     expect(result.current.filters.hasNegativeCfMatch).toBe("all");
+    expect(result.current.filters.flaggedOnly).toBe(false);
     // Cross-instance fields like the search query persist.
     expect(result.current.filters.q).toBe("stay");
+  });
+
+  it("updates flaggedOnly without clearing filters when the active instance show-all setting changes", () => {
+    const { result, rerender } = renderHook(
+      ({ showAllMedia }: { showAllMedia: boolean }) =>
+        useMediaFilters("profile", 1, showAllMedia),
+      { initialProps: { showAllMedia: false } },
+    );
+    act(() => {
+      result.current.setFilters((f) => ({
+        ...f,
+        profileIds: [7],
+        missingCfIds: [10],
+        missingCfMatch: "any",
+      }));
+    });
+    expect(result.current.filters.flaggedOnly).toBe(true);
+
+    rerender({ showAllMedia: true });
+    expect(result.current.filters.flaggedOnly).toBe(false);
+    expect(result.current.filters.profileIds).toEqual([7]);
+    expect(result.current.filters.missingCfIds).toEqual([10]);
+    expect(result.current.filters.missingCfMatch).toBe("any");
   });
 });

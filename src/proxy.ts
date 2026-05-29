@@ -1,9 +1,11 @@
-import { timingSafeEqual } from "crypto";
+import { randomUUID, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/server/lib/db";
 import { configRepository } from "@/server/repositories/ConfigRepository";
+import { userRepository } from "@/server/repositories/UserRepository";
+import { sessionRepository } from "@/server/repositories/SessionRepository";
 import { ConfigKey } from "@/server/config/keys";
 import { SESSION_COOKIE } from "@/server/lib/auth";
+import type { ApiErrorResponse } from "@/shared/types/api";
 
 // Next.js 16: Proxy always runs on Node.js — no `export const runtime` needed.
 
@@ -38,24 +40,42 @@ const CSP_POLICY = [
   "base-uri 'self'",
 ].join("; ");
 
-function withSecurityHeaders(res: NextResponse): NextResponse {
+function withSecurityHeaders(res: NextResponse, traceId: string): NextResponse {
   res.headers.set("Content-Security-Policy", CSP_POLICY);
   res.headers.set("X-Frame-Options", "DENY");
   res.headers.set("X-Content-Type-Options", "nosniff");
   res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.headers.set("X-Trace-Id", traceId);
   return res;
 }
 
+// Forward `x-trace-id` on the *request* so `createApiHandler` reuses
+// it instead of minting a new one — guarantees one ID for edge + handler
+// logs of the same request.
+function passThrough(req: NextRequest, traceId: string): NextResponse {
+  const forwarded = new Headers(req.headers);
+  forwarded.set("x-trace-id", traceId);
+  return NextResponse.next({ request: { headers: forwarded } });
+}
+
+function apiError(
+  status: number,
+  error: string,
+  code: string,
+  traceId: string,
+): NextResponse {
+  const body: ApiErrorResponse = { error, code, traceId };
+  return NextResponse.json(body, { status });
+}
+
 async function userExists(): Promise<boolean> {
-  const c = await prisma.user.count();
-  return c > 0;
+  return (await userRepository.count()) > 0;
 }
 
 async function isValidSessionId(id: string): Promise<boolean> {
-  const s = await prisma.session.findUnique({ where: { id } });
+  const s = await sessionRepository.findByToken(id);
   if (!s) return false;
-  if (s.expiresAt.getTime() < Date.now()) return false;
-  return true;
+  return s.expiresAt.getTime() >= Date.now();
 }
 
 function constantTimeMatch(a: string, b: string): boolean {
@@ -69,9 +89,13 @@ async function getStoredApiKey(): Promise<string | null> {
   return configRepository.getTyped(ConfigKey.ApiKey);
 }
 
-function unauthorized(req: NextRequest, isApi: boolean): NextResponse {
+function unauthorized(
+  req: NextRequest,
+  isApi: boolean,
+  traceId: string,
+): NextResponse {
   if (isApi) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiError(401, "Unauthorized", "UNAUTHORIZED", traceId);
   }
   const url = req.nextUrl.clone();
   url.pathname = "/login";
@@ -85,14 +109,15 @@ async function setupGate(
   req: NextRequest,
   path: string,
   isApi: boolean,
+  traceId: string,
 ): Promise<NextResponse | null> {
   const isSetupPath = path === "/setup" || path === "/api/auth/setup";
   const hasUser = await userExists();
 
   if (!hasUser) {
-    if (isSetupPath) return NextResponse.next();
+    if (isSetupPath) return passThrough(req, traceId);
     if (isApi)
-      return NextResponse.json({ error: "Setup required" }, { status: 401 });
+      return apiError(401, "Setup required", "SETUP_REQUIRED", traceId);
     const url = req.nextUrl.clone();
     url.pathname = "/setup";
     return NextResponse.redirect(url);
@@ -100,9 +125,11 @@ async function setupGate(
 
   if (isSetupPath) {
     if (isApi)
-      return NextResponse.json(
-        { error: "Setup already completed" },
-        { status: 409 },
+      return apiError(
+        409,
+        "Setup already completed",
+        "SETUP_COMPLETED",
+        traceId,
       );
     const url = req.nextUrl.clone();
     url.pathname = "/dashboard";
@@ -141,20 +168,23 @@ async function hasValidAuth(req: NextRequest): Promise<boolean> {
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const isApi = path.startsWith("/api/");
+  const traceId = randomUUID();
 
   // Health endpoint is always public — must bypass userExists() so the webServer
   // health check resolves to 200 before any user is created.
-  if (path === "/api/health") return withSecurityHeaders(NextResponse.next());
+  if (path === "/api/health")
+    return withSecurityHeaders(passThrough(req, traceId), traceId);
 
-  const setupResp = await setupGate(req, path, isApi);
-  if (setupResp) return withSecurityHeaders(setupResp);
+  const setupResp = await setupGate(req, path, isApi, traceId);
+  if (setupResp) return withSecurityHeaders(setupResp, traceId);
 
   if (isPublicPath(path, isApi))
-    return withSecurityHeaders(NextResponse.next());
+    return withSecurityHeaders(passThrough(req, traceId), traceId);
 
-  if (await hasValidAuth(req)) return withSecurityHeaders(NextResponse.next());
+  if (await hasValidAuth(req))
+    return withSecurityHeaders(passThrough(req, traceId), traceId);
 
-  return withSecurityHeaders(unauthorized(req, isApi));
+  return withSecurityHeaders(unauthorized(req, isApi, traceId), traceId);
 }
 
 export const config = {

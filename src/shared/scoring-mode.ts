@@ -1,4 +1,9 @@
-import type { CustomFormat, FlaggedMedia, ScoringMode } from "./types/models";
+import type {
+  AutoSearchScoringMode,
+  CustomFormat,
+  MediaItem,
+  ScoringMode,
+} from "./types/models";
 
 // Centralized dispatch tables for the two scoring modes. Replaces the
 // scattered `mode === "profile" ? a : b` ternaries and matches the
@@ -11,7 +16,7 @@ import type { CustomFormat, FlaggedMedia, ScoringMode } from "./types/models";
 // The score field a flagged item exposes for the active mode. Profile mode
 // uses the *arr's customFormatScore (compared to the profile's cutoff);
 // manual mode uses cfScore (CF-coverage 0..1).
-export const SCORE_FOR: Record<ScoringMode, (item: FlaggedMedia) => number> = {
+export const SCORE_FOR: Record<ScoringMode, (item: MediaItem) => number> = {
   profile: (item) => item.customFormatScore,
   manual: (item) => item.cfScore,
 };
@@ -21,7 +26,7 @@ export const SCORE_FOR: Record<ScoringMode, (item: FlaggedMedia) => number> = {
 // mode surfaces wanted formats missing from the file.
 export const ISSUES_FOR: Record<
   ScoringMode,
-  (item: FlaggedMedia) => CustomFormat[]
+  (item: MediaItem) => CustomFormat[]
 > = {
   profile: (item) => item.unwantedFormats,
   manual: (item) => item.missingFormats,
@@ -55,6 +60,14 @@ export const isScoringMode = (value: string): value is ScoringMode =>
 // the safer default — it derives the target from the *arr's quality
 // profile cutoff and works without any per-instance CF preferences.
 export const DEFAULT_SCORING_MODE: ScoringMode = "profile";
+
+const AUTO_SEARCH_SCORING_MODE_SET: ReadonlySet<string> = new Set([
+  "inherit",
+  "profile",
+]);
+export const isAutoSearchScoringMode = (
+  v: string,
+): v is AutoSearchScoringMode => AUTO_SEARCH_SCORING_MODE_SET.has(v);
 
 // Stable iteration order over every supported scoring mode. Useful for UI
 // surfaces that need to render an option per mode (e.g. <SelectItem>).

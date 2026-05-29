@@ -49,13 +49,20 @@
     "refresh": "Refresh",
     "clear": "Clear",
     "loading": "Loading…",
+    "loadingMore": "Loading more…",
     "all": "All",
     "edit": "Edit",
     "test": "Test",
     "yes": "Yes",
     "no": "No",
     "viewAll": "View all",
-    "moreCount": "+{count} more"
+    "moreCount": "+{count} more",
+    "on": "On",
+    "off": "Off",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "moreActions": "More actions",
+    "scrollToTop": "Scroll to top"
   },
   "dialog": {
     "close": "Close"
@@ -70,7 +77,10 @@
     "logs": "Logs",
     "settings": "Settings",
     "menu": "Menu",
-    "openMenu": "Open navigation menu"
+    "more": "More",
+    "openMenu": "Open navigation menu",
+    "openMore": "Open more menu",
+    "primary": "Primary navigation"
   },
   "instanceSelector": {
     "selectInstance": "Select instance",
@@ -79,6 +89,7 @@
     "flaggedTile": "Flagged",
     "selectedTile": "Selected",
     "flaggedSummary": "{total} flagged{selected, select, 0 {} other { · {selected} selected}}",
+    "flaggedSummaryShort": "{total, plural, =0 {Nothing flagged} one {# Flagged} other {# Flagged}}",
     "scoringModeBanner": "{mode} mode"
   },
   "instanceHealth": {
@@ -121,7 +132,11 @@
     }
   },
   "a11y": {
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "table": {
+      "resizeColumn": "Resize {column} column",
+      "issueOverflow": "{count, plural, one {Show 1 more issue tag} other {Show # more issue tags}}"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -143,7 +158,24 @@
       "disabled": "Disabled",
       "flaggedMoviesNoun": "{count, plural, one {flagged movie} other {flagged movies}}",
       "flaggedSeriesNoun": "{count, plural, one {flagged series} other {flagged series}}",
-      "settings": "Settings"
+      "flaggedOfTotal": "{flagged} of {total}",
+      "flaggedOfTotalUnavailable": "Counts unavailable",
+      "settings": "Settings",
+      "autoSearchLastRun": "auto {time}",
+      "autoSearchNeverRun": "auto never ran"
+    },
+    "fleet": {
+      "title": "Auto-search",
+      "running": "Running…",
+      "neverRun": "Never run",
+      "lastRun": "Last run {time}",
+      "nextRun": "Next in {eta}",
+      "pausedUntil": "Paused until {time}",
+      "overdue": "Overdue — scheduled {eta} ago",
+      "failedStreak": "{count} failed ticks — check Logs",
+      "viewRuns": "View runs",
+      "resume": "Resume",
+      "runNow": "Run now"
     }
   },
   "movies": {
@@ -152,12 +184,16 @@
     "refreshTitle": "Refresh from Radarr",
     "columns": {
       "title": "Title",
+      "monitored": "Monitored",
       "profile": "Profile",
       "score": "Score",
       "size": "Size",
+      "severity": "Severity",
       "missing": "Missing",
       "penalties": "Penalties"
     },
+    "monitoredYes": "Monitored",
+    "monitoredNo": "Unmonitored",
     "noFile": "No file",
     "drawer": {
       "score": "Score",
@@ -165,20 +201,23 @@
       "hasFile": "Has file",
       "customFormats": "Custom Formats",
       "noFileDownloaded": "No file downloaded.",
-      "noCfData": "No custom format data.",
-      "deleteAndSearch": "Delete + Search"
+      "noCfData": "No custom format data."
     }
   },
   "shows": {
     "title": "Shows",
     "flaggedSummary": "{total} flagged{selected, select, 0 {} other { · {selected} selected}}",
     "refreshTitle": "Refresh from Sonarr",
+    "monitoredYes": "Monitored",
+    "monitoredNo": "Unmonitored",
     "columns": {
       "title": "Title",
+      "monitored": "Monitored",
       "profile": "Profile",
       "score": "Score",
       "size": "Size",
       "episodes": "Eps",
+      "severity": "Severity",
       "missing": "Missing",
       "penalties": "Penalties"
     },
@@ -208,10 +247,12 @@
     "penaltyMultiLabel": "{count} penalty formats",
     "matchAny": "Match any",
     "matchAll": "Match all (default)",
+    "matchModeAriaLabel": "Match mode",
     "matchAnySuffix": "any",
     "matchAllSuffix": "all",
     "profileLabel": "Profile: {name}",
     "queryLabel": "“{q}”",
+    "mediaIdLabel": "Selected item",
     "searchPlaceholder": "Search title or Custom Format…",
     "maxScore": "Max score",
     "active": "Active:",
@@ -219,15 +260,77 @@
     "title": "Filters",
     "openFilters": "Filters",
     "applyFilters": "Apply",
-    "onlyMissing": "Only missing",
-    "clearAll": "Clear all"
+    "showAll": "Show all",
+    "clearAll": "Clear all",
+    "density": {
+      "groupLabel": "Row density",
+      "buttonLabel": "View mode",
+      "next": "Switch to {mode}",
+      "cozy": "Cozy",
+      "compact": "Compact",
+      "card": "Cards",
+      "poster": "Posters"
+    },
+    "toolbarAriaLabel": "Filter toolbar",
+    "activeCountAriaLabel": "{count, plural, one {# active filter} other {# active filters}}",
+    "sheetDescription": "Toggle filters that apply to the visible items.",
+    "columnFilterAriaLabel": "Filter {column}",
+    "missingColumnDescription": "Toggle Custom Formats this column must be missing.",
+    "penaltyColumnDescription": "Toggle penalty Custom Formats this column must contain.",
+    "noFormatsAvailable": "No Custom Formats available.",
+    "clearFilter": "Clear filter",
+    "severityHeading": "Severity",
+    "severityColumnDescription": "Show only items in the selected severity buckets.",
+    "severityLabel": "{name}",
+    "profileHeading": "Quality profile",
+    "profileColumnDescription": "Show only items in the selected quality profiles.",
+    "noProfilesAvailable": "No quality profiles available.",
+    "scoreHeading": "Score",
+    "scoreColumnDescription": "Pick a score range.",
+    "scoreRangeBoth": "Score: {min} to {max}",
+    "scoreRangeMin": "Score: {min} or above",
+    "scoreRangeMax": "Score: {max} or below",
+    "scoreBuckets": {
+      "manualLt30": "< 30%",
+      "manual30to60": "30 – 60%",
+      "manual60to85": "60 – 85%",
+      "manualGt85": "85%+",
+      "profileNegative": "Negative",
+      "profileZero": "Zero",
+      "profilePositive": "Positive"
+    },
+    "sizeHeading": "File size",
+    "sizeColumnDescription": "Pick a size bucket.",
+    "sizeRangeBoth": "Size: {min} to {max}",
+    "sizeRangeMin": "Size: {min} or larger",
+    "sizeRangeMax": "Size: up to {max}",
+    "sizeBuckets": {
+      "lt1": "< 1 GB",
+      "to1to5": "1 – 5 GB",
+      "to5to10": "5 – 10 GB",
+      "to10to25": "10 – 25 GB",
+      "to25to50": "25 – 50 GB",
+      "gt50": "> 50 GB"
+    },
+    "monitorStatus": {
+      "label": "Monitor status",
+      "description": "Show only items with the chosen monitor state.",
+      "all": "All",
+      "monitored": "Monitored",
+      "unmonitored": "Unmonitored",
+      "missing": "Missing files"
+    },
+    "monitorStatusLabel": "Monitored: {value}"
   },
   "bulk": {
     "selected": "{count} selected",
+    "selectAll": "Select all visible items",
+    "selectRow": "Select row",
     "search": "Search",
     "ignore": "Ignore",
     "delete": "Delete",
-    "deleteAndSearch": "Delete and search",
+    "clearSelection": "Clear selection",
+    "moreActions": "More actions",
     "progress": {
       "search": "Searching {current}/{total}",
       "ignore": "Ignoring {current}/{total}",
@@ -263,6 +366,7 @@
   },
   "history": {
     "title": "History",
+    "subtitle": "Every action taken on your media. Retry failed searches or clear records you no longer need.",
     "filters": {
       "instance": "Instance",
       "status": "Status",
@@ -270,9 +374,12 @@
     },
     "statusLabels": {
       "success": "Success",
+      "searched": "Searched",
       "dryRun": "Dry Run",
       "failed": "Failed",
-      "pending": "Pending"
+      "pending": "Pending",
+      "grabbed": "Grabbed",
+      "downloaded": "Downloaded"
     },
     "actionLabels": {
       "search": "Search",
@@ -291,6 +398,11 @@
       "retry": "Retry",
       "retried": "Retried {time}"
     },
+    "batch": {
+      "header": "Batch · {action} · {count, plural, one {# item} other {# items}}",
+      "expand": "Expand batch",
+      "collapse": "Collapse batch"
+    },
     "clear": "Clear history"
   },
   "logs": {
@@ -307,25 +419,90 @@
       "warn": "Warnings",
       "error": "Errors"
     },
+    "badgeLevels": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warn",
+      "error": "Error"
+    },
     "columns": {
       "time": "Time",
       "level": "Level",
       "source": "Source",
       "message": "Message"
     },
-    "empty": "No logs recorded yet — application logs will appear here as the app runs."
+    "empty": "No logs recorded yet — application logs will appear here as the app runs.",
+    "noMatches": "No logs match the current filters.",
+    "instanceAll": "All instances",
+    "sourceAll": "All sources",
+    "source": {
+      "api": "API",
+      "client": "Client",
+      "auth": "Auth",
+      "db": "Database",
+      "arr-client": "Arr client",
+      "instance-service": "Instance",
+      "movie-service": "Movies",
+      "series-service": "Series",
+      "media-action": "Actions",
+      "search-queue": "Search queue",
+      "search-worker": "Search worker",
+      "status-poller": "Status poller",
+      "auto-run": "Auto-search"
+    },
+    "chips": {
+      "level": "Level: {label}",
+      "source": "Source: {label}",
+      "instance": "Instance: {name}",
+      "search": "Search: \"{q}\"",
+      "clearAll": "Clear all",
+      "removeAriaLabel": "Remove {label}"
+    },
+    "selectPrompt": "Select a log entry to see its full context.",
+    "detail": {
+      "timestamp": "Timestamp",
+      "context": "Context",
+      "error": "Error",
+      "stack": "Stack trace",
+      "showStack": "Show stack trace",
+      "hideStack": "Hide stack trace",
+      "copyRecord": "Copy record",
+      "copyTraceId": "Copy traceId",
+      "copyJson": "Copy JSON",
+      "noTraceId": "No traceId",
+      "noContext": "No context attached.",
+      "close": "Close"
+    },
+    "autoScroll": {
+      "label": "Auto-scroll",
+      "paused": "Paused — scroll resumed manually."
+    }
   },
   "settings": {
     "title": "Settings",
+    "subtitle": "Manage your refinarr instances and preferences.",
+    "navAriaLabel": "Settings sections",
+    "sections": {
+      "general": "General",
+      "appearance": "Appearance",
+      "instances": "Instances",
+      "apiAccess": "API Access",
+      "account": "Account",
+      "diagnostics": "Diagnostics",
+      "system": "System"
+    },
     "instances": "Instances",
     "addInstance": "Add Instance",
     "scoringMode": "Scoring Mode",
+    "profileMode": "Profile Mode",
     "scoringModeOptions": {
       "manual": "Manual",
       "profile": "Profile"
     },
     "wantedCfs": "Wanted Custom Formats",
     "wantedCfsHelp": "Select which Custom Formats each instance should have. Media missing any of these will be flagged.",
+    "showAllMedia": "Advanced — show all media",
+    "showAllMediaHelp": "By default the library view only shows flagged items — media that doesn't yet meet your custom-format requirements. Turn this on to view, search, or delete items that already pass (for further enhancement). Recommended off.",
     "noCfsConfigured": "No Custom Formats configured",
     "dryRunMode": "Dry Run Mode",
     "appearance": {
@@ -366,10 +543,80 @@
       "rotated": "API key rotated",
       "rotateFailed": "Couldn't rotate API key"
     },
+    "autoSearch": {
+      "sectionTitle": "Auto-search",
+      "optionalLabel": "Optional",
+      "enableLabel": "Enable auto-search",
+      "modeIntervalTab": "Interval",
+      "modeCronTab": "Cron",
+      "intervalLabel": "Run every",
+      "intervalUnit": {
+        "minutes": "Minutes",
+        "hours": "Hours",
+        "days": "Days"
+      },
+      "intervalHelper": "Runs every {value} {unit}",
+      "cronLabel": "Cron expression",
+      "cronPlaceholder": "0 3 * * *",
+      "cronInvalid": "Invalid cron expression (5-field only, e.g. \"0 3 * * *\")",
+      "cronNextPreview": "Next: {next}",
+      "cronHint": "Need help building an expression? Try",
+      "cronPresetNightly": "Nightly",
+      "cronPresetTwiceDaily": "Twice daily",
+      "cronPresetWeekends": "Weekends",
+      "cronPresetHourly": "Hourly",
+      "batchLimitLabel": "Items per cycle",
+      "batchLimitHelper": "Up to {count} items searched per run",
+      "batchLimitHelperZero": "No items will be searched — set to 1 or more to enable",
+      "monitoredOnlyLabel": "Monitored items only",
+      "monitoredOnlyHelper": "Skip items marked as unmonitored in your media server",
+      "scopeLabel": "Search scope",
+      "scopeMissing": "Missing",
+      "scopeMissingDesc": "No file on disk",
+      "scopeUpgrade": "Upgrade",
+      "scopeUpgradeDesc": "Has file, below cutoff",
+      "scopeFlagged": "Flagged",
+      "scopeFlaggedDesc": "Any flagged item",
+      "scopeAll": "All",
+      "scopeAllDesc": "Every item regardless of score",
+      "scopeMixed": "Mixed",
+      "scopeMixedDesc": "Some from each priority — missing, flagged, and upgrades",
+      "lastRun": "Last run",
+      "lastRunNever": "Never",
+      "nextRun": "Next",
+      "nextRunIn": "in {eta}",
+      "runningNow": "Running now…",
+      "cronUnscheduled": "Cron expression invalid — auto-search won't run until you fix it",
+      "runNow": "Run now",
+      "pickStrategyLabel": "Pick strategy",
+      "pickStrategyBalanced": "Balanced",
+      "pickStrategyRandom": "Random",
+      "pickStrategyBalancedDesc": "Prioritises items searched longest ago, then worst score",
+      "pickStrategyRandomDesc": "Picks items at random from the candidate pool",
+      "helperText": "Auto-search only triggers Search commands. It never deletes files or removes items.",
+      "cooldownLabel": "Cooldown",
+      "cooldownHelperOff": "No cooldown — even already-searched items can be re-searched every cycle",
+      "cooldownHelper": "Skip items already searched within the last {n}h",
+      "scoringModeLabel": "Scoring mode",
+      "scoringModeManual": "Manual",
+      "scoringModeInherit": "Match display mode",
+      "scoringModeProfile": "Profile mode",
+      "scoringModeInheritDesc": "Use the same scoring mode as the instance's display setting",
+      "scoringModeProfileDesc": "Pick candidates by quality profile cutoff, even when display mode is Manual",
+      "pausedLabel": "Paused",
+      "pausedUntil": "Paused until {time}",
+      "pause1h": "Pause for 1 hour",
+      "pause6h": "Pause for 6 hours",
+      "pause24h": "Pause for 24 hours",
+      "pause7d": "Pause for 7 days",
+      "pauseMenu": "Pause auto-search",
+      "resume": "Resume"
+    },
     "instanceForm": {
       "addTitle": "Add Instance",
       "editTitle": "Edit Instance",
       "type": "Type",
+      "typeImmutableHint": "Type can't be changed after creation. Delete and recreate to switch.",
       "types": {
         "radarr": "Radarr",
         "sonarr": "Sonarr"
@@ -384,6 +631,7 @@
       "apiKeyPlaceholderEdit": "•••••••• (leave blank to keep current)",
       "apiKeyPlaceholderNew": "••••••••",
       "searchesPerHour": "Max searches per hour",
+      "searchesPerHourSuffix": "/hr",
       "searchesPerHourHelp": "Caps how often refinarr triggers searches on this instance. Searches fan out to your indexers and trackers — too many in a short window can cause them to rate-limit or ban you. 20/hour is safe for most private trackers.",
       "queuedBadge": "{count, plural, one {# queued} other {# queued}}",
       "queuedBadgeTooltip": "{count, plural, one {# search pending. ETA ~{eta}.} other {# searches pending. ETA ~{eta}.}}",
@@ -395,6 +643,10 @@
       "loading": "Loading Custom Formats…",
       "empty": "No Custom Formats found in {name}.",
       "selectedCount": "{count} selected"
+    },
+    "debugMode": {
+      "label": "Debug mode",
+      "helper": "Shows extra filters on the Logs page and verbose source information."
     },
     "dryRun": {
       "label": "Dry Run Mode",
@@ -450,7 +702,69 @@
       "ignored": "Ignored"
     }
   },
+  "diagnostics": {
+    "title": "Diagnostics",
+    "subtitle": "In-memory cache health and manual controls.",
+    "metrics": {
+      "entries": "Entries",
+      "memory": "Memory",
+      "hitRate": "Hit rate",
+      "inflight": "Inflight",
+      "hits": "Hits",
+      "misses": "Misses",
+      "evictions": "Evictions",
+      "oldest": "Oldest entry",
+      "lastInvalidated": "Last invalidated",
+      "never": "never",
+      "empty": "—",
+      "ofMax": "{current} / {max}"
+    },
+    "actions": {
+      "refresh": "Refresh",
+      "clear": "Clear cache"
+    },
+    "confirm": {
+      "title": "Clear cache?",
+      "body": "All cached upstream data will be dropped. Next page load triggers a fresh fetch.",
+      "confirmLabel": "Clear cache"
+    },
+    "toast": {
+      "cleared": "Cache cleared",
+      "clearFailed": "Couldn't clear cache"
+    }
+  },
+  "system": {
+    "title": "System",
+    "subtitle": "Build, runtime, and update status.",
+    "fields": {
+      "version": "Version",
+      "uptime": "Uptime",
+      "auth": "Auth",
+      "runtime": "Runtime",
+      "lastChecked": "Last checked GitHub"
+    },
+    "update": {
+      "current": "Up to date",
+      "available": "Update available · {tag}",
+      "unavailable": "Update check unavailable",
+      "viewRelease": "View release",
+      "checking": "Checking…",
+      "never": "never"
+    },
+    "actions": {
+      "refresh": "Refresh"
+    },
+    "auth": {
+      "session": "session · {username}",
+      "apiKey": "API key",
+      "proxy": "proxy · {username}"
+    }
+  },
   "toast": {
+    "system": {
+      "refreshed": "Update check refreshed",
+      "refreshFailed": "Couldn't refresh update check"
+    },
     "search": {
       "started": "Search started",
       "queuedDryRun": "Search queued (dry run)",
@@ -464,13 +778,9 @@
     },
     "delete": {
       "fileDone": "File deleted",
-      "fileDoneAndSearch": "File deleted; search started",
       "filesDone": "Files deleted",
-      "filesDoneAndSearch": "Files deleted; search started",
       "seasonDone": "Season files deleted",
-      "seasonDoneAndSearch": "Season files deleted; search started",
       "queuedDryRun": "Delete queued (dry run)",
-      "queuedAndSearchDryRun": "Delete and search queued (dry run)",
       "fileFailed": "Couldn't delete file",
       "filesFailed": "Couldn't delete files",
       "seasonFailed": "Couldn't delete season files"
@@ -505,13 +815,21 @@
     },
     "logs": {
       "cleared": "Logs cleared",
-      "clearFailed": "Couldn't clear logs"
+      "clearFailed": "Couldn't clear logs",
+      "copied": "Copied to clipboard",
+      "copyFailed": "Couldn't copy to clipboard"
+    },
+    "debugMode": {
+      "enabled": "Debug mode on",
+      "disabled": "Debug mode off"
     },
     "dryRun": {
       "enabled": "Dry Run mode enabled",
       "disabled": "Live mode on. Actions will execute against your *arr instances."
     },
     "scoringMode": "Scoring mode set to {mode}",
+    "showAllMediaOn": "Show-all-media enabled — non-flagged items now visible.",
+    "showAllMediaOff": "Show-all-media disabled — only flagged items will be shown.",
     "apiKey": {
       "copied": "API key copied",
       "regenerated": "API key regenerated"
@@ -547,6 +865,10 @@
     "clearHistory": {
       "title": "Clear history?",
       "body": "Clear all history? This cannot be undone."
+    },
+    "deleteInstance": {
+      "title": "Delete instance?",
+      "body": "Delete “{name}”? Its data stays in Radarr/Sonarr — only refinarr's link to it is removed. This cannot be undone."
     },
     "clearLogs": {
       "title": "Clear logs?",
