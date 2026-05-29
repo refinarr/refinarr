@@ -177,16 +177,24 @@ jobs:
       - name: Compute image tags
         id: meta
         uses: docker/metadata-action@v6
+        env:
+          # On release events inputs.tag is empty → github.ref_name
+          # (the tag name) is used. On workflow_dispatch we pass an
+          # explicit `value=` because github.ref=refs/heads/main and
+          # `type=semver` can't extract a version from a branch ref.
+          SEMVER_TAG: ${{ inputs.tag || github.ref_name }}
+          # Stable releases (no prerelease suffix like `-rc.1`) get
+          # the rolling `:latest` and `:X.Y` tags too. Prereleases
+          # only emit the exact `:vX.Y.Z-foo` tag so users on
+          # `:latest` or `:X.Y` never get pinned on an unstable
+          # build by surprise.
+          IS_STABLE: ${{ !contains(inputs.tag || github.ref_name, '-') }}
         with:
           images: ${{ env.REGISTRY_IMAGE }}
-          # Pass an explicit `value=` so workflow_dispatch (which has
-          # github.ref=refs/heads/main) still produces semver tags.
-          # On release events inputs.tag is empty → github.ref_name
-          # (the tag name) is used.
           tags: |
-            type=semver,pattern={{version}},value=${{ inputs.tag || github.ref_name }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.tag || github.ref_name }}
-            type=raw,value=latest
+            type=semver,pattern={{version}},value=${{ env.SEMVER_TAG }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.SEMVER_TAG }},enable=${{ env.IS_STABLE }}
+            type=raw,value=latest,enable=${{ env.IS_STABLE }}
 
       - name: Create multi-arch manifest
         working-directory: /tmp/digests
