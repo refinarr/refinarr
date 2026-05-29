@@ -11,6 +11,14 @@ name: release-please
 #   fix:            → PATCH bump
 #   feat!: / BREAKING CHANGE: in body → MAJOR bump
 #   chore:/refactor:/docs:/test: → no bump (skipped)
+#
+# Pre-1.0 config (release-please-config.json):
+#   bump-minor-pre-major: true           — feat: → MINOR (not MAJOR)
+#   bump-patch-for-minor-pre-major: true — fix:  → PATCH (not MINOR)
+# Drop both flags the first time we intentionally cut a 1.0.0.
+#
+# Current version is pinned in .release-please-manifest.json so the
+# action doesn't need to re-derive it from package.json on every run.
 
 on:
   push:
@@ -30,5 +38,6 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v5
         with:
-          release-type: node
           target-branch: main
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
