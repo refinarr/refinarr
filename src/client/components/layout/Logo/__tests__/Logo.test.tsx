@@ -4,21 +4,22 @@ import { render, screen } from "@testing-library/react";
 import { Logo } from "../Logo";
 
 describe("Logo", () => {
-  it("renders the wordmark by default with the *arr suffix split out", () => {
+  it("renders the wordmark with an accessible label by default", () => {
     render(<Logo />);
-    expect(screen.getByText("Refin")).toBeInTheDocument();
-    expect(screen.getByText("arr")).toBeInTheDocument();
+    const svg = screen.getByLabelText("Refinarr");
+    expect(svg).toBeInTheDocument();
+    expect(svg.getAttribute("viewBox")).toBe("0 0 800 193");
   });
 
-  it("hides the wordmark when showWordmark is false", () => {
+  it("narrows the viewBox to the icon-only glyph when showWordmark is false", () => {
     render(<Logo showWordmark={false} />);
-    expect(screen.queryByText("Refin")).not.toBeInTheDocument();
+    const svg = screen.getByLabelText("Refinarr");
+    expect(svg.getAttribute("viewBox")).toBe("0 0 163 193");
   });
 
-  it("uses the brand utility classes so theme switches retint without code changes", () => {
+  it("uses brand + foreground utility classes so theme switches retint without code changes", () => {
     const { container } = render(<Logo />);
     expect(container.querySelector(".fill-brand")).toBeTruthy();
-    expect(container.querySelector(".fill-foreground-on-brand")).toBeTruthy();
-    expect(container.querySelector(".text-brand")).toBeTruthy();
+    expect(container.querySelector(".fill-foreground")).toBeTruthy();
   });
 });
