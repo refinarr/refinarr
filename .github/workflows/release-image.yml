@@ -1,11 +1,19 @@
 name: release-image
 
-# Triggered by release-please when it publishes a GitHub Release after a
-# vX.Y.Z tag lands on main. Builds the production Docker image and
-# pushes it to GHCR with three tags:
+# Triggered by release-please when it publishes a GitHub Release after
+# a vX.Y.Z tag lands. Builds the production Docker image and pushes
+# to GHCR with three tags:
 #   - vX.Y.Z (immutable, exact release)
 #   - X.Y    (rolling minor — `latest patch in X.Y`)
 #   - latest (rolling — most recent release)
+#
+# Multi-arch (amd64 + arm64) builds are split into parallel matrix
+# jobs that push by digest only. A final `manifest` job stitches the
+# per-arch digests into the user-visible tags. This pattern is the
+# official docker/build-push-action recommendation for multi-platform
+# builds — wall-clock is bounded by the slowest single arch (arm64
+# under QEMU emulation, ~15–20 min) instead of the sum of both,
+# which would have busted a single-job 20-minute timeout.
 #
 # GHCR auth uses the workflow's GITHUB_TOKEN (no extra secrets). The
 # image inherits repo visibility on first push; flip to public via
@@ -15,9 +23,9 @@ name: release-image
 on:
   release:
     types: [published]
-  # Manual recovery hatch — pass the tag to rebuild as an input.
-  # We fire from main (where this workflow definition lives) and
-  # checkout the requested tag, rather than dispatching with
+  # Manual recovery hatch — pass the tag to rebuild as an input. We
+  # fire from main (where this workflow definition lives) and check
+  # out the requested tag, rather than dispatching with
   # `--ref refs/tags/vX.Y.Z` directly, because GitHub reads the
   # workflow file FROM the dispatched ref — so a tag predating this
   # workflow_dispatch trigger would fail HTTP 422 "Workflow does
@@ -37,32 +45,124 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  # GHCR / Docker image names MUST be lowercase, but the repo
+  # owner `iHX-Labs` contains uppercase letters. `${{ github.repository }}`
+  # preserves the original casing, so hardcode the lowercase form
+  # here. docker/metadata-action's `images:` input auto-lowercases,
+  # but the raw `outputs: name=...` on docker/build-push-action and
+  # the `imagetools create` command in the manifest job do not.
+  REGISTRY_IMAGE: ghcr.io/ihx-labs/refinarr
+
 jobs:
-  docker:
+  # Gate job that runs once before the build matrix fans out — fast
+  # fail if workflow_dispatch was fired with a non-SemVer ref.
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 1
     steps:
-      # Manual dispatch must target a SemVer tag, otherwise
-      # docker/metadata-action's `type=semver` patterns produce no
-      # version tag while `type=raw,value=latest` still fires —
-      # which would push branch code as `:latest`.
       - name: Validate semver tag (workflow_dispatch only)
         if: github.event_name == 'workflow_dispatch'
+        env:
+          TAG_INPUT: ${{ inputs.tag }}
         run: |
-          if [[ ! "${{ inputs.tag }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
-            echo "::error::tag input must be SemVer (e.g. v0.2.0 or v1.0.0-rc.1), got '${{ inputs.tag }}'"
+          if [[ ! "$TAG_INPUT" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "::error::tag input must be SemVer (e.g. v0.2.0 or v1.0.0-rc.1), got '$TAG_INPUT'"
             exit 1
           fi
 
+  # Parallel matrix builds — one job per arch on a native runner.
+  # No QEMU: amd64 on standard ubuntu-latest, arm64 on the native
+  # ubuntu-24.04-arm hosted runner (GA in 2024). Each job pushes
+  # its layer to GHCR by digest only (no human-readable tag yet)
+  # and uploads the digest as an artifact for the `manifest` job
+  # to consume.
+  #
+  # Native arm64 runners on a private repo cost ~$0.005/min (~$0.04
+  # per build). For a public repo they're free. The wall-clock win
+  # vs QEMU is ~3×.
+  build:
+    needs: validate
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - name: Set platform-pair env (used for artifact name)
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: echo "PLATFORM_PAIR=${PLATFORM//\//-}" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v6
         with:
-          # For release events, the default github.ref is the tag.
-          # For workflow_dispatch, we override with the input tag so
+          # For release events the default github.ref is the tag.
+          # For workflow_dispatch we override with the input tag so
           # the build runs against that tag's tree.
           ref: ${{ inputs.tag || github.ref }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Push by digest only — no human-readable tags here.
+          # The manifest job stitches per-arch digests into the
+          # user-visible vX.Y.Z / X.Y / latest tags.
+          outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Combines the per-arch digests from the matrix into a single
+  # multi-arch manifest published under the user-visible tags.
+  manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v4
@@ -78,7 +178,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ env.REGISTRY_IMAGE }}
           # Pass an explicit `value=` so workflow_dispatch (which has
           # github.ref=refs/heads/main) still produces semver tags.
           # On release events inputs.tag is empty → github.ref_name
@@ -88,13 +188,15 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},value=${{ inputs.tag || github.ref_name }}
             type=raw,value=latest
 
-      - name: Build and push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Create multi-arch manifest
+        working-directory: /tmp/digests
+        env:
+          REGISTRY_IMAGE: ${{ env.REGISTRY_IMAGE }}
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf "${REGISTRY_IMAGE}@sha256:%s " *)
+
+      - name: Verify manifest
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}

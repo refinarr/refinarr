@@ -1,10 +1,31 @@
 name: release-please
 
-# Watches `main` (where releases land via develop → main merges).
-# When conventional-commit messages accumulate on main, opens a
-# "release-please: Release vX.Y.Z" PR that bumps package.json + writes
-# CHANGELOG.md. Merging that PR creates a vX.Y.Z tag + GitHub Release,
-# which then triggers release-image.yml.
+# Watches `develop` (the integration branch where conventional-commit
+# feature/fix PRs accumulate). Opens a continuously-updated
+# "chore(develop): release vX.Y.Z" PR on develop that bumps
+# package.json + writes CHANGELOG.md based on the conventional
+# commits since the last release. Merging that PR creates a
+# vX.Y.Z tag + GitHub Release on develop's HEAD, which then triggers
+# release-image.yml.
+#
+# Why target develop and not main:
+# main is the "released snapshots" branch in Gitflow — every commit
+# is a tagged release. The develop → main merge happens AFTER the
+# release-please PR merges. release-please uses first-parent walking
+# to scan conventional commits, which only sees top-level merge
+# commits. On main, the develop → main merge commit ("Release vX.Y.Z")
+# isn't a conventional commit → release-please can't parse it →
+# zero bumps. On develop, every feature PR's squash-merge commit IS
+# a conventional commit → release-please reads them directly.
+#
+# Release flow:
+#   1. Feature PRs squash-merge to develop with conventional titles
+#   2. release-please continuously updates the release PR on develop
+#   3. When ready: merge the release-please PR → develop bumped + tagged
+#   4. release-image.yml fires on the release event → Docker image built
+#   5. Fast-forward main from develop: `git checkout main &&
+#      git merge --ff-only develop && git push origin main`
+#      — keeps main = released snapshots
 #
 # Versioning is driven by commit prefixes:
 #   feat:           → MINOR bump
@@ -27,8 +48,8 @@ name: release-please
 #
 # Force-version overrides: include `Release-As: x.y.z` as a footer
 # in a commit message to make the next release target that version
-# (regardless of commit prefix bump). Used once to recover from a
-# bad release sequence; do not use routinely.
+# (regardless of commit prefix bump). Used to recover from a bad
+# release sequence; do not use routinely.
 #
 # Why a PAT instead of GITHUB_TOKEN:
 # GitHub's intentional loop-prevention rule says events triggered by
@@ -48,7 +69,7 @@ name: release-please
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
 
 permissions:
   contents: write
@@ -65,6 +86,6 @@ jobs:
       - uses: googleapis/release-please-action@v5
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-          target-branch: main
+          target-branch: develop
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
