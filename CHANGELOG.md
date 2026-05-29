@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/iHX-Labs/refinarr/compare/v0.2.1...v0.2.2) (2026-05-29)
+
+
+### Miscellaneous Chores
+
+* trigger v0.2.2 release ([#166](https://github.com/iHX-Labs/refinarr/issues/166)) ([7629456](https://github.com/iHX-Labs/refinarr/commit/7629456b29d891ad28dee856f0993bda99b3badf))
+
 ## [0.2.1](https://github.com/iHX-Labs/refinarr/compare/v0.2.0...v0.2.1) (2026-05-29)
 
 
