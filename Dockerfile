@@ -7,6 +7,11 @@ RUN apk add --no-cache su-exec
 FROM base AS deps
 WORKDIR /app
 COPY package.json yarn.lock ./
+# Copy prisma/ BEFORE yarn install — the postinstall hook runs
+# `prisma generate` which requires prisma/schema.prisma. Without
+# this, multi-arch builds fail at the deps layer with
+# "Could not find Prisma Schema".
+COPY prisma ./prisma
 RUN yarn install --frozen-lockfile
 
 # ---------- builder ----------
