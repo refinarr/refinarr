@@ -1,0 +1,33 @@
+# CodeRabbit configuration.
+# Docs: https://docs.coderabbit.ai/getting-started/configure-coderabbit/
+#
+# Assertive profile: full nit + style coverage. Suited to a solo
+# repo where every PR gets a real second-pair-of-eyes pass.
+
+language: en-US
+early_access: false
+
+reviews:
+  profile: assertive
+  # Don't auto-request-changes on the PR — leave comments only so
+  # the author drives the merge decision.
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  # Skip generated / lockfile / build-output / asset paths so the
+  # review focuses on hand-written code.
+  path_filters:
+    - "!prisma/migrations/**"
+    - "!yarn.lock"
+    - "!**/*.snap"
+    - "!**/*.svg"
+    - "!.next/**"
+    - "!.next-e2e/**"
+    - "!coverage/**"
+    - "!playwright-report/**"
+    - "!public/**"
+
+chat:
+  auto_reply: true
