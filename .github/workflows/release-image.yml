@@ -71,19 +71,28 @@ jobs:
             exit 1
           fi
 
-  # Parallel matrix builds — one job per arch. Each pushes its layer
-  # to GHCR by digest only (no human-readable tag yet) and uploads
-  # the digest as an artifact for the `manifest` job to consume.
+  # Parallel matrix builds — one job per arch on a native runner.
+  # No QEMU: amd64 on standard ubuntu-latest, arm64 on the native
+  # ubuntu-24.04-arm hosted runner (GA in 2024). Each job pushes
+  # its layer to GHCR by digest only (no human-readable tag yet)
+  # and uploads the digest as an artifact for the `manifest` job
+  # to consume.
+  #
+  # Native arm64 runners on a private repo cost ~$0.005/min (~$0.04
+  # per build). For a public repo they're free. The wall-clock win
+  # vs QEMU is ~3×.
   build:
     needs: validate
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Set platform-pair env (used for artifact name)
         env:
@@ -96,12 +105,6 @@ jobs:
           # For workflow_dispatch we override with the input tag so
           # the build runs against that tag's tree.
           ref: ${{ inputs.tag || github.ref }}
-
-      - name: Set up QEMU
-        # Only emulation needed for non-native arch. amd64 native on
-        # ubuntu-latest runners; arm64 emulated.
-        if: matrix.platform != 'linux/amd64'
-        uses: docker/setup-qemu-action@v4
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v4
