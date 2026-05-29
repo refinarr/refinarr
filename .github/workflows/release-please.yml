@@ -13,9 +13,9 @@ name: release-please
 #   chore:/refactor:/docs:/test: → no bump (skipped)
 #
 # Pre-1.0 config (release-please-config.json):
-#   bump-minor-pre-major: true           — feat: → MINOR (not MAJOR)
-#   bump-patch-for-minor-pre-major: true — fix:  → PATCH (not MINOR)
-# Drop both flags the first time we intentionally cut a 1.0.0.
+#   bump-minor-pre-major: true — pre-1.0, feat: and breaking changes
+#     map to MINOR instead of MAJOR. fix: stays PATCH. Drop this flag
+#     the first time we intentionally cut a 1.0.0.
 #
 # Current version is pinned in .release-please-manifest.json so the
 # action doesn't need to re-derive it from package.json on every run.
