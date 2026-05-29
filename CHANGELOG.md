@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/iHX-Labs/refinarr/compare/refinarr-v0.1.1...refinarr-v0.1.2) (2026-05-29)
+
+
+### Bug Fixes
+
+* **ci:** drop bump-patch-for-minor-pre-major from release-please config ([#153](https://github.com/iHX-Labs/refinarr/issues/153)) ([af7b088](https://github.com/iHX-Labs/refinarr/commit/af7b088c7b72c034d8016d541125db7d2e2d999f))
+
 ## [0.1.1](https://github.com/iHX-Labs/refinarr/compare/refinarr-v0.1.0...refinarr-v0.1.1) (2026-05-29)
 
 
