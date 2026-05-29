@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/iHX-Labs/refinarr/compare/v0.3.1...v0.4.0) (2026-05-29)
+
+
+### Features
+
+* **ci:** use native ubuntu-24.04-arm runner for arm64 build ([#174](https://github.com/iHX-Labs/refinarr/issues/174)) ([2f8977b](https://github.com/iHX-Labs/refinarr/commit/2f8977bfcd46c3800cfa3d58cf580453efb6661f))
+
 ## [0.3.1](https://github.com/iHX-Labs/refinarr/compare/v0.3.0...v0.3.1) (2026-05-29)
 
 
