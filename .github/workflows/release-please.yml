@@ -16,9 +16,19 @@ name: release-please
 #   bump-minor-pre-major: true — pre-1.0, feat: and breaking changes
 #     map to MINOR instead of MAJOR. fix: stays PATCH. Drop this flag
 #     the first time we intentionally cut a 1.0.0.
+#   include-component-in-tag: false — emit plain `vX.Y.Z` tags. The
+#     manifest-mode default is `<component>-vX.Y.Z` (e.g.
+#     `refinarr-v0.1.2`), which docker/metadata-action's `type=semver`
+#     matcher in release-image.yml silently skips — that's why no
+#     Docker image was built for v0.1.1/v0.1.2.
 #
 # Current version is pinned in .release-please-manifest.json so the
 # action doesn't need to re-derive it from package.json on every run.
+#
+# Force-version overrides: include `Release-As: x.y.z` as a footer
+# in a commit message to make the next release target that version
+# (regardless of commit prefix bump). Used once to recover from a
+# bad release sequence; do not use routinely.
 
 on:
   push:
