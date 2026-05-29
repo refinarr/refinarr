@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/iHX-Labs/refinarr/compare/v0.3.0...v0.3.1) (2026-05-29)
+
+
+### Bug Fixes
+
+* **ci:** hardcode lowercase GHCR image name ([#172](https://github.com/iHX-Labs/refinarr/issues/172)) ([ee8b651](https://github.com/iHX-Labs/refinarr/commit/ee8b6514a8894c7e14eb5ce639661553a7f1ba1a))
+
 ## [0.3.0](https://github.com/iHX-Labs/refinarr/compare/v0.2.2...v0.3.0) (2026-05-29)
 
 
