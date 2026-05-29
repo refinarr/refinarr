@@ -11,6 +11,40 @@ name: release-please
 #   fix:            → PATCH bump
 #   feat!: / BREAKING CHANGE: in body → MAJOR bump
 #   chore:/refactor:/docs:/test: → no bump (skipped)
+#
+# Pre-1.0 config (release-please-config.json):
+#   bump-minor-pre-major: true — pre-1.0, feat: and breaking changes
+#     map to MINOR instead of MAJOR. fix: stays PATCH. Drop this flag
+#     the first time we intentionally cut a 1.0.0.
+#   include-component-in-tag: false — emit plain `vX.Y.Z` tags. The
+#     manifest-mode default is `<component>-vX.Y.Z` (e.g.
+#     `refinarr-v0.1.2`), which docker/metadata-action's `type=semver`
+#     matcher in release-image.yml silently skips — that's why no
+#     Docker image was built for v0.1.1/v0.1.2.
+#
+# Current version is pinned in .release-please-manifest.json so the
+# action doesn't need to re-derive it from package.json on every run.
+#
+# Force-version overrides: include `Release-As: x.y.z` as a footer
+# in a commit message to make the next release target that version
+# (regardless of commit prefix bump). Used once to recover from a
+# bad release sequence; do not use routinely.
+#
+# Why a PAT instead of GITHUB_TOKEN:
+# GitHub's intentional loop-prevention rule says events triggered by
+# the default GITHUB_TOKEN (releases, tags, pushes) do NOT create
+# downstream workflow runs — only workflow_dispatch and
+# repository_dispatch are exempted. So if release-please publishes
+# the release with GITHUB_TOKEN, release-image.yml's
+# `on: release: types: [published]` listener silently skips.
+# We pass a fine-grained PAT (RELEASE_PLEASE_TOKEN, scoped to
+# Contents:write + Pull requests:write + Issues:write on this repo
+# only) so the release is created under a non-bot identity and
+# downstream workflows fire normally. The PAT carries Issues:write
+# for the labeling release-please does on its own release PRs; the
+# workflow-level `permissions:` block governs GITHUB_TOKEN, which
+# the action doesn't use for API calls when we pass `token:` — so
+# we keep that block minimal (no `issues: write` needed).
 
 on:
   push:
@@ -30,5 +64,7 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v5
         with:
-          release-type: node
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           target-branch: main
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
