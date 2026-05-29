@@ -127,6 +127,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: docker/Dockerfile
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           # Push by digest only — no human-readable tags here.
@@ -192,8 +193,14 @@ jobs:
         with:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: |
-            type=semver,pattern={{version}},value=${{ env.SEMVER_TAG }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ env.SEMVER_TAG }},enable=${{ env.IS_STABLE }}
+            # `{{raw}}` keeps the leading `v` from the input tag
+            # (e.g. v0.4.0). `{{version}}` strips it (→ 0.4.0). We
+            # want the `v` so the Docker tag matches the GitHub tag,
+            # which is what the comment block above promises.
+            type=semver,pattern={{raw}},value=${{ env.SEMVER_TAG }}
+            # Literal `v` prefix in the pattern so the rolling
+            # X.Y tag also keeps the v-convention (`:v0.4`).
+            type=semver,pattern=v{{major}}.{{minor}},value=${{ env.SEMVER_TAG }},enable=${{ env.IS_STABLE }}
             type=raw,value=latest,enable=${{ env.IS_STABLE }}
 
       - name: Create multi-arch manifest

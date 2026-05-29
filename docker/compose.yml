@@ -1,6 +1,10 @@
 services:
   refinarr:
-    build: .
+    # Build context is the repo root (parent of this docker/ folder)
+    # so Dockerfile's `COPY . .` sees src/, package.json, etc.
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: refinarr
     environment:
       - PUID=1000

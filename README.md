@@ -10,8 +10,8 @@ yarn install
 yarn prisma migrate dev
 yarn dev
 
-# Docker
-docker compose up -d
+# Docker (compose file lives in docker/)
+docker compose -f docker/compose.yml up -d
 ```
 
 On first launch, navigate to `http://<host>:7272` — you will be redirected to `/setup` to create the admin account.

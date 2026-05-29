@@ -19,11 +19,15 @@ on:
   pull_request:
     branches: [develop]
     paths:
-      - "Dockerfile"
+      - "docker/Dockerfile"
+      - "docker/entrypoint.sh"
       - ".dockerignore"
       - "package.json"
       - "yarn.lock"
       - "prisma/**"
+      - "prisma.config.ts"
+      - "next.config.*"
+      - "instrumentation.ts"
       - ".github/workflows/docker-pr-build.yml"
 
 permissions:
@@ -47,6 +51,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: docker/Dockerfile
           platforms: linux/amd64
           push: false
           load: false

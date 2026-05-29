@@ -10,6 +10,13 @@ updates:
     target-branch: develop
     labels:
       - dependencies
+    # Production-dep bumps use `fix(deps):` so release-please picks
+    # them up as PATCH bumps and the security fix actually ships.
+    # Dev-dep bumps stay `chore(deps-dev):` (no release impact).
+    commit-message:
+      prefix: "fix"
+      prefix-development: "chore"
+      include: "scope"
     # Group related deps so we get fewer noisy PRs.
     groups:
       types:
