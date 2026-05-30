@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.2](https://github.com/refinarr/refinarr/compare/v0.5.1...v0.5.2) (2026-05-30)
+
+
+### Bug Fixes
+
+* **docker:** make the production image build and boot end-to-end ([e28a178](https://github.com/refinarr/refinarr/commit/e28a1789a82c3d78af542a7101884944ac6a3f6f))
+* **docker:** make the production image build and boot end-to-end ([57307be](https://github.com/refinarr/refinarr/commit/57307be5485a38a9237b00364241f1492d3eef29))
+* **e2e:** build without standalone output so `next start` is supported ([e5a184a](https://github.com/refinarr/refinarr/commit/e5a184ac0a2513727ad4953e5db132b01c10e987))
+* **e2e:** build without standalone output so `next start` is supported ([a125946](https://github.com/refinarr/refinarr/commit/a12594644d8545075dcb454727e3f732bdffb87a))
+
+
+### Performance Improvements
+
+* **docker:** shrink runtime image 493MB -&gt; 399MB ([56ffa1d](https://github.com/refinarr/refinarr/commit/56ffa1d5400e68099afac55efe9fdfe8ee8e2fea))
+
 ## [0.5.1](https://github.com/refinarr/refinarr/compare/v0.5.0...v0.5.1) (2026-05-30)
 
 
