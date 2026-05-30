@@ -59,7 +59,12 @@ next-env.d.ts
 *.db-shm
 plan-v1.md
 
-# Claude Code runtime state
+# Local-only AI/Claude Code state + internal planning docs (never
+# tracked in the public repo). AGENTS.md is intentionally TRACKED
+# (universal AI-agent rules belong in the repo so external
+# contributors using AI tools see them too).
 .claude/*.lock
 .claude/
 HANDOFF.md
+CLAUDE.md
+plans/
