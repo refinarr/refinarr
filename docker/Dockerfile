@@ -27,6 +27,20 @@ ENV DATABASE_URL=file:///data/data.db
 RUN npx prisma generate
 RUN yarn build
 
+# Prisma 7's client ships a query-compiler WASM bundle for EVERY database
+# (~14MB each), but we only use SQLite via the better-sqlite3 driver adapter
+# (src/server/lib/db.ts). Prune the four unused engines HERE (before the
+# runner COPY) so the bytes never enter the final image — deleting them in
+# the runner stage wouldn't shrink it (they'd persist in the COPY layer).
+# This is the size cost prisma/prisma#29095 tracks; driver adapters are
+# Prisma's sanctioned path for pruning unused engines. The boot health check
+# (a real query → db:ok) verifies the SQLite engine still works.
+RUN find node_modules/@prisma/client/runtime -type f \( \
+      -name 'query_compiler_*_bg.sqlserver.*' -o \
+      -name 'query_compiler_*_bg.cockroachdb.*' -o \
+      -name 'query_compiler_*_bg.postgresql.*' -o \
+      -name 'query_compiler_*_bg.mysql.*' \) -delete
+
 # ---------- runner ----------
 FROM base AS runner
 WORKDIR /app

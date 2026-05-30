@@ -41,6 +41,14 @@ const nextConfig: NextConfig = {
   // different port doesn't collide with the primary dev server's lock file.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   ...(allowedDevOrigins ? { allowedDevOrigins } : {}),
+  // The app uses no next/image — only the middleware matcher references the
+  // /_next/image route. Next still bundles sharp (~33MB of @img platform
+  // binaries) into the standalone trace for the built-in image optimizer we
+  // never invoke, so exclude it. Re-include via outputFileTracingIncludes if
+  // next/image is ever adopted.
+  outputFileTracingExcludes: {
+    "**": ["node_modules/@img/**", "node_modules/sharp/**"],
+  },
   async headers() {
     return [
       {
