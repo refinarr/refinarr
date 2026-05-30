@@ -44,9 +44,17 @@ export function RecentActivityList({ logs }: Props) {
       </CardHeader>
       <CardContent>
         {logs.length === 0 ? (
-          <p className="text-muted-foreground py-4 text-center text-sm">
-            {t("noRecentActions")}
-          </p>
+          <div className="py-4 text-center">
+            <p className="text-muted-foreground text-sm">
+              {t("noRecentActions")}
+            </p>
+            <Link
+              href="/movies"
+              className="text-brand mt-1 inline-block text-xs hover:underline"
+            >
+              {t("noRecentActionsCta")}
+            </Link>
+          </div>
         ) : (
           <ul className="divide-y">
             {logs.map((log) => {

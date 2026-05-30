@@ -146,11 +146,13 @@
       "instances": "Instances",
       "flaggedMovies": "Flagged movies",
       "flaggedSeries": "Flagged series",
-      "failed24h": "Failed (24h)"
+      "failed24h": "Failed (24h)",
+      "warming": "Loading from your library…"
     },
     "instances": "Instances",
     "recentActivity": "Recent activity",
     "noRecentActions": "No recent actions.",
+    "noRecentActionsCta": "Browse flagged movies to get started →",
     "instanceCard": {
       "connected": "Connected",
       "unreachable": "Unreachable",
