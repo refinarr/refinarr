@@ -16,9 +16,13 @@ name: test
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "plans/**"
+      - ".vscode/**"
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
     paths-ignore:
       - "**.md"
@@ -56,8 +60,10 @@ jobs:
       # (e.g. importing a "use client" component into a Server Component
       # tree, or a server-only module reaching a client bundle). The
       # dev-checklist requires running this locally too; CI is the
-      # safety net.
+      # safety net. PR-only: the post-merge push run skips it since the
+      # identical tree was already built on the PR that gated the merge.
       - name: Production build
+        if: github.event_name == 'pull_request'
         run: yarn build
 
       - name: Upload coverage report
@@ -72,10 +78,12 @@ jobs:
     name: playwright
     runs-on: ${{ github.actor == 'iHunterX' && (vars.RUNNER_LABEL || 'ubuntu-latest') || 'ubuntu-latest' }}
     timeout-minutes: 15
-    # Skip e2e on draft PRs to save minutes during in-flight iteration.
-    # When the PR is marked ready_for_review, the workflow re-runs and
-    # this job picks up. Pushes to main/develop always run e2e.
-    if: github.event_name == 'push' || github.event.pull_request.draft == false
+    # PR-only: e2e gates the merge, so it runs on PRs (skipping drafts to
+    # save minutes during in-flight iteration; it picks up when the PR is
+    # marked ready_for_review). The post-merge push to main skips e2e —
+    # the same tree already passed it on the PR — keeping main's CI a fast
+    # lint + tsc + vitest health signal.
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-deps
