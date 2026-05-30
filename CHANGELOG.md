@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/refinarr/refinarr/compare/v0.4.2...v0.5.0) (2026-05-30)
+
+
+### Miscellaneous Chores
+
+* launch refinarr public OSS ([b96f570](https://github.com/refinarr/refinarr/commit/b96f570971e7893ce23bca3ea5818ccdc922d8e4))
+
 ## [0.4.2](https://github.com/iHX-Labs/refinarr/compare/v0.4.1...v0.4.2) (2026-05-30)
 
 
