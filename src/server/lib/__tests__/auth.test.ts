@@ -1,4 +1,5 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi, afterEach } from "vitest";
+import type { NextRequest } from "next/server";
 import {
   hashPassword,
   verifyPassword,
@@ -10,8 +11,53 @@ import {
   isValidSession,
   deleteSession,
   pruneExpiredSessions,
+  isHttpsRequest,
+  sessionCookieOptions,
 } from "@/server/lib/auth";
 import { prisma } from "@/server/lib/db";
+
+function mockReq(protocol: string, xForwardedProto?: string): NextRequest {
+  return {
+    nextUrl: { protocol },
+    headers: {
+      get: (name: string) =>
+        name.toLowerCase() === "x-forwarded-proto"
+          ? (xForwardedProto ?? null)
+          : null,
+    },
+  } as unknown as NextRequest;
+}
+
+describe("isHttpsRequest / sessionCookieOptions", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  test("plain HTTP request is not secure (LAN-over-HTTP must keep the cookie)", () => {
+    expect(isHttpsRequest(mockReq("http:"))).toBe(false);
+  });
+
+  test("direct HTTPS request is secure", () => {
+    expect(isHttpsRequest(mockReq("https:"))).toBe(true);
+  });
+
+  test("X-Forwarded-Proto=https is trusted only when TRUST_PROXY_AUTH=true", () => {
+    expect(isHttpsRequest(mockReq("http:", "https"))).toBe(false);
+    vi.stubEnv("TRUST_PROXY_AUTH", "true");
+    expect(isHttpsRequest(mockReq("http:", "https"))).toBe(true);
+    expect(isHttpsRequest(mockReq("http:", "https, http"))).toBe(true);
+  });
+
+  test("cookie options are httpOnly + strict; secure tracks the transport", () => {
+    const expires = new Date(Date.now() + 1000);
+    expect(sessionCookieOptions(mockReq("http:"), expires)).toEqual({
+      httpOnly: true,
+      sameSite: "strict",
+      secure: false,
+      path: "/",
+      expires,
+    });
+    expect(sessionCookieOptions(mockReq("https:"), expires).secure).toBe(true);
+  });
+});
 
 describe("hashPassword / verifyPassword", () => {
   test("correct password verifies against its own hash", () => {
