@@ -4834,10 +4834,10 @@ kleur@^4.1.5:
   resolved "https://registry.yarnpkg.com/kleur/-/kleur-4.1.5.tgz#95106101795f7050c6c650f350c683febddb1780"
   integrity sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==
 
-knip@^6.13.1:
-  version "6.13.1"
-  resolved "https://registry.yarnpkg.com/knip/-/knip-6.13.1.tgz#e03866a9272591b1032d8d901e0a3ce49b546997"
-  integrity sha512-hvSnb+YDpDWW1LXub4U0JFfkQhscwgInWuQOv99WTutPZavf1cEP3GwxzEzO2JJpGI9yATk6l0jPLY1V3fp1sQ==
+knip@^6.14.2:
+  version "6.14.2"
+  resolved "https://registry.yarnpkg.com/knip/-/knip-6.14.2.tgz#264f725dd2bf2104e70561b0fee7432d2c77fd76"
+  integrity sha512-Vg3JhIINjZew1I7qAFI4UHemW1mc4azP/BxJvsq9eGDfxpGO7oVCuD/bsWkog9TO/ZwwJeAeOMFZ1kd9jnY9+Q==
   dependencies:
     fdir "^6.5.0"
     formatly "^0.3.0"
