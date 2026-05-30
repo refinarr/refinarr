@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.3](https://github.com/refinarr/refinarr/compare/v0.5.2...v0.5.3) (2026-05-30)
+
+
+### Bug Fixes
+
+* **docker:** chmod /data so a read-only bind mount can't break migrate ([209ab94](https://github.com/refinarr/refinarr/commit/209ab94109aec6425b0f2afa93471367b87e539f))
+* **docker:** chmod /data so a read-only bind mount can't break migrate ([bf904bf](https://github.com/refinarr/refinarr/commit/bf904bf51b72957ae689a8aa90083a888706e471))
+
 ## [0.5.2](https://github.com/refinarr/refinarr/compare/v0.5.1...v0.5.2) (2026-05-30)
 
 
