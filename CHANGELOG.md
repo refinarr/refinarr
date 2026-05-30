@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.4](https://github.com/refinarr/refinarr/compare/v0.5.3...v0.5.4) (2026-05-30)
+
+
+### Bug Fixes
+
+* **auth:** set session cookie Secure by transport, not NODE_ENV ([#13](https://github.com/refinarr/refinarr/issues/13)) ([b98dc71](https://github.com/refinarr/refinarr/commit/b98dc719769bc73b9e17cc65972494a2e1e568fd))
+
 ## [0.5.3](https://github.com/refinarr/refinarr/compare/v0.5.2...v0.5.3) (2026-05-30)
 
 
