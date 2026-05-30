@@ -1,17 +1,57 @@
-# Refinarr
+# refinarr
 
-Self-hosted dashboard that connects to Sonarr/Radarr, identifies media missing your wanted Custom Formats, and gives you bulk cleanup tools. Runs on port **7272**.
+[![CI](https://github.com/refinarr/refinarr/actions/workflows/test.yml/badge.svg)](https://github.com/refinarr/refinarr/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/refinarr/refinarr)](https://github.com/refinarr/refinarr/releases)
+[![Docker image](https://img.shields.io/badge/ghcr.io-refinarr%2Frefinarr-blue?logo=docker)](https://github.com/refinarr/refinarr/pkgs/container/refinarr)
+
+Self-hosted dashboard that connects to Sonarr/Radarr, identifies media missing your wanted Custom Formats (HDR / Atmos / DV / etc.), and gives you bulk cleanup tools. Runs on port **7272**.
+
+## Features
+
+- **Per-instance scoring** — manual (pick wanted CFs) or profile (use Sonarr/Radarr's `customFormatScore` cutoff)
+- **Bulk actions** — search, delete, ignore across hundreds of items in one pass
+- **Auto-runner** (optional) — schedules upgrade searches per instance with rate-limit + cooldown controls
+- **Action history** with retry + dry-run mode for everything
+- **Multiple Sonarr/Radarr instances** in one dashboard
+- **Mobile + desktop** — responsive layout, dark + light themes, two brand palettes
+- **No telemetry, no analytics** — outbound calls only to your configured *arr instances
 
 ## Quick start
 
-```bash
-# Dev
-yarn install
-yarn prisma migrate dev
-yarn dev
+### Docker (recommended)
 
-# Docker
+```yaml
+# compose.yml
+services:
+  refinarr:
+    image: ghcr.io/refinarr/refinarr:latest
+    container_name: refinarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - LOG_LEVEL=info
+    volumes:
+      - refinarr-data:/data
+    ports:
+      - "7272:7272"
+    restart: unless-stopped
+
+volumes:
+  refinarr-data:
+```
+
+```bash
 docker compose up -d
+```
+
+### Dev
+
+```bash
+yarn install        # also runs prisma generate
+yarn prisma migrate dev
+yarn dev            # starts on :7272
 ```
 
 On first launch, navigate to `http://<host>:7272` — you will be redirected to `/setup` to create the admin account.

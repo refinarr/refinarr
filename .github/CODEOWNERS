@@ -1,0 +1,29 @@
+# Code owners — auto-requested for review on PRs touching matching paths.
+# Solo project for now; the maintainer's handle covers everything.
+# When external contributors arrive, this gives automatic review-request
+# on security-sensitive paths without having to remember.
+#
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default — every PR requests the maintainer
+*                                @iHunterX
+
+# Workflow + CI security — extra scrutiny on anything that
+# could exfiltrate secrets or push container images.
+/.github/                        @iHunterX
+
+# Auth + crypto + SSRF guard — security-critical paths.
+# A regression here can leak credentials or open the homelab.
+/src/proxy.ts                    @iHunterX
+/src/server/lib/auth.ts          @iHunterX
+/src/server/lib/crypto.ts        @iHunterX
+/src/server/lib/url-guard.ts     @iHunterX
+/src/server/lib/redact.ts        @iHunterX
+/src/server/lib/api-errors.ts    @iHunterX
+
+# DB schema + migrations — once applied, they're forever.
+/prisma/                         @iHunterX
+
+# Distribution — Dockerfile / entrypoint / compose.
+/docker/                         @iHunterX
+/.dockerignore                   @iHunterX

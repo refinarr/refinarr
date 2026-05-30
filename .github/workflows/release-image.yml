@@ -46,13 +46,12 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # GHCR / Docker image names MUST be lowercase, but the repo
-  # owner `iHX-Labs` contains uppercase letters. `${{ github.repository }}`
-  # preserves the original casing, so hardcode the lowercase form
-  # here. docker/metadata-action's `images:` input auto-lowercases,
-  # but the raw `outputs: name=...` on docker/build-push-action and
-  # the `imagetools create` command in the manifest job do not.
-  REGISTRY_IMAGE: ghcr.io/ihx-labs/refinarr
+  # GHCR / Docker image names MUST be lowercase. `refinarr` (the new
+  # org name) is already lowercase, so `${{ github.repository }}` is
+  # safe to use directly — and using it dynamically means we don't
+  # have to update this file on every repo rename (refinarr-dev →
+  # refinarr-beta → refinarr during the public migration).
+  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
   # Gate job that runs once before the build matrix fans out — fast
@@ -127,6 +126,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: docker/Dockerfile
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           # Push by digest only — no human-readable tags here.
@@ -192,7 +192,16 @@ jobs:
         with:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: |
-            type=semver,pattern={{version}},value=${{ env.SEMVER_TAG }}
+            # `{{raw}}` keeps the leading `v` from the input tag
+            # (e.g. v0.4.0). `{{version}}` strips it (→ 0.4.0). We
+            # want the `v` so the Docker tag matches the GitHub tag.
+            type=semver,pattern={{raw}},value=${{ env.SEMVER_TAG }}
+            # Rolling minor — two variants for the same image:
+            #   - :vX.Y    (matches the GitHub-tag convention)
+            #   - :X.Y     (backward-compat — v0.4.0 published :0.4
+            #              before the v-prefix unification, so users
+            #              pulling `:0.4` keep getting updates)
+            type=semver,pattern=v{{major}}.{{minor}},value=${{ env.SEMVER_TAG }},enable=${{ env.IS_STABLE }}
             type=semver,pattern={{major}}.{{minor}},value=${{ env.SEMVER_TAG }},enable=${{ env.IS_STABLE }}
             type=raw,value=latest,enable=${{ env.IS_STABLE }}
 

@@ -1,0 +1,29 @@
+# Pin the Compose project name so the named volume below resolves
+# to `refinarr_refinarr-data` regardless of which directory the
+# compose file lives in. Without this, Compose derives the project
+# name from the parent dir of compose.yml — so a user switching
+# from running this file at the repo root vs from docker/ would see
+# different physical volumes (and apparent data loss).
+name: refinarr
+
+services:
+  refinarr:
+    # Build context is the repo root (parent of this docker/ folder)
+    # so Dockerfile's `COPY . .` sees src/, package.json, etc.
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: refinarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - LOG_LEVEL=info
+    volumes:
+      - refinarr-data:/data
+    ports:
+      - "7272:7272"
+    restart: unless-stopped
+
+volumes:
+  refinarr-data:

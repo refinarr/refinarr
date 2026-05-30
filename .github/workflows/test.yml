@@ -22,9 +22,13 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths-ignore:
       - "**.md"
-      - "messages/**"
       - "plans/**"
       - ".vscode/**"
+      # messages/** is NOT ignored — `yarn lint` runs prettier on
+      # messages/*.json, and the app imports messages/en.json at
+      # runtime via src/i18n/request.ts. Skipping CI on
+      # message-only changes would let invalid JSON or stray keys
+      # ship undetected.
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

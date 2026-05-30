@@ -1,31 +1,11 @@
 name: release-please
 
-# Watches `develop` (the integration branch where conventional-commit
-# feature/fix PRs accumulate). Opens a continuously-updated
-# "chore(develop): release vX.Y.Z" PR on develop that bumps
-# package.json + writes CHANGELOG.md based on the conventional
-# commits since the last release. Merging that PR creates a
-# vX.Y.Z tag + GitHub Release on develop's HEAD, which then triggers
-# release-image.yml.
-#
-# Why target develop and not main:
-# main is the "released snapshots" branch in Gitflow — every commit
-# is a tagged release. The develop → main merge happens AFTER the
-# release-please PR merges. release-please uses first-parent walking
-# to scan conventional commits, which only sees top-level merge
-# commits. On main, the develop → main merge commit ("Release vX.Y.Z")
-# isn't a conventional commit → release-please can't parse it →
-# zero bumps. On develop, every feature PR's squash-merge commit IS
-# a conventional commit → release-please reads them directly.
-#
-# Release flow:
-#   1. Feature PRs squash-merge to develop with conventional titles
-#   2. release-please continuously updates the release PR on develop
-#   3. When ready: merge the release-please PR → develop bumped + tagged
-#   4. release-image.yml fires on the release event → Docker image built
-#   5. Fast-forward main from develop: `git checkout main &&
-#      git merge --ff-only develop && git push origin main`
-#      — keeps main = released snapshots
+# Watches `main` (single-branch GitHub Flow). Every feature PR
+# squash-merged to main with a conventional-commit title contributes
+# to the next release. release-please continuously updates an open
+# "chore(main): release vX.Y.Z" PR on main with package.json bump +
+# CHANGELOG entry. Merging that PR creates a vX.Y.Z tag + GitHub
+# Release on main's HEAD, which then triggers release-image.yml.
 #
 # Versioning is driven by commit prefixes:
 #   feat:           → MINOR bump
@@ -37,11 +17,7 @@ name: release-please
 #   bump-minor-pre-major: true — pre-1.0, feat: and breaking changes
 #     map to MINOR instead of MAJOR. fix: stays PATCH. Drop this flag
 #     the first time we intentionally cut a 1.0.0.
-#   include-component-in-tag: false — emit plain `vX.Y.Z` tags. The
-#     manifest-mode default is `<component>-vX.Y.Z` (e.g.
-#     `refinarr-v0.1.2`), which docker/metadata-action's `type=semver`
-#     matcher in release-image.yml silently skips — that's why no
-#     Docker image was built for v0.1.1/v0.1.2.
+#   include-component-in-tag: false — emit plain `vX.Y.Z` tags.
 #
 # Current version is pinned in .release-please-manifest.json so the
 # action doesn't need to re-derive it from package.json on every run.
@@ -61,15 +37,11 @@ name: release-please
 # We pass a fine-grained PAT (RELEASE_PLEASE_TOKEN, scoped to
 # Contents:write + Pull requests:write + Issues:write on this repo
 # only) so the release is created under a non-bot identity and
-# downstream workflows fire normally. The PAT carries Issues:write
-# for the labeling release-please does on its own release PRs; the
-# workflow-level `permissions:` block governs GITHUB_TOKEN, which
-# the action doesn't use for API calls when we pass `token:` — so
-# we keep that block minimal (no `issues: write` needed).
+# downstream workflows fire normally.
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
 
 permissions:
   contents: write
@@ -86,6 +58,6 @@ jobs:
       - uses: googleapis/release-please-action@v5
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-          target-branch: develop
+          target-branch: main
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

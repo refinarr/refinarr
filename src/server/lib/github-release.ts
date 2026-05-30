@@ -12,7 +12,7 @@ interface CachedRelease {
 const TTL_MS = 6 * 60 * 60 * 1000;
 
 // Overridable for forks that publish their own release feed.
-const REPO = process.env.REFINARR_RELEASE_REPO ?? "iHX-Labs/refinarr";
+const REPO = process.env.REFINARR_RELEASE_REPO ?? "refinarr/refinarr";
 
 let cached: CachedRelease | null = null;
 let inFlight: Promise<CachedRelease | null> | null = null;
