@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.2](https://github.com/refinarr/refinarr/compare/v0.5.1...v0.5.2) (2026-05-30)
+
+
+### Bug Fixes
+
+* **e2e:** build without standalone output so `next start` is supported ([e5a184a](https://github.com/refinarr/refinarr/commit/e5a184ac0a2513727ad4953e5db132b01c10e987))
+* **e2e:** build without standalone output so `next start` is supported ([a125946](https://github.com/refinarr/refinarr/commit/a12594644d8545075dcb454727e3f732bdffb87a))
+
 ## [0.5.1](https://github.com/refinarr/refinarr/compare/v0.5.0...v0.5.1) (2026-05-30)
 
 
