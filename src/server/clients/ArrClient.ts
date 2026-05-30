@@ -124,6 +124,12 @@ export abstract class ArrClient {
   protected readonly instanceName: string;
   protected readonly instanceId: number;
 
+  // The `appName` this *arr's /system/status must report (Radarr → "Radarr",
+  // Sonarr → "Sonarr"). Used by testConnection to reject a URL that points at
+  // the wrong product, which otherwise connects fine (both serve /api/v3) and
+  // silently creates a mistyped instance.
+  protected abstract readonly expectedAppName: string;
+
   constructor(instance: Instance) {
     // Defense in depth: even if a row was tampered with, refuse to fetch
     // unsafe URLs. The primary check happens at write time in InstanceService.
@@ -207,7 +213,18 @@ export abstract class ArrClient {
 
   async testConnection(): Promise<{ ok: boolean; error?: string }> {
     try {
-      await this.fetch("/system/status");
+      const status = await this.fetch<{ appName?: string }>("/system/status");
+      // Reject a wrong-product URL (e.g. a Sonarr URL saved as a Radarr
+      // instance): both reply 200 on /api/v3/system/status, so without this
+      // the mismatch is silently accepted. Only reject on an explicit
+      // mismatch — tolerate an absent appName (older/unknown builds).
+      const appName = status?.appName;
+      if (appName && appName !== this.expectedAppName) {
+        return {
+          ok: false,
+          error: `URL points to ${appName}, expected ${this.expectedAppName}`,
+        };
+      }
       return { ok: true };
     } catch (e) {
       return { ok: false, error: describeFetchError(e) };

@@ -45,6 +45,8 @@ interface SonarrQualityProfile {
 const BATCH = 20;
 
 export class SonarrClient extends ArrClient {
+  protected readonly expectedAppName = "Sonarr";
+
   constructor(instance: Instance) {
     super(instance);
   }
