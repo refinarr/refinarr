@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.1](https://github.com/iHX-Labs/refinarr/compare/v0.4.0...v0.4.1) (2026-05-30)
+
+
+### Bug Fixes
+
+* **deps:** bump @hookform/resolvers from 5.2.2 to 5.4.0 ([#182](https://github.com/iHX-Labs/refinarr/issues/182)) ([24d1842](https://github.com/iHX-Labs/refinarr/commit/24d18428ed1a39ba98543644c4508817ccd34994))
+* **deps:** bump @tanstack/react-virtual in the tanstack group ([#180](https://github.com/iHX-Labs/refinarr/issues/180)) ([201a8ea](https://github.com/iHX-Labs/refinarr/commit/201a8eab6d0825b5f28ca7700e8cece4cc7abcd5))
+* **deps:** bump next-intl from 4.12.0 to 4.13.0 in the next group ([#181](https://github.com/iHX-Labs/refinarr/issues/181)) ([15586dd](https://github.com/iHX-Labs/refinarr/commit/15586dd176e4ac8c19bb4d909f5c4c178492d6d1))
+* **deps:** bump shadcn from 4.7.0 to 4.8.3 ([#183](https://github.com/iHX-Labs/refinarr/issues/183)) ([992eb4c](https://github.com/iHX-Labs/refinarr/commit/992eb4cc9d9325197a18271f79ea0230f0a8f262))
+
 ## [0.4.0](https://github.com/iHX-Labs/refinarr/compare/v0.3.1...v0.4.0) (2026-05-29)
 
 
