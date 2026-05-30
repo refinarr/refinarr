@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/iHX-Labs/refinarr/compare/v0.4.1...v0.4.2) (2026-05-30)
+
+
+### Bug Fixes
+
+* **ci:** apply Codex findings + drop docker-pr-build ([#186](https://github.com/iHX-Labs/refinarr/issues/186)) ([0050f8f](https://github.com/iHX-Labs/refinarr/commit/0050f8f5b5feb00c7223b6ec23fa66d73d718181))
+
 ## [0.4.1](https://github.com/iHX-Labs/refinarr/compare/v0.4.0...v0.4.1) (2026-05-30)
 
 
