@@ -195,12 +195,15 @@ jobs:
           tags: |
             # `{{raw}}` keeps the leading `v` from the input tag
             # (e.g. v0.4.0). `{{version}}` strips it (→ 0.4.0). We
-            # want the `v` so the Docker tag matches the GitHub tag,
-            # which is what the comment block above promises.
+            # want the `v` so the Docker tag matches the GitHub tag.
             type=semver,pattern={{raw}},value=${{ env.SEMVER_TAG }}
-            # Literal `v` prefix in the pattern so the rolling
-            # X.Y tag also keeps the v-convention (`:v0.4`).
+            # Rolling minor — two variants for the same image:
+            #   - :vX.Y    (matches the GitHub-tag convention)
+            #   - :X.Y     (backward-compat — v0.4.0 published :0.4
+            #              before the v-prefix unification, so users
+            #              pulling `:0.4` keep getting updates)
             type=semver,pattern=v{{major}}.{{minor}},value=${{ env.SEMVER_TAG }},enable=${{ env.IS_STABLE }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.SEMVER_TAG }},enable=${{ env.IS_STABLE }}
             type=raw,value=latest,enable=${{ env.IS_STABLE }}
 
       - name: Create multi-arch manifest
