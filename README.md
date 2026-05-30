@@ -1,7 +1,7 @@
 # refinarr
 
 [![CI](https://github.com/refinarr/refinarr/actions/workflows/test.yml/badge.svg)](https://github.com/refinarr/refinarr/actions/workflows/test.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/refinarr/refinarr)](https://github.com/refinarr/refinarr/releases)
 [![Docker image](https://img.shields.io/badge/ghcr.io-refinarr%2Frefinarr-blue?logo=docker)](https://github.com/refinarr/refinarr/pkgs/container/refinarr)
 
@@ -14,7 +14,7 @@ Self-hosted dashboard that connects to Sonarr/Radarr, identifies media missing y
 - **Auto-runner** (optional) — schedules upgrade searches per instance with rate-limit + cooldown controls
 - **Action history** with retry + dry-run mode for everything
 - **Multiple Sonarr/Radarr instances** in one dashboard
-- **Mobile + desktop** — responsive layout, dark + light themes, two brand palettes
+- **Mobile + desktop** — responsive layout; two brand palettes (amber, teal) × light / dark / system modes
 - **No telemetry, no analytics** — outbound calls only to your configured *arr instances
 
 ## Quick start
@@ -56,43 +56,15 @@ yarn dev            # starts on :7272
 
 On first launch, navigate to `http://<host>:7272` — you will be redirected to `/setup` to create the admin account.
 
-## Threat model and security
+## Security
 
-Refinarr stores the API keys for your Sonarr/Radarr instances. Treat the data volume the same as you would treat those keys — back it up encrypted, do not share it, and rotate downstream API keys after suspected compromise.
+Refinarr stores your Sonarr/Radarr API keys, so it's built defensively:
 
-**Defaults you should know about:**
+- **Deny-by-default auth** on every route ([`src/proxy.ts`](src/proxy.ts)) — only `/api/health`, `/login`, and (first-run) `/setup` are public.
+- **API keys encrypted at rest** (AES-256-GCM) and never returned to the browser; scrypt passwords; httpOnly + sameSite=strict sessions.
+- **No telemetry, no file uploads** — outbound calls only to your *arr instances, which sidesteps Zip Slip / path-traversal entirely.
 
-- Every page and API route is gated by a deny-by-default auth proxy ([`src/proxy.ts`](src/proxy.ts), Next.js 16's renamed Middleware). The only public surfaces are `/api/health`, `/login`, and (only while no user exists) `/setup`.
-- Passwords are hashed with scrypt; sessions are random 32-byte tokens stored httpOnly + sameSite=strict.
-- Sonarr/Radarr API keys are stored encrypted at rest with AES-256-GCM. The encryption key lives at `/data/.encryption-key` (auto-generated on first start, mode 0600) or via the `ENCRYPTION_KEY` env var (32 bytes base64). Lose the key → existing instance keys are unrecoverable; you will need to re-add the instances.
-- API keys for connected *arr apps are **never** returned to the browser. They never leave the server-side code path that talks to Sonarr/Radarr.
-- Refinarr has no telemetry, no analytics, and makes no outbound HTTP calls except to your configured *arr instances.
-- The Node process inside the container does not run as root.
-
-**Public exposure:**
-
-Refinarr **must not be exposed to the public internet** without a reverse proxy you trust to do TLS and (optionally) external auth. The built-in login is good for a private LAN; it is not designed to be the only thing between the internet and your media server.
-
-**Reverse-proxy auth (Authelia / Authentik / Caddy / etc):**
-
-Refinarr can trust a username header from a reverse proxy that has already authenticated the user. Off by default. Enable it like:
-
-```env
-TRUST_PROXY_AUTH=true
-PROXY_USER_HEADER=X-Remote-User   # default; change if your proxy sets a different header
-```
-
-Only enable this when refinarr is bound to a private interface that **only** the trusted proxy can reach. Anything else can spoof the header. Refinarr deliberately does **not** read `X-Forwarded-For` or any IP header for auth decisions.
-
-**API access from scripts:**
-
-The `X-Api-Key` header is honored for non-browser callers. The key is shown (and rotatable) in Settings → API Access; both reveal and rotate require your password again. Keep the key out of shell history and version control.
-
-## What we deliberately don't do
-
-- **No file uploads, no archive extraction, no path-from-input filesystem access.** This eliminates Zip Slip and path-traversal vulnerability classes entirely.
-- **No client-controlled flags that bypass auth.** Auth state never comes from a request body or URL parameter.
-- **No allow-list-shaped auth.** Every route is private unless explicitly listed as public — there is no "skip auth for X" code path.
+**Don't expose refinarr to the public internet** without a TLS reverse proxy you trust. Full threat model, reverse-proxy auth setup, and vulnerability reporting → [SECURITY.md](SECURITY.md).
 
 ## Configuration
 
@@ -108,8 +80,14 @@ The `X-Api-Key` header is honored for non-browser callers. The key is shown (and
 
 ## Stack
 
-- Next.js App Router, TypeScript, Tailwind 4, shadcn/ui (3 themes: dark-orange, dark-teal, light)
+- Next.js App Router, TypeScript, Tailwind 4, shadcn/ui — 2 brand palettes (amber, teal) × light / dark / system
 - Prisma 7 + SQLite
 - TanStack Query v5
 - next-intl
 - pino
+
+## License
+
+Copyright (c) 2025-2026 refinarr contributors.
+
+Licensed under the [GNU General Public License v3.0](LICENSE).

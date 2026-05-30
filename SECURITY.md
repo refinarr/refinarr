@@ -55,6 +55,31 @@ Out of scope:
 - All log context routed through `redactContext()` — masks `apikey=`, `Authorization:`, 32-hex tokens, reserved keys
 - Rate limiting on login + setup endpoints
 
+## Deployment guidance
+
+Refinarr **must not be exposed to the public internet** without a reverse proxy you trust to do TLS and (optionally) external auth. The built-in login is good for a private LAN; it is not designed to be the only thing between the internet and your media server.
+
+The only public surfaces are `/api/health`, `/login`, and — only while no user exists — `/setup`. Everything else is gated by the deny-by-default proxy.
+
+**Reverse-proxy auth (Authelia / Authentik / Caddy / etc.).** Refinarr can trust a username header from a reverse proxy that has already authenticated the user. Off by default:
+
+```env
+TRUST_PROXY_AUTH=true
+PROXY_USER_HEADER=X-Remote-User   # default; change if your proxy sets a different header
+```
+
+Only enable this when refinarr is bound to a private interface that **only** the trusted proxy can reach — anything else can spoof the header. Refinarr deliberately does **not** read `X-Forwarded-For` or any IP header for auth decisions.
+
+**API access from scripts.** The `X-Api-Key` header is honored for non-browser callers. The key is shown (and rotatable) in Settings → API Access; both reveal and rotate require your password again. Keep the key out of shell history and version control.
+
+## What we deliberately don't do
+
+- **No file uploads, no archive extraction, no path-from-input filesystem access** — eliminates Zip Slip and path-traversal classes entirely.
+- **No client-controlled flags that bypass auth** — auth state never comes from a request body or URL parameter.
+- **No allow-list-shaped auth** — every route is private unless explicitly listed as public; there is no "skip auth for X" code path.
+- **No telemetry, no analytics** — outbound HTTP calls only to your configured *arr instances.
+- **Process does not run as root** inside the container.
+
 ## Acknowledgements
 
 We'll credit security reporters in the GitHub Security Advisory + release notes for the fix release. Let us know if you'd prefer to stay anonymous.
