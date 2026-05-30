@@ -58,7 +58,13 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
   );
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
   const tConfirmDelete = useTranslations("confirm.deleteInstance");
-  const noCfs = (prefs?.length ?? 0) === 0 && instance.enabled;
+  // Only meaningful in manual scoring: profile mode imports its wanted CFs
+  // from the upstream quality profile, so "no CF preferences" is expected,
+  // not a misconfiguration (GAP-5).
+  const noCfs =
+    (prefs?.length ?? 0) === 0 &&
+    instance.enabled &&
+    instance.scoringMode !== "profile";
   const pendingCount = queue?.pendingCount ?? 0;
 
   const runTest = withToast(test, {
