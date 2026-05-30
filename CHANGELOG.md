@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/refinarr/refinarr/compare/v0.5.0...v0.5.1) (2026-05-30)
+
+
+### Bug Fixes
+
+* **docker:** install shadow so PUID/PGID entrypoint works on Alpine ([affac12](https://github.com/refinarr/refinarr/commit/affac1295008c36ae7feb6edaa2386f29244af5c))
+* **docker:** install shadow so PUID/PGID entrypoint works on Alpine ([e4c390d](https://github.com/refinarr/refinarr/commit/e4c390d20918feda7082fe9cedc94e0b779a16e4))
+
 ## [0.5.0](https://github.com/refinarr/refinarr/compare/v0.4.2...v0.5.0) (2026-05-30)
 
 
