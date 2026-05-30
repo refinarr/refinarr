@@ -13,6 +13,17 @@ const PUBLIC_API_PATHS = new Set<string>(["/api/health", "/api/auth/login"]);
 
 const PUBLIC_PAGE_PATHS = new Set<string>(["/login"]);
 
+// Public static assets that must bypass BOTH the setup gate and auth so the
+// browser can always fetch them — including on /login and the first-run /setup
+// page. Without this the deny-by-default gate redirects them to an HTML page,
+// which the browser then fails to parse (e.g. "Manifest: Line 1, Syntax
+// error"). They carry no secrets. (favicon.ico is already excluded in the
+// matcher; these aren't, because they're generated routes, not static files.)
+const STATIC_PUBLIC_PATHS = new Set<string>([
+  "/manifest.webmanifest",
+  "/icon.svg",
+]);
+
 // Content-Security-Policy:
 //   - default-src 'self'           — only same-origin by default
 //   - script-src 'unsafe-inline'   — Next.js injects inline runtime bootstrap;
@@ -173,6 +184,11 @@ export async function proxy(req: NextRequest) {
   // Health endpoint is always public — must bypass userExists() so the webServer
   // health check resolves to 200 before any user is created.
   if (path === "/api/health")
+    return withSecurityHeaders(passThrough(req, traceId), traceId);
+
+  // Public static assets bypass the setup gate AND auth so the browser can
+  // always fetch them (PWA manifest, app icon) — even on /login or /setup.
+  if (STATIC_PUBLIC_PATHS.has(path))
     return withSecurityHeaders(passThrough(req, traceId), traceId);
 
   const setupResp = await setupGate(req, path, isApi, traceId);
