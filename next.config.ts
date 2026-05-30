@@ -36,7 +36,15 @@ const allowedDevOrigins =
   isDev && envAllowedDevOrigins.length > 0 ? envAllowedDevOrigins : undefined;
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Standalone output is for the Docker image entrypoint
+  // (node .next/standalone/server.js). The E2E run serves via
+  // `next start`, which is incompatible with standalone — it logs a
+  // warning and aborted requests surface as an uncaught ECONNRESET.
+  // NEXT_DISABLE_STANDALONE=true (set by playwright.config.ts) keeps the
+  // E2E build a plain build so `next start` is the fully supported path.
+  ...(process.env.NEXT_DISABLE_STANDALONE === "true"
+    ? {}
+    : { output: "standalone" }),
   // Allow E2E tests to use a separate dist dir so a second `next dev` on a
   // different port doesn't collide with the primary dev server's lock file.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",

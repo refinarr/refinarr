@@ -43,6 +43,10 @@ export default defineConfig({
     timeout: 240_000,
     env: {
       NEXT_DIST_DIR: E2E_DIST,
+      // Build without `output: standalone` so `next start` is the
+      // supported entrypoint (standalone serves via node server.js) —
+      // silences the warning and the aborted-request ECONNRESET noise.
+      NEXT_DISABLE_STANDALONE: "true",
       DATABASE_URL: E2E_DB,
       // crypto.ts defaults to /data/.encryption-key when NODE_ENV=production;
       // that's a Docker-volume path. Override to a local file for the e2e run.
