@@ -5,6 +5,7 @@ import {
   verifyPassword,
   createSession,
   SESSION_COOKIE,
+  sessionCookieOptions,
 } from "@/server/lib/auth";
 import { checkRateLimit, clientIp } from "@/server/lib/rate-limit";
 import { appLogger } from "@/server/lib/app-logger";
@@ -46,12 +47,10 @@ export const POST = createApiHandler(async (req: NextRequest) => {
 
   const session = await createSession(user.id);
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(SESSION_COOKIE, session.id, {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: session.expiresAt,
-  });
+  res.cookies.set(
+    SESSION_COOKIE,
+    session.id,
+    sessionCookieOptions(req, session.expiresAt),
+  );
   return res;
 });

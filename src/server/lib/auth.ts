@@ -1,4 +1,5 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import type { NextRequest } from "next/server";
 import { userRepository } from "@/server/repositories/UserRepository";
 import { sessionRepository } from "@/server/repositories/SessionRepository";
 
@@ -10,6 +11,32 @@ const SESSION_DAYS = 30;
 const SESSION_MS = SESSION_DAYS * 24 * 60 * 60 * 1000;
 
 export const SESSION_COOKIE = "rfn_session";
+
+// The session cookie's Secure flag must reflect the actual transport, NOT
+// NODE_ENV. The production image always runs NODE_ENV=production, but the
+// primary deployment is a private LAN over plain HTTP — where a Secure cookie
+// is silently dropped by the browser, so login can never persist. Mark the
+// cookie Secure only when the request truly arrived over HTTPS: directly, or
+// via a TLS-terminating reverse proxy whose X-Forwarded-Proto we trust (same
+// gate the proxy-auth header uses — TRUST_PROXY_AUTH=true).
+export function isHttpsRequest(req: NextRequest): boolean {
+  if (req.nextUrl.protocol === "https:") return true;
+  if (process.env.TRUST_PROXY_AUTH === "true") {
+    const proto = req.headers.get("x-forwarded-proto");
+    if (proto?.split(",")[0]?.trim().toLowerCase() === "https") return true;
+  }
+  return false;
+}
+
+export function sessionCookieOptions(req: NextRequest, expiresAt: Date) {
+  return {
+    httpOnly: true as const,
+    sameSite: "strict" as const,
+    secure: isHttpsRequest(req),
+    path: "/",
+    expires: expiresAt,
+  };
+}
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16);
