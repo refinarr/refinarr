@@ -1,7 +1,10 @@
 FROM node:22-alpine AS base
 
-# Install su-exec for privilege dropping
-RUN apk add --no-cache su-exec
+# su-exec for privilege dropping; shadow provides groupmod/usermod/groupadd/useradd
+# (Alpine ships only BusyBox addgroup/adduser, which the entrypoint's PUID/PGID
+# remap of the existing `node` user cannot use) — without it the entrypoint
+# crash-loops with "groupadd: not found" and the app never starts.
+RUN apk add --no-cache su-exec shadow
 
 # ---------- deps ----------
 FROM base AS deps
