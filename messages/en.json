@@ -1,13 +1,17 @@
 {
   "auth": {
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "setup": {
       "title": "Welcome to Refinarr",
       "subtitle": "Create the admin account that will manage this instance.",
       "username": "Username",
       "password": "Password",
       "passwordHint": "At least 12 characters.",
+      "passwordProgress": "{count} / 12 characters",
       "confirmPassword": "Confirm password",
       "submit": "Create account",
+      "usernameInvalid": "3–64 characters: letters, numbers, and _ . -",
       "mismatch": "Passwords do not match.",
       "tooShort": "Password must be at least 12 characters.",
       "tooManyAttempts": "Too many attempts. Wait a few minutes.",

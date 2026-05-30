@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/client/components/ui/card";
 import { Input } from "@/client/components/ui/input";
+import { PasswordInput } from "@/client/components/common/PasswordInput";
 import { Button } from "@/client/components/ui/button";
 import { FormField } from "@/client/components/ui/form-field";
 import { api, ApiClientError } from "@/client/lib/api";
@@ -64,8 +65,7 @@ function LoginForm() {
               />
             </FormField>
             <FormField id="password" label={t("password")} error={err}>
-              <Input
-                type="password"
+              <PasswordInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
