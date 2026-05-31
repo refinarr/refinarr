@@ -211,7 +211,7 @@ function TitleCell({
       )}
       {log.sourceTitle && (
         <div
-          className="text-muted-foreground/80 truncate text-xs"
+          className="text-muted-foreground truncate text-xs"
           title={log.sourceTitle}
         >
           {t("grabbedRelease", { title: log.sourceTitle })}
