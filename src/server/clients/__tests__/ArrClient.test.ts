@@ -1,5 +1,9 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import { describeFetchError, ArrClient } from "@/server/clients/ArrClient";
+import {
+  describeFetchError,
+  isUpstreamError,
+  ArrClient,
+} from "@/server/clients/ArrClient";
 import type {
   UpstreamHistoryRecord,
   UpstreamHistoryEvent,
@@ -164,6 +168,30 @@ describe("ArrClient.testConnection appName validation", () => {
 // actual diagnostic ("ECONNREFUSED" / "ENOTFOUND" / etc.) instead of
 // the useless wrapper. A miss here = silent regression in user-facing
 // observability — worth a few cheap tests.
+// Routes use this to return 502 (your *arr is down) instead of an opaque 500.
+describe("isUpstreamError", () => {
+  test("true for a Node 'fetch failed' TypeError", () => {
+    const e = new TypeError("fetch failed");
+    expect(isUpstreamError(e)).toBe(true);
+  });
+  test("true for an aborted/timed-out request", () => {
+    const e = Object.assign(new Error("aborted"), { name: "AbortError" });
+    expect(isUpstreamError(e)).toBe(true);
+  });
+  test("true when a network cause is attached", () => {
+    const e = Object.assign(new Error("boom"), {
+      cause: Object.assign(new Error("connect ECONNREFUSED"), {
+        code: "ECONNREFUSED",
+      }),
+    });
+    expect(isUpstreamError(e)).toBe(true);
+  });
+  test("false for a plain internal error", () => {
+    expect(isUpstreamError(new Error("DB write failed"))).toBe(false);
+    expect(isUpstreamError("nope")).toBe(false);
+  });
+});
+
 describe("describeFetchError", () => {
   test("unwraps Node fetch's `cause` and includes its code", () => {
     const cause = Object.assign(new Error("connect ECONNREFUSED 1.2.3.4:80"), {
