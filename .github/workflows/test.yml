@@ -161,3 +161,39 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Single required status check. The `main` ruleset requires ONLY this
+  # job, not `unit`/`e2e` directly — so adding/renaming CI jobs never
+  # needs a ruleset edit, and the pass/fail decision is made explicitly
+  # here rather than relying on GitHub's skipped-reports-success behavior.
+  # `if: always()` so it runs even when the gated jobs are skipped
+  # (docs-only PR) or one fails; it then inspects their results:
+  #   - changes must succeed (the classifier itself must be healthy)
+  #   - unit/e2e must each be success OR skipped (skipped = docs-only or
+  #     draft, which is legitimately fine) — anything else (failure,
+  #     cancelled) fails the gate.
+  ci-success:
+    name: ci-success
+    needs: [changes, unit, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify gated jobs passed or were skipped
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          UNIT: ${{ needs.unit.result }}
+          E2E: ${{ needs.e2e.result }}
+        run: |
+          set -euo pipefail
+          echo "changes=$CHANGES unit=$UNIT e2e=$E2E"
+          if [ "$CHANGES" != "success" ]; then
+            echo "::error::changes (diff classifier) did not succeed"; exit 1
+          fi
+          for r in "$UNIT" "$E2E"; do
+            case "$r" in
+              success | skipped) ;;
+              *) echo "::error::a gated job did not pass (unit=$UNIT e2e=$E2E)"; exit 1 ;;
+            esac
+          done
+          echo "All gated jobs passed or were legitimately skipped."
