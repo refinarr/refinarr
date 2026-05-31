@@ -221,7 +221,7 @@ function ActionsView({
     <>
       <Button
         variant="ghost"
-        size="icon-sm"
+        size="icon-touch"
         onClick={onClearSelection}
         aria-label={t("clearSelection")}
         className="text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50"
@@ -280,7 +280,7 @@ function ActionsView({
           render={
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon-touch"
               className="text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50"
             />
           }
@@ -327,7 +327,7 @@ function ProgressView({ progress, onCancel, t }: ProgressProps) {
       </div>
       {onCancel && (
         <Button
-          size="icon-sm"
+          size="icon-touch"
           variant="ghost"
           onClick={onCancel}
           aria-label={t("cancel")}

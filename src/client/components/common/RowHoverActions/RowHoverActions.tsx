@@ -21,7 +21,7 @@ export function RowHoverActions({
     <div className="inline-flex items-center gap-0.5">
       <Button
         variant="ghost"
-        size="icon-xs"
+        size="icon-touch"
         title={t("search")}
         aria-label={t("search")}
         disabled={searchPending}
@@ -31,7 +31,7 @@ export function RowHoverActions({
       </Button>
       <Button
         variant="ghost"
-        size="icon-xs"
+        size="icon-touch"
         title={t("ignore")}
         aria-label={t("ignore")}
         disabled={ignorePending}

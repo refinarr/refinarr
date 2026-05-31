@@ -37,6 +37,18 @@ const profile = {
 };
 
 describe("GET /api/sonarr/series", () => {
+  test("rejects out-of-range page sizes before dispatch", async () => {
+    const res = await listSeries(
+      new NextRequest(
+        "http://localhost/api/sonarr/series?instanceId=1&page=1&limit=99999999",
+      ),
+      ctxNone,
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "Invalid limit" });
+  });
+
   test("returns paginated SeriesItem wrapper", async () => {
     const instanceId = await makeInstance();
     await preferenceRepository.setForInstance(instanceId, [

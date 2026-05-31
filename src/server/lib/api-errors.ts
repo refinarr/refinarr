@@ -130,6 +130,18 @@ export function positiveInt(value: string | undefined, name: string): number {
   return numericValue;
 }
 
+export function boundedPositiveInt(
+  value: string | undefined,
+  name: string,
+  max: number,
+): number {
+  const numericValue = positiveInt(value, name);
+  if (numericValue > max) {
+    throw badRequest(`Invalid ${name}`);
+  }
+  return numericValue;
+}
+
 // Assertion predicate for route handlers that take a user-supplied
 // `instanceId` and need the resolved instance to be a specific arr type
 // (e.g. `/api/radarr/*` routes require a radarr instance). Throws

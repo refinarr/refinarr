@@ -51,8 +51,7 @@ export function EpisodeFileRow({
           <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
             <Button
               variant="ghost"
-              size="icon"
-              className="size-7"
+              size="icon-touch"
               title={t("search")}
               aria-label={t("search")}
               onClick={() => onSearch()}
@@ -61,8 +60,7 @@ export function EpisodeFileRow({
             </Button>
             <Button
               variant="ghost"
-              size="icon"
-              className="size-7"
+              size="icon-touch"
               title={t("delete")}
               aria-label={t("delete")}
               onClick={() => onDelete()}

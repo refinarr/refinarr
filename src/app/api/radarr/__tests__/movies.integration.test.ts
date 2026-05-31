@@ -39,6 +39,18 @@ const profile = {
 };
 
 describe("GET /api/radarr/movies", () => {
+  test("rejects out-of-range page sizes before dispatch", async () => {
+    const res = await listMovies(
+      new NextRequest(
+        "http://localhost/api/radarr/movies?instanceId=1&page=1&limit=99999999",
+      ),
+      ctxNone,
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "Invalid limit" });
+  });
+
   test("returns paginated MovieItem wrapper through the full route handler", async () => {
     const instanceId = await makeInstance();
     await preferenceRepository.setForInstance(instanceId, [

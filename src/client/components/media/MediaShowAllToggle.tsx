@@ -37,7 +37,7 @@ export function MediaShowAllToggle({ instanceId }: Props) {
   return (
     <Button
       variant="ghost"
-      size="icon-sm"
+      size="icon-touch"
       onClick={toggle}
       disabled={update.isPending}
       title={`${label} — ${t("viewToggleHint")}`}

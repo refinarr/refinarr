@@ -31,11 +31,11 @@ const buttonVariants = cva(
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
         // Mobile-touch icon button that collapses to icon-sm on md+:
-        // 40px tap target on mobile (iOS-friendly), 28px compact on
-        // desktop. Use when a single Button needs to cover both
-        // viewports without callsite className overrides.
+        // 44px tap target on mobile, 28px compact on desktop. Use when
+        // a single Button needs to cover both viewports without
+        // callsite className overrides.
         "icon-touch":
-          "size-10 in-data-[slot=button-group]:rounded-lg md:size-7 md:rounded-[min(var(--radius-md),12px)] [&_svg:not([class*='size-'])]:size-5 md:[&_svg:not([class*='size-'])]:size-4",
+          "size-11 in-data-[slot=button-group]:rounded-lg md:size-7 md:rounded-[min(var(--radius-md),12px)] [&_svg:not([class*='size-'])]:size-5 md:[&_svg:not([class*='size-'])]:size-4",
       },
     },
     defaultVariants: {

@@ -522,7 +522,7 @@ function MediaListShellTopBar() {
       />
       <Button
         variant="ghost"
-        size="icon-sm"
+        size="icon-touch"
         onClick={() => refreshWithToast(inst.activeInstance)}
         disabled={refreshMutation.isPending}
         title={tCommon("refresh")}

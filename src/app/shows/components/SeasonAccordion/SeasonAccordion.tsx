@@ -52,7 +52,7 @@ export function SeasonAccordion({
           <div className="absolute top-1/2 right-2 z-10 flex -translate-y-1/2 items-center gap-1.5">
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon-touch"
               title={t("searchSeasonAria", { season })}
               aria-label={t("searchSeasonAria", { season })}
               onClick={() => onSearch()}
@@ -61,7 +61,7 @@ export function SeasonAccordion({
             </Button>
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon-touch"
               title={t("deleteSeasonAria", { season })}
               aria-label={t("deleteSeasonAria", { season })}
               onClick={() => onDelete()}
