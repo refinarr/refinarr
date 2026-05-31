@@ -87,7 +87,7 @@ export function DryRunToggle({ prominent = false }: Props) {
                 <p className="font-medium">
                   {isDryRun ? t("prominentTitleDry") : t("prominentTitleLive")}
                 </p>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-foreground text-sm">
                   {isDryRun ? t("prominentBodyDry") : t("prominentBodyLive")}
                 </p>
               </div>
