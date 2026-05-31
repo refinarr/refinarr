@@ -109,6 +109,13 @@ model ActionLog {
   // with instanceId prevents cross-instance false matches when two
   // instances happen to issue the same id.
   @@index([instanceId, commandId])
+  // Composite (instanceId, status, createdAt) — serves the lifecycle-poll
+  // + auto-runner hot path: findInFlightMediaIds, findCorrelatableByMedia,
+  // and findOpenCommandsByInstance all filter (instanceId, status) then
+  // range on createdAt. Keeps those seeks index-bound rather than
+  // instance-scan-bound if ACTION_LOG_RETENTION_CAP is raised well past
+  // its 5000 default.
+  @@index([instanceId, status, createdAt])
 }
 
 model AppLog {
