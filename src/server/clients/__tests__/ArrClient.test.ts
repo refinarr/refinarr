@@ -33,6 +33,7 @@ const stubInstance: Instance = {
 };
 
 class TestClient extends ArrClient {
+  protected readonly expectedAppName = "Radarr";
   getQualityProfiles() {
     return Promise.resolve([]);
   }
@@ -115,6 +116,45 @@ describe("ArrClient.fetch timeout", () => {
       }),
     );
     await fetchPromise;
+  });
+});
+
+// testConnection must reject a URL that points at the wrong *arr product:
+// both Radarr and Sonarr answer 200 on /api/v3/system/status, so without an
+// appName check a Sonarr URL saved as a Radarr instance connects "fine" and
+// silently creates a broken instance (BUG-1).
+describe("ArrClient.testConnection appName validation", () => {
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+  afterEach(() => fetchSpy?.mockRestore());
+
+  function mockStatus(body: Record<string, unknown>) {
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(body), {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  }
+
+  test("ok when appName matches the expected product", async () => {
+    mockStatus({ appName: "Radarr", version: "5" });
+    expect(await new TestClient(stubInstance).testConnection()).toEqual({
+      ok: true,
+    });
+  });
+
+  test("ok when appName is absent (tolerate older/unknown builds)", async () => {
+    mockStatus({ version: "5" });
+    expect(await new TestClient(stubInstance).testConnection()).toEqual({
+      ok: true,
+    });
+  });
+
+  test("rejects when appName is a different product", async () => {
+    mockStatus({ appName: "Sonarr", version: "4" });
+    const res = await new TestClient(stubInstance).testConnection();
+    expect(res.ok).toBe(false);
+    expect(res.error).toContain("Sonarr");
+    expect(res.error).toContain("Radarr");
   });
 });
 

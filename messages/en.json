@@ -1,13 +1,17 @@
 {
   "auth": {
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "setup": {
       "title": "Welcome to Refinarr",
       "subtitle": "Create the admin account that will manage this instance.",
       "username": "Username",
       "password": "Password",
       "passwordHint": "At least 12 characters.",
+      "passwordProgress": "{count} / 12 characters",
       "confirmPassword": "Confirm password",
       "submit": "Create account",
+      "usernameInvalid": "3–64 characters: letters, numbers, and _ . -",
       "mismatch": "Passwords do not match.",
       "tooShort": "Password must be at least 12 characters.",
       "tooManyAttempts": "Too many attempts. Wait a few minutes.",
@@ -56,6 +60,9 @@
     "yes": "Yes",
     "no": "No",
     "viewAll": "View all",
+    "viewFlaggedOnly": "Flagged only",
+    "viewShowAll": "All media",
+    "viewToggleHint": "Toggle showing all media (not just flagged) for this instance",
     "moreCount": "+{count} more",
     "on": "On",
     "off": "Off",
@@ -146,11 +153,13 @@
       "instances": "Instances",
       "flaggedMovies": "Flagged movies",
       "flaggedSeries": "Flagged series",
-      "failed24h": "Failed (24h)"
+      "failed24h": "Failed (24h)",
+      "warming": "Loading from your library…"
     },
     "instances": "Instances",
     "recentActivity": "Recent activity",
     "noRecentActions": "No recent actions.",
+    "noRecentActionsCta": "Browse flagged movies to get started →",
     "instanceCard": {
       "connected": "Connected",
       "unreachable": "Unreachable",
@@ -625,8 +634,8 @@
       "namePlaceholder": "My Radarr",
       "namePlaceholderSonarr": "My Sonarr",
       "url": "URL",
-      "urlPlaceholder": "localhost:7878 or 10.10.1.10:7878",
-      "urlPlaceholderSonarr": "localhost:8989 or 10.10.1.10:8989",
+      "urlPlaceholder": "http://radarr:7878 or https://radarr.lan",
+      "urlPlaceholderSonarr": "http://sonarr:8989 or https://sonarr.lan",
       "apiKey": "API Key",
       "apiKeyPlaceholderEdit": "•••••••• (leave blank to keep current)",
       "apiKeyPlaceholderNew": "••••••••",

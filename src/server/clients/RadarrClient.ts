@@ -36,6 +36,8 @@ interface RadarrQualityProfile {
 const CHUNK = 200;
 
 export class RadarrClient extends ArrClient {
+  protected readonly expectedAppName = "Radarr";
+
   constructor(instance: Instance) {
     super(instance);
   }

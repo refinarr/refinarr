@@ -20,6 +20,7 @@ import {
 } from "@/client/components/media/BulkActionToolbar";
 import { DensityToggle } from "@/client/components/media/DensityToggle";
 import { InstancePicker } from "@/client/components/media/InstancePicker";
+import { MediaShowAllToggle } from "@/client/components/media/MediaShowAllToggle";
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
 import { MediaSearchBar } from "@/client/components/media/MediaSearchBar";
 import { MobileFilterBar } from "@/client/components/media/MobileFilterBar";
@@ -534,6 +535,10 @@ function MediaListShellTopBar() {
 
       {showInstanceContext && (
         <ScoringModeSelector instanceId={inst.activeInstance} hideLabel />
+      )}
+
+      {showInstanceContext && (
+        <MediaShowAllToggle instanceId={inst.activeInstance} />
       )}
 
       {/*

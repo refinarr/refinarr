@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -41,6 +42,7 @@ export function KpiCard({
   loading,
   valueLoading,
 }: Props) {
+  const t = useTranslations("dashboard");
   if (loading) return <KpiCardSkeleton />;
   const inner = (
     <Card
@@ -55,7 +57,12 @@ export function KpiCard({
       </CardHeader>
       <CardContent>
         {valueLoading ? (
-          <Skeleton className="h-9 w-16" />
+          <div>
+            <Skeleton className="h-9 w-16" />
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t("kpi.warming")}
+            </p>
+          </div>
         ) : (
           <p className={`text-3xl font-bold tabular-nums ${toneClasses[tone]}`}>
             {value}
