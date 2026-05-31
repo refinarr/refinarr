@@ -156,11 +156,22 @@ describe("LogRepository", () => {
     expect(await logRepository.countByStatusSince("dry_run", before)).toBe(0);
   });
 
-  test("findRecent caps the result at the limit", async () => {
+  test("findRecent caps the result at the limit and projects away heavy fields", async () => {
     for (let i = 0; i < 4; i += 1)
-      await logRepository.create({ ...baseLog, mediaId: i });
+      await logRepository.create({
+        ...baseLog,
+        mediaId: i,
+        payload: JSON.stringify({ big: "x".repeat(1000) }),
+      });
     const recent = await logRepository.findRecent(2);
     expect(recent).toHaveLength(2);
+    // Rendered fields are present...
+    expect(recent[0].title).toBe("Movie 100");
+    expect(recent[0].status).toBeDefined();
+    // ...heavy fields are projected out (not just null).
+    expect(recent[0]).not.toHaveProperty("payload");
+    expect(recent[0]).not.toHaveProperty("completionMessage");
+    expect(recent[0]).not.toHaveProperty("error");
   });
 
   test("update mutates a row", async () => {
