@@ -35,7 +35,7 @@ export default function DashboardPage() {
   if (!loadingInstances && (instances?.length ?? 0) === 0) {
     return (
       <AppShell>
-        <NoInstancesPrompt onAdd={() => router.push("/settings")} />
+        <NoInstancesPrompt onAdd={() => router.push("/settings/instances")} />
       </AppShell>
     );
   }
@@ -74,7 +74,7 @@ export default function DashboardPage() {
               )}
               <Button
                 variant="outline"
-                onClick={() => router.push("/settings")}
+                onClick={() => router.push("/settings/instances")}
               >
                 <Plus className="mr-1 size-4" /> {t("addInstance")}
               </Button>

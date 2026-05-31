@@ -133,7 +133,7 @@ export function InstanceSummaryCard({ instance }: Props) {
               </span>
             )}
             <Link
-              href="/settings"
+              href="/settings/instances"
               className="text-muted-foreground hover:text-foreground flex items-center gap-1"
             >
               <Settings className="size-3" /> {t("settings")}

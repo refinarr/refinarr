@@ -38,7 +38,7 @@ export default function IgnoredPage() {
   if (!loadingInstances && !instances?.length) {
     return (
       <AppShell>
-        <NoInstancesPrompt onAdd={() => router.push("/settings")} />
+        <NoInstancesPrompt onAdd={() => router.push("/settings/instances")} />
       </AppShell>
     );
   }
