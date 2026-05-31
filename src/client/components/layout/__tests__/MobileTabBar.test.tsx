@@ -19,6 +19,9 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/client/hooks/data/useInstances", () => ({
   useInstances: () => ({ data: [] }),
   useInstanceHealth: () => ({ data: undefined, isLoading: true }),
+  // No instances yet → onboarding fallback shows all arr tabs (#53), so
+  // the existing Movies + Shows assertions still hold.
+  useConfiguredArrTypes: () => ["radarr", "sonarr"],
 }));
 
 describe("MobileTabBar", () => {

@@ -6,6 +6,7 @@ import { Film, LayoutDashboard, Menu, Tv2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePrefersReducedMotion } from "@/client/hooks/ui/useMediaQuery";
 import { useScrollDirection } from "@/client/hooks/ui/useScrollDirection";
+import { useConfiguredArrTypes } from "@/client/hooks/data/useInstances";
 import { cn } from "@/client/lib/utils";
 import { ARR_LIBRARY_ROUTE } from "@/shared/arr-meta";
 import type { ArrType } from "@/shared/types/models";
@@ -70,6 +71,13 @@ export function MobileTabBar({ onMoreClick, moreOpen }: Props) {
   const direction = useScrollDirection();
   const prefersReducedMotion = usePrefersReducedMotion();
   const hidden = direction === "down" && !moreOpen;
+  // Hide per-arr tabs for types with no configured instance (#53) — a
+  // Radarr-only user shouldn't get a phantom Shows tab. Route tabs
+  // (Dashboard) always show.
+  const arrTypes = useConfiguredArrTypes();
+  const visibleTabs = TABS.filter(
+    (tab) => tab.kind !== "instance" || arrTypes.includes(tab.arrType),
+  );
   return (
     <nav
       aria-label={t("primary")}
@@ -91,7 +99,7 @@ export function MobileTabBar({ onMoreClick, moreOpen }: Props) {
       )}
     >
       <div className="h-bottom-bar flex items-stretch">
-        {TABS.map((tab) => {
+        {visibleTabs.map((tab) => {
           if (tab.kind === "instance") {
             return (
               <MobileInstanceTab

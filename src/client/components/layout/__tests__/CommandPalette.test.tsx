@@ -11,6 +11,8 @@ vi.mock("@/client/hooks/data/useInstances", () => ({
   useInstances: () => ({
     data: [{ id: 1, type: "radarr", name: "Radarr-Main" }],
   }),
+  // Only radarr configured → Shows nav command should be gated out (#53).
+  useConfiguredArrTypes: () => ["radarr"],
 }));
 
 vi.mock("@/client/hooks/data/useConfig", () => ({
@@ -47,6 +49,8 @@ describe("CommandPalette", () => {
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Movies")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
+    // Only radarr is configured, so the Shows navigation command is gated.
+    expect(screen.queryByText("Shows")).not.toBeInTheDocument();
   });
 
   it("opens on Ctrl+K too (Windows / Linux)", async () => {

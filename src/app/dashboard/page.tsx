@@ -11,7 +11,10 @@ import { RecentActivityList } from "@/client/components/dashboard/RecentActivity
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { AllClearState } from "@/client/components/states/AllClearState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
-import { useInstances } from "@/client/hooks/data/useInstances";
+import {
+  useInstances,
+  useConfiguredArrTypes,
+} from "@/client/hooks/data/useInstances";
 import { useDashboardSummary } from "@/client/hooks/data/useDashboardSummary";
 import { useConfig } from "@/client/hooks/data/useConfig";
 import { AutoSearchFleetPanel } from "@/app/dashboard/components/AutoSearchFleetPanel";
@@ -27,6 +30,7 @@ export default function DashboardPage() {
     isError: summaryError,
   } = useDashboardSummary();
   const { data: config } = useConfig();
+  const arrTypes = useConfiguredArrTypes();
 
   if (!loadingInstances && (instances?.length ?? 0) === 0) {
     return (
@@ -83,26 +87,30 @@ export default function DashboardPage() {
               value={summary?.perInstance.length ?? 0}
               loading={loadingSummary}
             />
-            <KpiCard
-              label={t("kpi.flaggedMovies")}
-              value={flaggedMovies ?? "—"}
-              href="/movies"
-              tone={(flaggedMovies ?? 0) > 0 ? "warning" : "default"}
-              loading={loadingSummary}
-              valueLoading={
-                !loadingSummary && !summaryError && flaggedMovies === null
-              }
-            />
-            <KpiCard
-              label={t("kpi.flaggedSeries")}
-              value={flaggedSeries ?? "—"}
-              href="/shows"
-              tone={(flaggedSeries ?? 0) > 0 ? "warning" : "default"}
-              loading={loadingSummary}
-              valueLoading={
-                !loadingSummary && !summaryError && flaggedSeries === null
-              }
-            />
+            {arrTypes.includes("radarr") && (
+              <KpiCard
+                label={t("kpi.flaggedMovies")}
+                value={flaggedMovies ?? "—"}
+                href="/movies"
+                tone={(flaggedMovies ?? 0) > 0 ? "warning" : "default"}
+                loading={loadingSummary}
+                valueLoading={
+                  !loadingSummary && !summaryError && flaggedMovies === null
+                }
+              />
+            )}
+            {arrTypes.includes("sonarr") && (
+              <KpiCard
+                label={t("kpi.flaggedSeries")}
+                value={flaggedSeries ?? "—"}
+                href="/shows"
+                tone={(flaggedSeries ?? 0) > 0 ? "warning" : "default"}
+                loading={loadingSummary}
+                valueLoading={
+                  !loadingSummary && !summaryError && flaggedSeries === null
+                }
+              />
+            )}
             <KpiCard
               label={t("kpi.failed24h")}
               value={totals?.failedActions24h ?? 0}
