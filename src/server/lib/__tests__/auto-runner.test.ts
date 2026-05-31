@@ -1216,6 +1216,20 @@ describe("buildAutoSearchStatus", () => {
     expect(status.nextRunAt).toBeNull();
   });
 
+  test("enabled cron schedule with an invalid expression reports health=critical (#23)", () => {
+    const status = buildAutoSearchStatus(
+      {
+        ...baseInst,
+        autoSearchEnabled: true,
+        autoSearchScheduleMode: "cron",
+        autoSearchCronExpression: "not-a-cron",
+      },
+      false,
+    );
+    expect(status.cronValid).toBe(false);
+    expect(status.health).toBe("critical");
+  });
+
   test("valid cron: cronValid=true, nextRunAt is a future ISO timestamp", () => {
     const status = buildAutoSearchStatus(
       {

@@ -164,7 +164,13 @@ export function buildAutoSearchStatus(
   })();
 
   const failedStreak = instance.autoSearchFailedStreak;
-  const health = computeHealth(failedStreak, overdue);
+  // An enabled cron schedule with an invalid expression never fires — surface
+  // that as critical instead of a misleading green "ok" badge (#23).
+  const cronBroken =
+    instance.autoSearchEnabled &&
+    instance.autoSearchScheduleMode === "cron" &&
+    !cronValid;
+  const health = cronBroken ? "critical" : computeHealth(failedStreak, overdue);
 
   return {
     enabled: instance.autoSearchEnabled,
