@@ -130,6 +130,16 @@ describe("GET / PUT / DELETE /api/instances/[id]", () => {
     expect(res.status).toBe(404);
   });
 
+  test("PUT on unknown id returns 404, not 500 (#22)", async () => {
+    const res = await PUT(putReq(99999, { name: "Ghost" }), ctxFor(99999));
+    expect(res.status).toBe(404);
+  });
+
+  test("DELETE on unknown id returns 404, not 500 (#22)", async () => {
+    const res = await DELETE(delReq(99999), ctxFor(99999));
+    expect(res.status).toBe(404);
+  });
+
   test("PUT updates fields and re-encrypts a new apiKey", async () => {
     const created = await POST(postReq(valid), { params: Promise.resolve({}) });
     const { id } = await created.json();
@@ -255,7 +265,7 @@ describe("POST /api/instances — auto-search fields", () => {
     expect(body.autoSearchScope).toBe("missing");
   });
 
-  test("invalid cron expression returns 400 INVALID_CRON", async () => {
+  test("invalid cron expression returns 400 (rejected by schema, #23)", async () => {
     const res = await POST(
       postReq({
         ...valid,
@@ -265,8 +275,6 @@ describe("POST /api/instances — auto-search fields", () => {
       { params: Promise.resolve({}) },
     );
     expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.code).toBe("INVALID_CRON");
   });
 
   test("valid cron expression is accepted", async () => {
@@ -292,7 +300,7 @@ describe("PUT /api/instances/[id] — auto-search fields", () => {
     expect(body.autoSearchBatchLimit).toBe(10);
   });
 
-  test("PUT with invalid cron returns 400 INVALID_CRON", async () => {
+  test("PUT with invalid cron returns 400 (rejected by schema, #23)", async () => {
     const created = await POST(postReq(valid), { params: Promise.resolve({}) });
     const { id } = await created.json();
     const res = await PUT(
@@ -303,7 +311,15 @@ describe("PUT /api/instances/[id] — auto-search fields", () => {
       ctxFor(id),
     );
     expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.code).toBe("INVALID_CRON");
+  });
+
+  test("PUT with only an invalid cron field (no scheduleMode) is rejected (#23)", async () => {
+    const created = await POST(postReq(valid), { params: Promise.resolve({}) });
+    const { id } = await created.json();
+    const res = await PUT(
+      putReq(id, { autoSearchCronExpression: "garbage_string" }),
+      ctxFor(id),
+    );
+    expect(res.status).toBe(400);
   });
 });

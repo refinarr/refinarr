@@ -61,14 +61,14 @@ describe("POST /api/instances/[id]/test", () => {
     expect(await res.json()).toEqual({ ok: false });
   });
 
-  test("ok: false when instance does not exist", async () => {
+  test("404 when instance does not exist (#22)", async () => {
     const res = await testConnection(
       new NextRequest("http://localhost/api/instances/99999/test", {
         method: "POST",
       }),
       ctxFor(99999),
     );
-    expect(await res.json()).toEqual({ ok: false });
+    expect(res.status).toBe(404);
   });
 
   // The Test button is the user's "I just fixed something — pick it
@@ -137,5 +137,15 @@ describe("POST /api/instances/[id]/refresh", () => {
     // Entry for our instance is gone; entry for the other instance survived.
     expect(dataCache.get(`movies:${id}:manual`, 60_000)).toBeNull();
     expect(dataCache.get(`movies:999:manual`, 60_000)).not.toBeNull();
+  });
+
+  test("404 when instance does not exist (#22)", async () => {
+    const res = await refresh(
+      new NextRequest("http://localhost/api/instances/99999/refresh", {
+        method: "POST",
+      }),
+      ctxFor(99999),
+    );
+    expect(res.status).toBe(404);
   });
 });

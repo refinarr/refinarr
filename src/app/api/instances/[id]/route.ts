@@ -48,6 +48,8 @@ export const GET = createApiHandler(async (_req, ctx) => {
 
 export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
   const id = positiveInt(ctx.params.id, "id");
+  const existing = await instanceService.getById(id);
+  if (!existing) throw notFound();
   const update = await parseJson(
     req,
     instanceUpdateSchema,
@@ -60,8 +62,6 @@ export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
   // client that flipped mode to cron without resending the expression
   // could leave an invalid/stale stored value driving the runner.
   if (update.autoSearchScheduleMode === "cron") {
-    const existing = await instanceService.getById(id);
-    if (!existing) throw notFound();
     const effectiveExpr =
       update.autoSearchCronExpression ?? existing.autoSearchCronExpression;
     if (!isValidCronExpression(effectiveExpr)) {
@@ -88,6 +88,8 @@ export const PUT = createApiHandler(async (req: NextRequest, ctx) => {
 
 export const DELETE = createApiHandler(async (_req, ctx) => {
   const id = positiveInt(ctx.params.id, "id");
+  // Return 404 (not a Prisma 500) when the instance is already gone.
+  if (!(await instanceService.getById(id))) throw notFound();
   await instanceService.delete(id);
   dataCache.invalidate(id);
   return NextResponse.json({ ok: true });

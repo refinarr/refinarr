@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidCronExpression } from "@/shared/cron";
 
 export const credentialsSchema = z.object({
   username: z
@@ -32,7 +33,14 @@ const autoSearchFields = {
     .min(1)
     .max(60 * 24 * 365)
     .optional(),
-  autoSearchCronExpression: z.string().max(128).optional(),
+  // Validate the cron field itself (not just when scheduleMode is in the same
+  // payload) so a bare single-field PUT can't persist a garbage expression that
+  // then sits idle (#23). .optional() short-circuits when the field is absent.
+  autoSearchCronExpression: z
+    .string()
+    .max(128)
+    .refine(isValidCronExpression, "Invalid cron expression")
+    .optional(),
   autoSearchBatchLimit: z.number().int().min(0).max(100).optional(),
   autoSearchMonitoredOnly: z.boolean().optional(),
   autoSearchScope: z
