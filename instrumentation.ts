@@ -21,5 +21,10 @@ export async function register() {
     // stop`/`restart` doesn't wait the full 10s grace before SIGKILL.
     const { registerShutdownHandlers } = await import("@/server/lib/shutdown");
     registerShutdownHandlers();
+    // Direct stdout: confirms register() actually ran in the standalone
+    // server (seeding alone doesn't prove it — createApiHandler re-seeds as a
+    // fallback). If this line is absent from boot logs, the SIGTERM handler
+    // was never installed and the signal wiring needs a preload shim instead.
+    console.log("[instrumentation] shutdown handlers registered");
   }
 }

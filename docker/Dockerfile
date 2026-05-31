@@ -65,6 +65,15 @@ ENV DATABASE_URL=file:///data/data.db
 # so os.homedir() has nothing to resolve. Pin HOME so anything reading it
 # (caches, tmp paths) lands in the app dir instead of throwing/falling back.
 ENV HOME=/app
+# Next 16's standalone server installs its own SIGTERM/SIGINT handler whose
+# cleanup awaits server.close() WITHOUT closeAllConnections() in production
+# (closeAllConnections is dev-only — see next/dist/server/lib/start-server.js).
+# Long-lived sockets (the /api/logs/stream SSE, HTTP keep-alive) never drain,
+# so server.close()'s callback never fires and `docker stop` hangs the full
+# 10s grace before SIGKILL. Setting this env makes Next skip its handler so
+# our own registerShutdownHandlers() (instrumentation.ts → shutdown.ts) owns
+# the signal and process.exit()s promptly after stopping the workers.
+ENV NEXT_MANUAL_SIG_HANDLE=1
 
 RUN mkdir -p /data
 
