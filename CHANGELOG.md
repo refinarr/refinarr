@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.9](https://github.com/refinarr/refinarr/compare/v0.5.8...v0.5.9) (2026-05-31)
+
+
+### Bug Fixes
+
+* **a11y:** name history filters, monitored header, dry-run toggle ([#40](https://github.com/refinarr/refinarr/issues/40), [#41](https://github.com/refinarr/refinarr/issues/41), [#42](https://github.com/refinarr/refinarr/issues/42)) ([#44](https://github.com/refinarr/refinarr/issues/44)) ([f31dd57](https://github.com/refinarr/refinarr/commit/f31dd5792f742bb69e16d425547baaddb17cb877))
+* **auto-search:** gate in-flight media + record grabbed release ([#39](https://github.com/refinarr/refinarr/issues/39)) ([#45](https://github.com/refinarr/refinarr/issues/45)) ([a3bbb3e](https://github.com/refinarr/refinarr/commit/a3bbb3e0853ab7c5e49584794daad17ab9f9ec2c))
+
 ## [0.5.8](https://github.com/refinarr/refinarr/compare/v0.5.7...v0.5.8) (2026-05-31)
 
 
