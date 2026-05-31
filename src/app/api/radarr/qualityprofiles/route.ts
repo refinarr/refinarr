@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createApiHandler } from "@/server/lib/handler";
+import { createApiHandler, READ_CACHE } from "@/server/lib/handler";
 import { assertArrType, notFound, positiveInt } from "@/server/lib/api-errors";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { createTypedClient } from "@/server/arr/composition";
 
-export const GET = createApiHandler(async (req: NextRequest) => {
-  const instanceId = positiveInt(
-    req.nextUrl.searchParams.get("instanceId") ?? undefined,
-    "instanceId",
-  );
-  const instance = await instanceRepository.findById(instanceId);
-  if (!instance) throw notFound("Instance not found");
-  assertArrType(instance, "radarr");
-  const client = createTypedClient(instance, "radarr");
-  const profiles = await client.getQualityProfiles();
-  return NextResponse.json(profiles);
-});
+export const GET = createApiHandler(
+  async (req: NextRequest) => {
+    const instanceId = positiveInt(
+      req.nextUrl.searchParams.get("instanceId") ?? undefined,
+      "instanceId",
+    );
+    const instance = await instanceRepository.findById(instanceId);
+    if (!instance) throw notFound("Instance not found");
+    assertArrType(instance, "radarr");
+    const client = createTypedClient(instance, "radarr");
+    const profiles = await client.getQualityProfiles();
+    return NextResponse.json(profiles);
+  },
+  { cacheControl: READ_CACHE },
+);

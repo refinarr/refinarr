@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { badRequest, parseJson } from "@/server/lib/api-errors";
-import { createApiHandler } from "@/server/lib/handler";
+import { createApiHandler, READ_CACHE } from "@/server/lib/handler";
 import { instanceService } from "@/server/services/InstanceService";
 import { isValidCronExpression } from "@/shared/cron";
 import { instanceCreateSchema } from "@/shared/types/schemas";
@@ -33,10 +33,13 @@ function publicView(i: Instance): PublicInstance {
   };
 }
 
-export const GET = createApiHandler(async () => {
-  const instances = await instanceService.getAll();
-  return NextResponse.json(instances.map(publicView));
-});
+export const GET = createApiHandler(
+  async () => {
+    const instances = await instanceService.getAll();
+    return NextResponse.json(instances.map(publicView));
+  },
+  { cacheControl: READ_CACHE },
+);
 
 export const POST = createApiHandler(async (req: NextRequest) => {
   const data = await parseJson(req, instanceCreateSchema, "Invalid instance");
