@@ -20,6 +20,10 @@ export function registerShutdownHandlers(
   const handle = (signal: NodeJS.Signals) => {
     if (inFlight) return;
     inFlight = true;
+    // Direct stdout, before the async appLogger — pino's DB-backed transport
+    // may not flush before the process exits, so this is the one log line
+    // guaranteed to prove the handler fired (vs. Next's own handler winning).
+    console.log(`[shutdown] ${signal} received`);
     appLogger.info("Graceful shutdown started", {
       source: LogSource.System,
       context: { signal },
