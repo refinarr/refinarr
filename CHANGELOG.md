@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.5.11](https://github.com/refinarr/refinarr/compare/v0.5.10...v0.5.11) (2026-05-31)
+
+
+### Bug Fixes
+
+* **e2e:** seed both arr types in mobile tab-bar test (gating race) ([#59](https://github.com/refinarr/refinarr/issues/59)) ([584b6aa](https://github.com/refinarr/refinarr/commit/584b6aa16e20c5f572c219e52973e66f705e58cb))
+
+
+### Performance Improvements
+
+* **api:** Cache-Control on qualityprofiles reads ([#62](https://github.com/refinarr/refinarr/issues/62)) ([dc37e2f](https://github.com/refinarr/refinarr/commit/dc37e2f7645aef6a222353b188d7cce1f5fb9350))
+* **api:** project heavy fields out of dashboard recent-activity ([#66](https://github.com/refinarr/refinarr/issues/66)) ([4d1efcb](https://github.com/refinarr/refinarr/commit/4d1efcbb580fc2cbb25e143f242c41435821bf16))
+* **client:** tune staleTime / refetchOnWindowFocus on config + history queries ([#65](https://github.com/refinarr/refinarr/issues/65)) ([fab8fad](https://github.com/refinarr/refinarr/commit/fab8fad87b65ffd9c362ab1a728b6df30461868b))
+* **docker:** prune Prisma Studio UI from the image (~31MB) ([#58](https://github.com/refinarr/refinarr/issues/58)) ([bd38144](https://github.com/refinarr/refinarr/commit/bd38144b053f51a6159ec53b13e51b69c6c5ea5a))
+* optimizePackageImports for non-default barrel packages ([#64](https://github.com/refinarr/refinarr/issues/64)) ([249db92](https://github.com/refinarr/refinarr/commit/249db92e10e685cd5cbf05b7d369671eecc6a552))
+* parallelize worker boot ([#61](https://github.com/refinarr/refinarr/issues/61)) ([af7dfb3](https://github.com/refinarr/refinarr/commit/af7dfb33fb33fe0642ca3ae31b929340fa431723))
+* **ui:** seed active instance from localStorage (kill selection waterfall) ([#63](https://github.com/refinarr/refinarr/issues/63)) ([26346e3](https://github.com/refinarr/refinarr/commit/26346e3035149d248bb1880ddeef5738c21ddc92))
+
 ## [0.5.10](https://github.com/refinarr/refinarr/compare/v0.5.9...v0.5.10) (2026-05-31)
 
 
