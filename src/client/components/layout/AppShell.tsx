@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
-import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import {
   Sheet,
@@ -11,24 +10,12 @@ import {
 import { useMediaQuery } from "@/client/hooks/ui/useMediaQuery";
 import { useSidebarOpen } from "@/client/hooks/ui/useSidebarOpen";
 import { cn } from "@/client/lib/utils";
+import { CommandPalette } from "./CommandPalette";
+import { KeyboardHelpDialog } from "./KeyboardHelpDialog";
 import { MobileTabBar } from "./MobileTabBar";
 import { NavContent } from "./NavContent";
 import { Sidebar } from "./Sidebar";
 import { TopHeader } from "./TopHeader";
-
-// Lazy-loaded: both are mounted on every page but only used behind a
-// keyboard shortcut (Cmd+K / "?"). Code-splitting them (incl. cmdk) keeps
-// them out of the initial bundle; their global key listeners attach once
-// the chunk loads shortly after hydration. ssr:false — they're client-only
-// overlays with nothing to render on the server.
-const CommandPalette = dynamic(
-  () => import("./CommandPalette").then((m) => m.CommandPalette),
-  { ssr: false },
-);
-const KeyboardHelpDialog = dynamic(
-  () => import("./KeyboardHelpDialog").then((m) => m.KeyboardHelpDialog),
-  { ssr: false },
-);
 
 // Routes already represented in the bottom tab bar are hidden from
 // the More drawer to avoid duplicate entry points.
