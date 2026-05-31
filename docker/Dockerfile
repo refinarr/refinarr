@@ -1,10 +1,9 @@
 FROM node:22-alpine AS base
 
-# su-exec for privilege dropping; shadow provides groupmod/usermod/groupadd/useradd
-# (Alpine ships only BusyBox addgroup/adduser, which the entrypoint's PUID/PGID
-# remap of the existing `node` user cannot use) — without it the entrypoint
-# crash-loops with "groupadd: not found" and the app never starts.
-RUN apk add --no-cache su-exec shadow
+# su-exec drops privileges to the operator's PUID:GID. The entrypoint passes
+# a NUMERIC uid:gid (no /etc/passwd remap), so BusyBox + su-exec suffice —
+# `shadow` (groupmod/usermod) is no longer needed.
+RUN apk add --no-cache su-exec
 
 # ---------- deps ----------
 FROM base AS deps
@@ -62,6 +61,10 @@ ENV PORT=7272
 # `-p` mappings work on real hosts (Synology, etc.).
 ENV HOSTNAME=0.0.0.0
 ENV DATABASE_URL=file:///data/data.db
+# The entrypoint runs the app as a numeric UID with no /etc/passwd entry,
+# so os.homedir() has nothing to resolve. Pin HOME so anything reading it
+# (caches, tmp paths) lands in the app dir instead of throwing/falling back.
+ENV HOME=/app
 
 RUN mkdir -p /data
 
