@@ -65,6 +65,17 @@ Other rules to know:
 - **All actions** go through `MediaService.executeAction()` — dry-run + ActionLog logging guaranteed
 - **No comments** that explain WHAT — only WHY when it's non-obvious
 
+## Adding a new `*arr` type
+
+refinarr is a module map: a new product (Lidarr, Whisparr, …) is a couple of
+data rows (`ARR_META`, `ARR_UI`) plus one module file, and most UI surfaces
+(sidebar nav, command palette, dashboard, queue dispatch) auto-wire from those
+registries. The full step-by-step — client/service/module, API routes, the
+per-type UI set, i18n, and tests — is in
+**[docs/adding-an-arr-type.md](docs/adding-an-arr-type.md)**.
+
+Lidarr and Whisparr are wanted — grab a [`help wanted`](https://github.com/refinarr/refinarr/labels/help%20wanted) issue if you'd like to take one on.
+
 ## Security-sensitive PRs
 
 PRs touching authentication, encryption, the auth proxy, or upstream URL validation get extra scrutiny via `.github/CODEOWNERS`. The maintainer is auto-requested. These paths matter:
@@ -83,4 +94,4 @@ Please see [SECURITY.md](SECURITY.md) — don't open public issues for security 
 
 ## License
 
-By contributing, you agree your contribution is licensed under the [MIT License](LICENSE).
+By contributing, you agree your contribution is licensed under the [GNU General Public License v3.0](LICENSE).
