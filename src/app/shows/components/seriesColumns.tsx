@@ -1,4 +1,4 @@
-import { Eye, EyeOff } from "lucide-react";
+import { Bookmark } from "lucide-react";
 import { CfBadge } from "@/client/components/common/CfBadge";
 import {
   Popover,
@@ -126,7 +126,7 @@ export function seriesColumns(
           title={tCols("monitored")}
           aria-label={tCols("monitored")}
         >
-          <Eye className="size-3.5" aria-hidden />
+          <Bookmark className="size-3.5" aria-hidden />
         </span>
       ),
       size: 80,
@@ -144,9 +144,12 @@ export function seriesColumns(
       },
       cell: ({ row: { original: s } }) =>
         s.monitored ? (
-          <Eye className="text-ok size-3.5" aria-label={t("monitoredYes")} />
+          <Bookmark
+            className="text-ok size-3.5 fill-current"
+            aria-label={t("monitoredYes")}
+          />
         ) : (
-          <EyeOff
+          <Bookmark
             className="text-muted-foreground size-3.5"
             aria-label={t("monitoredNo")}
           />
