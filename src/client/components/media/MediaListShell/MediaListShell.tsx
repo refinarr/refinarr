@@ -361,7 +361,7 @@ function Root<T extends MediaItem>({
   if (!inst.loadingInstances && !inst.instances?.length) {
     return (
       <AppShell>
-        <NoInstancesPrompt onAdd={() => router.push("/settings")} />
+        <NoInstancesPrompt onAdd={() => router.push("/settings/instances")} />
       </AppShell>
     );
   }
