@@ -35,7 +35,7 @@ function isSeverity(v: string): v is Severity {
 
 // Strict: an explicitly-provided value that isn't a known option is a 400
 // (not silently coerced to the default), so a scripting caller learns its
-// query was malformed instead of getting the unfiltered list (#36). An absent
+// query was malformed instead of getting the unfiltered list. An absent
 // param still falls back to the default.
 function pickEnum<T extends string>(
   raw: string | null,

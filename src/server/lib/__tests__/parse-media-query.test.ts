@@ -34,7 +34,7 @@ describe("parseMediaQuery", () => {
     expect(out.order).toBe("desc");
   });
 
-  test("rejects an explicitly invalid sortBy / order with 400 (#36)", () => {
+  test("rejects an explicitly invalid sortBy / order with 400", () => {
     expect(() => parseMediaQuery(urlParams("sortBy=hax0r"))).toThrow();
     expect(() => parseMediaQuery(urlParams("order=sideways"))).toThrow();
   });
@@ -94,7 +94,7 @@ describe("parseMediaQuery", () => {
     expect(out.maxScore).toBeUndefined();
   });
 
-  test("matchMode — `any`/`all` accepted, default all, invalid rejected (#36)", () => {
+  test("matchMode — `any`/`all` accepted, default all, invalid rejected", () => {
     expect(
       parseMediaQuery(urlParams("missingCfMatch=any")).missingCfMatch,
     ).toBe("any");
@@ -114,7 +114,7 @@ describe("parseMediaQuery", () => {
     expect(parseMediaQuery(urlParams("")).q).toBeUndefined();
   });
 
-  test("flaggedOnly — default true, explicit true/false honored, junk rejected (#36)", () => {
+  test("flaggedOnly — default true, explicit true/false honored, junk rejected", () => {
     expect(parseMediaQuery(urlParams("")).flaggedOnly).toBe(true);
     expect(parseMediaQuery(urlParams("flaggedOnly=true")).flaggedOnly).toBe(
       true,
@@ -125,7 +125,7 @@ describe("parseMediaQuery", () => {
     expect(() => parseMediaQuery(urlParams("flaggedOnly=junk"))).toThrow();
   });
 
-  test("monitorStatus — four valid values, default all, invalid rejected (#36)", () => {
+  test("monitorStatus — four valid values, default all, invalid rejected", () => {
     expect(parseMediaQuery(urlParams("")).monitorStatus).toBe("all");
     expect(
       parseMediaQuery(urlParams("monitorStatus=monitored")).monitorStatus,

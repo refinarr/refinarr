@@ -83,7 +83,7 @@ describe("GET /api/radarr/movies", () => {
     expect(body.hasMore).toBe(false);
   });
 
-  // #36 — out-of-band query values are rejected, not silently coerced.
+  // Out-of-band query values are rejected, not silently coerced.
   test("rejects limit over the max with 400", async () => {
     const res = await listMovies(
       new NextRequest(
