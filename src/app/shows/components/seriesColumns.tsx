@@ -123,6 +123,7 @@ export function seriesColumns(
       header: () => (
         <span
           className="text-muted-foreground inline-flex"
+          role="img"
           title={tCols("monitored")}
           aria-label={tCols("monitored")}
         >
