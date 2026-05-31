@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { HistoryTable } from "@/client/components/history/HistoryTable";
-import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
+import { HistoryTableSkeleton } from "@/client/components/history/HistoryTableSkeleton";
 import { EmptyLogs } from "@/client/components/states/EmptyLogs";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import {
@@ -191,14 +191,14 @@ function HistoryContent() {
         </div>
       </div>
 
-      {isLoading && <MediaTableSkeleton />}
+      {isLoading && <HistoryTableSkeleton />}
       {!isLoading && allLogs.length === 0 && <EmptyLogs />}
       {allLogs.length > 0 && (
         <HistoryTable logs={allLogs} groupSummaries={groupSummaries} />
       )}
 
       <div ref={sentinelRef} className="h-4" />
-      {isFetchingNextPage && <MediaTableSkeleton rows={3} />}
+      {isFetchingNextPage && <HistoryTableSkeleton rows={3} header={false} />}
       {confirmDialog}
     </div>
   );
@@ -216,7 +216,7 @@ export default function HistoryPage() {
               {t("subtitle")}
             </p>
           </div>
-          <Suspense fallback={<MediaTableSkeleton />}>
+          <Suspense fallback={<HistoryTableSkeleton />}>
             <HistoryContent />
           </Suspense>
         </div>
