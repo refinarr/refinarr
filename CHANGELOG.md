@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.6](https://github.com/refinarr/refinarr/compare/v0.5.5...v0.5.6) (2026-05-31)
+
+
+### Bug Fixes
+
+* **auto-runner:** close runNow() mutex TOCTOU window ([#30](https://github.com/refinarr/refinarr/issues/30)) ([#31](https://github.com/refinarr/refinarr/issues/31)) ([4339eba](https://github.com/refinarr/refinarr/commit/4339ebabadf2e283faf1d3e3d899127c14bb88a0))
+* QA Phase 4 R2 batch — 502 on unreachable *arr ([#26](https://github.com/refinarr/refinarr/issues/26)) + mobile touch targets ([#29](https://github.com/refinarr/refinarr/issues/29)) ([#33](https://github.com/refinarr/refinarr/issues/33)) ([4c591e5](https://github.com/refinarr/refinarr/commit/4c591e54dad9d13d7aaba44fe01e50cfe7c25099))
+
 ## [0.5.5](https://github.com/refinarr/refinarr/compare/v0.5.4...v0.5.5) (2026-05-31)
 
 
