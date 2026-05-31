@@ -34,10 +34,9 @@ describe("parseMediaQuery", () => {
     expect(out.order).toBe("desc");
   });
 
-  test("falls back to defaults when sortBy / order are invalid", () => {
-    const out = parseMediaQuery(urlParams("sortBy=hax0r&order=sideways"));
-    expect(out.sortBy).toBe("score");
-    expect(out.order).toBe("asc");
+  test("rejects an explicitly invalid sortBy / order with 400", () => {
+    expect(() => parseMediaQuery(urlParams("sortBy=hax0r"))).toThrow();
+    expect(() => parseMediaQuery(urlParams("order=sideways"))).toThrow();
   });
 
   test("parses CSV id lists and drops invalid entries", () => {
@@ -95,16 +94,14 @@ describe("parseMediaQuery", () => {
     expect(out.maxScore).toBeUndefined();
   });
 
-  test("normalises matchMode — only `any` flips off the default `all`", () => {
+  test("matchMode — `any`/`all` accepted, default all, invalid rejected", () => {
     expect(
       parseMediaQuery(urlParams("missingCfMatch=any")).missingCfMatch,
     ).toBe("any");
     expect(
       parseMediaQuery(urlParams("missingCfMatch=any")).hasNegativeCfMatch,
     ).toBe("all");
-    expect(
-      parseMediaQuery(urlParams("missingCfMatch=junk")).missingCfMatch,
-    ).toBe("all");
+    expect(() => parseMediaQuery(urlParams("missingCfMatch=junk"))).toThrow();
     // Verify hasNegativeCfMatch flips on its own param, not just inherits
     // from missingCfMatch.
     expect(
@@ -117,20 +114,18 @@ describe("parseMediaQuery", () => {
     expect(parseMediaQuery(urlParams("")).q).toBeUndefined();
   });
 
-  test("flaggedOnly defaults to true — only `?flaggedOnly=false` flips it", () => {
+  test("flaggedOnly — default true, explicit true/false honored, junk rejected", () => {
     expect(parseMediaQuery(urlParams("")).flaggedOnly).toBe(true);
     expect(parseMediaQuery(urlParams("flaggedOnly=true")).flaggedOnly).toBe(
-      true,
-    );
-    expect(parseMediaQuery(urlParams("flaggedOnly=junk")).flaggedOnly).toBe(
       true,
     );
     expect(parseMediaQuery(urlParams("flaggedOnly=false")).flaggedOnly).toBe(
       false,
     );
+    expect(() => parseMediaQuery(urlParams("flaggedOnly=junk"))).toThrow();
   });
 
-  test("monitorStatus parses the four valid values + falls back to 'all'", () => {
+  test("monitorStatus — four valid values, default all, invalid rejected", () => {
     expect(parseMediaQuery(urlParams("")).monitorStatus).toBe("all");
     expect(
       parseMediaQuery(urlParams("monitorStatus=monitored")).monitorStatus,
@@ -141,8 +136,6 @@ describe("parseMediaQuery", () => {
     expect(
       parseMediaQuery(urlParams("monitorStatus=missing")).monitorStatus,
     ).toBe("missing");
-    expect(
-      parseMediaQuery(urlParams("monitorStatus=invalid")).monitorStatus,
-    ).toBe("all");
+    expect(() => parseMediaQuery(urlParams("monitorStatus=invalid"))).toThrow();
   });
 });
