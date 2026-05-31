@@ -129,10 +129,17 @@ export async function parseJson<T>(
   return parsed.data;
 }
 
-export function positiveInt(value: string | undefined, name: string): number {
+export function positiveInt(
+  value: string | undefined,
+  name: string,
+  max?: number,
+): number {
   const numericValue = Number(value);
   if (!Number.isInteger(numericValue) || numericValue <= 0) {
     throw badRequest(`Invalid ${name}`);
+  }
+  if (max !== undefined && numericValue > max) {
+    throw badRequest(`${name} exceeds maximum of ${max}`);
   }
   return numericValue;
 }

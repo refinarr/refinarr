@@ -1,3 +1,4 @@
+import { badRequest } from "@/server/lib/api-errors";
 import type {
   MediaQuery,
   MonitorStatus,
@@ -32,16 +33,19 @@ function isSeverity(v: string): v is Severity {
   return VALID_SEVERITIES.has(v);
 }
 
-function isSortBy(v: string): v is MediaQuery["sortBy"] {
-  return VALID_SORT_BY.has(v);
-}
-
-function isOrder(v: string): v is "asc" | "desc" {
-  return VALID_ORDER.has(v);
-}
-
-function isMonitorStatus(v: string): v is MonitorStatus {
-  return VALID_MONITOR_STATUS.has(v);
+// Strict: an explicitly-provided value that isn't a known option is a 400
+// (not silently coerced to the default), so a scripting caller learns its
+// query was malformed instead of getting the unfiltered list (#36). An absent
+// param still falls back to the default.
+function pickEnum<T extends string>(
+  raw: string | null,
+  valid: ReadonlySet<string>,
+  name: string,
+  fallback: T,
+): T {
+  if (raw === null) return fallback;
+  if (!valid.has(raw)) throw badRequest(`Invalid ${name}`, "INVALID_QUERY");
+  return raw as T;
 }
 
 function parseIdList(raw: string | null): number[] | undefined {
@@ -80,8 +84,11 @@ function parsePositiveInt(raw: string | null): number | undefined {
   return Number.isInteger(n) && n > 0 ? n : undefined;
 }
 
-function parseMatchMode(raw: string | null): "any" | "all" {
-  return raw === "any" ? "any" : "all";
+function parseMatchMode(raw: string | null, name: string): "any" | "all" {
+  if (raw === null) return "all";
+  if (raw !== "any" && raw !== "all")
+    throw badRequest(`Invalid ${name}`, "INVALID_QUERY");
+  return raw;
 }
 
 // Pulls every MediaQuery field except `instanceId`, `page`, `limit` (which
@@ -90,12 +97,26 @@ function parseMatchMode(raw: string | null): "any" | "all" {
 export function parseMediaQuery(
   s: URLSearchParams,
 ): Omit<MediaQuery, "page" | "limit"> {
-  const rawSortBy = s.get("sortBy");
-  const sortBy: MediaQuery["sortBy"] =
-    rawSortBy !== null && isSortBy(rawSortBy) ? rawSortBy : "score";
-  const rawOrder = s.get("order");
-  const order: "asc" | "desc" =
-    rawOrder !== null && isOrder(rawOrder) ? rawOrder : "asc";
+  const sortBy = pickEnum<MediaQuery["sortBy"]>(
+    s.get("sortBy"),
+    VALID_SORT_BY,
+    "sortBy",
+    "score",
+  );
+  const order = pickEnum<"asc" | "desc">(
+    s.get("order"),
+    VALID_ORDER,
+    "order",
+    "asc",
+  );
+  const rawFlaggedOnly = s.get("flaggedOnly");
+  if (
+    rawFlaggedOnly !== null &&
+    rawFlaggedOnly !== "true" &&
+    rawFlaggedOnly !== "false"
+  ) {
+    throw badRequest("Invalid flaggedOnly", "INVALID_QUERY");
+  }
   return {
     sortBy,
     order,
@@ -108,15 +129,20 @@ export function parseMediaQuery(
     profileIds: parseIdList(s.get("profileIds")),
     severities: parseSeverityList(s.get("severities")),
     missingCfIds: parseIdList(s.get("missingCfIds")),
-    missingCfMatch: parseMatchMode(s.get("missingCfMatch")),
+    missingCfMatch: parseMatchMode(s.get("missingCfMatch"), "missingCfMatch"),
     hasNegativeCfIds: parseIdList(s.get("hasNegativeCfIds")),
-    hasNegativeCfMatch: parseMatchMode(s.get("hasNegativeCfMatch")),
+    hasNegativeCfMatch: parseMatchMode(
+      s.get("hasNegativeCfMatch"),
+      "hasNegativeCfMatch",
+    ),
     // Default true (preserves the legacy "flagged items only" contract).
     // Only an explicit `?flaggedOnly=false` opens the "Show all" view.
-    flaggedOnly: s.get("flaggedOnly") !== "false",
-    monitorStatus: (() => {
-      const raw = s.get("monitorStatus");
-      return raw !== null && isMonitorStatus(raw) ? raw : "all";
-    })(),
+    flaggedOnly: rawFlaggedOnly !== "false",
+    monitorStatus: pickEnum<MonitorStatus>(
+      s.get("monitorStatus"),
+      VALID_MONITOR_STATUS,
+      "monitorStatus",
+      "all",
+    ),
   };
 }

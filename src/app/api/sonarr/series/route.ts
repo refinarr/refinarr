@@ -12,7 +12,10 @@ export const GET = createApiHandler(async (req: NextRequest) => {
     "instanceId",
   );
   const page = positiveInt(s.get("page") ?? "1", "page");
-  const limit = positiveInt(s.get("limit") ?? "50", "limit");
+  const limit = positiveInt(s.get("limit") ?? "50", "limit", 500);
+  // Validate filter params up front so a malformed query fails with 400
+  // before we touch the DB (otherwise a bad instanceId masks it as 404).
+  const query = parseMediaQuery(s);
 
   const instance = await instanceRepository.findById(instanceId);
   if (!instance) throw notFound("Instance not found");
@@ -21,7 +24,7 @@ export const GET = createApiHandler(async (req: NextRequest) => {
   const { items, total } = await seriesService.getSeries(instanceId, {
     page,
     limit,
-    ...parseMediaQuery(s),
+    ...query,
   });
 
   return NextResponse.json({
