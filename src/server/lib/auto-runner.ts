@@ -453,14 +453,19 @@ class AutoRunner {
         code: "AUTO_RUN_BUSY",
       });
     }
-    const instance = await instanceRepository.findById(instanceId);
-    if (!instance || !instance.enabled || !instance.autoSearchEnabled) {
-      throw Object.assign(new Error("Instance not eligible for auto-search"), {
-        code: "AUTO_RUN_INELIGIBLE",
-      });
-    }
+    // Claim the slot SYNCHRONOUSLY, before any await — otherwise concurrent
+    // triggers all pass the has() check before the first reaches add(), and a
+    // burst (esp. when fanOut is a no-op) can all run (#30). The finally always
+    // releases it, including on the ineligible throw below.
     this.processing.add(instanceId);
     try {
+      const instance = await instanceRepository.findById(instanceId);
+      if (!instance || !instance.enabled || !instance.autoSearchEnabled) {
+        throw Object.assign(
+          new Error("Instance not eligible for auto-search"),
+          { code: "AUTO_RUN_INELIGIBLE" },
+        );
+      }
       let result: { enqueued: number };
       // fanOut owns the failed-streak outcome — only its rejection counts
       // as a failed tick. Bookkeeping rejections are logged + swallowed
