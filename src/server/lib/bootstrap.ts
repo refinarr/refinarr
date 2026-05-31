@@ -30,13 +30,15 @@ export async function seedDefaults(): Promise<void> {
     });
   }
 
-  await searchWorker.start();
-  // Per-instance lifecycle status polling. Both workers share the
-  // findAllEnabled() snapshot above (each is idempotent on its own),
-  // so they run independently — one feeding queue drains, the other
-  // observing upstream lifecycle for already-dispatched commands.
-  await statusPoller.start();
-  await autoRunner.start();
+  // The three workers are independent and idempotent — each takes its own
+  // findAllEnabled() snapshot; one drains the search queue, one observes
+  // upstream lifecycle for dispatched commands, one schedules auto-searches.
+  // Start them concurrently so boot isn't three sequential awaits.
+  await Promise.all([
+    searchWorker.start(),
+    statusPoller.start(),
+    autoRunner.start(),
+  ]);
   startRateLimitCleanup();
 }
 
