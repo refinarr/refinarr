@@ -82,7 +82,7 @@ Refinarr stores your Sonarr/Radarr API keys, so it's built defensively:
 
 Refinarr exposes a JSON API under `/api` (same auth as the UI — session cookie or `X-Api-Key`). One thing to know if you script against it:
 
-- **Search/delete dispatch is asynchronous.** `POST /api/radarr/movies/search` (and the Sonarr equivalents) returns `202 {"queued": true, ...}` meaning _accepted for processing_, not _completed_. A background worker drains the queue and talks to your *arr; the **terminal** outcome (success / failed) lands in **`GET /api/history`**. Check there for the real result rather than treating the `202` as success.
+- **Search dispatch is asynchronous.** `POST /api/radarr/movies/search` (and the Sonarr equivalents) returns `202 {"queued": true, ...}` meaning _accepted for processing_, not _completed_. A background worker drains the queue and talks to your *arr; the **terminal** outcome (success / failed) lands in **`GET /api/history`**. Check there for the real result rather than treating the `202` as success. (Delete, by contrast, responds synchronously with its result.)
 
 ## Stack
 
