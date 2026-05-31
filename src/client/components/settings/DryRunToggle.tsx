@@ -53,8 +53,8 @@ export function DryRunToggle({ prominent = false }: Props) {
 
   const row = (
     <div className="flex items-center gap-4">
-      <Switch checked={isDryRun} onCheckedChange={handleToggle} />
-      <Label>{t("label")}</Label>
+      <Switch id="dry-run" checked={isDryRun} onCheckedChange={handleToggle} />
+      <Label htmlFor="dry-run">{t("label")}</Label>
       <Badge size="md" variant={isDryRun ? "outline" : "destructive"}>
         {isDryRun ? t("badgeOn") : t("badgeOff")}
       </Badge>

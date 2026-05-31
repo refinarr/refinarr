@@ -122,7 +122,7 @@ function HistoryContent() {
             value={instanceId}
             onValueChange={(v) => setInstanceId(v ?? "")}
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-40" aria-label={t("filters.instance")}>
               <SelectValue>
                 {instanceId
                   ? ((instances ?? []).find((i) => String(i.id) === instanceId)
@@ -143,7 +143,7 @@ function HistoryContent() {
         <div className="flex flex-col gap-1">
           <Label>{t("filters.status")}</Label>
           <Select value={status} onValueChange={(v) => setStatus(v ?? "")}>
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-36" aria-label={t("filters.status")}>
               <SelectValue>{statusLabel(status)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -162,7 +162,7 @@ function HistoryContent() {
         <div className="flex flex-col gap-1">
           <Label>{t("filters.action")}</Label>
           <Select value={action} onValueChange={(v) => setAction(v ?? "")}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-40" aria-label={t("filters.action")}>
               <SelectValue>{actionLabel(action)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
