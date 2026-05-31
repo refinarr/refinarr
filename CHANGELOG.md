@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.6.0](https://github.com/refinarr/refinarr/compare/v0.5.11...v0.6.0) (2026-05-31)
+
+
+### Features
+
+* graceful shutdown on SIGTERM/SIGINT ([#70](https://github.com/refinarr/refinarr/issues/70)) ([c037eb1](https://github.com/refinarr/refinarr/commit/c037eb1dfa2844b3e8196aecd01b0b2d5b779f3d))
+
+
+### Bug Fixes
+
+* **ui:** match KpiCard skeleton header height (no dashboard layout shift) ([#67](https://github.com/refinarr/refinarr/issues/67)) ([6219c18](https://github.com/refinarr/refinarr/commit/6219c18d34e8b1fadad4cddb17d6c9977347c10f))
+* **ui:** match loading skeletons to their real shape (no layout shift) ([#68](https://github.com/refinarr/refinarr/issues/68)) ([1021892](https://github.com/refinarr/refinarr/commit/1021892ca8e41f1316a5848472e78041500b1ff8))
+
+
+### Performance Improvements
+
+* **docker:** slim + speed the entrypoint (drop shadow, fingerprint-skip migrate) ([#71](https://github.com/refinarr/refinarr/issues/71)) ([7f7ad95](https://github.com/refinarr/refinarr/commit/7f7ad95cbd5d6d6d00ff807803b761ab0e74fdab))
+
 ## [0.5.11](https://github.com/refinarr/refinarr/compare/v0.5.10...v0.5.11) (2026-05-31)
 
 
