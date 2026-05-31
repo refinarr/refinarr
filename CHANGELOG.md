@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/refinarr/refinarr/compare/v0.6.0...v0.6.1) (2026-05-31)
+
+
+### Bug Fixes
+
+* **docker:** make graceful shutdown actually fire on SIGTERM ([#72](https://github.com/refinarr/refinarr/issues/72)) ([a322caf](https://github.com/refinarr/refinarr/commit/a322cafdd363617422643e80adf7adc4b510fac0))
+* **server:** move instrumentation.ts to src/ so the standalone build loads it ([#74](https://github.com/refinarr/refinarr/issues/74)) ([3b73b8c](https://github.com/refinarr/refinarr/commit/3b73b8c1607acfb57f0541cd8599c8a3afe357e8))
+
 ## [0.6.0](https://github.com/refinarr/refinarr/compare/v0.5.11...v0.6.0) (2026-05-31)
 
 
