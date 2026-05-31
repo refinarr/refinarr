@@ -15,6 +15,7 @@ export const LogSource = {
   SearchWorker: "search-worker",
   StatusPoller: "status-poller",
   AutoRun: "auto-run",
+  System: "system",
 } as const;
 export type LogSource = (typeof LogSource)[keyof typeof LogSource];
 export type ScoringMode = "manual" | "profile";

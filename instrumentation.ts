@@ -17,5 +17,9 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { ensureSeeded } = await import("@/server/lib/bootstrap");
     await ensureSeeded();
+    // Stop the workers + exit promptly on SIGTERM/SIGINT so `docker
+    // stop`/`restart` doesn't wait the full 10s grace before SIGKILL.
+    const { registerShutdownHandlers } = await import("@/server/lib/shutdown");
+    registerShutdownHandlers();
   }
 }
