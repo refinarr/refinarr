@@ -12,5 +12,7 @@ export function useQualityProfiles(type: ArrType, instanceId: number) {
         `/${type}/qualityprofiles?instanceId=${instanceId}`,
       ),
     enabled: instanceId > 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
