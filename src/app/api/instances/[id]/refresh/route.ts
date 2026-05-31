@@ -8,7 +8,6 @@ import { LogSource } from "@/shared/types/models";
 
 export const POST = createApiHandler(async (_req, ctx) => {
   const id = positiveInt(ctx.params.id, "id");
-  // Don't report success for an instance that doesn't exist.
   if (!(await instanceService.getById(id))) throw notFound();
   dataCache.invalidate(id);
   appLogger.info("Manual refresh triggered", {
