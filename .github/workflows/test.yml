@@ -30,6 +30,13 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
 
+# Least privilege: every job here only checks out code, diffs, and runs
+# tests — none mutate the repo or call the API with the job token.
+# actions/cache + upload-artifact use the Actions runtime token, not
+# GITHUB_TOKEN, so read-only contents is sufficient.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -56,16 +63,29 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          # Any failure to resolve the diff falls back to code=true (run the
+          # full suite) rather than dying — a dead `changes` job would fail
+          # `ci-success` and re-block the PR, the exact state this avoids.
+          # The git commands sit inside `if` conditions so a failure picks
+          # the fallback branch instead of tripping `set -e`. Shallow base
+          # fetches can leave merge-base unreachable, so this path is real.
           if [ "$EVENT" = "pull_request" ]; then
-            git fetch --no-tags --depth=1 origin "$BASE_REF"
-            base="$(git merge-base "origin/$BASE_REF" HEAD)"
-            files="$(git diff --name-only "$base" HEAD)"
+            if git fetch --no-tags --depth=1 origin "$BASE_REF" \
+              && base="$(git merge-base "origin/$BASE_REF" HEAD)" \
+              && files="$(git diff --name-only "$base" HEAD)"; then
+              echo "Resolved PR diff against base $base"
+            else
+              echo "code=true" >> "$GITHUB_OUTPUT"
+              echo "Could not resolve PR base — defaulting to code=true"; exit 0
+            fi
           elif [ -n "${BEFORE:-}" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE" 2>/dev/null; then
-            files="$(git diff --name-only "$BEFORE" "$SHA")"
+            if ! files="$(git diff --name-only "$BEFORE" "$SHA")"; then
+              echo "code=true" >> "$GITHUB_OUTPUT"
+              echo "Could not diff push range — defaulting to code=true"; exit 0
+            fi
           else
             # New branch / unknown base (force-push, first push): can't diff
             # reliably, so run the full suite rather than risk skipping it.
-            files=""
             echo "code=true" >> "$GITHUB_OUTPUT"
             echo "Unknown base — defaulting to code=true"; exit 0
           fi
