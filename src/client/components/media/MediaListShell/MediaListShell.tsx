@@ -537,10 +537,6 @@ function MediaListShellTopBar() {
         <ScoringModeSelector instanceId={inst.activeInstance} hideLabel />
       )}
 
-      {showInstanceContext && (
-        <MediaShowAllToggle instanceId={inst.activeInstance} />
-      )}
-
       {/*
         Search stretches to fill the slot between the Profile control
         and the density toggle (`flex-1` on both the group and the
@@ -557,6 +553,9 @@ function MediaListShellTopBar() {
             }
           />
         </div>
+        {showInstanceContext && (
+          <MediaShowAllToggle instanceId={inst.activeInstance} />
+        )}
         <DensityToggle />
       </div>
     </>
