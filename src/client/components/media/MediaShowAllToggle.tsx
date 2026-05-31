@@ -33,20 +33,18 @@ export function MediaShowAllToggle({ instanceId }: Props) {
     await apply({ id: instanceId, data: { showAllMedia: !showAll } });
   };
 
+  const label = showAll ? t("viewShowAll") : t("viewFlaggedOnly");
   return (
     <Button
-      variant="outline"
-      size="sm"
+      variant="ghost"
+      size="icon-sm"
       onClick={toggle}
       disabled={update.isPending}
-      title={t("viewToggleHint")}
+      title={`${label} — ${t("viewToggleHint")}`}
+      aria-label={label}
+      aria-pressed={showAll}
     >
-      {showAll ? (
-        <Eye className="mr-1 size-4" />
-      ) : (
-        <EyeOff className="mr-1 size-4" />
-      )}
-      {showAll ? t("viewShowAll") : t("viewFlaggedOnly")}
+      {showAll ? <Eye /> : <EyeOff />}
     </Button>
   );
 }
