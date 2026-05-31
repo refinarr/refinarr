@@ -403,6 +403,7 @@
       "title": "Title",
       "status": "Status"
     },
+    "grabbedRelease": "Grabbed: {title}",
     "retry": {
       "retry": "Retry",
       "retried": "Retried {time}"

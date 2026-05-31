@@ -13,7 +13,9 @@ import { instanceService } from "@/server/services/InstanceService";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
-import type { Instance } from "@/shared/types/models";
+import { logRepository } from "@/server/repositories/LogRepository";
+import { prisma } from "@/server/lib/db";
+import type { ActionStatus, Instance } from "@/shared/types/models";
 import { mswServer, http, HttpResponse, radarrHandlers } from "@/test/msw";
 
 const radarrBase = "http://192.168.1.10:7878";
@@ -948,6 +950,134 @@ describe("autoRunner.runNow", () => {
     // not attributed to fanOut.
     row = await instanceRepository.findById(inst.id);
     expect(row?.autoSearchFailedStreak).toBe(0);
+    await instanceService.delete(inst.id);
+  });
+});
+
+// ─── in-flight gate: don't re-enqueue a media whose search is in flight ──────
+
+describe("autoRunner — in-flight gate (#39)", () => {
+  // One flagged (missing-file, monitored) movie the picker will always
+  // want. cutoffFormatScore stays irrelevant — hasFile:false makes it
+  // "missing" and therefore flagged regardless of CF score.
+  const flaggedMovie = {
+    id: 1,
+    title: "Tears of Steel",
+    qualityProfileId: 1,
+    customFormats: [],
+    customFormatScore: 0,
+    hasFile: false,
+    monitored: true,
+    movieFile: null,
+  };
+
+  function stageFlaggedUpstream() {
+    mswServer.use(
+      http.get(`${radarrBase}/api/v3/movie`, () =>
+        HttpResponse.json([flaggedMovie]),
+      ),
+      ...radarrHandlers(
+        { baseUrl: radarrBase },
+        {
+          movies: [flaggedMovie],
+          movieFiles: [],
+          qualityProfiles: [
+            {
+              id: 1,
+              name: "HD",
+              cutoff: 1,
+              cutoffFormatScore: 100,
+              minUpgradeFormatScore: 1,
+              formatItems: [],
+              items: [],
+            },
+          ],
+        },
+      ),
+    );
+  }
+
+  async function seedRow(
+    instanceId: number,
+    status: ActionStatus,
+    ageMs = 0,
+  ): Promise<void> {
+    const row = await logRepository.create({
+      instanceId,
+      action: "search",
+      mediaId: flaggedMovie.id,
+      title: flaggedMovie.title,
+      isDryRun: false,
+      status,
+      error: null,
+      payload: null,
+      groupId: null,
+      commandId: 5000,
+      completionMessage: null,
+      lastRetriedAt: null,
+    });
+    if (ageMs > 0) {
+      await prisma.actionLog.update({
+        where: { id: row.id },
+        data: { createdAt: new Date(Date.now() - ageMs) },
+      });
+    }
+  }
+
+  async function makeInstance(): Promise<Instance> {
+    return instanceService.create({
+      ...baseInstance,
+      autoSearchScope: "all",
+      autoSearchMonitoredOnly: false,
+      autoSearchCooldownHours: 0,
+    });
+  }
+
+  test("does NOT re-enqueue a media with a recent 'searched' row", async () => {
+    stageFlaggedUpstream();
+    const inst = await makeInstance();
+    await seedRow(inst.id, "searched");
+
+    const { enqueued } = await autoRunner.runNow(inst.id);
+
+    expect(enqueued).toBe(0);
+    const queued = await searchQueueRepository.findPendingByInstance(inst.id);
+    expect(queued).toHaveLength(0);
+    await instanceService.delete(inst.id);
+  });
+
+  test("does NOT re-enqueue a media with a recent 'grabbed' row", async () => {
+    stageFlaggedUpstream();
+    const inst = await makeInstance();
+    await seedRow(inst.id, "grabbed");
+
+    const { enqueued } = await autoRunner.runNow(inst.id);
+
+    expect(enqueued).toBe(0);
+    await instanceService.delete(inst.id);
+  });
+
+  test("DOES enqueue when the only in-flight row is older than the gate window", async () => {
+    stageFlaggedUpstream();
+    const inst = await makeInstance();
+    // 7h old — past the 6h gate window, so it self-heals and the media
+    // becomes eligible again.
+    await seedRow(inst.id, "searched", 7 * 60 * 60 * 1000);
+
+    const { enqueued } = await autoRunner.runNow(inst.id);
+
+    expect(enqueued).toBe(1);
+    await instanceService.delete(inst.id);
+  });
+
+  test("DOES enqueue a media whose last row is terminal ('failed')", async () => {
+    stageFlaggedUpstream();
+    const inst = await makeInstance();
+    await seedRow(inst.id, "failed");
+
+    const { enqueued } = await autoRunner.runNow(inst.id);
+
+    expect(enqueued).toBe(1);
     await instanceService.delete(inst.id);
   });
 });

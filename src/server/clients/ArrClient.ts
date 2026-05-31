@@ -128,6 +128,7 @@ export interface UpstreamHistoryRecord {
   eventType: string;
   date: string;
   sourceTitle: string | null;
+  downloadId?: string | null;
   movieId?: number;
   seriesId?: number;
   episodeId?: number;
@@ -329,6 +330,7 @@ export abstract class ArrClient {
         eventType: r.eventType,
         date: r.date,
         sourceTitle: r.sourceTitle,
+        downloadId: r.downloadId ?? null,
       });
     }
     return out;
@@ -374,4 +376,5 @@ export interface UpstreamHistoryEvent {
     | string;
   date: string;
   sourceTitle: string | null;
+  downloadId?: string | null;
 }
