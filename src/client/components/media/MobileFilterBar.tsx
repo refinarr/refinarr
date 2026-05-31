@@ -84,7 +84,7 @@ export function MobileFilterBar({
           aria-haspopup="dialog"
           aria-expanded={sheetOpen}
           className={cn(
-            "h-control-sm ml-auto inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+            "h-control-sm ml-auto inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors pointer-coarse:min-h-11",
             activeCount > 0
               ? "border-primary bg-primary text-primary-foreground"
               : "border-input text-muted-foreground hover:bg-accent hover:text-foreground",

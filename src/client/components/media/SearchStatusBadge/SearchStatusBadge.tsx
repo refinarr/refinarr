@@ -41,7 +41,14 @@ export function SearchStatusBadge(props: Props) {
       : t("searchedBadgeTooltip", { time: props.relativeTime });
 
   return (
-    <Link href={href} title={tooltip} aria-label={tooltip}>
+    <Link
+      href={href}
+      title={tooltip}
+      aria-label={tooltip}
+      // Keep the badge visually compact but give the link a ≥44px tap target on
+      // touch devices (Apple HIG) without enlarging it on desktop (#29).
+      className="inline-flex items-center pointer-coarse:min-h-11"
+    >
       <Badge variant="outline" className={cn("gap-1 text-xs", classes[status])}>
         <Icon className="size-3" />
         {label}
