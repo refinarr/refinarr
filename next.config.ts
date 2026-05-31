@@ -57,6 +57,19 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "**": ["node_modules/@img/**", "node_modules/sharp/**"],
   },
+  // Barrel-import optimization for our heavy re-export packages. NOTE:
+  // lucide-react, @tanstack/react-query, and others are ALREADY in Next's
+  // built-in default list — listing them here is a no-op. These are the
+  // ones Next does NOT default, where the barrel defeats tree-shaking:
+  experimental: {
+    optimizePackageImports: [
+      "cmdk",
+      "sonner",
+      "@base-ui/react",
+      "@tanstack/react-table",
+      "@tanstack/react-virtual",
+    ],
+  },
   async headers() {
     return [
       {
