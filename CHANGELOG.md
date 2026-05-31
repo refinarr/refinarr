@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.10](https://github.com/refinarr/refinarr/compare/v0.5.9...v0.5.10) (2026-05-31)
+
+
+### Bug Fixes
+
+* **a11y:** clear color-contrast AA failures (destructive + history sub-line) ([#47](https://github.com/refinarr/refinarr/issues/47)) ([#55](https://github.com/refinarr/refinarr/issues/55)) ([5f0ba5b](https://github.com/refinarr/refinarr/commit/5f0ba5b9fa1a0084c8bbfb6c555b6c9c38328d0e))
+* **ui:** gate per-arr surfaces by configured instance types ([#53](https://github.com/refinarr/refinarr/issues/53)) ([#56](https://github.com/refinarr/refinarr/issues/56)) ([7b7dac2](https://github.com/refinarr/refinarr/commit/7b7dac2d1324f2db5a18cca93b95b7ade2271922))
+* **ui:** point add-instance CTAs at /settings/instances, not /settings ([#54](https://github.com/refinarr/refinarr/issues/54)) ([6fd56fa](https://github.com/refinarr/refinarr/commit/6fd56fac8c820cef8c658eba5efbbc24ecafbfab))
+
 ## [0.5.9](https://github.com/refinarr/refinarr/compare/v0.5.8...v0.5.9) (2026-05-31)
 
 
