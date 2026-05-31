@@ -10,6 +10,8 @@ export function usePreferences(instanceId: number) {
     queryFn: () =>
       api.get<CfPreference[]>(`/preferences?instanceId=${instanceId}`),
     enabled: instanceId > 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 

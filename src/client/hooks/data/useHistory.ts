@@ -31,6 +31,7 @@ export function useHistory(filters: HistoryFilters = {}) {
       api.get<HistoryResponse>(`/history?${params}&page=${pageParam}&limit=50`),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
+    refetchOnWindowFocus: false,
   });
 }
 

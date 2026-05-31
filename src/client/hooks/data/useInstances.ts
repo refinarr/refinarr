@@ -14,6 +14,8 @@ export function useInstances() {
   return useQuery({
     queryKey: queryKeys.instances(),
     queryFn: () => api.get<PublicInstance[]>("/instances"),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 
