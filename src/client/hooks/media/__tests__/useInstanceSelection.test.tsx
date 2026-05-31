@@ -85,6 +85,7 @@ describe("useInstanceSelection", () => {
   beforeEach(() => {
     mockApi.get.mockReset();
     mockSearch.delete("instanceId");
+    window.localStorage.clear();
   });
 
   it("filters instances by arrType and exposes typed ids", async () => {
@@ -105,6 +106,43 @@ describe("useInstanceSelection", () => {
     });
     await vi.waitFor(() => {
       expect(result.current.activeInstance).toBe(1);
+    });
+  });
+
+  it("uses the remembered instance from localStorage over the default first (#53/waterfall)", async () => {
+    window.localStorage.setItem("refinarr:lastInstance:radarr", "2");
+    mockApi.get.mockResolvedValue([radarr1, radarr2, sonarr1]);
+    const { result } = renderHook(() => useInstanceSelection("radarr"), {
+      wrapper,
+    });
+    await vi.waitFor(() => {
+      expect(result.current.activeInstance).toBe(2);
+    });
+  });
+
+  it("reconciles to the first instance when the remembered id no longer exists", async () => {
+    window.localStorage.setItem("refinarr:lastInstance:radarr", "99");
+    mockApi.get.mockResolvedValue([radarr1, radarr2]);
+    const { result } = renderHook(() => useInstanceSelection("radarr"), {
+      wrapper,
+    });
+    await vi.waitFor(() => {
+      expect(result.current.activeInstance).toBe(1);
+    });
+  });
+
+  it("persists the resolved active instance to localStorage", async () => {
+    mockApi.get.mockResolvedValue([radarr1, radarr2]);
+    const { result } = renderHook(() => useInstanceSelection("radarr"), {
+      wrapper,
+    });
+    await vi.waitFor(() => {
+      expect(result.current.activeInstance).toBe(1);
+    });
+    await vi.waitFor(() => {
+      expect(window.localStorage.getItem("refinarr:lastInstance:radarr")).toBe(
+        "1",
+      );
     });
   });
 
