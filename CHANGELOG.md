@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.8](https://github.com/refinarr/refinarr/compare/v0.5.7...v0.5.8) (2026-05-31)
+
+
+### Bug Fixes
+
+* **api:** reject out-of-band media query values with 400 ([#36](https://github.com/refinarr/refinarr/issues/36)) ([#38](https://github.com/refinarr/refinarr/issues/38)) ([6f2c666](https://github.com/refinarr/refinarr/commit/6f2c666093ed15ecf0962a2c0d12f1fccf1ea984))
+
 ## [0.5.7](https://github.com/refinarr/refinarr/compare/v0.5.6...v0.5.7) (2026-05-31)
 
 
