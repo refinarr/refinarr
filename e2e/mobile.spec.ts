@@ -16,6 +16,20 @@ const FAKE_INSTANCE = {
   createdAt: new Date().toISOString(),
 };
 
+// A Sonarr instance is seeded too so the tab bar's per-arr gating (#53)
+// deterministically renders BOTH the Movies and Shows tabs. With a
+// radarr-only list, useConfiguredArrTypes briefly shows all tabs while
+// /api/instances is loading, then gates Shows once it resolves — racing
+// the "Shows tab visible" assertion in the test below.
+const FAKE_SONARR_INSTANCE = {
+  id: 2,
+  type: "sonarr",
+  name: "Mock Sonarr",
+  url: "http://192.168.1.100:8989",
+  enabled: true,
+  createdAt: new Date().toISOString(),
+};
+
 const FAKE_MOVIE: MovieItem = {
   id: 1,
   title: "The Missing Format",
@@ -46,7 +60,10 @@ const FAKE_RESPONSE: PaginatedResponse<MovieItem> = {
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/instances", (route) => {
     if (route.request().method() === "GET") {
-      return route.fulfill({ status: 200, json: [FAKE_INSTANCE] });
+      return route.fulfill({
+        status: 200,
+        json: [FAKE_INSTANCE, FAKE_SONARR_INSTANCE],
+      });
     }
     return route.continue();
   });
