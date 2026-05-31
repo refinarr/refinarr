@@ -11,6 +11,9 @@ import { RecentActivityList } from "@/client/components/dashboard/RecentActivity
 import { NoInstancesPrompt } from "@/client/components/states/NoInstancesPrompt";
 import { AllClearState } from "@/client/components/states/AllClearState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
+import { InstanceSummaryCardSkeleton } from "@/client/components/states/InstanceSummaryCardSkeleton";
+import { RecentActivityListSkeleton } from "@/client/components/states/RecentActivityListSkeleton";
+import { AutoSearchFleetSkeleton } from "@/client/components/states/AutoSearchFleetSkeleton";
 import {
   useInstances,
   useConfiguredArrTypes,
@@ -51,6 +54,13 @@ export default function DashboardPage() {
   const enabledInstances = (summary?.perInstance ?? []).filter(
     (i) => i.enabled,
   );
+  // Instance list is cached app-wide (sidebar), so it's almost always known
+  // while the summary is still loading — drives the skeleton counts below so
+  // the reserved height matches the real cards/rows and the dashboard doesn't
+  // shift when the summary resolves.
+  const autoSearchCount = (instances ?? []).filter(
+    (i) => i.autoSearchEnabled,
+  ).length;
 
   return (
     <AppShell>
@@ -130,15 +140,29 @@ export default function DashboardPage() {
           <div>
             <h2 className="mb-3 text-lg font-semibold">{t("instances")}</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {(summary?.perInstance ?? []).map((inst) => (
-                <InstanceSummaryCard key={inst.id} instance={inst} />
-              ))}
+              {loadingSummary
+                ? (instances ?? []).map((inst) => (
+                    <InstanceSummaryCardSkeleton key={inst.id} />
+                  ))
+                : (summary?.perInstance ?? []).map((inst) => (
+                    <InstanceSummaryCard key={inst.id} instance={inst} />
+                  ))}
             </div>
           </div>
 
-          <AutoSearchFleetPanel instances={summary?.perInstance ?? []} />
+          {loadingSummary ? (
+            autoSearchCount > 0 && (
+              <AutoSearchFleetSkeleton rows={autoSearchCount} />
+            )
+          ) : (
+            <AutoSearchFleetPanel instances={summary?.perInstance ?? []} />
+          )}
 
-          <RecentActivityList logs={summary?.recentActivity ?? []} />
+          {loadingSummary ? (
+            <RecentActivityListSkeleton />
+          ) : (
+            <RecentActivityList logs={summary?.recentActivity ?? []} />
+          )}
         </div>
       </PageErrorBoundary>
     </AppShell>
