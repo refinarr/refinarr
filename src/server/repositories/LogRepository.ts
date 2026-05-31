@@ -73,6 +73,12 @@ class LogRepository extends BaseRepository<ActionLog> {
     });
   }
 
+  // Feeds the dashboard "recent activity" list, which only renders
+  // id/instance/media/title/status/action/timestamps. Projecting away the
+  // heavy fields (payload retry-snapshots, error/stack text, completion +
+  // grabbed-release strings) keeps the dashboard summary payload lean —
+  // those columns can dwarf the rendered ones. The omitted fields are all
+  // optional on ActionLog, so the cast stays sound.
   async findRecent(limit: number): Promise<ActionLog[]> {
     return this.db.actionLog.findMany({
       orderBy: [
@@ -80,6 +86,17 @@ class LogRepository extends BaseRepository<ActionLog> {
         { createdAt: "desc" },
       ],
       take: limit,
+      select: {
+        id: true,
+        instanceId: true,
+        action: true,
+        mediaId: true,
+        title: true,
+        status: true,
+        isDryRun: true,
+        createdAt: true,
+        lastRetriedAt: true,
+      },
     }) as Promise<ActionLog[]>;
   }
 
