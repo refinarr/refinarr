@@ -25,7 +25,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/client/components/ui/command";
-import { useInstances } from "@/client/hooks/data/useInstances";
+import {
+  useInstances,
+  useConfiguredArrTypes,
+} from "@/client/hooks/data/useInstances";
 import { useConfig } from "@/client/hooks/data/useConfig";
 import { ARR_UI } from "@/client/lib/arr-ui";
 import { ALL_ARR_TYPES, ARR_LIBRARY_ROUTE } from "@/shared/arr-meta";
@@ -36,6 +39,7 @@ export function CommandPalette() {
   const t = useTranslations("commandPalette");
   const tNav = useTranslations("nav");
   const { data: instances } = useInstances();
+  const arrTypes = useConfiguredArrTypes();
   const { data: config } = useConfig();
 
   // Global ⌘K / Ctrl+K listener — toggles the palette from anywhere.
@@ -75,7 +79,7 @@ export function CommandPalette() {
                 <LayoutDashboard className="size-4" />
                 {tNav("dashboard")}
               </CommandItem>
-              {ALL_ARR_TYPES.map((type) => {
+              {arrTypes.map((type) => {
                 const { navLabelKey, Icon } = ARR_UI[type];
                 return (
                   <CommandItem
