@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.5](https://github.com/refinarr/refinarr/compare/v0.5.4...v0.5.5) (2026-05-31)
+
+
+### Bug Fixes
+
+* address QA Phase 1 bugs & gaps (BUG-1/2, GAP-1–9) ([#18](https://github.com/refinarr/refinarr/issues/18)) ([5cc1072](https://github.com/refinarr/refinarr/commit/5cc10720d69b957eabf9f450611a0edee9e98101))
+* **auth:** enforce confirmPassword server-side on password change ([#21](https://github.com/refinarr/refinarr/issues/21)) ([039738a](https://github.com/refinarr/refinarr/commit/039738abe53f232db2e9b33ccaf92670c473613c))
+* **proxy:** serve manifest.webmanifest + icon.svg without auth gating ([#16](https://github.com/refinarr/refinarr/issues/16)) ([1beeddd](https://github.com/refinarr/refinarr/commit/1beeddddc1cf6ac8c9f311e677e4367dcea8e714))
+* QA Phase 4 — cron validation/health ([#23](https://github.com/refinarr/refinarr/issues/23)) + nonexistent-instance 404s ([#22](https://github.com/refinarr/refinarr/issues/22)) ([#25](https://github.com/refinarr/refinarr/issues/25)) ([2bc0b48](https://github.com/refinarr/refinarr/commit/2bc0b48d4cc0a8293544f3871fd3fabfbb3185a3))
+
 ## [0.5.4](https://github.com/refinarr/refinarr/compare/v0.5.3...v0.5.4) (2026-05-30)
 
 
