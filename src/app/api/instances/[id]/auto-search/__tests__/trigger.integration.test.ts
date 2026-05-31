@@ -746,7 +746,7 @@ describe("POST /api/instances/[id]/auto-search/trigger — real dispatch", () =>
 
   // ── Upstream failure ─────────────────────────────────────────────────────
 
-  test("upstream arr unreachable: trigger returns 500", async () => {
+  test("upstream arr error: trigger returns 502 (or 200 if cache short-circuits), no queue rows", async () => {
     // No MSW handler registered → mswServer's onUnhandledRequest="error"
     // causes the fetch to throw, which the runner catches.
     // Actually the runner catches internally and returns enqueued=0 rather
@@ -774,11 +774,11 @@ describe("POST /api/instances/[id]/auto-search/trigger — real dispatch", () =>
     );
     const { id } = await created.json();
 
-    // The runner lets the error propagate from fanOut → trigger route returns 500.
     const res = await triggerPost(triggerReq(id), ctxFor(id));
-    // Could be 500 (upstream error propagated) or 200 { enqueued: 0 } depending on
-    // whether DataCache catches the fetch error. Either is acceptable; no queue rows.
-    expect([200, 500]).toContain(res.status);
+    // When the upstream error propagates from fanOut, the trigger route maps it
+    // to 502 (#26). It may also be 200 { enqueued: 0 } if DataCache short-
+    // circuits without hitting the upstream. Either way, no queue rows.
+    expect([200, 502]).toContain(res.status);
     expect(await searchQueueRepository.findPendingByInstance(id)).toHaveLength(
       0,
     );

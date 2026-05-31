@@ -80,6 +80,13 @@ export function serviceUnavailable(
   return new HttpError({ status: 503, message, headers, code });
 }
 
+// 502 for a failed call to an upstream the server depends on (a user's
+// Radarr/Sonarr being unreachable or erroring). Distinguishes "your *arr is
+// down" from "Refinarr itself broke" (500), which a bare 500 can't.
+export function badGateway(message: string, code?: string): HttpError {
+  return new HttpError({ status: 502, message, expose: true, code });
+}
+
 // 500 helper. Defaults to `expose: false` so a future caller doing
 // `throw internal("DB conn failed: " + cause)` can't leak the raw
 // message to the client. Pass `{ expose: true }` explicitly when the

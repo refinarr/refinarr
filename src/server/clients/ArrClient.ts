@@ -25,6 +25,21 @@ export function describeFetchError(e: unknown): string {
   return e.message;
 }
 
+// True when an error came from talking to the upstream *arr (a non-2xx
+// response, an aborted/timed-out request, or a network failure) rather than
+// from Refinarr's own logic. Lets routes return 502 ("your *arr is down")
+// instead of an opaque 500. Network failures are Node's "fetch failed"
+// TypeError (real cause on `.cause`); timeouts surface as AbortError.
+export function isUpstreamError(e: unknown): boolean {
+  if (e instanceof ArrHttpError) return true;
+  if (e instanceof Error) {
+    if (e.name === "AbortError") return true;
+    if (e.name === "TypeError" && /fetch failed/i.test(e.message)) return true;
+    if ((e as Error & { cause?: unknown }).cause instanceof Error) return true;
+  }
+  return false;
+}
+
 // Typed HTTP-status error for upstream *arr non-2xx responses. Carries
 // the status code so callers can discriminate (e.g. `getCommandById`
 // swallows 404 but rethrows 5xx / 401 to surface real outages).
