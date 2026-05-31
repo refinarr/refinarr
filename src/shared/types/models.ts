@@ -223,6 +223,12 @@ export interface ActionLog {
   // grabbed" from the absence of a grab event. Null until either
   // path observes the command finishing.
   completionMessage?: string | null;
+  // Captured from the /history `grabbed` event when the lifecycle poller
+  // advances the row to `grabbed`. `sourceTitle` is the grabbed release
+  // name shown in History; `downloadId` is the download-client handle.
+  // Both null until a grab is observed.
+  sourceTitle?: string | null;
+  downloadId?: string | null;
   createdAt: Date;
   lastRetriedAt?: Date | null;
 }

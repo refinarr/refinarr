@@ -360,8 +360,20 @@ export class StatusPollerService {
       if (!row) continue;
       const next = nextStatusFor(ev.eventType, row.status);
       if (!next || next === row.status) continue;
+      // On the grab transition, capture the release name + download-client
+      // handle so History can show "what was grabbed" (#39). Only on
+      // `grabbed` — later events (import/fail) don't carry a more specific
+      // release identity than the grab already recorded.
+      const patch: Partial<ActionLog> =
+        next === "grabbed"
+          ? {
+              status: next,
+              sourceTitle: ev.sourceTitle,
+              downloadId: ev.downloadId ?? null,
+            }
+          : { status: next };
       try {
-        await logRepository.update(row.id, { status: next });
+        await logRepository.update(row.id, patch);
         updates += 1;
       } catch (err) {
         appLogger.warn("statusPoller history-sync update failed", {

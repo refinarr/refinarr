@@ -185,6 +185,7 @@ function TitleCell({
   log: ActionLog;
   instanceTypeMap: InstanceTypeMap;
 }) {
+  const t = useTranslations("history");
   const instanceType = instanceTypeMap.get(log.instanceId);
   const titleNode = instanceType ? (
     <Link
@@ -207,6 +208,14 @@ function TitleCell({
         <span className="text-muted-foreground/80 ml-1.5 text-xs italic">
           · {log.completionMessage}
         </span>
+      )}
+      {log.sourceTitle && (
+        <div
+          className="text-muted-foreground/80 truncate text-xs"
+          title={log.sourceTitle}
+        >
+          {t("grabbedRelease", { title: log.sourceTitle })}
+        </div>
       )}
     </>
   );

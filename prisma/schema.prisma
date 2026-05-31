@@ -90,6 +90,13 @@ model ActionLog {
   // queued-upstream semantic; this field disambiguates "still
   // pending" from "completed but found nothing".
   completionMessage String?
+  // Captured from the /history `grabbed` event when the lifecycle poller
+  // advances the row to `grabbed`. `sourceTitle` is the grabbed release
+  // name surfaced in the History UI ("what was grabbed"); `downloadId` is
+  // the download-client handle, stored for correlation with download
+  // progress. Both null until a grab is observed.
+  sourceTitle   String?
+  downloadId    String?
   createdAt     DateTime  @default(now())
   lastRetriedAt DateTime?
 
@@ -102,6 +109,13 @@ model ActionLog {
   // with instanceId prevents cross-instance false matches when two
   // instances happen to issue the same id.
   @@index([instanceId, commandId])
+  // Composite (instanceId, status, createdAt) — serves the lifecycle-poll
+  // + auto-runner hot path: findInFlightMediaIds, findCorrelatableByMedia,
+  // and findOpenCommandsByInstance all filter (instanceId, status) then
+  // range on createdAt. Keeps those seeks index-bound rather than
+  // instance-scan-bound if ACTION_LOG_RETENTION_CAP is raised well past
+  // its 5000 default.
+  @@index([instanceId, status, createdAt])
 }
 
 model AppLog {

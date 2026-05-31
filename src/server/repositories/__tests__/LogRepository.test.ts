@@ -1,5 +1,6 @@
 import { describe, test, expect, vi } from "vitest";
 import { logRepository } from "@/server/repositories/LogRepository";
+import { prisma } from "@/server/lib/db";
 import type { ActionStatus, ActionType } from "@/shared/types/models";
 
 const baseLog = {
@@ -79,6 +80,71 @@ describe("LogRepository", () => {
     });
     const failed = await logRepository.findFailedByInstance(1);
     expect(failed).toHaveLength(1);
+  });
+
+  describe("findInFlightMediaIds (#39)", () => {
+    const HOUR = 60 * 60 * 1000;
+
+    test("returns mediaIds at searched/grabbed within the window, excludes terminal + dry-run + other instances", async () => {
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 1,
+        status: "searched",
+      });
+      await logRepository.create({ ...baseLog, mediaId: 2, status: "grabbed" });
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 3,
+        status: "downloaded",
+      });
+      await logRepository.create({ ...baseLog, mediaId: 4, status: "failed" });
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 5,
+        status: "searched",
+        isDryRun: true,
+      });
+      await logRepository.create({
+        ...baseLog,
+        mediaId: 6,
+        instanceId: 2,
+        status: "searched",
+      });
+
+      const inFlight = await logRepository.findInFlightMediaIds(1, 6 * HOUR);
+      expect([...inFlight].sort()).toEqual([1, 2]);
+    });
+
+    test("excludes rows older than the window (self-heal)", async () => {
+      const row = await logRepository.create({
+        ...baseLog,
+        mediaId: 7,
+        status: "searched",
+      });
+      await prisma.actionLog.update({
+        where: { id: row.id },
+        data: { createdAt: new Date(Date.now() - 7 * HOUR) },
+      });
+      const inFlight = await logRepository.findInFlightMediaIds(1, 6 * HOUR);
+      expect(inFlight.has(7)).toBe(false);
+    });
+
+    test("includes a row created before the window but retried inside it", async () => {
+      const row = await logRepository.create({
+        ...baseLog,
+        mediaId: 8,
+        status: "searched",
+      });
+      await prisma.actionLog.update({
+        where: { id: row.id },
+        data: {
+          createdAt: new Date(Date.now() - 8 * HOUR),
+          lastRetriedAt: new Date(Date.now() - 1 * HOUR),
+        },
+      });
+      const inFlight = await logRepository.findInFlightMediaIds(1, 6 * HOUR);
+      expect(inFlight.has(8)).toBe(true);
+    });
   });
 
   test("countByStatusSince counts rows matching status created on/after the cutoff", async () => {

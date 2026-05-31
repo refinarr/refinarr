@@ -296,3 +296,80 @@ describe("ArrClient.getCommandById", () => {
     await expect(client.getCommandById(7)).rejects.toThrow(/401/);
   });
 });
+
+// Projects movie-scope records so getRecentHistory emits events (the
+// base TestClient returns null and would drop everything).
+class MovieHistoryClient extends ArrClient {
+  protected readonly expectedAppName = "Radarr";
+  getQualityProfiles() {
+    return Promise.resolve([]);
+  }
+  triggerSearch() {
+    return Promise.resolve({ commandId: 0 });
+  }
+  deleteFile() {
+    return Promise.resolve();
+  }
+  protected projectHistoryRecord(r: UpstreamHistoryRecord) {
+    return r.movieId ? { mediaId: r.movieId, scope: "movie" as const } : null;
+  }
+}
+
+describe("ArrClient.getRecentHistory", () => {
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+  afterEach(() => fetchSpy?.mockRestore());
+
+  test("projects sourceTitle + downloadId from grabbed records (#39)", async () => {
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          records: [
+            {
+              id: 1,
+              eventType: "grabbed",
+              date: "2026-05-31T10:36:54Z",
+              sourceTitle: "Tears Of Steel (2012) 720p WEBRip-LAMA",
+              downloadId: "D8CF1DCE819935BB",
+              movieId: 22,
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new MovieHistoryClient(stubInstance);
+    const events = await client.getRecentHistory(new Date(0));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toEqual(
+      expect.objectContaining({
+        mediaId: 22,
+        scope: "movie",
+        eventType: "grabbed",
+        sourceTitle: "Tears Of Steel (2012) 720p WEBRip-LAMA",
+        downloadId: "D8CF1DCE819935BB",
+      }),
+    );
+  });
+
+  test("defaults downloadId to null when upstream omits it", async () => {
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          records: [
+            {
+              id: 2,
+              eventType: "downloadFolderImported",
+              date: "2026-05-31T11:00:00Z",
+              sourceTitle: "rls",
+              movieId: 22,
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const client = new MovieHistoryClient(stubInstance);
+    const events = await client.getRecentHistory(new Date(0));
+    expect(events[0].downloadId).toBeNull();
+  });
+});

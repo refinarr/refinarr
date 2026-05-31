@@ -104,6 +104,12 @@ export const OVERDUE_GRACE_MS = 60_000;
 // Consecutive failed ticks before the dashboard tier flips to "critical".
 export const FAILED_STREAK_CRITICAL_THRESHOLD = 3;
 
+// How long a `searched`/`grabbed` ActionLog row blocks re-enqueue of its
+// media (#39). Long enough to cover a normal grab → download → import,
+// short enough that a row the lifecycle poller never resolved (missed
+// terminal event) self-heals instead of gating that media forever.
+export const IN_FLIGHT_GATE_MS = 6 * 60 * 60 * 1000;
+
 function computeHealth(
   failedStreak: number,
   overdue: boolean,
@@ -755,7 +761,17 @@ class AutoRunner {
         (p) => p.mediaId,
       ),
     );
-    const toEnqueue = picked.filter((item) => !alreadyPending.has(item.id));
+    // Skip items whose prior search is still in flight (searched/grabbed
+    // within the gate window) — the lifecycle poller hasn't resolved them
+    // to downloaded/failed yet, so re-searching only burns upstream calls
+    // and buries the grab transition under fresh rows (#39).
+    const inFlight = await logRepository.findInFlightMediaIds(
+      inst.id,
+      IN_FLIGHT_GATE_MS,
+    );
+    const toEnqueue = picked.filter(
+      (item) => !alreadyPending.has(item.id) && !inFlight.has(item.id),
+    );
 
     const groupId = toEnqueue.length > 1 ? crypto.randomUUID() : undefined;
     const action = ARR_META[inst.type].defaultBatchAction;

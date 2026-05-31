@@ -648,6 +648,32 @@ describe("StatusPollerService.pollHistory (history sync)", () => {
     expect(after?.status).toBe("grabbed");
   });
 
+  test("grabbed transition persists sourceTitle + downloadId (#39)", async () => {
+    const inst = await instanceService.create(baseInstance);
+    const row = await seedRow(inst, { mediaId: 42, status: "searched" });
+    await service.pollHistory(
+      inst,
+      mockClient({
+        history: [
+          {
+            id: 1,
+            mediaId: 42,
+            scope: "movie",
+            eventType: "grabbed",
+            date: new Date().toISOString(),
+            sourceTitle: "Tears Of Steel (2012) 720p WEBRip-LAMA",
+            downloadId: "D8CF1DCE819935BB",
+          },
+        ],
+      }),
+      new Date(0),
+    );
+    const after = await logRepository.findById(row.id);
+    expect(after?.status).toBe("grabbed");
+    expect(after?.sourceTitle).toBe("Tears Of Steel (2012) 720p WEBRip-LAMA");
+    expect(after?.downloadId).toBe("D8CF1DCE819935BB");
+  });
+
   test("grab + import in one batch advances grabbed → downloaded in order", async () => {
     // Critical: events arrive newest-first from upstream, but the
     // service must process oldest-first so grabbed lands BEFORE

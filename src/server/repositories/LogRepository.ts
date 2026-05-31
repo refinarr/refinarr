@@ -224,6 +224,38 @@ class LogRepository extends BaseRepository<ActionLog> {
   }
 
   /**
+   * Media that already have a search in flight — a non-dry-run row at
+   * `searched` or `grabbed` created within `sinceMs`. The auto-runner
+   * uses this to avoid re-enqueuing a movie/series whose prior search
+   * hasn't resolved to `downloaded`/`failed` yet (#39): the lifecycle
+   * poller advances one row per media, so without this gate a still-
+   * flagged item (grabbed but not yet imported) gets re-searched every
+   * tick, multiplying upstream load and burying the grab transition
+   * under fresh `searched` rows. The `sinceMs` bound self-heals a row
+   * the poller never resolved — past the window the media is eligible
+   * again instead of being gated forever.
+   */
+  async findInFlightMediaIds(
+    instanceId: number,
+    sinceMs: number,
+  ): Promise<Set<number>> {
+    const since = new Date(Date.now() - sinceMs);
+    const rows = await this.db.actionLog.findMany({
+      where: {
+        instanceId,
+        isDryRun: false,
+        status: { in: ["searched", "grabbed"] },
+        // A retried search is in flight regardless of when the original
+        // row was created — gate on either timestamp so a retry of an
+        // old failed row isn't re-enqueued underneath the in-flight retry.
+        OR: [{ createdAt: { gte: since } }, { lastRetriedAt: { gte: since } }],
+      },
+      select: { mediaId: true },
+    });
+    return new Set(rows.map((r) => r.mediaId));
+  }
+
+  /**
    * Per-group aggregate counts for the History batch header. Returns one
    * entry per requested groupId that has any matching ActionLog row;
    * groupIds with zero matches are omitted (caller can detect that and
