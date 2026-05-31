@@ -41,6 +41,17 @@ RUN find node_modules/@prisma/client/runtime -type f \( \
       -name 'query_compiler_*_bg.postgresql.*' -o \
       -name 'query_compiler_*_bg.mysql.*' \) -delete
 
+# The `prisma` CLI hard-requires @prisma/studio-core/data/bff at module load
+# (so the whole package can't be dropped — `migrate deploy` would crash), but
+# the bulk of studio-core is the Studio web UI (dist/ui, ~24MB) + esbuild
+# metafiles (dist/metafile-*.json, ~5MB), neither of which the migrate path
+# or the app runtime ever loads. Prune just those (37.6MB → ~8MB). Pruned in
+# the builder, before the runner COPYs @prisma whole, so the bytes never enter
+# the final image. The runner's `migrate deploy` smoke test below is the guard.
+RUN rm -rf node_modules/@prisma/studio-core/dist/ui \
+ && rm -f node_modules/@prisma/studio-core/dist/metafile-cjs.json \
+          node_modules/@prisma/studio-core/dist/metafile-esm.json
+
 # ---------- runner ----------
 FROM base AS runner
 WORKDIR /app
