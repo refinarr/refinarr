@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.7](https://github.com/refinarr/refinarr/compare/v0.5.6...v0.5.7) (2026-05-31)
+
+
+### Bug Fixes
+
+* **ui:** finish 44pt touch targets + document async-search API contract ([#29](https://github.com/refinarr/refinarr/issues/29)) ([#35](https://github.com/refinarr/refinarr/issues/35)) ([6283ac2](https://github.com/refinarr/refinarr/commit/6283ac2b1bbeb1f4fd25de8dce6fca0cd27288bc))
+
 ## [0.5.6](https://github.com/refinarr/refinarr/compare/v0.5.5...v0.5.6) (2026-05-31)
 
 
