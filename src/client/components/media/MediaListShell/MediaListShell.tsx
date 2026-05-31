@@ -66,6 +66,7 @@ import {
 } from "@/client/hooks/media/useBulkMediaActions";
 import { useBulkHandlers } from "@/client/hooks/media/useBulkHandlers";
 import { DEFAULT_SCORING_MODE, isManualMode } from "@/shared/scoring-mode";
+import { ARR_META } from "@/shared/arr-meta";
 import type {
   ArrType,
   MediaItem,
@@ -358,10 +359,18 @@ function Root<T extends MediaItem>({
     tA11y,
   };
 
-  if (!inst.loadingInstances && !inst.instances?.length) {
+  // Gate on instances OF THIS ARR TYPE, not the global list: a Radarr-only
+  // user opening /shows (e.g. via a deep link) has instances but none of
+  // type sonarr, and should see "add a Sonarr instance" — not the
+  // misleading "no Custom Formats" empty state that the activeInstance<=0
+  // path would otherwise produce (#53).
+  if (!inst.loadingInstances && inst.typedInstances.length === 0) {
     return (
       <AppShell>
-        <NoInstancesPrompt onAdd={() => router.push("/settings/instances")} />
+        <NoInstancesPrompt
+          onAdd={() => router.push("/settings/instances")}
+          arrLabel={ARR_META[arrType].label}
+        />
       </AppShell>
     );
   }

@@ -14,8 +14,9 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/client/lib/utils";
 import { useMe, useLogout } from "@/client/hooks/data/useMe";
+import { useConfiguredArrTypes } from "@/client/hooks/data/useInstances";
 import { ARR_UI } from "@/client/lib/arr-ui";
-import { ARR_LIBRARY_ROUTE, ALL_ARR_TYPES } from "@/shared/arr-meta";
+import { ARR_LIBRARY_ROUTE } from "@/shared/arr-meta";
 
 // Per-arr nav label keys come from ARR_UI (one source for the icon +
 // i18n key per arr). Adding Lidarr / Whisparr drops a row in arr-ui.ts
@@ -35,15 +36,14 @@ interface NavLink {
   icon: LucideIcon;
 }
 
-const links: NavLink[] = [
-  { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
-  ...ALL_ARR_TYPES.map(
-    (type): NavLink => ({
-      href: ARR_LIBRARY_ROUTE[type],
-      key: ARR_UI[type].navLabelKey,
-      icon: ARR_UI[type].Icon,
-    }),
-  ),
+const DASHBOARD_LINK: NavLink = {
+  href: "/dashboard",
+  key: "dashboard",
+  icon: LayoutDashboard,
+};
+// Non-arr links that sit after the per-arr library links. The arr links
+// are spliced in per-render from the configured-types hook (#53).
+const SECONDARY_LINKS: NavLink[] = [
   { href: "/ignored", key: "ignored", icon: EyeOff },
   { href: "/queue", key: "queue", icon: Hourglass },
   { href: "/history", key: "history", icon: History },
@@ -64,6 +64,18 @@ export function NavContent({ onNavigate, excludeKeys }: Props) {
   const tAuth = useTranslations("auth");
   const { data: me } = useMe();
   const logout = useLogout();
+  const arrTypes = useConfiguredArrTypes();
+  const links: NavLink[] = [
+    DASHBOARD_LINK,
+    ...arrTypes.map(
+      (type): NavLink => ({
+        href: ARR_LIBRARY_ROUTE[type],
+        key: ARR_UI[type].navLabelKey,
+        icon: ARR_UI[type].Icon,
+      }),
+    ),
+    ...SECONDARY_LINKS,
+  ];
   const visibleLinks = excludeKeys
     ? links.filter((l) => !excludeKeys.has(l.key))
     : links;

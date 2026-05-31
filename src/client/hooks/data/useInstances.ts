@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/client/lib/api";
 import { queryKeys } from "@/client/lib/query-keys";
+import { ALL_ARR_TYPES } from "@/shared/arr-meta";
 import type { ArrType } from "@/shared/types/models";
 import type {
   CreateInstanceDto,
@@ -14,6 +15,20 @@ export function useInstances() {
     queryKey: queryKeys.instances(),
     queryFn: () => api.get<PublicInstance[]>("/instances"),
   });
+}
+
+// Arr types that have at least one configured instance, in canonical
+// ARR_META order. Drives the per-arr UI surfaces (nav, command palette,
+// mobile tab bar, dashboard KPIs) so a Radarr-only user doesn't see a
+// phantom Shows tab (#53). While instances are still loading or none
+// exist yet (first run), returns ALL supported types — hiding everything
+// during onboarding would leave an empty husk, and the no-instances
+// prompts already guide the user to add one.
+export function useConfiguredArrTypes(): ArrType[] {
+  const { data: instances } = useInstances();
+  if (!instances || instances.length === 0) return ALL_ARR_TYPES;
+  const present = new Set(instances.map((i) => i.type));
+  return ALL_ARR_TYPES.filter((t) => present.has(t));
 }
 
 export function useCreateInstance() {
