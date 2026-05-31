@@ -5,6 +5,8 @@ import { api, ApiClientError } from "@/client/lib/api";
 interface Vars {
   currentPassword: string;
   newPassword: string;
+  // Sent so the server can enforce the confirmation match (not just the UI).
+  confirmPassword: string;
 }
 
 // Mutation throws ApiClientError on failure (status, code, traceId

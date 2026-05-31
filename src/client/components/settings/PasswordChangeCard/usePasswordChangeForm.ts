@@ -36,7 +36,11 @@ export function usePasswordChangeForm() {
     if (next === current) return setErrors({ form: t("sameAsCurrent") });
     setErrors({});
     try {
-      await changeWithToast({ currentPassword: current, newPassword: next });
+      await changeWithToast({
+        currentPassword: current,
+        newPassword: next,
+        confirmPassword: confirm,
+      });
       setCurrent("");
       setNext("");
       setConfirm("");

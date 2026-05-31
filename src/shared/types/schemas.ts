@@ -9,10 +9,19 @@ export const credentialsSchema = z.object({
   password: z.string().min(12).max(256),
 });
 
-export const passwordChangeSchema = z.object({
-  currentPassword: z.string().min(1).max(256),
-  newPassword: z.string().min(12).max(256),
-});
+export const passwordChangeSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(256),
+    newPassword: z.string().min(12).max(256),
+    // Confirmation is enforced server-side, not just in the UI: a non-browser
+    // caller (curl / X-Api-Key / extension) could otherwise change the password
+    // to an unconfirmed value and lock the user out (no recovery flow exists).
+    confirmPassword: z.string().min(12).max(256),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: "New password and confirmation must match",
+    path: ["confirmPassword"],
+  });
 
 const autoSearchFields = {
   autoSearchEnabled: z.boolean().optional(),
