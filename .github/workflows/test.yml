@@ -14,33 +14,77 @@ name: test
 # RUNNER_LABEL=self-hosted permanently, even after the repo is public.
 # ──────────────────────────────────────────────────────────────────────
 
+# Triggers do NOT use `paths-ignore`. A workflow skipped by a path filter
+# leaves its required checks ("lint + tsc + vitest", "playwright") stuck
+# Pending forever, so a docs-only PR can never satisfy the branch ruleset
+# and is unmergeable. Instead the `changes` job below classifies the diff
+# and the heavy jobs gate on it via `if:` — a job skipped by a conditional
+# reports Success, which DOES satisfy a required check. So docs-only PRs go
+# green instantly with zero heavy CI, mixed code+docs PRs run the real
+# suite, and there's no second "no-op" workflow that could shadow a real
+# failing check. (GitHub docs: "Troubleshooting required status checks".)
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "**.md"
-      - "plans/**"
-      - ".vscode/**"
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths-ignore:
-      - "**.md"
-      - "plans/**"
-      - ".vscode/**"
-      # messages/** is NOT ignored — `yarn lint` runs prettier on
-      # messages/*.json, and the app imports messages/en.json at
-      # runtime via src/i18n/request.ts. Skipping CI on
-      # message-only changes would let invalid JSON or stray keys
-      # ship undetected.
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # Classifies the PR/push diff into "code changed" vs "docs-only". Always
+  # runs (never required), and its output gates the two required jobs.
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Full history so the PR merge-base resolves for the diff below.
+          fetch-depth: 0
+      - id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "pull_request" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_REF"
+            base="$(git merge-base "origin/$BASE_REF" HEAD)"
+            files="$(git diff --name-only "$base" HEAD)"
+          elif [ -n "${BEFORE:-}" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE" 2>/dev/null; then
+            files="$(git diff --name-only "$BEFORE" "$SHA")"
+          else
+            # New branch / unknown base (force-push, first push): can't diff
+            # reliably, so run the full suite rather than risk skipping it.
+            files=""
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "Unknown base — defaulting to code=true"; exit 0
+          fi
+          echo "Changed files:"; printf '%s\n' "$files"
+          # Doc-inert paths (mirrors the former paths-ignore list). A file
+          # outside these counts as code and triggers the full suite.
+          # messages/** is deliberately NOT inert: `yarn lint` prettier-checks
+          # messages/*.json and the app imports messages/en.json at runtime,
+          # so a message-only change must run CI.
+          if printf '%s\n' "$files" | grep -qvE '(\.md$|^plans/|^\.vscode/|^$)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
   unit:
     name: lint + tsc + vitest
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ${{ github.actor == 'iHunterX' && (vars.RUNNER_LABEL || 'ubuntu-latest') || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
@@ -76,14 +120,17 @@ jobs:
 
   e2e:
     name: playwright
+    needs: changes
     runs-on: ${{ github.actor == 'iHunterX' && (vars.RUNNER_LABEL || 'ubuntu-latest') || 'ubuntu-latest' }}
     timeout-minutes: 15
     # PR-only: e2e gates the merge, so it runs on PRs (skipping drafts to
     # save minutes during in-flight iteration; it picks up when the PR is
     # marked ready_for_review). The post-merge push to main skips e2e —
     # the same tree already passed it on the PR — keeping main's CI a fast
-    # lint + tsc + vitest health signal.
-    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    # lint + tsc + vitest health signal. Also skipped on docs-only PRs
+    # (changes.code == 'false') — a conditional-skip reports Success, so the
+    # required "playwright" check is satisfied without running the suite.
+    if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request' && github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-deps
@@ -114,3 +161,39 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Single required status check. The `main` ruleset requires ONLY this
+  # job, not `unit`/`e2e` directly — so adding/renaming CI jobs never
+  # needs a ruleset edit, and the pass/fail decision is made explicitly
+  # here rather than relying on GitHub's skipped-reports-success behavior.
+  # `if: always()` so it runs even when the gated jobs are skipped
+  # (docs-only PR) or one fails; it then inspects their results:
+  #   - changes must succeed (the classifier itself must be healthy)
+  #   - unit/e2e must each be success OR skipped (skipped = docs-only or
+  #     draft, which is legitimately fine) — anything else (failure,
+  #     cancelled) fails the gate.
+  ci-success:
+    name: ci-success
+    needs: [changes, unit, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify gated jobs passed or were skipped
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          UNIT: ${{ needs.unit.result }}
+          E2E: ${{ needs.e2e.result }}
+        run: |
+          set -euo pipefail
+          echo "changes=$CHANGES unit=$UNIT e2e=$E2E"
+          if [ "$CHANGES" != "success" ]; then
+            echo "::error::changes (diff classifier) did not succeed"; exit 1
+          fi
+          for r in "$UNIT" "$E2E"; do
+            case "$r" in
+              success | skipped) ;;
+              *) echo "::error::a gated job did not pass (unit=$UNIT e2e=$E2E)"; exit 1 ;;
+            esac
+          done
+          echo "All gated jobs passed or were legitimately skipped."
