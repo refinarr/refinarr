@@ -19,7 +19,7 @@ vi.mock("@/server/lib/app-logger", () => ({
   },
 }));
 
-import { createApiHandler } from "@/server/lib/handler";
+import { createApiHandler, READ_CACHE } from "@/server/lib/handler";
 import {
   badRequest,
   parseJson,
@@ -45,6 +45,35 @@ describe("createApiHandler", () => {
     expect(res.headers.get("X-Trace-Id")).toBeTruthy();
     const body = await res.json();
     expect(body).toEqual({ ok: true });
+  });
+
+  test("sets Cache-Control on a 2xx response when cacheControl opted in", async () => {
+    const handler = createApiHandler(
+      async () => NextResponse.json({ ok: true }, { status: 200 }),
+      { cacheControl: READ_CACHE },
+    );
+    const res = await handler(makeReq(), makeCtx());
+    expect(res.headers.get("Cache-Control")).toBe(READ_CACHE);
+  });
+
+  test("does NOT set Cache-Control when not opted in", async () => {
+    const handler = createApiHandler(async () =>
+      NextResponse.json({ ok: true }, { status: 200 }),
+    );
+    const res = await handler(makeReq(), makeCtx());
+    expect(res.headers.get("Cache-Control")).toBeNull();
+  });
+
+  test("does NOT cache an error response even when cacheControl opted in", async () => {
+    const handler = createApiHandler(
+      async () => {
+        throw badRequest("nope");
+      },
+      { cacheControl: READ_CACHE },
+    );
+    const res = await handler(makeReq(), makeCtx());
+    expect(res.status).toBe(400);
+    expect(res.headers.get("Cache-Control")).toBeNull();
   });
 
   test("UnsafeUrlError from handler returns 400", async () => {

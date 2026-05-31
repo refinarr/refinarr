@@ -17,7 +17,26 @@ type RouteHandler = (
   ctx: ResolvedCtx,
 ) => Promise<NextResponse>;
 
-export function createApiHandler(handler: RouteHandler) {
+interface HandlerOptions {
+  // Opt-in `Cache-Control` for safe GET reads. Applied ONLY to 2xx
+  // responses (errors return via handleApiError, which never sets it),
+  // so a failed fetch is never cached. Use `READ_CACHE` for the standard
+  // short revalidate window. NEVER set this on mutations, auth, SSE, or
+  // anything returning per-request-sensitive data.
+  cacheControl?: string;
+}
+
+// Authenticated, per-user/per-instance reads → `private` (a shared proxy
+// must not cache+cross-serve them). `max-age=0` forces revalidation, but
+// `stale-while-revalidate=30` lets the browser paint instantly from cache
+// on reload/new-tab then refresh in the background — the actual perf win,
+// with the stale window bounded to 30s.
+export const READ_CACHE = "private, max-age=0, stale-while-revalidate=30";
+
+export function createApiHandler(
+  handler: RouteHandler,
+  options: HandlerOptions = {},
+) {
   return async (req: NextRequest, ctx?: RouteContext) => {
     // Reuse the traceId the proxy minted (forwarded as `x-trace-id`)
     // so a single request has one ID across edge + handler logs. Falls
@@ -37,6 +56,10 @@ export function createApiHandler(handler: RouteHandler) {
       const resolvedParams = ctx?.params ? await ctx.params : {};
       const res = await handler(req, { params: resolvedParams });
       res.headers.set("X-Trace-Id", traceId);
+      // Only cache successful reads; errors must always re-hit the origin.
+      if (options.cacheControl && res.ok) {
+        res.headers.set("Cache-Control", options.cacheControl);
+      }
       return res;
     } catch (err) {
       return handleApiError(err, traceId, requestContext);
