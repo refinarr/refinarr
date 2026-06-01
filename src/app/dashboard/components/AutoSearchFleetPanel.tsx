@@ -110,7 +110,7 @@ function FleetRow({ instance, status }: RowProps) {
       <div className="flex shrink-0 items-center gap-1">
         <Link
           href={`/logs?source=auto-run&instanceId=${instance.id}`}
-          className="text-muted-foreground hover:text-foreground px-2 text-xs underline-offset-2 hover:underline"
+          className="text-muted-foreground hover:text-foreground inline-flex items-center px-2 text-xs underline-offset-2 hover:underline pointer-coarse:min-h-11"
         >
           {t("viewRuns")}
         </Link>
