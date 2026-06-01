@@ -6,6 +6,7 @@
     "postinstall": "prisma generate && (simple-git-hooks || true)",
     "dev": "next dev -p 7272",
     "build": "next build",
+    "analyze": "ANALYZE=true next build",
     "start": "next start -p 7272",
     "lint": "prettier --check \"src/**/*.{ts,tsx}\" \"e2e/**/*.ts\" \"messages/**/*.json\" \"*.{json,mjs,ts}\" && eslint",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"e2e/**/*.ts\" \"messages/**/*.json\" \"*.{json,mjs,ts}\"",
@@ -52,6 +53,7 @@
     "zod": "^4.4.1"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.6",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",
