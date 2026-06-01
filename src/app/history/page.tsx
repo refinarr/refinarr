@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { HistoryTable } from "@/client/components/history/HistoryTable";
 import { HistoryTableSkeleton } from "@/client/components/history/HistoryTableSkeleton";
+import { HistoryFiltersSkeleton } from "@/client/components/history/HistoryFiltersSkeleton";
 import { EmptyLogs } from "@/client/components/states/EmptyLogs";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
 import {
@@ -216,7 +217,17 @@ export default function HistoryPage() {
               {t("subtitle")}
             </p>
           </div>
-          <Suspense fallback={<HistoryTableSkeleton />}>
+          <Suspense
+            fallback={
+              // Mirror HistoryContent's own layout (filter bar + table) so the
+              // filter bar doesn't pop in above the skeleton when the
+              // useSearchParams() suspense resolves on hydration.
+              <div className="space-y-4">
+                <HistoryFiltersSkeleton />
+                <HistoryTableSkeleton />
+              </div>
+            }
+          >
             <HistoryContent />
           </Suspense>
         </div>
