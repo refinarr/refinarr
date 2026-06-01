@@ -19,8 +19,11 @@ interface Props {
 
 // Mirrors HistoryTable's 5-column shadcn layout (date / action / title /
 // status / retry) so the swap from skeleton → rows doesn't reflow. Uses
-// the same Table primitives, so row height tracks the real table.
-export function HistoryTableSkeleton({ rows = 10, header = true }: Props) {
+// the same Table primitives, so row height tracks the real table. Default
+// fills the fold (page size is 50): once the skeleton is taller than the
+// viewport, the skeleton → 50-row swap happens below the fold, so it costs
+// no visible layout shift.
+export function HistoryTableSkeleton({ rows = 20, header = true }: Props) {
   return (
     <Table>
       {header && (
