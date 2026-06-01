@@ -14,7 +14,7 @@ export function RecentActivityListSkeleton() {
       </CardHeader>
       <CardContent>
         <ul className="divide-y">
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: 10 }).map((_, i) => (
             <li key={i} className="flex items-center gap-3 py-2">
               <Skeleton className="h-5 w-20 shrink-0" />
               <Skeleton className="h-5 w-24 shrink-0" />

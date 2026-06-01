@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
+import { Skeleton } from "@/client/components/ui/skeleton";
 import { KpiCard } from "@/client/components/dashboard/KpiCard";
 import { InstanceSummaryCard } from "@/client/components/dashboard/InstanceSummaryCard";
 import { RecentActivityList } from "@/client/components/dashboard/RecentActivityList";
@@ -61,6 +62,11 @@ export default function DashboardPage() {
   const autoSearchCount = (instances ?? []).filter(
     (i) => i.autoSearchEnabled,
   ).length;
+  // On a cold load the instance list is still undefined at first paint, so
+  // fall back to 2 (the canonical radarr+sonarr setup) — rendering zero
+  // skeleton cards is what let the grid grow ~2 cards' height when the
+  // summary resolved and shoved the activity list down (~289px shift).
+  const instanceSkeletonCount = instances?.length ?? 2;
 
   return (
     <AppShell>
@@ -74,13 +80,18 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {config && (
+              {config ? (
                 <Badge
                   size="md"
                   variant={config.dryRun ? "outline" : "destructive"}
                 >
                   {config.dryRun ? tDryRun("badgeOn") : tDryRun("badgeOff")}
                 </Badge>
+              ) : (
+                // Reserve the badge's footprint so it doesn't pop in when
+                // useConfig() resolves and shove the button left (top-of-page
+                // shift = highest CLS impact). Matches the md badge height.
+                <Skeleton className="h-control-xs w-24 rounded-4xl" />
               )}
               <Button
                 variant="outline"
@@ -141,8 +152,8 @@ export default function DashboardPage() {
             <h2 className="mb-3 text-lg font-semibold">{t("instances")}</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {loadingSummary
-                ? (instances ?? []).map((inst) => (
-                    <InstanceSummaryCardSkeleton key={inst.id} />
+                ? Array.from({ length: instanceSkeletonCount }).map((_, i) => (
+                    <InstanceSummaryCardSkeleton key={i} />
                   ))
                 : (summary?.perInstance ?? []).map((inst) => (
                     <InstanceSummaryCard key={inst.id} instance={inst} />
