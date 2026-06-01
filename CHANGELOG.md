@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.2](https://github.com/refinarr/refinarr/compare/v0.6.1...v0.6.2) (2026-06-01)
+
+
+### Bug Fixes
+
+* **ui:** eliminate cold-load layout shift — sidebar shell + dashboard + history ([#75](https://github.com/refinarr/refinarr/issues/75)) ([3878144](https://github.com/refinarr/refinarr/commit/3878144182e4c5fca9531efd7c8dc62c47705d33))
+* **ui:** meet 44pt touch targets on mobile ([#89](https://github.com/refinarr/refinarr/issues/89)) ([3022f2d](https://github.com/refinarr/refinarr/commit/3022f2dcdc781166f6a9a0bf822178e06188eb62))
+
 ## [0.6.1](https://github.com/refinarr/refinarr/compare/v0.6.0...v0.6.1) (2026-05-31)
 
 
