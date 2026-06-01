@@ -4,12 +4,11 @@ import { useVirtList } from "@/client/hooks/ui/useVirtList";
 import { MediaCard } from "./MediaCard";
 import { MediaCardSkeleton } from "./MediaCardSkeleton";
 
-// Real cards measure ~150–170px (title row 24, score row 24, optional
-// CF badge 24, actions row 32, p-3 padding 24, border 2, pb-card-gap 8).
-// Picking an estimate close to the real value keeps the cumulative
-// translateY in sync during fast scroll — under-estimating bunches
-// unmeasured rows on top of already-measured ones until virt catches up.
-const CARD_HEIGHT_ESTIMATE_PX = 156;
+// Compact cards measure ~80–110px (title row 24, meta row 18, optional
+// CF row ~24, p-3 padding 24, border 2, pb-card-gap 8 — the old actions
+// footer is gone). Estimate near the real value so cumulative translateY
+// stays in sync during fast scroll; virt still measures actual height.
+const CARD_HEIGHT_ESTIMATE_PX = 96;
 
 function pickCardOverscan(count: number): number {
   if (count > 5000) return 3;
@@ -74,7 +73,7 @@ export function MediaCardList<T extends { id: number }>({
       className="relative flex min-h-0 flex-1 flex-col overflow-auto p-3"
     >
       {/*
-        max-w-3xl + mx-auto: keeps the card column centered on wide
+        max-w-5xl + mx-auto: keeps the card column centered on wide
         viewports (desktop "card" mode) so cards don't stretch the
         entire width. w-full keeps it filling at mobile widths.
       */}
@@ -83,8 +82,8 @@ export function MediaCardList<T extends { id: number }>({
         data-testid="media-card-list"
         className={
           virtEnabled
-            ? "mx-auto w-full max-w-3xl"
-            : "gap-card-gap mx-auto flex w-full max-w-3xl flex-col"
+            ? "mx-auto w-full max-w-5xl"
+            : "gap-card-gap mx-auto flex w-full max-w-5xl flex-col"
         }
         style={containerStyle}
       >

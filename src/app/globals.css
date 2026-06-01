@@ -104,7 +104,7 @@
   --spacing-row-compact: 2.25rem; /* compact MediaTable row (~36px) */
   --spacing-row-cozy: 3rem; /* cozy MediaTable row (~48px, default) */
   --spacing-card-gap: 0.5rem; /* inter-card spacing in mobile MediaCard list (~8px) */
-  --spacing-card-min: 9.75rem; /* virtualizer estimate / skeleton min height for mobile cards (~156px to match the rendered card with actions row) */
+  --spacing-card-min: 6rem; /* skeleton min height for the compact MediaCard (~96px; no actions footer) — keep in sync with CARD_HEIGHT_ESTIMATE_PX */
 }
 
 /* First-paint safety: surface is keyed on the .dark class (toggled by

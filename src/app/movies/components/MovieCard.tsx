@@ -1,11 +1,11 @@
+import { cn } from "@/client/lib/utils";
 import { CfScoreList } from "@/client/components/common/CfScoreList";
-import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { SearchStatusBadge } from "@/client/components/media/SearchStatusBadge";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
 import { formatBytes } from "@/client/lib/format";
 import { formatRelative } from "@/client/lib/format-relative";
-import { getSeverity } from "@/client/lib/severity";
+import { getSeverity, severityTextClass } from "@/client/lib/severity";
 import { ISSUES_FOR, SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
 import type { MovieItem } from "@/shared/types/models";
 
@@ -20,46 +20,54 @@ export function MovieCard({ item, ctx }: Props) {
   const issues = ISSUES_FOR[scoringMode](item);
   const recent = !queuedIds.has(item.id) ? recentMap.get(item.id) : undefined;
   const profile = isProfileMode(scoringMode);
+  const severity = getSeverity(
+    score,
+    item.minProfileScore,
+    scoringMode,
+    item.hasFile,
+  );
+  const noFileScore = profile && !item.hasFile;
+  let scoreText: string;
+  if (noFileScore) scoreText = t("noFile");
+  else if (item.minProfileScore !== undefined)
+    scoreText = `${score} / ${item.minProfileScore}`;
+  else scoreText = `${Math.round(score * 100)}%`;
 
   return (
-    <div className="space-y-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <SeverityDot
-          severity={getSeverity(
-            score,
-            item.minProfileScore,
-            scoringMode,
-            item.hasFile,
+    <div className="space-y-1.5">
+      <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+          <SeverityDot severity={severity} />
+          <span className="truncate font-medium">{item.title}</span>
+          <span className="text-muted-foreground shrink-0 text-xs">
+            {item.year}
+          </span>
+          {queuedIds.has(item.id) && (
+            <SearchStatusBadge status="pending" instanceId={activeInstance} />
           )}
-        />
-        <span className="truncate font-medium">{item.title}</span>
-        <span className="text-muted-foreground shrink-0 text-xs">
-          {item.year}
+          {recent && (
+            <SearchStatusBadge
+              status="searched"
+              instanceId={activeInstance}
+              title={item.title}
+              relativeTime={formatRelative(recent, tTime)}
+            />
+          )}
+        </div>
+        {/* Prominent, severity-colored score — the card's key metric. */}
+        <span
+          className={cn(
+            "shrink-0 text-sm font-semibold tabular-nums",
+            severityTextClass[severity],
+          )}
+        >
+          {scoreText}
         </span>
-        {queuedIds.has(item.id) && (
-          <SearchStatusBadge status="pending" instanceId={activeInstance} />
-        )}
-        {recent && (
-          <SearchStatusBadge
-            status="searched"
-            instanceId={activeInstance}
-            title={item.title}
-            relativeTime={formatRelative(recent, tTime)}
-          />
-        )}
       </div>
-      <div className="text-muted-foreground flex items-center gap-3 text-xs">
-        {profile && !item.hasFile ? (
-          <span>{t("noFile")}</span>
-        ) : (
-          <ScoreLabel score={score} minProfileScore={item.minProfileScore} />
-        )}
+      <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
         <span className="tabular-nums">{formatBytes(item.sizeOnDisk)}</span>
+        {!profile && !item.hasFile && <span>{t("noFile")}</span>}
       </div>
-      {/* CF detail: show the flagged formats WITH their scores (profile
-          penalties render as "name −X" in red; manual missing render
-          line-through), via the shared list's wrap + collapse — richer
-          than the old name-only badges capped at 3. */}
       {issues.length > 0 && (
         <CfScoreList
           formats={profile ? issues : []}
