@@ -32,6 +32,26 @@ yarn build          # production build — catches RSC boundary violations
 
 CI runs all of the above. Coverage threshold is 85% on `lines/branches/functions/statements` for `server/lib/**`, `server/repositories/**`, `server/services/**`, `client/lib/**`, and `shared/**`.
 
+## Issues + tracking
+
+- **Non-trivial work needs an issue before code starts** — features, bug fixes, investigations, multi-step QA. Trivial ops (restart a container, run a one-off test) don't.
+- File it with the **Task** template. The title is short and action-oriented: "Fix CLS on Dashboard", not "Dashboard problem".
+- **Labels:**
+  - `type:bug` | `type:feature` | `type:chore` | `type:investigation`
+  - `area:<subsystem>` — e.g. `area:dashboard`, `area:radarr-sync`
+  - optional `priority:p0` | `priority:p1` | `priority:p2`
+  - existing labels (e.g. `qa-phase-4`) stay valid alongside these.
+- **The description is the contract; comments are the log.** Decisions, partial findings, and blockers go in issue **comments** — don't mutate the original description.
+- **Link the issue from the PR:** `Closes #N` when the PR completes it, `Refs #N` when it's progress, not completion. Reviewers get the scope without scrolling chat.
+- **Cross-link Discord ↔ issue:** when a chat thread becomes a real task, file the issue and paste its URL into Discord; paste meaningful Discord conclusions back as issue comments.
+
+### Two agents in this repo
+
+- **Forge** — OpenClaw assistant on the gateway (Discord identity **ClawChat**), full filesystem access at `/projects/refinarr`; handles infra/QA.
+- **VSCC** — Mac-side Claude Code via the openclaw MCP bridge (Discord **ClaudeCode** bot, `[claude-code]` prefix); handles code/PR/release.
+
+When you take an issue, **assign it to your own GitHub account**; Forge assigns to its own for infra/QA. **Don't both work the same issue in parallel** without coordinating in a comment first.
+
 ## Branching + PRs
 
 - All PRs target the **`main`** branch (single-branch GitHub Flow)
