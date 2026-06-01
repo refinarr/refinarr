@@ -1,4 +1,4 @@
-import { CfBadge } from "@/client/components/common/CfBadge";
+import { CfScoreList } from "@/client/components/common/CfScoreList";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { SearchStatusBadge } from "@/client/components/media/SearchStatusBadge";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
@@ -19,9 +19,10 @@ export function MovieCard({ item, ctx }: Props) {
   const score = SCORE_FOR[scoringMode](item);
   const issues = ISSUES_FOR[scoringMode](item);
   const recent = !queuedIds.has(item.id) ? recentMap.get(item.id) : undefined;
+  const profile = isProfileMode(scoringMode);
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <SeverityDot
           severity={getSeverity(
@@ -48,24 +49,22 @@ export function MovieCard({ item, ctx }: Props) {
         )}
       </div>
       <div className="text-muted-foreground flex items-center gap-3 text-xs">
-        {isProfileMode(scoringMode) && !item.hasFile ? (
+        {profile && !item.hasFile ? (
           <span>{t("noFile")}</span>
         ) : (
           <ScoreLabel score={score} minProfileScore={item.minProfileScore} />
         )}
         <span className="tabular-nums">{formatBytes(item.sizeOnDisk)}</span>
       </div>
+      {/* CF detail: show the flagged formats WITH their scores (profile
+          penalties render as "name −X" in red; manual missing render
+          line-through), via the shared list's wrap + collapse — richer
+          than the old name-only badges capped at 3. */}
       {issues.length > 0 && (
-        <div className="flex flex-wrap gap-1 pt-0.5">
-          {issues.slice(0, 3).map((cf) => (
-            <CfBadge key={cf.id} name={cf.name} missing />
-          ))}
-          {issues.length > 3 && (
-            <span className="text-muted-foreground text-xs">
-              +{issues.length - 3}
-            </span>
-          )}
-        </div>
+        <CfScoreList
+          formats={profile ? issues : []}
+          missingFormats={profile ? [] : issues}
+        />
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { CfBadge } from "@/client/components/common/CfBadge";
+import { CfScoreList } from "@/client/components/common/CfScoreList";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
@@ -17,9 +17,10 @@ export function SeriesCard({ item, ctx }: Props) {
   const score = SCORE_FOR[scoringMode](item);
   const hasFile = item.episodeFiles.length > 0;
   const issues = ISSUES_FOR[scoringMode](item);
+  const profile = isProfileMode(scoringMode);
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <div className="flex min-w-0 items-center gap-2">
         <SeverityDot
           severity={getSeverity(
@@ -35,7 +36,7 @@ export function SeriesCard({ item, ctx }: Props) {
         </span>
       </div>
       <div className="text-muted-foreground flex items-center gap-3 text-xs">
-        {isProfileMode(scoringMode) && !hasFile ? (
+        {profile && !hasFile ? (
           <span>{t("noFile")}</span>
         ) : (
           <ScoreLabel score={score} minProfileScore={item.minProfileScore} />
@@ -48,17 +49,12 @@ export function SeriesCard({ item, ctx }: Props) {
           })}
         </span>
       </div>
+      {/* CF detail with scores via the shared list (see MovieCard). */}
       {issues.length > 0 && (
-        <div className="flex flex-wrap gap-1 pt-0.5">
-          {issues.slice(0, 3).map((cf) => (
-            <CfBadge key={cf.id} name={cf.name} missing />
-          ))}
-          {issues.length > 3 && (
-            <span className="text-muted-foreground text-xs">
-              +{issues.length - 3}
-            </span>
-          )}
-        </div>
+        <CfScoreList
+          formats={profile ? issues : []}
+          missingFormats={profile ? [] : issues}
+        />
       )}
     </div>
   );
