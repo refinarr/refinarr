@@ -110,8 +110,10 @@ export function MediaCard<T extends { id: number }>({
       )}
     >
       {swipeEnabled && (
-        // row-reverse → Search (info) lands on the right for easy thumb
-        // reach and peeks first; Ignore (critical) sits deeper.
+        // row-reverse → Search lands on the right for easy thumb reach and
+        // peeks first; Ignore sits deeper. On-theme: Search uses the brand
+        // accent (primary), Ignore the neutral secondary — matching the
+        // app's convention (red is reserved for delete, not shown here).
         <div
           className="absolute inset-y-0 right-0 flex flex-row-reverse"
           style={{ width: REVEAL_PX }}
@@ -122,7 +124,7 @@ export function MediaCard<T extends { id: number }>({
             tabIndex={isOpen ? 0 : -1}
             aria-label={t("search")}
             onClick={() => runAction(swipeActions!.onSearch)}
-            className="bg-info text-info-foreground flex w-16 flex-col items-center justify-center gap-1 text-xs font-medium"
+            className="bg-brand text-foreground-on-brand flex w-16 flex-col items-center justify-center gap-1 text-xs font-medium"
           >
             <Search className="size-5" aria-hidden />
             {t("search")}
@@ -132,7 +134,7 @@ export function MediaCard<T extends { id: number }>({
             tabIndex={isOpen ? 0 : -1}
             aria-label={t("ignore")}
             onClick={() => runAction(swipeActions!.onIgnore)}
-            className="bg-critical text-critical-foreground flex w-16 flex-col items-center justify-center gap-1 text-xs font-medium"
+            className="bg-secondary text-secondary-foreground flex w-16 flex-col items-center justify-center gap-1 text-xs font-medium"
           >
             <EyeOff className="size-5" aria-hidden />
             {t("ignore")}
