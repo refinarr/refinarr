@@ -55,8 +55,13 @@ export function MediaCard<T extends { id: number }>({
   const isMobile = useIsMobile();
   const reduceMotion = usePrefersReducedMotion();
 
-  // Swipe is phone-only, needs handlers, and yields while selecting.
-  const swipeEnabled = isMobile && !!swipeActions && !selectionActive;
+  // A phone card whose actions come from swipe (not the inline icons).
+  // The inline icons are gated on this — NOT on swipeEnabled — so they
+  // never pop in when selection turns the gesture off (that flip was a
+  // layout shift). swipeEnabled gates the live gesture: phone-only, has
+  // handlers, and yields while selecting (bulk bar owns actions then).
+  const swipeCapable = isMobile && !!swipeActions;
+  const swipeEnabled = swipeCapable && !selectionActive;
   const { offset, isOpen, isDragging, close, wasDragRef, surfaceProps } =
     useSwipeReveal({ enabled: swipeEnabled, revealWidth: REVEAL_PX });
 
@@ -97,10 +102,10 @@ export function MediaCard<T extends { id: number }>({
     <li
       className={cn(
         "bg-card relative rounded-lg border",
-        // Clip the left overflow + the action panel only while swipe is
-        // active; on desktop keep overflow visible so the focus glow isn't
-        // clipped.
-        swipeEnabled && "overflow-hidden",
+        // Clip the left overflow + the action panel on phone swipe-cards;
+        // on desktop keep overflow visible so the focus glow isn't clipped.
+        // Gated on swipeCapable (stable) so selection doesn't toggle it.
+        swipeCapable && "overflow-hidden",
         focused && "media-row-focused",
       )}
     >
@@ -154,9 +159,11 @@ export function MediaCard<T extends { id: number }>({
         </span>
         <div className="min-w-0 flex-1">{renderCard(row)}</div>
         <div className="flex shrink-0 items-center gap-0.5 self-center">
-          {/* Swipe replaces the inline actions on phones; keep them for
-              desktop hover + tablet pointer-coarse. */}
-          {!swipeEnabled && actions && (
+          {/* Swipe replaces the inline actions on phone swipe-cards (even
+              during selection — the bulk bar owns actions then), so they
+              never pop in and shift layout. Kept for desktop hover +
+              tablet pointer-coarse. */}
+          {!swipeCapable && actions && (
             <span
               className="flex items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100"
               onClick={(e) => e.stopPropagation()}

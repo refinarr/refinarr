@@ -97,6 +97,16 @@ describe("MediaCard swipe-to-reveal (phone)", () => {
       screen.queryByRole("button", { name: "Search" }),
     ).not.toBeInTheDocument();
   });
+
+  it("never renders inline actions on a swipe-card, even during selection (no layout shift on select)", () => {
+    renderCard({
+      selectionActive: true,
+      actions: <button type="button">inline-action</button>,
+    });
+    // The inline icons must not appear when selection toggles swipe off —
+    // that pop-in was the layout shift; the bulk bar owns actions instead.
+    expect(screen.queryByText("inline-action")).not.toBeInTheDocument();
+  });
 });
 
 describe("MediaCard swipe-to-reveal (desktop)", () => {
