@@ -64,6 +64,8 @@
     "viewShowAll": "All media",
     "viewToggleHint": "Toggle showing all media (not just flagged) for this instance",
     "moreCount": "+{count} more",
+    "penaltyCount": "{count, plural, one {# penalty} other {# penalties}}",
+    "missingCount": "{count, plural, one {# missing format} other {# missing formats}}",
     "on": "On",
     "off": "Off",
     "expand": "Expand",
