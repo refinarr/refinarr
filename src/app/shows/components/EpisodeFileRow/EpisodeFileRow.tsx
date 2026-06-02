@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import { Search, Trash2 } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
-import { CfScoreList } from "@/client/components/common/CfScoreList";
+import { CfBreakdown } from "@/client/components/common/CfBreakdown";
 import { isProfileMode } from "@/shared/scoring-mode";
 import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
 import { filename } from "../utils";
@@ -72,8 +72,8 @@ export function EpisodeFileRow({
           </div>
         </div>
       </div>
-      <CfScoreList
-        formats={file.customFormats}
+      <CfBreakdown
+        customFormats={file.customFormats}
         missingFormats={file.missingFormats}
       />
     </div>

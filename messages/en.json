@@ -66,6 +66,8 @@
     "moreCount": "+{count} more",
     "penaltyCount": "{count, plural, one {# penalty} other {# penalties}}",
     "missingCount": "{count, plural, one {# missing format} other {# missing formats}}",
+    "currentFormats": "Current formats",
+    "missingFormats": "Missing",
     "on": "On",
     "off": "Off",
     "expand": "Expand",
