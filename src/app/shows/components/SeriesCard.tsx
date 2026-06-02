@@ -1,9 +1,9 @@
-import { CfBadge } from "@/client/components/common/CfBadge";
-import { ScoreLabel } from "@/client/components/common/ScoreLabel";
+import { useTranslations } from "next-intl";
+import { cn } from "@/client/lib/utils";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
 import { formatBytes } from "@/client/lib/format";
-import { getSeverity } from "@/client/lib/severity";
+import { getSeverity, severityTextClass } from "@/client/lib/severity";
 import { ISSUES_FOR, SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
 import type { SeriesItem } from "@/shared/types/models";
 
@@ -14,52 +14,62 @@ interface Props {
 
 export function SeriesCard({ item, ctx }: Props) {
   const { scoringMode, t } = ctx;
+  const tCommon = useTranslations("common");
   const score = SCORE_FOR[scoringMode](item);
   const hasFile = item.episodeFiles.length > 0;
   const issues = ISSUES_FOR[scoringMode](item);
+  const profile = isProfileMode(scoringMode);
+  const severity = getSeverity(
+    score,
+    item.minProfileScore,
+    scoringMode,
+    hasFile,
+  );
+  const noFileScore = profile && !hasFile;
+  let scoreText: string;
+  if (noFileScore) scoreText = t("noFile");
+  else if (item.minProfileScore !== undefined)
+    scoreText = `${score} / ${item.minProfileScore}`;
+  else scoreText = `${Math.round(score * 100)}%`;
 
   return (
     <div className="space-y-1.5">
-      <div className="flex min-w-0 items-center gap-2">
-        <SeverityDot
-          severity={getSeverity(
-            score,
-            item.minProfileScore,
-            scoringMode,
-            hasFile,
+      <div className="flex items-center gap-2">
+        <SeverityDot severity={severity} />
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="min-w-0 truncate font-medium">{item.title}</span>
+          <span className="text-muted-foreground shrink-0 text-xs">
+            {item.year}
+          </span>
+        </div>
+        <span
+          className={cn(
+            "shrink-0 text-sm font-semibold tabular-nums",
+            severityTextClass[severity],
           )}
-        />
-        <span className="truncate font-medium">{item.title}</span>
-        <span className="text-muted-foreground shrink-0 text-xs">
-          {item.year}
+        >
+          {scoreText}
         </span>
       </div>
-      <div className="text-muted-foreground flex items-center gap-3 text-xs">
-        {isProfileMode(scoringMode) && !hasFile ? (
-          <span>{t("noFile")}</span>
-        ) : (
-          <ScoreLabel score={score} minProfileScore={item.minProfileScore} />
-        )}
+      {/* Single meta line keeps every card exactly two rows tall →
+          uniform height, so the virtualizer estimate is exact (no
+          gap/overlap on fast scroll). The CF detail lives in the drawer. */}
+      <div className="text-muted-foreground flex items-center gap-x-2 overflow-hidden text-xs">
         <span className="tabular-nums">{formatBytes(item.sizeOnDisk)}</span>
-        <span className="tabular-nums">
+        <span className="shrink-0 tabular-nums">
           {t("episodeCountShort", {
             affected: item.affectedEpisodeCount,
             total: item.totalEpisodeCount,
           })}
         </span>
+        {issues.length > 0 && (
+          <span className="text-critical/90 shrink-0">
+            {tCommon(profile ? "penaltyCount" : "missingCount", {
+              count: issues.length,
+            })}
+          </span>
+        )}
       </div>
-      {issues.length > 0 && (
-        <div className="flex flex-wrap gap-1 pt-0.5">
-          {issues.slice(0, 3).map((cf) => (
-            <CfBadge key={cf.id} name={cf.name} missing />
-          ))}
-          {issues.length > 3 && (
-            <span className="text-muted-foreground text-xs">
-              +{issues.length - 3}
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 }

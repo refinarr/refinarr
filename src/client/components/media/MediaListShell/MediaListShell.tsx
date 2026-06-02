@@ -29,6 +29,7 @@ import {
   MediaTable,
   type ColumnDef,
 } from "@/client/components/media/MediaTable";
+import { PosterTile } from "@/client/components/media/MediaPosterGrid";
 import { ActiveFilterChips } from "@/client/components/common/ActiveFilterChips";
 import { RowHoverActions } from "@/client/components/common/RowHoverActions";
 import { ScrollToTopButton } from "@/client/components/common/ScrollToTopButton";
@@ -689,7 +690,12 @@ function Body<T extends MediaItem>({ columns, Card, tableId }: BodyProps<T>) {
                 }}
               />
             )}
+            swipeActions={(item) => ({
+              onSearch: () => void ctx.runSearch(item),
+              onIgnore: () => void ctx.runIgnore(item),
+            })}
             renderCard={(item) => <Card item={item} ctx={ctx} />}
+            renderPoster={(item) => <PosterTile item={item} ctx={ctx} />}
           />
         </div>
       )}

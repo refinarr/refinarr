@@ -44,6 +44,14 @@ export function useIsDesktop(): boolean {
   return useMediaQuery("(min-width: 1024px)");
 }
 
+// Phone-sized viewport (≤480px). Distinct from `!useIsDesktop()` (which
+// also covers tablets): touch-first affordances like card swipe-to-reveal
+// activate only at true phone widths so they don't fight a tablet's
+// pointer-coarse hover actions.
+export function useIsMobile(): boolean {
+  return useMediaQuery("(max-width: 480px)");
+}
+
 // Honour the OS-level "reduce motion" accessibility setting. Use this
 // to switch smooth-scroll/animations to instant equivalents — important
 // for users with motion sensitivity (vestibular disorders, etc.).

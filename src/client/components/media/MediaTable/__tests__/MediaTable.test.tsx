@@ -123,6 +123,40 @@ describe("MediaTable", () => {
     expect(onRowClick).not.toHaveBeenCalled();
   });
 
+  it("density=poster renders the poster grid over the table/cards (desktop)", () => {
+    mockMatchMedia(true);
+    render(
+      <MediaTable
+        {...baseProps}
+        density="poster"
+        renderCard={(r) => <span data-testid={`card-${r.id}`}>{r.title}</span>}
+        renderPoster={(r) => (
+          <span data-testid={`poster-${r.id}`}>{r.title}</span>
+        )}
+      />,
+    );
+    expect(screen.getByTestId("media-poster-grid")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("card-1")).not.toBeInTheDocument();
+    expect(screen.getByTestId("poster-1")).toHaveTextContent("Alpha");
+  });
+
+  it("density=poster shows the grid on mobile too (2-col)", () => {
+    mockMatchMedia(false);
+    render(
+      <MediaTable
+        {...baseProps}
+        density="poster"
+        renderCard={(r) => <span data-testid={`card-${r.id}`}>{r.title}</span>}
+        renderPoster={(r) => (
+          <span data-testid={`poster-${r.id}`}>{r.title}</span>
+        )}
+      />,
+    );
+    expect(screen.getByTestId("media-poster-grid")).toBeInTheDocument();
+    expect(screen.queryByTestId("card-1")).not.toBeInTheDocument();
+  });
+
   it("renders meta.filter inline next to the header label", () => {
     const columnsWithFilter: ColumnDef<Row>[] = [
       {

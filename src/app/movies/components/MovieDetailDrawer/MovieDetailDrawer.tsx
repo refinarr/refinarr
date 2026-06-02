@@ -10,7 +10,7 @@ import {
 } from "@/client/components/ui/sheet";
 import { Button } from "@/client/components/ui/button";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
-import { CfScoreList } from "@/client/components/common/CfScoreList";
+import { CfBreakdown } from "@/client/components/common/CfBreakdown";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
 import { getSeverity } from "@/client/lib/severity";
 import { SCORE_FOR } from "@/shared/scoring-mode";
@@ -97,8 +97,8 @@ export function MovieDetailDrawer({
                 );
               if (hasCfs)
                 return (
-                  <CfScoreList
-                    formats={movie.customFormats}
+                  <CfBreakdown
+                    customFormats={movie.customFormats}
                     missingFormats={movie.missingFormats}
                   />
                 );

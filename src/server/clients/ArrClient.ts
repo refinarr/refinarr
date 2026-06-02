@@ -156,17 +156,22 @@ export abstract class ArrClient {
     this.instanceId = instance.id;
   }
 
-  protected async fetch<T>(path: string, init?: RequestInit): Promise<T> {
+  // Raw request scaffolding shared by the JSON `fetch` and the binary
+  // `fetchImage` paths: builds the URL, enforces the 10s ceiling even
+  // when the caller passes its own signal, and acquires a rate-limit
+  // token INSIDE that timeout window (a stuck bucket would otherwise
+  // hang indefinitely before the AbortController is even constructed).
+  //
+  // AbortSignal.any() isn't available until Node 22; for broader
+  // compatibility we compose manually — the timeout fires after
+  // ARR_FETCH_TIMEOUT_MS and a caller abort propagates immediately, with
+  // the timeout cleared either way. Returns the raw Response unchecked;
+  // callers own the !ok handling and body decoding.
+  private async performFetch(
+    path: string,
+    init?: RequestInit,
+  ): Promise<Response> {
     const url = `${this.baseUrl}/api/v3${path}`;
-
-    // Always enforce the 10s ceiling even when the caller passes its own signal.
-    // AbortSignal.any() isn't available until Node 22; for broader compatibility
-    // we compose manually: the timeout fires after ARR_FETCH_TIMEOUT_MS and a
-    // caller abort propagates immediately, with the timeout cleared either way.
-    //
-    // The rate-limiter acquire is INSIDE this timeout window — a stuck token
-    // bucket would otherwise hang fetch indefinitely before the AbortController
-    // is even constructed.
     const ac = new AbortController();
     const timeoutId = setTimeout(
       () => ac.abort(new DOMException("TimeoutError", "TimeoutError")),
@@ -186,15 +191,13 @@ export abstract class ArrClient {
       }
     }
 
-    let res: Response;
     try {
       await arrRateLimiter.acquire(this.instanceId, ac.signal);
-      res = await globalThis.fetch(url, {
+      return await globalThis.fetch(url, {
         ...init,
         signal: ac.signal,
         headers: {
           "X-Api-Key": this.apiKey,
-          "Content-Type": "application/json",
           ...init?.headers,
         },
       });
@@ -203,6 +206,13 @@ export abstract class ArrClient {
       if (onCallerAbort)
         init?.signal?.removeEventListener("abort", onCallerAbort);
     }
+  }
+
+  protected async fetch<T>(path: string, init?: RequestInit): Promise<T> {
+    const res = await this.performFetch(path, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...init?.headers },
+    });
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
@@ -210,7 +220,7 @@ export abstract class ArrClient {
         source: LogSource.ArrClient,
         context: {
           instance: this.instanceName,
-          url,
+          url: `${this.baseUrl}/api/v3${path}`,
           status: res.status,
           body: redactString(text).slice(0, 500),
         },
@@ -225,6 +235,37 @@ export abstract class ArrClient {
     const len = res.headers.get("content-length");
     if (!ct.includes("application/json") || len === "0") return undefined as T;
     return res.json() as Promise<T>;
+  }
+
+  // Binary sibling of `fetch` for image endpoints (poster art). Same
+  // SSRF guard (baseUrl validated in the constructor), rate-limit, and
+  // timeout, but returns the raw Response WITHOUT forcing a JSON
+  // Content-Type or parsing the body — the caller streams `res.body`
+  // and copies the upstream `content-type`. Returns the Response even
+  // on a non-2xx so the caller can map it (e.g. a 404 = "no poster" →
+  // placeholder) rather than throwing.
+  //
+  // NOTE: the 10s timeout bounds the connect + headers phase only (it's
+  // cleared once the Response resolves). Body streaming is unbounded by
+  // this timeout; pass the route's `signal` so a client disconnect
+  // during the header phase still aborts the upstream fetch.
+  protected async fetchImage(
+    path: string,
+    init?: RequestInit,
+  ): Promise<Response> {
+    return this.performFetch(path, init);
+  }
+
+  // Stream a media item's poster art. Both Radarr and Sonarr expose the
+  // same `/mediacover/{id}/poster.jpg` endpoint, so the projection lives
+  // here on the base. The route returns the stream same-origin (CSP
+  // unchanged) behind the auth proxy, with the instance API key never
+  // reaching the browser.
+  async getPosterStream(
+    mediaId: number,
+    init?: RequestInit,
+  ): Promise<Response> {
+    return this.fetchImage(`/mediacover/${mediaId}/poster.jpg`, init);
   }
 
   async testConnection(): Promise<{ ok: boolean; error?: string }> {

@@ -1,15 +1,17 @@
 "use client";
 import { useRef, type ReactNode } from "react";
 import { useVirtList } from "@/client/hooks/ui/useVirtList";
-import { MediaCard } from "./MediaCard";
+import { MediaCard, type SwipeActions } from "./MediaCard";
 import { MediaCardSkeleton } from "./MediaCardSkeleton";
 
-// Real cards measure ~150–170px (title row 24, score row 24, optional
-// CF badge 24, actions row 32, p-3 padding 24, border 2, pb-card-gap 8).
-// Picking an estimate close to the real value keeps the cumulative
-// translateY in sync during fast scroll — under-estimating bunches
-// unmeasured rows on top of already-measured ones until virt catches up.
-const CARD_HEIGHT_ESTIMATE_PX = 156;
+// Every card is exactly two text rows (header + meta) — the CF detail
+// moved to a count on the meta line, so cards no longer vary in height.
+// With a UNIFORM height the estimate is exact: virt can't gap (estimate
+// too tall) or overlap (estimate too short) during a fast flick, which
+// is the trade-off a single estimate forced when card heights differed.
+// ~p-3 shell 26 + header 24 + gap 6 + meta 16 + pb-card-gap 8 ≈ 80–88.
+// Keep in sync with --spacing-card-min in globals.css (skeleton height).
+export const CARD_HEIGHT_ESTIMATE_PX = 84;
 
 function pickCardOverscan(count: number): number {
   if (count > 5000) return 3;
@@ -24,6 +26,9 @@ interface Props<T extends { id: number }> {
   onRowClick: (id: number) => void;
   renderCard: (row: T) => ReactNode;
   rowActions?: (row: T) => ReactNode;
+  // Per-row handlers for the mobile swipe-to-reveal panel. When omitted,
+  // cards fall back to the inline hover actions on every viewport.
+  swipeActions?: (row: T) => SwipeActions;
   fetchNextPage?: () => unknown;
   hasNextPage?: boolean;
   isFetchingNextPage?: boolean;
@@ -44,12 +49,16 @@ export function MediaCardList<T extends { id: number }>({
   onRowClick,
   renderCard,
   rowActions,
+  swipeActions,
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
   focusedId,
 }: Props<T>) {
   const listRef = useRef<HTMLUListElement | null>(null);
+  // Any selection active → suppress swipe so it doesn't fight the
+  // checkbox tap / bulk bar.
+  const selectionActive = selectedIds.size > 0;
 
   const { items, virtEnabled, containerStyle } = useVirtList<T>({
     rows,
@@ -74,7 +83,7 @@ export function MediaCardList<T extends { id: number }>({
       className="relative flex min-h-0 flex-1 flex-col overflow-auto p-3"
     >
       {/*
-        max-w-3xl + mx-auto: keeps the card column centered on wide
+        max-w-5xl + mx-auto: keeps the card column centered on wide
         viewports (desktop "card" mode) so cards don't stretch the
         entire width. w-full keeps it filling at mobile widths.
       */}
@@ -83,8 +92,8 @@ export function MediaCardList<T extends { id: number }>({
         data-testid="media-card-list"
         className={
           virtEnabled
-            ? "mx-auto w-full max-w-3xl"
-            : "gap-card-gap mx-auto flex w-full max-w-3xl flex-col"
+            ? "mx-auto w-full max-w-5xl"
+            : "gap-card-gap mx-auto flex w-full max-w-5xl flex-col"
         }
         style={containerStyle}
       >
@@ -127,6 +136,8 @@ export function MediaCardList<T extends { id: number }>({
                   onRowClick={() => onRowClick(row.id)}
                   renderCard={renderCard}
                   actions={rowActions?.(row)}
+                  swipeActions={swipeActions?.(row)}
+                  selectionActive={selectionActive}
                   focused={isFocused}
                 />
               </div>
@@ -141,6 +152,8 @@ export function MediaCardList<T extends { id: number }>({
                 onRowClick={() => onRowClick(row.id)}
                 renderCard={renderCard}
                 actions={rowActions?.(row)}
+                swipeActions={swipeActions?.(row)}
+                selectionActive={selectionActive}
                 focused={isFocused}
               />
             </div>

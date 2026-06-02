@@ -5,8 +5,8 @@ const STORAGE_KEY = "rfn-density";
 const CHANGE_EVENT = "rfn:density-change";
 
 // "compact"/"cozy" = table row densities; "card" = full card view on
-// desktop (reuses the mobile MediaCardList); "poster" is reserved for
-// a future grid view and not yet in the cycle.
+// desktop (reuses the mobile MediaCardList); "poster" = responsive
+// poster grid (visual browse).
 export type Density = "compact" | "cozy" | "card" | "poster";
 
 interface Result {
@@ -16,12 +16,14 @@ interface Result {
   // wants binary toggling; the new top-bar button uses `cycle()` instead.
   toggle: () => void;
   // Advance density to the next mode in the cycle. Order: cozy →
-  // compact → card → cozy. `poster` is reserved for a future grid view
-  // and not in the cycle until that view ships.
+  // compact → card → poster → cozy.
   cycle: () => void;
 }
 
-const CYCLE_ORDER: Density[] = ["cozy", "compact", "card"];
+// Single source of truth for the view-mode cycle. DensityToggle imports
+// this for its "next mode" tooltip so the label can't drift from the
+// actual cycling logic below.
+export const CYCLE_ORDER: Density[] = ["cozy", "compact", "card", "poster"];
 
 // In-memory fallback for storage-restricted environments (private mode,
 // sandboxed iframes, locked-down corporate browsers). Without this,
@@ -107,8 +109,7 @@ export function useDensity(): Result {
   const cycle = useCallback(() => {
     const current = getSnapshot();
     const idx = CYCLE_ORDER.indexOf(current);
-    // If current density isn't in the cycle (e.g. legacy "poster"
-    // value), restart at the first cycle mode.
+    // If current density isn't in the cycle, restart at the first mode.
     const nextIdx = idx === -1 ? 0 : (idx + 1) % CYCLE_ORDER.length;
     writeStored(CYCLE_ORDER[nextIdx]);
     dispatchChange();
