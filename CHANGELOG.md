@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/refinarr/refinarr/compare/v0.6.2...v0.7.0) (2026-06-02)
+
+
+### Features
+
+* **ui:** card redesign, poster grid & mobile swipe actions ([#91](https://github.com/refinarr/refinarr/issues/91)) ([6d7147d](https://github.com/refinarr/refinarr/commit/6d7147dd0f041bdedc7dc5306a10e94656ae373d))
+
 ## [0.6.2](https://github.com/refinarr/refinarr/compare/v0.6.1...v0.6.2) (2026-06-01)
 
 
