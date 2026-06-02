@@ -62,8 +62,15 @@ export function MediaCard<T extends { id: number }>({
   // handlers, and yields while selecting (bulk bar owns actions then).
   const swipeCapable = isMobile && !!swipeActions;
   const swipeEnabled = swipeCapable && !selectionActive;
-  const { offset, isOpen, isDragging, close, wasDragRef, surfaceProps } =
-    useSwipeReveal({ enabled: swipeEnabled, revealWidth: REVEAL_PX });
+  const {
+    offset,
+    isOpen,
+    isDragging,
+    close,
+    setRoot,
+    wasDragRef,
+    surfaceProps,
+  } = useSwipeReveal({ enabled: swipeEnabled, revealWidth: REVEAL_PX });
 
   const handleContentClick = () => {
     // A horizontal drag just snapped — swallow the synthetic click so a
@@ -100,6 +107,7 @@ export function MediaCard<T extends { id: number }>({
 
   return (
     <li
+      ref={setRoot}
       className={cn(
         "bg-card relative rounded-lg border",
         // Clip the left overflow + the action panel on phone swipe-cards;

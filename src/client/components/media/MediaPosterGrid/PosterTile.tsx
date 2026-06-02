@@ -19,10 +19,11 @@ interface Props<T extends MediaItem> {
 // mirroring the MovieCard ⟷ MediaCard split. Generic over MediaItem:
 // file presence comes from `existingFileCount` (movies: 0/1, series:
 // episode-file count) so it works for both arrs without a subclass.
+type ImgState = "loading" | "loaded" | "failed";
+
 export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
   const { arrType, activeInstance, scoringMode } = ctx;
-  const [imgFailed, setImgFailed] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgState, setImgState] = useState<ImgState>("loading");
 
   const score = SCORE_FOR[scoringMode](item);
   const profile = isProfileMode(scoringMode);
@@ -44,7 +45,7 @@ export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
   return (
     <div className="space-y-1.5">
       <div className="bg-muted relative aspect-2/3 overflow-hidden rounded-md border">
-        {imgFailed ? (
+        {imgState === "failed" ? (
           <div className="text-muted-foreground flex size-full flex-col items-center justify-center gap-1 p-2 text-center">
             <ImageOff className="size-5" aria-hidden />
             <span className="line-clamp-3 text-xs">{item.title}</span>
@@ -54,7 +55,7 @@ export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
             {/* Shimmer placeholder until the poster paints — reserves the
                 2:3 box (no layout shift) and covers the blank gap while
                 the proxied image streams in. */}
-            {!imgLoaded && (
+            {imgState === "loading" && (
               <div className="bg-muted absolute inset-0 animate-pulse" />
             )}
             {/* Plain <img> (no next/image — sharp is excluded from the
@@ -68,10 +69,10 @@ export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
               loading="lazy"
               className={cn(
                 "size-full object-cover transition-opacity duration-200",
-                imgLoaded ? "opacity-100" : "opacity-0",
+                imgState === "loaded" ? "opacity-100" : "opacity-0",
               )}
-              onLoad={() => setImgLoaded(true)}
-              onError={() => setImgFailed(true)}
+              onLoad={() => setImgState("loaded")}
+              onError={() => setImgState("failed")}
             />
           </>
         )}

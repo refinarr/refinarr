@@ -39,6 +39,10 @@ interface Result {
   // card tracks the finger 1:1, then restores it for the snap.
   isDragging: boolean;
   close: () => void;
+  // Callback ref for the card ROOT element (e.g. the <li>). Attach so the
+  // outside-tap close can tell taps on the reveal buttons (inside the
+  // root) from taps elsewhere (outside).
+  setRoot: (el: HTMLElement | null) => void;
   // True when the last pointer interaction was a horizontal drag. The
   // caller checks (and resets) this in onClick so a swipe doesn't also
   // fire the row's tap handler (open drawer).
@@ -71,7 +75,14 @@ export function useSwipeReveal({
   const startY = useRef(0);
   const axis = useRef<null | "h" | "v">(null);
   const activePointer = useRef<number | null>(null);
-  const elRef = useRef<Element | null>(null);
+  // The card ROOT (the <li>, set via `setRoot`), not the swipe surface —
+  // the outside-tap check must treat the reveal buttons (a sibling of the
+  // surface, but a descendant of the root) as INSIDE, or tapping
+  // Search/Ignore would close the card and race the button's own tap.
+  const rootRef = useRef<HTMLElement | null>(null);
+  const setRoot = useCallback((el: HTMLElement | null) => {
+    rootRef.current = el;
+  }, []);
   const offsetRef = useRef(0);
   const openRef = useRef(false);
   const wasDragRef = useRef(false);
@@ -110,7 +121,7 @@ export function useSwipeReveal({
   useEffect(() => {
     if (!isOpen) return;
     const onDocDown = (e: PointerEvent) => {
-      if (elRef.current && !elRef.current.contains(e.target as Node)) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
         applyOpen(false);
       }
     };
@@ -126,7 +137,6 @@ export function useSwipeReveal({
   const onPointerDown = useCallback(
     (e: ReactPointerEvent) => {
       if (!enabled) return;
-      elRef.current = e.currentTarget;
       startX.current = e.clientX;
       startY.current = e.clientY;
       axis.current = null;
@@ -198,6 +208,7 @@ export function useSwipeReveal({
     isOpen,
     isDragging,
     close,
+    setRoot,
     wasDragRef,
     surfaceProps: {
       onPointerDown,
