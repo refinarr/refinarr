@@ -33,10 +33,10 @@ export function SeriesCard({ item, ctx }: Props) {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-start gap-2">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-          <SeverityDot severity={severity} />
-          <span className="truncate font-medium">{item.title}</span>
+      <div className="flex items-center gap-2">
+        <SeverityDot severity={severity} />
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="min-w-0 truncate font-medium">{item.title}</span>
           <span className="text-muted-foreground shrink-0 text-xs">
             {item.year}
           </span>
@@ -61,6 +61,7 @@ export function SeriesCard({ item, ctx }: Props) {
       </div>
       {issues.length > 0 && (
         <CfScoreList
+          dense
           formats={profile ? issues : []}
           missingFormats={profile ? [] : issues}
         />
