@@ -4,11 +4,15 @@ import { useVirtList } from "@/client/hooks/ui/useVirtList";
 import { MediaCard } from "./MediaCard";
 import { MediaCardSkeleton } from "./MediaCardSkeleton";
 
-// Compact cards measure ~80–110px (title row 24, meta row 18, optional
-// CF row ~24, p-3 padding 24, border 2, pb-card-gap 8 — the old actions
-// footer is gone). Estimate near the real value so cumulative translateY
-// stays in sync during fast scroll; virt still measures actual height.
-const CARD_HEIGHT_ESTIMATE_PX = 96;
+// Cards measure ~90px (no CF row) to ~118px (with the CF-chip row that
+// flagged items — the majority here — carry): p-3 shell 26 + content
+// 56–84 + pb-card-gap 8. virt suppresses the ref-attach remeasure while
+// `isScrolling` (virtual-core measureElement guard), so during a fast
+// flick freshly-mounted cards briefly sit at THIS estimate before the
+// ResizeObserver corrects them. Deliberately OVER-estimate at the
+// height ceiling: an overestimate flashes a harmless gap, an
+// underestimate stacks cards on top of each other (the bug this fixes).
+export const CARD_HEIGHT_ESTIMATE_PX = 120;
 
 function pickCardOverscan(count: number): number {
   if (count > 5000) return 3;
