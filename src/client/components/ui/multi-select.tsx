@@ -25,7 +25,7 @@ interface Props {
   selected: number[];
   onChange: (next: number[]) => void;
   placeholder: string;
-  // Heading rendered above the list (e.g. "Missing Custom Format").
+  // Heading rendered above the list (e.g. "Penalty Custom Format").
   label?: string;
   // Trigger label shown when selected.length === 1 — receives the option name.
   singleLabel?: (name: string) => string;

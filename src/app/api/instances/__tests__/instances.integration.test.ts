@@ -194,41 +194,34 @@ describe("GET / PUT / DELETE /api/instances/[id]", () => {
   test("PUT invalidates that instance's flagged-media cache", async () => {
     const created = await POST(postReq(valid), { params: Promise.resolve({}) });
     const { id } = await created.json();
-    dataCache.set(`movies:${id}:manual`, ["stale"]);
-    dataCache.set(`series:${id}:profile`, ["stale"]);
-    dataCache.set(`movies:9999:manual`, ["other"]);
+    dataCache.set(`movies:${id}`, ["stale"]);
+    dataCache.set(`series:${id}`, ["stale"]);
+    // Descendant key (extra trailing segment) must also drop; a
+    // prefix-collision key (`movies:${id}0`) must survive — invalidate
+    // anchors on the instanceId segment, not a substring.
+    dataCache.set(`movies:${id}:details`, ["child"]);
+    dataCache.set(`movies:${id}0`, ["collision"]);
+    dataCache.set(`movies:9999`, ["other"]);
 
     const res = await PUT(putReq(id, { name: "Renamed" }), ctxFor(id));
     expect(res.status).toBe(200);
-    expect(dataCache.get(`movies:${id}:manual`, 60_000)).toBeNull();
-    expect(dataCache.get(`series:${id}:profile`, 60_000)).toBeNull();
-    expect(dataCache.get(`movies:9999:manual`, 60_000)).toEqual(["other"]);
-  });
-
-  test("PUT scoringMode change invalidates that instance's flagged-media cache", async () => {
-    const created = await POST(postReq(valid), { params: Promise.resolve({}) });
-    const { id } = await created.json();
-    dataCache.set(`movies:${id}:manual`, ["stale"]);
-    dataCache.set(`movies:${id}:profile`, ["also-stale"]);
-    dataCache.set(`movies:9999:manual`, ["other"]);
-
-    const res = await PUT(putReq(id, { scoringMode: "manual" }), ctxFor(id));
-    expect(res.status).toBe(200);
-    expect(dataCache.get(`movies:${id}:manual`, 60_000)).toBeNull();
-    expect(dataCache.get(`movies:${id}:profile`, 60_000)).toBeNull();
-    expect(dataCache.get(`movies:9999:manual`, 60_000)).toEqual(["other"]);
+    expect(dataCache.get(`movies:${id}`, 60_000)).toBeNull();
+    expect(dataCache.get(`series:${id}`, 60_000)).toBeNull();
+    expect(dataCache.get(`movies:${id}:details`, 60_000)).toBeNull();
+    expect(dataCache.get(`movies:${id}0`, 60_000)).toEqual(["collision"]);
+    expect(dataCache.get(`movies:9999`, 60_000)).toEqual(["other"]);
   });
 
   test("DELETE invalidates that instance's flagged-media cache", async () => {
     const created = await POST(postReq(valid), { params: Promise.resolve({}) });
     const { id } = await created.json();
-    dataCache.set(`movies:${id}:manual`, ["stale"]);
-    dataCache.set(`movies:9999:manual`, ["other"]);
+    dataCache.set(`movies:${id}`, ["stale"]);
+    dataCache.set(`movies:9999`, ["other"]);
 
     const res = await DELETE(delReq(id), ctxFor(id));
     expect(res.status).toBe(200);
-    expect(dataCache.get(`movies:${id}:manual`, 60_000)).toBeNull();
-    expect(dataCache.get(`movies:9999:manual`, 60_000)).toEqual(["other"]);
+    expect(dataCache.get(`movies:${id}`, 60_000)).toBeNull();
+    expect(dataCache.get(`movies:9999`, 60_000)).toEqual(["other"]);
   });
 });
 

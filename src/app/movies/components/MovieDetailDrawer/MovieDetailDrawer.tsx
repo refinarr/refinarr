@@ -13,18 +13,13 @@ import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { CfBreakdown } from "@/client/components/common/CfBreakdown";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
 import { getSeverity } from "@/client/lib/severity";
-import { SCORE_FOR } from "@/shared/scoring-mode";
-import type {
-  MovieItem,
-  QualityProfile,
-  ScoringMode,
-} from "@/shared/types/models";
+import { scoreForItem } from "@/shared/scoring-mode";
+import type { MovieItem, QualityProfile } from "@/shared/types/models";
 
 interface Props {
   movie: MovieItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  scoringMode: ScoringMode;
   profiles: QualityProfile[] | undefined;
   onSearch: (movie: MovieItem) => void;
   onIgnore: (movie: MovieItem) => void;
@@ -35,7 +30,6 @@ export function MovieDetailDrawer({
   movie,
   open,
   onOpenChange,
-  scoringMode,
   profiles,
   onSearch,
   onIgnore,
@@ -45,13 +39,8 @@ export function MovieDetailDrawer({
   const tCommon = useTranslations("common");
   if (!movie) return null;
 
-  const score = SCORE_FOR[scoringMode](movie);
-  const severity = getSeverity(
-    score,
-    movie.minProfileScore,
-    scoringMode,
-    movie.hasFile,
-  );
+  const score = scoreForItem(movie);
+  const severity = getSeverity(score, movie.minProfileScore, movie.hasFile);
   const hasCfs =
     movie.customFormats.length > 0 || movie.missingFormats.length > 0;
   const profileName = profiles?.find(

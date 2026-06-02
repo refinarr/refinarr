@@ -20,7 +20,6 @@ function publicView(i: Instance): PublicInstance {
     name: i.name,
     url: i.url,
     enabled: i.enabled,
-    scoringMode: i.scoringMode,
     searchesPerHour: i.searchesPerHour,
     showAllMedia: i.showAllMedia,
     createdAt: i.createdAt,
@@ -35,7 +34,6 @@ function publicView(i: Instance): PublicInstance {
     autoSearchPickStrategy: i.autoSearchPickStrategy,
     autoSearchCooldownHours: i.autoSearchCooldownHours,
     autoSearchPausedUntil: i.autoSearchPausedUntil,
-    autoSearchScoringMode: i.autoSearchScoringMode,
   };
 }
 

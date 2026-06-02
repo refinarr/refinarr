@@ -1,9 +1,5 @@
 import { useState } from "react";
-import type {
-  MonitorStatus,
-  ScoringMode,
-  Severity,
-} from "@/shared/types/models";
+import type { MonitorStatus, Severity } from "@/shared/types/models";
 import { useDebouncedValue } from "../ui/useDebouncedValue";
 
 export type MatchMode = "any" | "all";
@@ -11,9 +7,9 @@ export type MatchMode = "any" | "all";
 export interface MediaFilters {
   sortBy: "score" | "title" | "added" | "size";
   order: "asc" | "desc";
-  // Score range — manual mode 0..1, profile mode raw integer score.
+  // Score range over the profile custom-format score (raw integer).
   // null = no bound on that side. Bounds for the UI slider come from
-  // the active mode/profiles via the column funnel, not from here.
+  // the active profiles via the column funnel, not from here.
   minScore: number | null;
   maxScore: number | null;
   // Size range in bytes. null = no bound.
@@ -27,8 +23,6 @@ export interface MediaFilters {
   mediaId: number | null;
   profileIds: number[];
   severities: Severity[];
-  missingCfIds: number[];
-  missingCfMatch: MatchMode;
   hasNegativeCfIds: number[];
   hasNegativeCfMatch: MatchMode;
   // Monitor-state filter. "all" (default) leaves the upstream untouched.
@@ -41,12 +35,10 @@ export interface MediaFilters {
   flaggedOnly: boolean;
 }
 
-// Hook query input — every field optional, plus scoringMode. useMovies /
-// useSeries / useMediaData accept this so they don't each redeclare
-// their own near-identical filter type.
-export type MediaQueryFilters = Partial<MediaFilters> & {
-  scoringMode?: ScoringMode;
-};
+// Hook query input — every field optional. useMovies / useSeries /
+// useMediaData accept this so they don't each redeclare their own
+// near-identical filter type.
+export type MediaQueryFilters = Partial<MediaFilters>;
 
 export const defaultMediaFilters: MediaFilters = {
   sortBy: "score",
@@ -59,8 +51,6 @@ export const defaultMediaFilters: MediaFilters = {
   mediaId: null,
   profileIds: [],
   severities: [],
-  missingCfIds: [],
-  missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
   flaggedOnly: true,
@@ -84,12 +74,10 @@ export interface MediaFiltersResult {
     maxScore?: number;
     minSize?: number;
     maxSize?: number;
-    scoringMode: ScoringMode;
   };
 }
 
 export function useMediaFilters(
-  scoringMode: ScoringMode,
   instanceId: number,
   showAllMedia = false,
 ): MediaFiltersResult {
@@ -101,23 +89,6 @@ export function useMediaFilters(
   const debouncedMinSize = useDebouncedValue(filters.minSize, 400);
   const debouncedMaxSize = useDebouncedValue(filters.maxSize, 400);
   const debouncedQ = useDebouncedValue(filters.q, 300);
-
-  // Score bounds change shape between manual and profile modes (0..1 vs
-  // raw integer), so a value the user picked in one mode is meaningless
-  // after switching. CF / penalty selections are also mode-specific.
-  const [trackedMode, setTrackedMode] = useState(scoringMode);
-  if (trackedMode !== scoringMode) {
-    setTrackedMode(scoringMode);
-    setFilters((f) => ({
-      ...f,
-      missingCfIds: [],
-      missingCfMatch: "all",
-      hasNegativeCfIds: [],
-      hasNegativeCfMatch: "all",
-      minScore: null,
-      maxScore: null,
-    }));
-  }
 
   // CF IDs and quality-profile IDs are per-instance, so switching instance
   // leaves stale IDs in the filter that point at unrelated entities. Clear
@@ -135,8 +106,6 @@ export function useMediaFilters(
       // filter to an empty result on the new instance.
       mediaId: null,
       profileIds: [],
-      missingCfIds: [],
-      missingCfMatch: "all",
       hasNegativeCfIds: [],
       hasNegativeCfMatch: "all",
       flaggedOnly: !showAllMedia,
@@ -156,7 +125,6 @@ export function useMediaFilters(
       minSize: debouncedMinSize ?? undefined,
       maxSize: debouncedMaxSize ?? undefined,
       q: debouncedQ,
-      scoringMode,
     },
   };
 }

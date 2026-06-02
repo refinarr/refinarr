@@ -1,6 +1,5 @@
 import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
-import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { GET as listMovies } from "@/app/api/radarr/movies/route";
 import { POST as searchMovie } from "@/app/api/radarr/movies/search/route";
 import { GET as listProfiles } from "@/app/api/radarr/qualityprofiles/route";
@@ -41,9 +40,6 @@ const profile = {
 describe("GET /api/radarr/movies", () => {
   test("returns paginated MovieItem wrapper through the full route handler", async () => {
     const instanceId = await makeInstance();
-    await preferenceRepository.setForInstance(instanceId, [
-      { cfId: 10, cfName: "HDR" },
-    ]);
     mswServer.use(
       ...radarrHandlers(
         { baseUrl },

@@ -47,7 +47,6 @@ describe("MovieDetailDrawer", () => {
         movie={movie}
         open
         onOpenChange={vi.fn()}
-        scoringMode="profile"
         profiles={profiles}
         onSearch={vi.fn()}
         onIgnore={vi.fn()}
@@ -63,7 +62,6 @@ describe("MovieDetailDrawer", () => {
         movie={{ ...movie, qualityProfileId: 999 }}
         open
         onOpenChange={vi.fn()}
-        scoringMode="profile"
         profiles={profiles}
         onSearch={vi.fn()}
         onIgnore={vi.fn()}
@@ -80,7 +78,6 @@ describe("MovieDetailDrawer", () => {
         movie={movie}
         open
         onOpenChange={vi.fn()}
-        scoringMode="profile"
         profiles={undefined}
         onSearch={vi.fn()}
         onIgnore={vi.fn()}

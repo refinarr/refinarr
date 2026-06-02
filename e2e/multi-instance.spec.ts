@@ -74,9 +74,6 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/api/radarr/qualityprofiles**", (route) =>
     route.fulfill({ status: 200, json: [] }),
   );
-  await page.route("**/api/preferences**", (route) =>
-    route.fulfill({ status: 200, json: [] }),
-  );
 });
 
 test("instance switcher reloads the table with the chosen instance's movies", async ({

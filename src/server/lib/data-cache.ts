@@ -172,10 +172,15 @@ class DataCache {
   }
 
   invalidate(instanceId: number): void {
-    const prefix = `:${instanceId}:`;
+    // Cache keys are `${namespace}:${instanceId}[:…]` (e.g. "movies:1").
+    // Anchor the match to the instanceId segment (index 1) rather than a
+    // bare substring/any-segment check: a substring would also hit
+    // "movies:10" and any-segment would over-delete a future key that
+    // happened to carry the same number in another position.
+    const target = String(instanceId);
     const keys = new Set([...this.store.keys(), ...this.inflight.keys()]);
     for (const key of keys) {
-      if (!key.includes(prefix)) continue;
+      if (key.split(":")[1] !== target) continue;
       this.store.delete(key);
       this.inflight.delete(key);
       this.bumpVersion(key);

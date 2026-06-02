@@ -16,7 +16,7 @@ vi.mock("@/client/hooks/data/useInstances", () => ({
 }));
 
 vi.mock("@/client/hooks/data/useConfig", () => ({
-  useConfig: () => ({ data: { dryRun: true, scoringModes: {} } }),
+  useConfig: () => ({ data: { dryRun: true } }),
 }));
 
 import { CommandPalette } from "../CommandPalette";

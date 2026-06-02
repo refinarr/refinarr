@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { fireEvent } from "@testing-library/react";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
+import { defaultMediaFilters } from "@/client/hooks/media/useMediaFilters";
 import type { MediaItem, MovieItem } from "@/shared/types/models";
 import { renderWithProviders as render, screen } from "@/test/render";
 import { MediaPosterGrid } from "../MediaPosterGrid";
@@ -105,20 +106,38 @@ function movie(over: Partial<MovieItem> = {}): MovieItem {
   };
 }
 
-function ctx(
-  scoringMode: "profile" | "manual",
-): MediaListShellRenderCtx<MediaItem> {
+// next-intl's translator is a complex callable (overloads + .rich/.raw/…)
+// that can't be hand-built in a unit test, so the stub carries a single
+// narrow cast. Everything else is a real value, so the object is now
+// type-checked against MediaListShellRenderCtx — a dropped/renamed ctx
+// field fails compilation instead of silently passing.
+const tStub = ((key: string) => key) as MediaListShellRenderCtx<MediaItem>["t"];
+
+function ctx(): MediaListShellRenderCtx<MediaItem> {
   return {
     arrType: "radarr",
+    profiles: undefined,
     activeInstance: 3,
-    scoringMode,
-    t: (k: string) => k,
-  } as unknown as MediaListShellRenderCtx<MediaItem>;
+    queuedIds: new Set<number>(),
+    recentMap: new Map<number, Date>(),
+    density: "cozy",
+    refetch: vi.fn(),
+    runSearch: vi.fn(),
+    runIgnore: vi.fn(),
+    runDelete: vi.fn(),
+    filters: defaultMediaFilters,
+    onFilterChange: vi.fn(),
+    cfOptions: { penalty: [] },
+    t: tStub,
+    tCols: tStub,
+    tTime: tStub,
+    tA11y: tStub,
+  };
 }
 
 describe("PosterTile", () => {
   it("renders the proxy poster src, title and year", () => {
-    render(<PosterTile item={movie()} ctx={ctx("manual")} />);
+    render(<PosterTile item={movie()} ctx={ctx()} />);
     const img = screen.getByRole("img", { name: "The Thing" });
     expect(img).toHaveAttribute(
       "src",
@@ -132,14 +151,14 @@ describe("PosterTile", () => {
     render(
       <PosterTile
         item={movie({ customFormatScore: 30, minProfileScore: 100 })}
-        ctx={ctx("profile")}
+        ctx={ctx()}
       />,
     );
     expect(screen.getByText("30 / 100")).toBeInTheDocument();
   });
 
   it("falls back to a placeholder with the title when the image fails", () => {
-    render(<PosterTile item={movie()} ctx={ctx("manual")} />);
+    render(<PosterTile item={movie()} ctx={ctx()} />);
     fireEvent.error(screen.getByRole("img", { name: "The Thing" }));
     // The poster <img> is replaced by the placeholder (severity dot,
     // which is also role=img, stays — assert the poster specifically).

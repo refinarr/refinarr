@@ -39,17 +39,11 @@ vi.mock("@/client/components/layout/AppShell", () => ({
 vi.mock("@/client/hooks/media/useInstanceSelection", () => ({
   useInstanceSelection: () => ({
     instances: [{ id: 1, name: "My Radarr" }],
-    typedInstances: [
-      { id: 1, name: "My Radarr", scoringMode: "manual", type: "radarr" },
-    ],
+    typedInstances: [{ id: 1, name: "My Radarr", type: "radarr" }],
     activeInstance: 1,
     setInstanceId: vi.fn(),
     loadingInstances: false,
   }),
-}));
-
-vi.mock("@/client/hooks/data/usePreferences", () => ({
-  usePreferences: () => ({ data: [{ cfId: 10, cfName: "HDR10" }] }),
 }));
 
 vi.mock("@/client/hooks/data/useQualityProfiles", () => ({
@@ -174,7 +168,6 @@ describe("MediaListShell", () => {
     const ctx = columns.mock.calls[0][0];
     expect(ctx.arrType).toBe("radarr");
     expect(ctx.activeInstance).toBe(1);
-    expect(ctx.scoringMode).toBe("manual");
     expect(Card).toHaveBeenCalled();
     const cardProps = Card.mock.calls[0][0];
     expect(cardProps.item).toEqual(baseMovie);

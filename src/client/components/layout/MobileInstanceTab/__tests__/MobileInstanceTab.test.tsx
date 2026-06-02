@@ -26,7 +26,6 @@ vi.mock("@/client/hooks/data/useInstances", () => ({
 
 const baseInstance: Omit<PublicInstance, "id" | "name" | "url" | "type"> = {
   enabled: true,
-  scoringMode: "manual",
   searchesPerHour: 100,
   showAllMedia: false,
   createdAt: new Date(),
@@ -41,7 +40,6 @@ const baseInstance: Omit<PublicInstance, "id" | "name" | "url" | "type"> = {
   autoSearchPickStrategy: "balanced",
   autoSearchCooldownHours: 0,
   autoSearchPausedUntil: null,
-  autoSearchScoringMode: "inherit",
 };
 
 function mkInstance(overrides: Partial<PublicInstance>): PublicInstance {

@@ -25,7 +25,6 @@ export function MovieDrawer({ item, ctx, close }: Props) {
         movie={item}
         open={item !== null}
         onOpenChange={(open) => !open && close()}
-        scoringMode={ctx.scoringMode}
         profiles={ctx.profiles}
         onSearch={async () => {
           if (!item) return;

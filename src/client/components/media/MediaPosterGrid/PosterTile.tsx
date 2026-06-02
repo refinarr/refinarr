@@ -6,7 +6,7 @@ import { posterUrl } from "@/client/lib/poster";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
 import { getSeverity, severityTextClass } from "@/client/lib/severity";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
-import { SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
+import { scoreForItem } from "@/shared/scoring-mode";
 import type { MediaItem } from "@/shared/types/models";
 
 interface Props<T extends MediaItem> {
@@ -22,25 +22,18 @@ interface Props<T extends MediaItem> {
 type ImgState = "loading" | "loaded" | "failed";
 
 export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
-  const { arrType, activeInstance, scoringMode } = ctx;
+  const { arrType, activeInstance } = ctx;
   const [imgState, setImgState] = useState<ImgState>("loading");
 
-  const score = SCORE_FOR[scoringMode](item);
-  const profile = isProfileMode(scoringMode);
+  const score = scoreForItem(item);
   const hasFile = item.existingFileCount > 0;
-  const severity = getSeverity(
-    score,
-    item.minProfileScore,
-    scoringMode,
-    hasFile,
-  );
+  const severity = getSeverity(score, item.minProfileScore, hasFile);
 
-  const noFileScore = profile && !hasFile;
   let scoreText: string;
-  if (noFileScore) scoreText = ctx.t("noFile");
+  if (!hasFile) scoreText = ctx.t("noFile");
   else if (item.minProfileScore !== undefined)
     scoreText = `${score} / ${item.minProfileScore}`;
-  else scoreText = `${Math.round(score * 100)}%`;
+  else scoreText = String(score);
 
   return (
     <div className="space-y-1.5">

@@ -13,7 +13,6 @@ model Instance {
   url             String
   apiKey          String
   enabled         Boolean  @default(true)
-  scoringMode     String   @default("profile")
   searchesPerHour Int      @default(20)
   showAllMedia    Boolean  @default(false)
   createdAt       DateTime @default(now())
@@ -30,7 +29,6 @@ model Instance {
   autoSearchPickStrategy    String    @default("balanced")
   autoSearchCooldownHours   Int       @default(0)
   autoSearchPausedUntil     DateTime?
-  autoSearchScoringMode     String    @default("inherit")
   autoSearchFailedStreak    Int       @default(0)
 }
 
@@ -48,15 +46,6 @@ model IgnoreEntry {
   ignoredAt  DateTime @default(now())
 
   @@unique([instanceId, mediaId, mediaType])
-}
-
-model CfPreference {
-  id         Int    @id @default(autoincrement())
-  instanceId Int
-  cfId       Int
-  cfName     String
-
-  @@unique([instanceId, cfId])
 }
 
 model ActionLog {

@@ -7,7 +7,6 @@ import type {
   AutoSearchPickStrategy,
   AutoSearchScheduleMode,
   AutoSearchScope,
-  AutoSearchScoringMode,
 } from "./models";
 
 export interface PaginatedResponse<T> {
@@ -90,7 +89,6 @@ export interface CreateInstanceDto {
 }
 
 export type UpdateInstanceDto = Partial<CreateInstanceDto> & {
-  scoringMode?: "manual" | "profile";
   showAllMedia?: boolean;
   autoSearchEnabled?: boolean;
   autoSearchScheduleMode?: AutoSearchScheduleMode;
@@ -102,7 +100,6 @@ export type UpdateInstanceDto = Partial<CreateInstanceDto> & {
   autoSearchPickStrategy?: AutoSearchPickStrategy;
   autoSearchCooldownHours?: number;
   autoSearchPausedUntil?: string | null;
-  autoSearchScoringMode?: AutoSearchScoringMode;
 };
 
 /**
@@ -114,7 +111,6 @@ export interface PublicInstance {
   name: string;
   url: string;
   enabled: boolean;
-  scoringMode: "manual" | "profile";
   searchesPerHour: number;
   showAllMedia: boolean;
   createdAt: string | Date;
@@ -129,7 +125,6 @@ export interface PublicInstance {
   autoSearchPickStrategy: AutoSearchPickStrategy;
   autoSearchCooldownHours: number;
   autoSearchPausedUntil: string | Date | null;
-  autoSearchScoringMode: AutoSearchScoringMode;
 }
 
 export interface AutoSearchStatus {
@@ -147,7 +142,6 @@ export interface AutoSearchStatus {
   paused: boolean;
   pausedUntil: string | null;
   cooldownHours: number;
-  scoringMode: AutoSearchScoringMode;
   // True when nextRunAt was due more than OVERDUE_GRACE_MS ago but the
   // tick hasn't fired yet (clock drift, system sleep, missed window).
   overdue: boolean;
@@ -189,7 +183,6 @@ export interface DashboardInstanceSummary {
   flaggedCount: number | null;
   totalCount: number | null;
   failedActionsCount: number;
-  hasPreferences: boolean;
 }
 
 // Aggregated counts across every enabled instance of each *arr type.

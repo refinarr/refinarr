@@ -26,7 +26,6 @@ import type {
   AutoSearchPickStrategy,
   AutoSearchScope,
   AutoSearchScheduleMode,
-  AutoSearchScoringMode,
 } from "@/shared/types/models";
 
 export interface AutoSearchFields {
@@ -39,7 +38,6 @@ export interface AutoSearchFields {
   autoSearchScope: AutoSearchScope;
   autoSearchPickStrategy: AutoSearchPickStrategy;
   autoSearchCooldownHours: number;
-  autoSearchScoringMode: AutoSearchScoringMode;
 }
 
 function isScheduleMode(v: string | null): v is AutoSearchScheduleMode {
@@ -52,11 +50,6 @@ function isIntervalUnit(v: string | null): v is IntervalDisplayUnit["key"] {
 
 function isPickStrategy(v: string | null): v is AutoSearchPickStrategy {
   return v === "balanced" || v === "random";
-}
-
-const AUTO_SEARCH_SCORING_MODE_SET = new Set<string>(["inherit", "profile"]);
-function isScoringMode(v: string | null): v is AutoSearchScoringMode {
-  return v !== null && AUTO_SEARCH_SCORING_MODE_SET.has(v);
 }
 
 function isAutoSearchScope(v: string | null): v is AutoSearchScope {
@@ -173,14 +166,6 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
   const pickDesc: Record<AutoSearchPickStrategy, string> = {
     balanced: t("pickStrategyBalancedDesc"),
     random: t("pickStrategyRandomDesc"),
-  };
-  const scoringModeLabel: Record<AutoSearchScoringMode, string> = {
-    inherit: t("scoringModeInherit"),
-    profile: t("scoringModeProfile"),
-  };
-  const scoringModeDesc: Record<AutoSearchScoringMode, string> = {
-    inherit: t("scoringModeInheritDesc"),
-    profile: t("scoringModeProfileDesc"),
   };
 
   return (
@@ -466,34 +451,6 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
                 onChange({ autoSearchCooldownHours: v });
               }}
             />
-          </FormField>
-
-          <FormField
-            id="auto-search-scoring-mode"
-            label={t("scoringModeLabel")}
-            description={scoringModeDesc[value.autoSearchScoringMode]}
-          >
-            <Select
-              value={value.autoSearchScoringMode}
-              onValueChange={(v) => {
-                if (isScoringMode(v)) onChange({ autoSearchScoringMode: v });
-              }}
-              disabled={disabled}
-            >
-              <SelectTrigger id="auto-search-scoring-mode">
-                <SelectValue>
-                  {scoringModeLabel[value.autoSearchScoringMode]}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="w-max">
-                <SelectItem value="inherit">
-                  {t("scoringModeInherit")}
-                </SelectItem>
-                <SelectItem value="profile">
-                  {t("scoringModeProfile")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
           </FormField>
 
           <p className="text-muted-foreground text-xs">{t("helperText")}</p>

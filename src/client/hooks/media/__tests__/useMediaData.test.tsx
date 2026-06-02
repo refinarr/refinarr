@@ -16,13 +16,10 @@ const baseFilters = {
   mediaId: null,
   profileIds: [],
   severities: [],
-  missingCfIds: [],
-  missingCfMatch: "all" as const,
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all" as const,
   flaggedOnly: true,
   monitorStatus: "all" as const,
-  scoringMode: "manual" as const,
 };
 
 function makeQueryHook(

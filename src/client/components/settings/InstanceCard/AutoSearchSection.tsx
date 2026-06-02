@@ -61,7 +61,6 @@ function fieldsFromInstance(i: PublicInstance): AutoSearchFields {
     autoSearchScope: i.autoSearchScope,
     autoSearchPickStrategy: i.autoSearchPickStrategy,
     autoSearchCooldownHours: i.autoSearchCooldownHours,
-    autoSearchScoringMode: i.autoSearchScoringMode,
   };
 }
 

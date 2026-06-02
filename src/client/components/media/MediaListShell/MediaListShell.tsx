@@ -24,7 +24,6 @@ import { MediaShowAllToggle } from "@/client/components/media/MediaShowAllToggle
 import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton";
 import { MediaSearchBar } from "@/client/components/media/MediaSearchBar";
 import { MobileFilterBar } from "@/client/components/media/MobileFilterBar";
-import { ScoringModeSelector } from "@/client/components/settings/ScoringModeSelector";
 import {
   MediaTable,
   type ColumnDef,
@@ -40,7 +39,6 @@ import {
   type EmptyStateKind,
 } from "@/client/components/states/MediaPageEmptyState";
 import { PageErrorBoundary } from "@/client/components/states/PageErrorBoundary";
-import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { useQualityProfiles } from "@/client/hooks/data/useQualityProfiles";
 import { useRefreshInstance } from "@/client/hooks/data/useRefreshInstance";
 import { useQueuedMediaIds } from "@/client/hooks/data/useSearchQueue";
@@ -66,14 +64,8 @@ import {
   type BulkActionsConfig,
 } from "@/client/hooks/media/useBulkMediaActions";
 import { useBulkHandlers } from "@/client/hooks/media/useBulkHandlers";
-import { DEFAULT_SCORING_MODE, isManualMode } from "@/shared/scoring-mode";
 import { ARR_META } from "@/shared/arr-meta";
-import type {
-  ArrType,
-  MediaItem,
-  QualityProfile,
-  ScoringMode,
-} from "@/shared/types/models";
+import type { ArrType, MediaItem, QualityProfile } from "@/shared/types/models";
 
 type TFn = ReturnType<typeof useTranslations>;
 
@@ -82,7 +74,6 @@ type TFn = ReturnType<typeof useTranslations>;
 // sub-components don't need to receive ctx through props.
 export interface MediaListShellRenderCtx<T extends MediaItem> {
   arrType: ArrType;
-  scoringMode: ScoringMode;
   profiles: QualityProfile[] | undefined;
   activeInstance: number;
   queuedIds: Set<number>;
@@ -99,12 +90,9 @@ export interface MediaListShellRenderCtx<T extends MediaItem> {
   // same filter slice MediaSearchBar reads from.
   filters: MediaFilters;
   onFilterChange: (patch: Partial<MediaFilters>) => void;
-  // Pre-computed CF option lists — `missing` is the user's "wanted"
-  // CFs (manual scoring), `penalty` is the negative-score formats from
-  // active quality profiles (profile scoring). Same shape both ways
-  // so column funnels stay scoring-mode-agnostic.
+  // Pre-computed CF option list — `penalty` is the negative-score formats
+  // from active quality profiles, used by the issues-column funnel.
   cfOptions: {
-    missing: { id: number; name: string }[];
     penalty: { id: number; name: string }[];
   };
   t: TFn;
@@ -131,7 +119,6 @@ interface InternalShellContext {
   refreshMutation: ReturnType<typeof useRefreshInstance>;
   chips: ReturnType<typeof useFilterChips>["chips"];
   clearActiveFilters: () => void;
-  noCfsConfigured: boolean;
   askConfirm: ReturnType<typeof useConfirm>["confirm"];
   i18nNamespace: "movies" | "shows";
   confirmDeleteBulkKey: "confirm.deleteMovies" | "confirm.deleteSeries";
@@ -213,7 +200,6 @@ function Root<T extends MediaItem>({
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [focusParam]);
   const inst = useInstanceSelection(arrType);
-  const { data: prefs } = usePreferences(inst.activeInstance);
   const { data: profiles } = useQualityProfiles(arrType, inst.activeInstance);
   const refreshMutation = useRefreshInstance();
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
@@ -221,17 +207,9 @@ function Root<T extends MediaItem>({
   const activeInstanceRow = inst.typedInstances.find(
     (i) => i.id === inst.activeInstance,
   );
-  const scoringMode: ScoringMode =
-    activeInstanceRow?.scoringMode ?? DEFAULT_SCORING_MODE;
   const showAllEnabled = activeInstanceRow?.showAllMedia ?? false;
-  const noCfsConfigured =
-    isManualMode(scoringMode) && (prefs?.length ?? 0) === 0;
 
-  const filters = useMediaFilters(
-    scoringMode,
-    inst.activeInstance,
-    showAllEnabled,
-  );
+  const filters = useMediaFilters(inst.activeInstance, showAllEnabled);
   // ?mediaId=<id> from history/dashboard deep-links drives a server-
   // side exact filter (single row). Decoupled from ?focus so a refresh
   // (which loses focus, since we strip it after the pulse) still keeps
@@ -291,12 +269,10 @@ function Root<T extends MediaItem>({
   const handlers = useBulkHandlers<T>({ selection, abort, actions });
   const { chips, clearActiveFilters } = useFilterChips({
     filters,
-    prefs,
     profiles,
   });
 
   const cfOptions = useMemo(() => {
-    const missing = (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName }));
     const penaltyPairs = (profiles ?? [])
       .flatMap((p) => p.formatItems ?? [])
       .filter((item) => item.score < 0)
@@ -305,8 +281,8 @@ function Root<T extends MediaItem>({
       id,
       name,
     }));
-    return { missing, penalty };
-  }, [prefs, profiles]);
+    return { penalty };
+  }, [profiles]);
 
   const { density, cycle: cycleDensity } = useDensity();
   // `,` keyboard shortcut cycles density — matches the top-bar density
@@ -334,7 +310,6 @@ function Root<T extends MediaItem>({
   }, [cycleDensity]);
   const ctx: MediaListShellRenderCtx<T> = {
     arrType,
-    scoringMode,
     profiles,
     activeInstance: inst.activeInstance,
     queuedIds,
@@ -391,7 +366,6 @@ function Root<T extends MediaItem>({
     refreshMutation,
     chips,
     clearActiveFilters,
-    noCfsConfigured,
     askConfirm,
     i18nNamespace,
     confirmDeleteBulkKey,
@@ -429,7 +403,6 @@ function Root<T extends MediaItem>({
           */}
           <div className="flex min-h-0 flex-1 flex-col">{children}</div>
           <MobileFilterBar
-            scoringMode={ctx.scoringMode}
             profiles={profiles}
             cfOptions={cfOptions}
             filters={filters.filters}
@@ -498,8 +471,8 @@ function MediaListShellBulkBar() {
 // ─────────────────────────────────────────────────────────────────────
 // MediaListShellTopBar — private. Composes the per-page chrome that
 // fills AppShell's TopHeader slot on movies/shows pages: instance
-// picker (with count subtitle), scoring mode, density, refresh, bulk
-// actions (animated), and search. qui-style: a single horizontal bar
+// picker (with count subtitle), density, refresh, bulk actions
+// (animated), and search. qui-style: a single horizontal bar
 // whose content changes by selection state but whose height stays
 // constant, so (de)selecting never shifts the table below.
 // ─────────────────────────────────────────────────────────────────────
@@ -543,12 +516,8 @@ function MediaListShellTopBar() {
         />
       </Button>
 
-      {showInstanceContext && (
-        <ScoringModeSelector instanceId={inst.activeInstance} hideLabel />
-      )}
-
       {/*
-        Search stretches to fill the slot between the Profile control
+        Search stretches to fill the slot between the refresh button
         and the density toggle (`flex-1` on both the group and the
         search wrapper) so there's no dead gap. `min-w-0` lets it
         shrink on a narrow slot instead of wrapping — the TopHeader
@@ -609,7 +578,6 @@ function Body<T extends MediaItem>({ columns, Card, tableId }: BodyProps<T>) {
     filters,
     chips,
     clearActiveFilters,
-    noCfsConfigured,
     focusedId,
   } = useShellContext<T>();
 
@@ -637,8 +605,7 @@ function Body<T extends MediaItem>({ columns, Card, tableId }: BodyProps<T>) {
         data.items.length === 0 &&
         (() => {
           let emptyState: EmptyStateKind;
-          if (inst.activeInstance <= 0 || noCfsConfigured)
-            emptyState = "no-cfs";
+          if (inst.activeInstance <= 0) emptyState = "no-cfs";
           else if (chips.length > 0) emptyState = "filtered-empty";
           else emptyState = "all-clear";
           return (

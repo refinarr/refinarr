@@ -16,8 +16,6 @@ const baseFilters: MediaFilters = {
   mediaId: null,
   profileIds: [],
   severities: [],
-  missingCfIds: [],
-  missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
   flaggedOnly: true,
@@ -47,10 +45,9 @@ describe("CfColumnFunnel", () => {
     Element.prototype.scrollIntoView = original.scrollIntoView;
   });
 
-  it("renders a chip per option in manual mode", async () => {
+  it("renders a chip per option", async () => {
     renderWithProviders(
       <CfColumnFunnel
-        scoringMode="manual"
         options={options}
         filters={baseFilters}
         onChange={() => {}}
@@ -67,30 +64,10 @@ describe("CfColumnFunnel", () => {
     }
   });
 
-  it("toggles a chip into missingCfIds in manual mode", async () => {
+  it("toggles a chip into hasNegativeCfIds", async () => {
     const onChange = vi.fn();
     renderWithProviders(
       <CfColumnFunnel
-        scoringMode="manual"
-        options={options}
-        filters={baseFilters}
-        onChange={onChange}
-        columnLabel="Custom Formats"
-      />,
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: /filter custom formats/i }),
-    );
-    const hdrChip = await screen.findByRole("button", { name: /HDR/ });
-    await userEvent.click(hdrChip);
-    expect(onChange).toHaveBeenCalledWith({ missingCfIds: [1] });
-  });
-
-  it("toggles a chip into hasNegativeCfIds in profile mode", async () => {
-    const onChange = vi.fn();
-    renderWithProviders(
-      <CfColumnFunnel
-        scoringMode="profile"
         options={options}
         filters={baseFilters}
         onChange={onChange}
@@ -109,9 +86,8 @@ describe("CfColumnFunnel", () => {
     const onChange = vi.fn();
     renderWithProviders(
       <CfColumnFunnel
-        scoringMode="manual"
         options={options}
-        filters={{ ...baseFilters, missingCfIds: [1, 2] }}
+        filters={{ ...baseFilters, hasNegativeCfIds: [1, 2] }}
         onChange={onChange}
         columnLabel="Custom Formats"
       />,
@@ -122,19 +98,18 @@ describe("CfColumnFunnel", () => {
     const hdrChip = await screen.findByRole("button", { name: /HDR/ });
     expect(hdrChip).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(hdrChip);
-    expect(onChange).toHaveBeenCalledWith({ missingCfIds: [2] });
+    expect(onChange).toHaveBeenCalledWith({ hasNegativeCfIds: [2] });
   });
 
   it("Clear button resets the active filter slice", async () => {
     const onChange = vi.fn();
     renderWithProviders(
       <CfColumnFunnel
-        scoringMode="manual"
         options={options}
         filters={{
           ...baseFilters,
-          missingCfIds: [1, 2],
-          missingCfMatch: "any",
+          hasNegativeCfIds: [1, 2],
+          hasNegativeCfMatch: "any",
         }}
         onChange={onChange}
         columnLabel="Custom Formats"
@@ -147,15 +122,14 @@ describe("CfColumnFunnel", () => {
       await screen.findByRole("button", { name: /clear filter/i }),
     );
     expect(onChange).toHaveBeenCalledWith({
-      missingCfIds: [],
-      missingCfMatch: "all",
+      hasNegativeCfIds: [],
+      hasNegativeCfMatch: "all",
     });
   });
 
   it("shows an empty-state message when there are no options", async () => {
     renderWithProviders(
       <CfColumnFunnel
-        scoringMode="manual"
         options={[]}
         filters={baseFilters}
         onChange={() => {}}

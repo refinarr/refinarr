@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { describe, it, expect } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import type { CfPreference, QualityProfile } from "@/shared/types/models";
+import type { QualityProfile } from "@/shared/types/models";
 import messages from "../../../../../messages/en.json";
 import { useFilterChips } from "../useFilterChips";
 import { useMediaFilters, type MediaFiltersResult } from "../useMediaFilters";
@@ -15,11 +15,6 @@ function wrapper({ children }: { children: ReactNode }) {
     </NextIntlClientProvider>
   );
 }
-
-const prefs: CfPreference[] = [
-  { id: 1, instanceId: 1, cfId: 10, cfName: "HDR10+" },
-  { id: 2, instanceId: 1, cfId: 11, cfName: "Atmos" },
-];
 
 const profiles: QualityProfile[] = [
   {
@@ -39,8 +34,8 @@ describe("useFilterChips", () => {
   it("returns no chips when no filters are active", () => {
     const { result } = renderHook(
       () => {
-        const filters = useMediaFilters("manual", 1);
-        return useFilterChips({ filters, prefs, profiles });
+        const filters = useMediaFilters(1);
+        return useFilterChips({ filters, profiles });
       },
       { wrapper },
     );
@@ -50,8 +45,8 @@ describe("useFilterChips", () => {
   it("emits a query chip when q is set", () => {
     const { result } = renderHook(
       () => {
-        const filters = useMediaFilters("manual", 1);
-        return { filters, ...useFilterChips({ filters, prefs, profiles }) };
+        const filters = useMediaFilters(1);
+        return { filters, ...useFilterChips({ filters, profiles }) };
       },
       { wrapper },
     );
@@ -61,26 +56,11 @@ describe("useFilterChips", () => {
     expect(result.current.chips.find((c) => c.key === "q")).toBeTruthy();
   });
 
-  it("emits chips for missing CF ids using preference names", () => {
-    const { result } = renderHook(
-      () => {
-        const filters = useMediaFilters("manual", 1);
-        return { filters, ...useFilterChips({ filters, prefs, profiles }) };
-      },
-      { wrapper },
-    );
-    act(() =>
-      result.current.filters.setFilters((f) => ({ ...f, missingCfIds: [10] })),
-    );
-    const chip = result.current.chips.find((c) => c.label.includes("HDR10+"));
-    expect(chip).toBeTruthy();
-  });
-
   it("emits chips for negative-CF ids derived from quality profiles", () => {
     const { result } = renderHook(
       () => {
-        const filters = useMediaFilters("profile", 1);
-        return { filters, ...useFilterChips({ filters, prefs, profiles }) };
+        const filters = useMediaFilters(1);
+        return { filters, ...useFilterChips({ filters, profiles }) };
       },
       { wrapper },
     );
@@ -100,9 +80,9 @@ describe("useFilterChips", () => {
     let captured!: MediaFiltersResult["filters"];
     const { result } = renderHook(
       () => {
-        const filters = useMediaFilters("manual", 1);
+        const filters = useMediaFilters(1);
         captured = filters.filters;
-        return { filters, ...useFilterChips({ filters, prefs, profiles }) };
+        return { filters, ...useFilterChips({ filters, profiles }) };
       },
       { wrapper },
     );
@@ -112,7 +92,6 @@ describe("useFilterChips", () => {
         q: "x",
         profileIds: [100],
         severities: ["critical"],
-        missingCfIds: [10],
         hasNegativeCfIds: [50],
         minScore: 0,
         maxScore: 0.5,
@@ -120,7 +99,7 @@ describe("useFilterChips", () => {
         maxSize: 1_000_000_000,
         sortBy: "title",
         order: "desc",
-        missingCfMatch: "any",
+        hasNegativeCfMatch: "any",
       })),
     );
     act(() => result.current.clearActiveFilters());
@@ -128,7 +107,6 @@ describe("useFilterChips", () => {
     expect(captured.q).toBe("");
     expect(captured.profileIds).toEqual([]);
     expect(captured.severities).toEqual([]);
-    expect(captured.missingCfIds).toEqual([]);
     expect(captured.hasNegativeCfIds).toEqual([]);
     expect(captured.minScore).toBeNull();
     expect(captured.maxScore).toBeNull();
@@ -137,6 +115,6 @@ describe("useFilterChips", () => {
     // Preferences preserved
     expect(captured.sortBy).toBe("title");
     expect(captured.order).toBe("desc");
-    expect(captured.missingCfMatch).toBe("any");
+    expect(captured.hasNegativeCfMatch).toBe("any");
   });
 });

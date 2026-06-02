@@ -1,6 +1,5 @@
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
-import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
 import type { ArrClient } from "@/server/clients/ArrClient";
 import type { ClientFor } from "@/server/arr/composition";
@@ -12,7 +11,7 @@ import {
   CACHE_TTL_MS,
 } from "@/server/lib/data-cache";
 import { LogSource } from "@/shared/types/models";
-import { isProfileMode, SCORE_FOR } from "@/shared/scoring-mode";
+import { scoreForItem } from "@/shared/scoring-mode";
 import { getSeverity } from "@/shared/severity";
 import type {
   ActionLog,
@@ -24,7 +23,6 @@ import type {
   MediaQuery,
   MediaType,
   QualityProfile,
-  ScoringMode,
 } from "@/shared/types/models";
 import { dryRunService } from "./DryRunService";
 
@@ -46,7 +44,7 @@ interface DecorateResult {
   unwantedFormats: CustomFormat[];
 }
 
-interface ProfileItemContext<TUpstream, TFile> {
+interface BuildItemContext<TUpstream, TFile> {
   item: TUpstream;
   file: TFile;
   profile: QualityProfile;
@@ -54,23 +52,13 @@ interface ProfileItemContext<TUpstream, TFile> {
   positiveProfileCfs: CustomFormat[];
 }
 
-interface ManualItemContext<TUpstream, TFile> {
-  item: TUpstream;
-  file: TFile;
-  profileMaps: ProfileMaps;
-  wantedIds: number[];
-  wantedCfs: Array<{ id: number; name: string }>;
-}
-
 interface BuildPipelineArgs<TUpstream extends UpstreamItem, TFile, TItem> {
   instance: Instance;
-  mode: ScoringMode;
   mediaType: MediaType;
   items: TUpstream[];
   profiles: QualityProfile[];
   filesFor: (item: TUpstream) => TFile;
-  toProfileItem: (ctx: ProfileItemContext<TUpstream, TFile>) => TItem;
-  toManualItem: (ctx: ManualItemContext<TUpstream, TFile>) => TItem;
+  toItem: (ctx: BuildItemContext<TUpstream, TFile>) => TItem;
 }
 
 // Minimal shape every *arr upstream item satisfies — used as the
@@ -139,7 +127,6 @@ function compareMedia<T extends MediaItem>(
   a: T,
   b: T,
   sortBy: MediaQuery["sortBy"],
-  mode: ScoringMode,
   dir: 1 | -1,
 ): number {
   if (sortBy === "added") return 0;
@@ -151,9 +138,7 @@ function compareMedia<T extends MediaItem>(
   if (aHas !== bHas) return aHas ? -1 : 1;
   if (!aHas) return 0;
   if (sortBy === "score") {
-    const av = SCORE_FOR[mode](a);
-    const bv = SCORE_FOR[mode](b);
-    return (av - bv) * dir;
+    return (scoreForItem(a) - scoreForItem(b)) * dir;
   }
   return (a.sizeOnDisk - b.sizeOnDisk) * dir;
 }
@@ -180,11 +165,7 @@ function filterByCfList<T extends MediaItem>(
 // Three small filter passes split by axis so each function stays under
 // the cognitive-complexity threshold and applyQuery's pipeline reads as
 // a sequence of named steps.
-function filterMedia<T extends MediaItem>(
-  source: T[],
-  query: MediaQuery,
-  mode: ScoringMode,
-): T[] {
+function filterMedia<T extends MediaItem>(source: T[], query: MediaQuery): T[] {
   // Exact-id filter short-circuits every other axis — used by deep-links
   // from /history and dashboard to land on a single specific item.
   // Bypasses flaggedOnly/severity/etc. so the linked item is found even
@@ -197,7 +178,7 @@ function filterMedia<T extends MediaItem>(
     return source.filter((m) => m.id === query.mediaId);
   }
   const visibility = applyVisibilityFilters(source, query);
-  const ranges = applyRangeFilters(visibility, query, mode);
+  const ranges = applyRangeFilters(visibility, query);
   return applyMatchFilters(ranges, query);
 }
 
@@ -224,9 +205,8 @@ function applyVisibilityFilters<T extends MediaItem>(
 function applyRangeFilters<T extends MediaItem>(
   source: T[],
   query: MediaQuery,
-  mode: ScoringMode,
 ): T[] {
-  const scoreOf = SCORE_FOR[mode];
+  const scoreOf = scoreForItem;
   let out = source;
   if (query.minScore !== undefined) {
     const min = query.minScore;
@@ -247,9 +227,7 @@ function applyRangeFilters<T extends MediaItem>(
   if (query.severities && query.severities.length > 0) {
     const wanted = new Set(query.severities);
     out = out.filter((m) =>
-      wanted.has(
-        getSeverity(scoreOf(m), m.minProfileScore, mode, itemHasFile(m)),
-      ),
+      wanted.has(getSeverity(scoreOf(m), m.minProfileScore, itemHasFile(m))),
     );
   }
   return out;
@@ -333,8 +311,8 @@ export abstract class MediaService<TItem extends MediaItem> {
     query: MediaQuery,
   ): Promise<{ items: TItem[]; total: number }>;
 
-  protected mediaCacheKey(instanceId: number, mode: ScoringMode): string {
-    return `${this.cacheNamespace}:${instanceId}:${mode}`;
+  protected mediaCacheKey(instanceId: number): string {
+    return `${this.cacheNamespace}:${instanceId}`;
   }
 
   // Flagged subset of the cache (per-item `flagged === true`). The
@@ -344,12 +322,11 @@ export abstract class MediaService<TItem extends MediaItem> {
   //
   // Reads from the full TTL+STALE window so the dashboard count tracks
   // whatever the actual `/api/<arr>/<media>` path would serve. With the
-  // strict TTL here, an unrelated mutation (e.g. changing another
-  // instance's scoring mode 6 minutes after page load) would cause this
-  // instance's KPI to flip to skeleton even though its endpoint still
-  // returns data from the SWR stale window.
-  getCachedFlaggedCount(instanceId: number, mode: ScoringMode): number | null {
-    const key = this.mediaCacheKey(instanceId, mode);
+  // strict TTL here, an unrelated mutation 6 minutes after page load would
+  // cause this instance's KPI to flip to skeleton even though its endpoint
+  // still returns data from the SWR stale window.
+  getCachedFlaggedCount(instanceId: number): number | null {
+    const key = this.mediaCacheKey(instanceId);
     const cached = dataCache.get<{ items: TItem[] }>(
       key,
       CACHE_TTL_MS + CACHE_STALE_MS,
@@ -361,8 +338,8 @@ export abstract class MediaService<TItem extends MediaItem> {
   // Visible-library size (cache row count). Used as the denominator
   // in the dashboard's "X / Y" KPI. Same TTL+STALE window as
   // `getCachedFlaggedCount` so both counts surface or skeleton in lockstep.
-  getCachedTotalCount(instanceId: number, mode: ScoringMode): number | null {
-    const key = this.mediaCacheKey(instanceId, mode);
+  getCachedTotalCount(instanceId: number): number | null {
+    const key = this.mediaCacheKey(instanceId);
     const cached = dataCache.get<{ items: TItem[] }>(
       key,
       CACHE_TTL_MS + CACHE_STALE_MS,
@@ -593,14 +570,13 @@ export abstract class MediaService<TItem extends MediaItem> {
   }
 
   // Template-method orchestrator for the build pipeline. The subclass
-  // provides the upstream items + per-item file resolver + per-mode
-  // adapters; this method handles the cross-arr concerns:
+  // provides the upstream items + per-item file resolver + item adapter;
+  // this method handles the cross-arr concerns:
   //   1. Build profile maps.
   //   2. Skip ignored items.
-  //   3. In profile mode: skip items pointing at a deleted profile
-  //      (broken upstream state, can't be scored).
-  //   4. In manual mode: load wanted-CF prefs once.
-  //   5. Dispatch to the per-mode adapter for each visible item.
+  //   3. Skip items pointing at a deleted profile (broken upstream state,
+  //      can't be scored).
+  //   4. Dispatch to the item adapter for each visible item.
   //
   // TUpstream / TFile are method-scoped generics so the class itself
   // stays single-generic on TItem (test subclasses don't need to
@@ -608,55 +584,38 @@ export abstract class MediaService<TItem extends MediaItem> {
   protected async runBuildPipeline<TUpstream extends UpstreamItem, TFile>(
     args: BuildPipelineArgs<TUpstream, TFile, TItem>,
   ): Promise<TItem[]> {
-    const { instance, mode, mediaType, items, profiles, filesFor } = args;
+    const { instance, mediaType, items, profiles, filesFor } = args;
     const profileMaps = this.buildProfileMaps(profiles);
     const ignoredSet = await this.findIgnoredMediaIds(instance.id, mediaType);
     const visible = items.filter((i) => !ignoredSet.has(i.id));
 
-    if (isProfileMode(mode)) {
-      return visible
-        .filter((i) => profileMaps.byId.has(i.qualityProfileId))
-        .map((item) => {
-          const profile = profileMaps.byId.get(item.qualityProfileId)!;
-          const cfScoreMap =
-            profileMaps.scoresByProfile.get(item.qualityProfileId) ??
-            new Map<number, number>();
-          const positiveProfileCfs =
-            profileMaps.positiveByProfile.get(item.qualityProfileId) ?? [];
-          return args.toProfileItem({
-            item,
-            file: filesFor(item),
-            profile,
-            cfScoreMap,
-            positiveProfileCfs,
-          });
+    return visible
+      .filter((i) => profileMaps.byId.has(i.qualityProfileId))
+      .map((item) => {
+        const profile = profileMaps.byId.get(item.qualityProfileId)!;
+        const cfScoreMap =
+          profileMaps.scoresByProfile.get(item.qualityProfileId) ??
+          new Map<number, number>();
+        const positiveProfileCfs =
+          profileMaps.positiveByProfile.get(item.qualityProfileId) ?? [];
+        return args.toItem({
+          item,
+          file: filesFor(item),
+          profile,
+          cfScoreMap,
+          positiveProfileCfs,
         });
-    }
-
-    const prefs = await preferenceRepository.findByInstance(instance.id);
-    const wantedIds = prefs.map((p) => p.cfId);
-    const wantedCfs = prefs.map((p) => ({ id: p.cfId, name: p.cfName }));
-
-    return visible.map((item) =>
-      args.toManualItem({
-        item,
-        file: filesFor(item),
-        profileMaps,
-        wantedIds,
-        wantedCfs,
-      }),
-    );
+      });
   }
 
   protected applyQuery<T extends MediaItem>(
     source: T[],
     query: MediaQuery,
-    mode: ScoringMode,
   ): { items: T[]; total: number } {
-    const filtered = filterMedia(source, query, mode);
+    const filtered = filterMedia(source, query);
     const dir = query.order === "asc" ? 1 : -1;
     const sorted = [...filtered].sort((a, b) =>
-      compareMedia(a, b, query.sortBy, mode, dir),
+      compareMedia(a, b, query.sortBy, dir),
     );
     const total = sorted.length;
     const start = (query.page - 1) * query.limit;
