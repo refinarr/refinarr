@@ -196,12 +196,19 @@ describe("GET / PUT / DELETE /api/instances/[id]", () => {
     const { id } = await created.json();
     dataCache.set(`movies:${id}`, ["stale"]);
     dataCache.set(`series:${id}`, ["stale"]);
+    // Descendant key (extra trailing segment) must also drop; a
+    // prefix-collision key (`movies:${id}0`) must survive — invalidate
+    // anchors on the instanceId segment, not a substring.
+    dataCache.set(`movies:${id}:details`, ["child"]);
+    dataCache.set(`movies:${id}0`, ["collision"]);
     dataCache.set(`movies:9999`, ["other"]);
 
     const res = await PUT(putReq(id, { name: "Renamed" }), ctxFor(id));
     expect(res.status).toBe(200);
     expect(dataCache.get(`movies:${id}`, 60_000)).toBeNull();
     expect(dataCache.get(`series:${id}`, 60_000)).toBeNull();
+    expect(dataCache.get(`movies:${id}:details`, 60_000)).toBeNull();
+    expect(dataCache.get(`movies:${id}0`, 60_000)).toEqual(["collision"]);
     expect(dataCache.get(`movies:9999`, 60_000)).toEqual(["other"]);
   });
 

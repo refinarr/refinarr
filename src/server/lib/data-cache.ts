@@ -172,14 +172,15 @@ class DataCache {
   }
 
   invalidate(instanceId: number): void {
-    // Cache keys are `${namespace}:${instanceId}` (e.g. "movies:1"). Match
-    // on a `:`-delimited segment so the instance id is found whether it's
-    // the final segment or carries a trailing suffix — a bare substring
-    // check would also match "movies:10" when invalidating instance 1.
+    // Cache keys are `${namespace}:${instanceId}[:…]` (e.g. "movies:1").
+    // Anchor the match to the instanceId segment (index 1) rather than a
+    // bare substring/any-segment check: a substring would also hit
+    // "movies:10" and any-segment would over-delete a future key that
+    // happened to carry the same number in another position.
     const target = String(instanceId);
     const keys = new Set([...this.store.keys(), ...this.inflight.keys()]);
     for (const key of keys) {
-      if (!key.split(":").includes(target)) continue;
+      if (key.split(":")[1] !== target) continue;
       this.store.delete(key);
       this.inflight.delete(key);
       this.bumpVersion(key);
