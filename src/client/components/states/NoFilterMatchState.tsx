@@ -10,7 +10,10 @@ interface Props {
 export function NoFilterMatchState({ onClear }: Props) {
   const t = useTranslations("states.noFilterMatch");
   return (
-    <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+    <div
+      data-testid="empty-no-filter-match"
+      className="flex flex-col items-center justify-center gap-4 py-16 text-center"
+    >
       <SearchX className="text-muted-foreground size-12" />
       <div>
         <p className="text-lg font-semibold">{t("title")}</p>

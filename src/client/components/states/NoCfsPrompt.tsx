@@ -5,7 +5,10 @@ import { ListX } from "lucide-react";
 export function NoCfsPrompt() {
   const t = useTranslations("states.noCfs");
   return (
-    <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+    <div
+      data-testid="empty-no-cfs"
+      className="flex flex-col items-center justify-center gap-4 py-20 text-center"
+    >
       <ListX className="text-muted-foreground size-12" />
       <div>
         <p className="text-lg font-semibold">{t("title")}</p>
