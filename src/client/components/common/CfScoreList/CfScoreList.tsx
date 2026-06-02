@@ -7,39 +7,16 @@ interface Props {
   formats: CustomFormat[];
   missingFormats: CustomFormat[];
   collapseMissingAfter?: number;
-  // Compact mode for the media card: collapse the formats to a readable
-  // count pill ("N penalties" / "N missing formats") instead of the chip
-  // list — long CF names can't fit legibly on a card. The full named list
-  // shows in the detail drawer (tap the card).
-  dense?: boolean;
 }
 
 export function CfScoreList({
   formats,
   missingFormats,
   collapseMissingAfter = 8,
-  dense = false,
 }: Props) {
   const tCommon = useTranslations("common");
   const [showAllMissing, setShowAllMissing] = useState(false);
   if (formats.length === 0 && missingFormats.length === 0) return null;
-
-  if (dense) {
-    return (
-      <div className="mt-1 flex items-center gap-1.5 text-xs">
-        {formats.length > 0 && (
-          <span className="bg-critical/10 text-critical/90 inline-flex items-center rounded-sm px-1.5 py-0.5 tabular-nums">
-            {tCommon("penaltyCount", { count: formats.length })}
-          </span>
-        )}
-        {missingFormats.length > 0 && (
-          <span className="bg-destructive/10 text-destructive/80 inline-flex items-center rounded-sm px-1.5 py-0.5 tabular-nums">
-            {tCommon("missingCount", { count: missingFormats.length })}
-          </span>
-        )}
-      </div>
-    );
-  }
 
   const sortedFormats = [...formats].sort(
     (a, b) => (b.score ?? 0) - (a.score ?? 0),

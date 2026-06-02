@@ -4,15 +4,14 @@ import { useVirtList } from "@/client/hooks/ui/useVirtList";
 import { MediaCard, type SwipeActions } from "./MediaCard";
 import { MediaCardSkeleton } from "./MediaCardSkeleton";
 
-// Cards measure ~90px (no CF row) to ~118px (with the CF-chip row that
-// flagged items — the majority here — carry): p-3 shell 26 + content
-// 56–84 + pb-card-gap 8. virt suppresses the ref-attach remeasure while
-// `isScrolling` (virtual-core measureElement guard), so during a fast
-// flick freshly-mounted cards briefly sit at THIS estimate before the
-// ResizeObserver corrects them. Deliberately OVER-estimate at the
-// height ceiling: an overestimate flashes a harmless gap, an
-// underestimate stacks cards on top of each other (the bug this fixes).
-export const CARD_HEIGHT_ESTIMATE_PX = 120;
+// Every card is exactly two text rows (header + meta) — the CF detail
+// moved to a count on the meta line, so cards no longer vary in height.
+// With a UNIFORM height the estimate is exact: virt can't gap (estimate
+// too tall) or overlap (estimate too short) during a fast flick, which
+// is the trade-off a single estimate forced when card heights differed.
+// ~p-3 shell 26 + header 24 + gap 6 + meta 16 + pb-card-gap 8 ≈ 80–88.
+// Keep in sync with --spacing-card-min in globals.css (skeleton height).
+export const CARD_HEIGHT_ESTIMATE_PX = 84;
 
 function pickCardOverscan(count: number): number {
   if (count > 5000) return 3;

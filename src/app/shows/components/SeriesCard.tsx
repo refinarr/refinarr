@@ -1,5 +1,5 @@
+import { useTranslations } from "next-intl";
 import { cn } from "@/client/lib/utils";
-import { CfScoreList } from "@/client/components/common/CfScoreList";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
 import { formatBytes } from "@/client/lib/format";
@@ -14,6 +14,7 @@ interface Props {
 
 export function SeriesCard({ item, ctx }: Props) {
   const { scoringMode, t } = ctx;
+  const tCommon = useTranslations("common");
   const score = SCORE_FOR[scoringMode](item);
   const hasFile = item.episodeFiles.length > 0;
   const issues = ISSUES_FOR[scoringMode](item);
@@ -50,22 +51,25 @@ export function SeriesCard({ item, ctx }: Props) {
           {scoreText}
         </span>
       </div>
-      <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+      {/* Single meta line keeps every card exactly two rows tall →
+          uniform height, so the virtualizer estimate is exact (no
+          gap/overlap on fast scroll). The CF detail lives in the drawer. */}
+      <div className="text-muted-foreground flex items-center gap-x-2 overflow-hidden text-xs">
         <span className="tabular-nums">{formatBytes(item.sizeOnDisk)}</span>
-        <span className="tabular-nums">
+        <span className="shrink-0 tabular-nums">
           {t("episodeCountShort", {
             affected: item.affectedEpisodeCount,
             total: item.totalEpisodeCount,
           })}
         </span>
+        {issues.length > 0 && (
+          <span className="text-critical/90 shrink-0">
+            {tCommon(profile ? "penaltyCount" : "missingCount", {
+              count: issues.length,
+            })}
+          </span>
+        )}
       </div>
-      {issues.length > 0 && (
-        <CfScoreList
-          dense
-          formats={profile ? issues : []}
-          missingFormats={profile ? [] : issues}
-        />
-      )}
     </div>
   );
 }
