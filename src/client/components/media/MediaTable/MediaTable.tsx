@@ -11,6 +11,7 @@ import type { Density } from "@/client/hooks/ui/useDensity";
 import { useIsDesktop } from "@/client/hooks/ui/useMediaQuery";
 import { useColumnSizing } from "@/client/hooks/media/useColumnSizing";
 import { useVirtList } from "@/client/hooks/ui/useVirtList";
+import { MediaPosterGrid } from "@/client/components/media/MediaPosterGrid";
 import { MediaCardList } from "./MediaCardList";
 import { MediaTableHeader } from "./MediaTableHeader";
 import { MediaTableRow } from "./MediaTableRow";
@@ -54,6 +55,9 @@ interface Props<T extends { id: number }> {
   onSortChange: (key: SortKey) => void;
   rowActions?: (row: T) => ReactNode;
   renderCard?: (row: T) => ReactNode;
+  // Poster-tile content for density="poster". Same role as renderCard
+  // but for the grid view; supplied for movies/shows.
+  renderPoster?: (row: T) => ReactNode;
   emptyState?: ReactNode;
   // Active row density (desktop only). "compact" = h-row-compact (~36px),
   // "cozy" = h-row-cozy (~48px, default). Read from useDensity().
@@ -84,6 +88,25 @@ export function MediaTable<T extends { id: number }>(props: Props<T>) {
 
   if (props.rows.length === 0 && props.emptyState) {
     return <>{props.emptyState}</>;
+  }
+
+  // Poster grid wins over both the card list and the table whenever the
+  // user picked density="poster" — on desktop AND mobile (the grid is
+  // 2-col on mobile). Requires renderPoster (passed for movies/shows).
+  if (props.density === "poster" && props.renderPoster) {
+    return (
+      <MediaPosterGrid
+        rows={props.rows}
+        selectedIds={props.selectedIds}
+        onToggleSelect={props.onToggleSelect}
+        onRowClick={props.onRowClick}
+        renderPoster={props.renderPoster}
+        focusedId={props.focusedId}
+        fetchNextPage={props.fetchNextPage}
+        hasNextPage={props.hasNextPage}
+        isFetchingNextPage={props.isFetchingNextPage}
+      />
+    );
   }
 
   // Card list is rendered when:

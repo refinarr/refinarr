@@ -373,3 +373,45 @@ describe("ArrClient.getRecentHistory", () => {
     expect(events[0].downloadId).toBeNull();
   });
 });
+
+describe("ArrClient.getPosterStream", () => {
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  test("streams the poster bytes from /mediacover with the API key", async () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff]); // JPEG magic
+    fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(bytes, {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      }),
+    );
+    const client = new TestClient(stubInstance);
+    const res = await client.getPosterStream(42);
+
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(url).toBe("http://localhost:7878/api/v3/mediacover/42/poster.jpg");
+    const headers = new Headers(init?.headers);
+    expect(headers.get("X-Api-Key")).toBe("key");
+    // Image fetches must NOT force a JSON content-type.
+    expect(headers.get("Content-Type")).toBeNull();
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+
+    expect(res.ok).toBe(true);
+    expect(res.headers.get("content-type")).toBe("image/jpeg");
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(bytes);
+  });
+
+  test("returns a non-2xx Response instead of throwing (caller maps 404)", async () => {
+    fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 404 }));
+    const client = new TestClient(stubInstance);
+    const res = await client.getPosterStream(7);
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(404);
+  });
+});
