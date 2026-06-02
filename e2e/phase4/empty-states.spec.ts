@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { stubMediaApis } from "./mocks";
 
 // I1 — a search that matches nothing surfaces the "no filter match" empty
@@ -13,7 +13,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function expectNoMatchAfterSearch(
-  page: import("@playwright/test").Page,
+  page: Page,
   route: string,
 ): Promise<void> {
   await page.goto(route);

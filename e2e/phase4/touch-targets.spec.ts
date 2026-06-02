@@ -2,8 +2,8 @@ import { test, expect } from "@playwright/test";
 import { stubMediaApis } from "./mocks";
 
 // A12 — the mobile bottom nav, the primary touch surface, meets the 44px
-// minimum tap-target size (the #84 fix; pointer-coarse:min-h-11). hasTouch
-// makes `pointer: coarse` match so those rules apply.
+// minimum tap-target size (pointer-coarse:min-h-11). hasTouch makes
+// `pointer: coarse` match so those rules apply.
 
 test.use({
   storageState: "e2e/.auth/user.json",

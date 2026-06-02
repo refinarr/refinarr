@@ -66,7 +66,7 @@ export async function stubMediaApis(
   pg: Page,
   { movies = [], series = [], instances = [RADARR, SONARR] }: StubOptions = {},
 ): Promise<void> {
-  await pg.route("**/api/instances", (route) =>
+  await pg.route("**/api/instances**", (route) =>
     route.request().method() === "GET"
       ? route.fulfill({ status: 200, json: instances })
       : route.continue(),
