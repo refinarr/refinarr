@@ -140,10 +140,17 @@ export function MediaCard<T extends { id: number }>({
         </div>
       )}
 
-      {/* Sliding surface: checkbox · content (flex-1) · actions + chevron. */}
+      {/* Sliding surface: checkbox · content (flex-1) · actions + chevron.
+          Round it on the desktop path: there the <li> has no
+          overflow-hidden, so this div's bg-card would otherwise square off
+          the <li>'s rounded corners. On swipe-cards the <li> clips instead
+          (overflow-hidden), so this stays square to slide cleanly. */}
       <div
         data-testid="media-card-surface"
-        className="group bg-card hover:bg-muted/40 flex cursor-pointer items-start gap-3 p-3 transition-colors"
+        className={cn(
+          "group bg-card hover:bg-muted/40 flex cursor-pointer items-start gap-3 p-3 transition-colors",
+          !swipeCapable && "rounded-lg",
+        )}
         style={contentStyle}
         onClick={handleContentClick}
         {...surfaceProps}
