@@ -10,12 +10,7 @@ import { CACHE_TTL_MS } from "@/server/lib/data-cache";
 import { RadarrClient } from "@/server/clients/RadarrClient";
 import { SonarrClient } from "@/server/clients/SonarrClient";
 import { LogSource } from "@/shared/types/models";
-import type {
-  ArrType,
-  MediaItem,
-  MediaQuery,
-  ScoringMode,
-} from "@/shared/types/models";
+import type { ArrType, MediaItem, MediaQuery } from "@/shared/types/models";
 
 // Minimal subclass that exposes the protected `executeAction` so we can
 // drive its branches directly. Production subclasses (MovieService,
@@ -47,7 +42,7 @@ class TestMediaService extends MediaService<MediaItem> {
   ): Promise<{ items: MediaItem[]; total: number }> {
     this.lastWarmQuery = query;
     const cached = await this.readWithSwr<{ items: MediaItem[] }>({
-      cacheKey: this.mediaCacheKey(instanceId, "manual"),
+      cacheKey: this.mediaCacheKey(instanceId),
       instanceId,
       logSource: LogSource.MovieService,
       backgroundErrorMessage: "Test media rebuild failed",
@@ -56,17 +51,16 @@ class TestMediaService extends MediaService<MediaItem> {
         return { items: this.items };
       },
     });
-    return this.applyQuery(cached.items, query, "manual");
+    return this.applyQuery(cached.items, query);
   }
 
   // Test-only seam over the protected applyQuery so the filter-branch
-  // tests below can drive it directly with arbitrary query + mode.
+  // tests below can drive it directly with an arbitrary query.
   runQuery<T extends MediaItem>(
     source: T[],
     query: MediaQuery,
-    mode: ScoringMode = "manual",
   ): { items: T[]; total: number } {
-    return this.applyQuery(source, query, mode);
+    return this.applyQuery(source, query);
   }
 
   // Test-only seam over the protected withClient so we can assert its
@@ -210,8 +204,8 @@ describe("MediaService flagged cache contract", () => {
     ]);
     const otherService = new TestMediaService("other", [makeMediaItem(3)]);
 
-    expect(service.getCachedFlaggedCount(instanceId, "manual")).toBeNull();
-    expect(otherService.getCachedFlaggedCount(instanceId, "manual")).toBeNull();
+    expect(service.getCachedFlaggedCount(instanceId)).toBeNull();
+    expect(otherService.getCachedFlaggedCount(instanceId)).toBeNull();
 
     await expect(service.warmMediaCache(instanceId)).resolves.toEqual({
       items: [makeMediaItem(1)],
@@ -224,13 +218,13 @@ describe("MediaService flagged cache contract", () => {
       sortBy: "score",
       order: "asc",
     });
-    expect(service.getCachedFlaggedCount(instanceId, "manual")).toBe(2);
-    expect(otherService.getCachedFlaggedCount(instanceId, "manual")).toBeNull();
+    expect(service.getCachedFlaggedCount(instanceId)).toBe(2);
+    expect(otherService.getCachedFlaggedCount(instanceId)).toBeNull();
 
     await otherService.warmMediaCache(instanceId);
 
-    expect(service.getCachedFlaggedCount(instanceId, "manual")).toBe(2);
-    expect(otherService.getCachedFlaggedCount(instanceId, "manual")).toBe(1);
+    expect(service.getCachedFlaggedCount(instanceId)).toBe(2);
+    expect(otherService.getCachedFlaggedCount(instanceId)).toBe(1);
   });
 
   // Regression: pre-fix, getCachedFlaggedCount returned cache size,
@@ -250,14 +244,14 @@ describe("MediaService flagged cache contract", () => {
 
     await service.warmMediaCache(instanceId);
 
-    expect(service.getCachedFlaggedCount(instanceId, "manual")).toBe(2);
-    expect(service.getCachedTotalCount(instanceId, "manual")).toBe(5);
+    expect(service.getCachedFlaggedCount(instanceId)).toBe(2);
+    expect(service.getCachedTotalCount(instanceId)).toBe(5);
   });
 
   test("getCachedTotalCount is null on cold cache, matching getCachedFlaggedCount", () => {
     const service = new TestMediaService("cold");
-    expect(service.getCachedFlaggedCount(1, "manual")).toBeNull();
-    expect(service.getCachedTotalCount(1, "manual")).toBeNull();
+    expect(service.getCachedFlaggedCount(1)).toBeNull();
+    expect(service.getCachedTotalCount(1)).toBeNull();
   });
 
   test("returns 0 (not null) within failure cooldown after a rebuild error", async () => {
@@ -269,14 +263,14 @@ describe("MediaService flagged cache contract", () => {
     await expect(service.warmMediaCache(1)).rejects.toThrow("ETIMEDOUT");
     // Within the 60s cooldown window, return 0 so the dashboard stops
     // the 5-second skeleton-poll loop.
-    expect(service.getCachedFlaggedCount(1, "manual")).toBe(0);
-    expect(service.getCachedTotalCount(1, "manual")).toBe(0);
+    expect(service.getCachedFlaggedCount(1)).toBe(0);
+    expect(service.getCachedTotalCount(1)).toBe(0);
   });
 
   test("cold cache without a prior failure still returns null", () => {
     const service = new TestMediaService("cold-no-fail");
-    expect(service.getCachedFlaggedCount(1, "manual")).toBeNull();
-    expect(service.getCachedTotalCount(1, "manual")).toBeNull();
+    expect(service.getCachedFlaggedCount(1)).toBeNull();
+    expect(service.getCachedTotalCount(1)).toBeNull();
   });
 
   test("returns null again after the 60s cooldown expires", async () => {
@@ -288,11 +282,11 @@ describe("MediaService flagged cache contract", () => {
         new Error("ETIMEDOUT"),
       );
       await expect(service.warmMediaCache(1)).rejects.toThrow("ETIMEDOUT");
-      expect(service.getCachedFlaggedCount(1, "manual")).toBe(0);
+      expect(service.getCachedFlaggedCount(1)).toBe(0);
       // Advance past the 60s cooldown.
       vi.advanceTimersByTime(61_000);
-      expect(service.getCachedFlaggedCount(1, "manual")).toBeNull();
-      expect(service.getCachedTotalCount(1, "manual")).toBeNull();
+      expect(service.getCachedFlaggedCount(1)).toBeNull();
+      expect(service.getCachedTotalCount(1)).toBeNull();
     } finally {
       vi.useRealTimers();
     }
@@ -302,14 +296,14 @@ describe("MediaService flagged cache contract", () => {
     const err = new Error("ETIMEDOUT");
     const service = new TestMediaService("fail-then-recover", [], err);
     await expect(service.warmMediaCache(1)).rejects.toThrow("ETIMEDOUT");
-    expect(service.getCachedFlaggedCount(1, "manual")).toBe(0);
+    expect(service.getCachedFlaggedCount(1)).toBe(0);
 
     // Swap the error out so the next rebuild succeeds.
     service.setBuildError(undefined);
     await service.warmMediaCache(1);
     // Cooldown should be cleared; cold-cache logic now returns null.
     // The cache itself is populated, so the count reflects the empty item list.
-    expect(service.getCachedFlaggedCount(1, "manual")).toBe(0); // 0 flagged items, not null
+    expect(service.getCachedFlaggedCount(1)).toBe(0); // 0 flagged items, not null
   });
 
   test("stale-path background rebuild failure serves stale data without throwing", async () => {
@@ -329,8 +323,8 @@ describe("MediaService flagged cache contract", () => {
       await Promise.resolve();
       // getCachedFlaggedCount uses a TTL+STALE window; the cache is still within
       // that window so it returns the stale count rather than the failure fallback.
-      expect(service.getCachedFlaggedCount(1, "manual")).toBe(0);
-      expect(service.getCachedTotalCount(1, "manual")).toBe(0);
+      expect(service.getCachedFlaggedCount(1)).toBe(0);
+      expect(service.getCachedTotalCount(1)).toBe(0);
     } finally {
       vi.useRealTimers();
     }
@@ -349,23 +343,28 @@ describe("MediaService.applyQuery — filter branches", () => {
 
   function items() {
     // Spread of profileIds, score, and size so the branches can be
-    // exercised without writing per-test fixtures.
+    // exercised without writing per-test fixtures. Score filtering /
+    // severity now read the raw `customFormatScore` against the
+    // profile's `minProfileScore` cutoff (100 here).
     const a: MediaItem = {
       ...makeMediaItem(1),
       qualityProfileId: 10,
-      cfScore: 0.1,
+      customFormatScore: 10,
+      minProfileScore: 100,
       sizeOnDisk: 500_000_000, // 500 MB
     };
     const b: MediaItem = {
       ...makeMediaItem(2),
       qualityProfileId: 20,
-      cfScore: 0.5,
+      customFormatScore: 50,
+      minProfileScore: 100,
       sizeOnDisk: 5_000_000_000, // 5 GB
     };
     const c: MediaItem = {
       ...makeMediaItem(3),
       qualityProfileId: 30,
-      cfScore: 0.95,
+      customFormatScore: 95,
+      minProfileScore: 100,
       sizeOnDisk: 30_000_000_000, // 30 GB
     };
     return [a, b, c];
@@ -374,7 +373,7 @@ describe("MediaService.applyQuery — filter branches", () => {
   test("filters by minScore lower bound", () => {
     const result = testService.runQuery(items(), {
       ...baseQuery,
-      minScore: 0.4,
+      minScore: 40,
     });
     expect(result.items.map((m) => m.id)).toEqual([2, 3]);
   });
@@ -382,7 +381,7 @@ describe("MediaService.applyQuery — filter branches", () => {
   test("filters by maxScore upper bound", () => {
     const result = testService.runQuery(items(), {
       ...baseQuery,
-      maxScore: 0.4,
+      maxScore: 40,
     });
     expect(result.items.map((m) => m.id)).toEqual([1]);
   });
@@ -404,9 +403,8 @@ describe("MediaService.applyQuery — filter branches", () => {
     expect(result.items.map((m) => m.id).sort()).toEqual([1, 3]);
   });
 
-  test("filters by severities (manual mode buckets)", () => {
-    // cfScore: 0.1 (critical), 0.5 (low), 0.95 (ok). Manual mode reads
-    // cfScore directly via SCORE_FOR; no profile cutoff in play.
+  test("filters by severities (profile cutoff buckets)", () => {
+    // customFormatScore 10/50/95 against cutoff 100 → low / warning / ok.
     const result = testService.runQuery(items(), {
       ...baseQuery,
       severities: ["ok"],
@@ -415,9 +413,10 @@ describe("MediaService.applyQuery — filter branches", () => {
   });
 
   test("severities + profileIds + range compose (AND)", () => {
+    // b(50)=warning, c(95)=ok against cutoff 100.
     const result = testService.runQuery(items(), {
       ...baseQuery,
-      severities: ["low", "ok"],
+      severities: ["warning", "ok"],
       profileIds: [20, 30],
       minSize: 4_000_000_000,
     });

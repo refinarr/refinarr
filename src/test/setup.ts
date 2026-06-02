@@ -43,7 +43,6 @@ beforeEach(async () => {
     prisma.user.deleteMany(),
     prisma.actionLog.deleteMany(),
     prisma.appLog.deleteMany(),
-    prisma.cfPreference.deleteMany(),
     prisma.ignoreEntry.deleteMany(),
     prisma.searchQueue.deleteMany(),
     prisma.appConfig.deleteMany(),

@@ -73,9 +73,6 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/api/radarr/qualityprofiles**", (route) =>
     route.fulfill({ status: 200, json: [] }),
   );
-  await page.route("**/api/preferences**", (route) =>
-    route.fulfill({ status: 200, json: [] }),
-  );
 });
 
 test("mobile bottom tab bar exposes primary nav and the More button opens the secondary-nav sheet", async ({

@@ -65,7 +65,6 @@
     "viewToggleHint": "Toggle showing all media (not just flagged) for this instance",
     "moreCount": "+{count} more",
     "penaltyCount": "{count, plural, one {# penalty} other {# penalties}}",
-    "missingCount": "{count, plural, one {# missing format} other {# missing formats}}",
     "currentFormats": "Current formats",
     "missingFormats": "Missing",
     "on": "On",
@@ -100,8 +99,7 @@
     "flaggedTile": "Flagged",
     "selectedTile": "Selected",
     "flaggedSummary": "{total} flagged{selected, select, 0 {} other { · {selected} selected}}",
-    "flaggedSummaryShort": "{total, plural, =0 {Nothing flagged} one {# Flagged} other {# Flagged}}",
-    "scoringModeBanner": "{mode} mode"
+    "flaggedSummaryShort": "{total, plural, =0 {Nothing flagged} one {# Flagged} other {# Flagged}}"
   },
   "instanceHealth": {
     "connected": "Connected",
@@ -250,13 +248,9 @@
   },
   "filters": {
     "allProfiles": "All profiles",
-    "anyMissingFormat": "Any missing Custom Format",
     "anyPenaltyFormat": "Any penalty Custom Format",
-    "missingHeading": "Missing Custom Format",
     "penaltyHeading": "Penalty Custom Format",
-    "missingLabel": "Missing: {name}",
     "penaltyLabel": "Penalty: {name}",
-    "missingMultiLabel": "{count} missing formats",
     "penaltyMultiLabel": "{count} penalty formats",
     "matchAny": "Match any",
     "matchAll": "Match all (default)",
@@ -288,7 +282,6 @@
     "activeCountAriaLabel": "{count, plural, one {# active filter} other {# active filters}}",
     "sheetDescription": "Toggle filters that apply to the visible items.",
     "columnFilterAriaLabel": "Filter {column}",
-    "missingColumnDescription": "Toggle Custom Formats this column must be missing.",
     "penaltyColumnDescription": "Toggle penalty Custom Formats this column must contain.",
     "noFormatsAvailable": "No Custom Formats available.",
     "clearFilter": "Clear filter",
@@ -304,10 +297,6 @@
     "scoreRangeMin": "Score: {min} or above",
     "scoreRangeMax": "Score: {max} or below",
     "scoreBuckets": {
-      "manualLt30": "< 30%",
-      "manual30to60": "30 – 60%",
-      "manual60to85": "60 – 85%",
-      "manualGt85": "85%+",
       "profileNegative": "Negative",
       "profileZero": "Zero",
       "profilePositive": "Positive"
@@ -507,17 +496,8 @@
     },
     "instances": "Instances",
     "addInstance": "Add Instance",
-    "scoringMode": "Scoring Mode",
-    "profileMode": "Profile Mode",
-    "scoringModeOptions": {
-      "manual": "Manual",
-      "profile": "Profile"
-    },
-    "wantedCfs": "Wanted Custom Formats",
-    "wantedCfsHelp": "Select which Custom Formats each instance should have. Media missing any of these will be flagged.",
     "showAllMedia": "Advanced — show all media",
     "showAllMediaHelp": "By default the library view only shows flagged items — media that doesn't yet meet your custom-format requirements. Turn this on to view, search, or delete items that already pass (for further enhancement). Recommended off.",
-    "noCfsConfigured": "No Custom Formats configured",
     "dryRunMode": "Dry Run Mode",
     "appearance": {
       "title": "Appearance",
@@ -611,12 +591,6 @@
       "cooldownLabel": "Cooldown",
       "cooldownHelperOff": "No cooldown — even already-searched items can be re-searched every cycle",
       "cooldownHelper": "Skip items already searched within the last {n}h",
-      "scoringModeLabel": "Scoring mode",
-      "scoringModeManual": "Manual",
-      "scoringModeInherit": "Match display mode",
-      "scoringModeProfile": "Profile mode",
-      "scoringModeInheritDesc": "Use the same scoring mode as the instance's display setting",
-      "scoringModeProfileDesc": "Pick candidates by quality profile cutoff, even when display mode is Manual",
       "pausedLabel": "Paused",
       "pausedUntil": "Paused until {time}",
       "pause1h": "Pause for 1 hour",
@@ -684,8 +658,8 @@
       "cta": "Add instance"
     },
     "noCfs": {
-      "title": "No Custom Formats configured",
-      "body": "Go to Settings and pick the Custom Formats you want for this instance."
+      "title": "No instance selected",
+      "body": "Pick an instance to view the media flagged for its quality-profile custom formats."
     },
     "allClear": {
       "title": "All clear!",
@@ -843,7 +817,6 @@
       "enabled": "Dry Run mode enabled",
       "disabled": "Live mode on. Actions will execute against your *arr instances."
     },
-    "scoringMode": "Scoring mode set to {mode}",
     "showAllMediaOn": "Show-all-media enabled — non-flagged items now visible.",
     "showAllMediaOff": "Show-all-media disabled — only flagged items will be shown.",
     "apiKey": {

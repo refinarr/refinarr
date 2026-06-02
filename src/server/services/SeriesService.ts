@@ -14,13 +14,7 @@ import type {
   RetryActionOptions,
 } from "@/server/arr/media-service-facade";
 import { LogSource } from "@/shared/types/models";
-import {
-  isMissingWantedFormats,
-  getMissingFormats,
-  scoreCfCoverage,
-  isBelowProfileScore,
-  scoreProfileCoverage,
-} from "@/shared/scoring";
+import { isBelowProfileScore, scoreProfileCoverage } from "@/shared/scoring";
 import { seriesRetryPayloadSchema } from "@/shared/types/schemas";
 import type {
   CustomFormat,
@@ -28,7 +22,6 @@ import type {
   EpisodeFileEntry,
   ActionLog,
   MediaQuery,
-  ScoringMode,
 } from "@/shared/types/models";
 import { MediaService } from "./MediaService";
 
@@ -42,14 +35,6 @@ type ProfileCtx = {
   profile: { cutoffFormatScore: number };
   cfScoreMap: Map<number, number>;
   positiveProfileCfs: CustomFormat[];
-};
-
-type ManualCtx = {
-  item: SonarrSeries;
-  file: SonarrEpisodeFile[];
-  profileMaps: { scoresByProfile: Map<number, Map<number, number>> };
-  wantedIds: number[];
-  wantedCfs: Array<{ id: number; name: string }>;
 };
 
 // Per-series file counts derived from upstream `seasons[].statistics`.
@@ -85,19 +70,17 @@ export class SeriesService
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
-    const mode = query.scoringModeOverride ?? instance.scoringMode;
-    const cacheKey = this.mediaCacheKey(instanceId, mode);
+    const cacheKey = this.mediaCacheKey(instanceId);
     const cached = await this.readWithSwr<{ items: SeriesItem[] }>({
       cacheKey,
       instanceId: instance.id,
       logSource: LogSource.SeriesService,
       backgroundErrorMessage: "Background series rebuild failed",
-      build: () => this.buildAndLog(instance.id, instance, mode),
+      build: () => this.buildAndLog(instance.id, instance),
     });
     return this.applyQuery(
       cached.items,
       this.enforceShowAllMedia(query, instance),
-      mode,
     );
   }
 
@@ -106,16 +89,14 @@ export class SeriesService
     instance: NonNullable<
       Awaited<ReturnType<typeof instanceRepository.findById>>
     >,
-    mode: ScoringMode,
   ): Promise<{ items: SeriesItem[] }> {
     const startedAt = Date.now();
-    const items = await this.buildSeries(instance, mode);
+    const items = await this.buildSeries(instance);
     appLogger.debug("Built series cache", {
       source: LogSource.SeriesService,
       context: {
         instanceId,
         instanceName: instance.name,
-        mode,
         items: items.length,
         flagged: items.filter((s) => s.flagged).length,
         durationMs: Date.now() - startedAt,
@@ -128,7 +109,6 @@ export class SeriesService
     instance: NonNullable<
       Awaited<ReturnType<typeof instanceRepository.findById>>
     >,
-    mode: ScoringMode,
   ): Promise<SeriesItem[]> {
     const client = this.clientFromInstance(instance, "sonarr");
     const [series, profiles] = await Promise.all([
@@ -144,24 +124,15 @@ export class SeriesService
 
     return this.runBuildPipeline<SonarrSeries, SonarrEpisodeFile[]>({
       instance,
-      mode,
       mediaType: "series",
       items: series,
       profiles,
       filesFor: (s) => episodeFilesMap.get(s.id) ?? [],
-      toProfileItem: (ctx) => this.toSeriesProfileItem(ctx),
-      toManualItem: (ctx) =>
-        this.toSeriesManualItem({
-          item: ctx.item,
-          file: ctx.file,
-          profileMaps: ctx.profileMaps,
-          wantedIds: ctx.wantedIds,
-          wantedCfs: ctx.wantedCfs,
-        }),
+      toItem: (ctx) => this.toSeriesItem(ctx),
     });
   }
 
-  private toSeriesProfileItem(ctx: ProfileCtx): SeriesItem {
+  private toSeriesItem(ctx: ProfileCtx): SeriesItem {
     const {
       item: s,
       file: files,
@@ -240,78 +211,6 @@ export class SeriesService
       missingFormats,
       unwantedFormats: Array.from(unwantedCfMap.values()),
       minProfileScore: profile.cutoffFormatScore,
-      affectedEpisodeCount,
-      totalEpisodeCount: files.length,
-      episodeFiles,
-      sizeOnDisk: files.reduce((acc, f) => acc + (f.size ?? 0), 0),
-      monitored: s.monitored,
-      existingFileCount: counts.existing,
-      totalFileCount: counts.total,
-      flagged,
-    };
-  }
-
-  private toSeriesManualItem(ctx: ManualCtx): SeriesItem {
-    const { item: s, file: files, profileMaps, wantedIds, wantedCfs } = ctx;
-    const allMissingIds = new Set<number>();
-    let affectedEpisodeCount = 0;
-    for (const f of files) {
-      const missing = getMissingFormats(f.customFormats ?? [], wantedCfs);
-      if (missing.length > 0) {
-        affectedEpisodeCount++;
-        missing.forEach((cf) => allMissingIds.add(cf.id));
-      }
-    }
-    const missingFormats = wantedCfs.filter((cf) => allMissingIds.has(cf.id));
-    const worstCoverage =
-      files.length === 0
-        ? 0
-        : Math.min(
-            ...files.map((f) =>
-              scoreCfCoverage(f.customFormats ?? [], wantedIds),
-            ),
-          );
-    const cfScores =
-      profileMaps.scoresByProfile.get(s.qualityProfileId) ??
-      new Map<number, number>();
-    const episodeFiles: EpisodeFileEntry[] = files.map((f) => ({
-      id: f.id,
-      seasonNumber: f.seasonNumber,
-      relativePath: f.relativePath,
-      customFormats:
-        f.customFormats?.map((cf) => ({
-          id: cf.id,
-          name: cf.name,
-          score: cfScores.get(cf.id),
-        })) ?? [],
-      customFormatScore: f.customFormatScore ?? 0,
-      missingFormats: getMissingFormats(f.customFormats ?? [], wantedCfs),
-      unwantedFormats: [],
-      size: f.size ?? 0,
-    }));
-    const counts = fileCounts(s);
-    // Manual-mode flagged predicate: at least one episode is missing
-    // any of the user's wanted CFs. With zero prefs configured no
-    // series can be flagged — flagged stays false but every series
-    // still appears in the cache for the "Show all" view. A series
-    // with no episode files is flagged when prefs exist (every
-    // wanted CF is missing by definition).
-    const flagged =
-      wantedIds.length > 0 &&
-      (files.length === 0 ||
-        files.some((f) =>
-          isMissingWantedFormats(f.customFormats ?? [], wantedIds),
-        ));
-    return {
-      id: s.id,
-      title: s.title,
-      year: s.year,
-      qualityProfileId: s.qualityProfileId,
-      customFormats: [],
-      customFormatScore: 0,
-      cfScore: worstCoverage,
-      missingFormats,
-      unwantedFormats: [],
       affectedEpisodeCount,
       totalEpisodeCount: files.length,
       episodeFiles,

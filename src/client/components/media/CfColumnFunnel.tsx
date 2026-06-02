@@ -6,8 +6,6 @@ import type {
   MediaFilters,
 } from "@/client/hooks/media/useMediaFilters";
 import { cn } from "@/client/lib/utils";
-import { isManualMode } from "@/shared/scoring-mode";
-import type { ScoringMode } from "@/shared/types/models";
 import { ColumnFilter } from "./ColumnFilter";
 
 export interface CfOption {
@@ -16,33 +14,20 @@ export interface CfOption {
 }
 
 interface BodyProps {
-  scoringMode: ScoringMode;
   options: CfOption[];
   filters: MediaFilters;
   onChange: (patch: Partial<MediaFilters>) => void;
 }
 
-// In manual mode the active filter is `missingCfIds` + `missingCfMatch`
-// — "show me items missing any/all of these CFs".
-// In profile mode it's `hasNegativeCfIds` + `hasNegativeCfMatch` —
-// "show me items that have any/all of these penalty CFs".
-// Single state machine, just bound to a different filter slice.
-export function CfFunnelBody({
-  scoringMode,
-  options,
-  filters,
-  onChange,
-}: BodyProps) {
+// "Show me items that have any/all of these penalty CFs" — bound to the
+// `hasNegativeCfIds` + `hasNegativeCfMatch` filter slice.
+export function CfFunnelBody({ options, filters, onChange }: BodyProps) {
   const t = useTranslations("filters");
-  const manual = isManualMode(scoringMode);
-  const selected = manual ? filters.missingCfIds : filters.hasNegativeCfIds;
-  const matchMode: MatchMode = manual
-    ? filters.missingCfMatch
-    : filters.hasNegativeCfMatch;
-  const setSelected = (next: number[]) =>
-    onChange(manual ? { missingCfIds: next } : { hasNegativeCfIds: next });
+  const selected = filters.hasNegativeCfIds;
+  const matchMode: MatchMode = filters.hasNegativeCfMatch;
+  const setSelected = (next: number[]) => onChange({ hasNegativeCfIds: next });
   const setMatchMode = (next: MatchMode) =>
-    onChange(manual ? { missingCfMatch: next } : { hasNegativeCfMatch: next });
+    onChange({ hasNegativeCfMatch: next });
   const toggle = (id: number) =>
     setSelected(
       selected.includes(id)
@@ -109,41 +94,26 @@ interface Props extends BodyProps {
 // Funnel for the "issues" / Custom-Formats column header. Wraps
 // CfFunnelBody in the popover-style ColumnFilter primitive.
 export function CfColumnFunnel({
-  scoringMode,
   options,
   filters,
   onChange,
   columnLabel,
 }: Props) {
   const t = useTranslations("filters");
-  const manual = isManualMode(scoringMode);
-  const selected = manual ? filters.missingCfIds : filters.hasNegativeCfIds;
+  const selected = filters.hasNegativeCfIds;
   const active = selected.length > 0;
-  const title = manual ? t("missingHeading") : t("penaltyHeading");
-  const description = manual
-    ? t("missingColumnDescription")
-    : t("penaltyColumnDescription");
   const clear = () =>
-    onChange(
-      manual
-        ? { missingCfIds: [], missingCfMatch: "all" }
-        : { hasNegativeCfIds: [], hasNegativeCfMatch: "all" },
-    );
+    onChange({ hasNegativeCfIds: [], hasNegativeCfMatch: "all" });
   return (
     <ColumnFilter
       active={active}
-      title={title}
-      description={description}
+      title={t("penaltyHeading")}
+      description={t("penaltyColumnDescription")}
       triggerAriaLabel={t("columnFilterAriaLabel", { column: columnLabel })}
       onClear={active ? clear : undefined}
       clearLabel={t("clearFilter")}
     >
-      <CfFunnelBody
-        scoringMode={scoringMode}
-        options={options}
-        filters={filters}
-        onChange={onChange}
-      />
+      <CfFunnelBody options={options} filters={filters} onChange={onChange} />
     </ColumnFilter>
   );
 }

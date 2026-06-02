@@ -7,13 +7,12 @@ import {
   AccordionContent,
 } from "@/client/components/ui/accordion";
 import { Button } from "@/client/components/ui/button";
-import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
+import type { EpisodeFileEntry } from "@/shared/types/models";
 import { EpisodeFileRow } from "../EpisodeFileRow";
 
 interface Props {
   season: number;
   files: EpisodeFileEntry[];
-  scoringMode: ScoringMode;
   affectedCount: number;
   onSearch: () => Promise<unknown>;
   onDelete: () => Promise<unknown>;
@@ -24,7 +23,6 @@ interface Props {
 export function SeasonAccordion({
   season,
   files,
-  scoringMode,
   affectedCount,
   onSearch,
   onDelete,
@@ -77,7 +75,6 @@ export function SeasonAccordion({
             <EpisodeFileRow
               key={f.id}
               file={f}
-              scoringMode={scoringMode}
               onSearch={() => onSearchFile(f.id, f.relativePath)}
               onDelete={() => onDeleteFile(f.id, f.relativePath)}
             />

@@ -21,19 +21,16 @@ import {
 import { InstanceConnectionDot } from "@/client/components/common/InstanceConnectionDot";
 import { ARR_UI } from "@/client/lib/arr-ui";
 import { ShowAllMediaToggle } from "@/client/components/settings/ShowAllMediaToggle";
-import { ScoringModeSection } from "@/client/components/settings/InstanceCard/ScoringModeSection";
 import { AutoSearchSection } from "@/client/components/settings/InstanceCard/AutoSearchSection";
 import {
   useDeleteInstance,
   useTestConnection,
 } from "@/client/hooks/data/useInstances";
-import { usePreferences } from "@/client/hooks/data/usePreferences";
 import { useSearchQueue } from "@/client/hooks/data/useSearchQueue";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
 import { useInstanceCardCollapsed } from "@/client/hooks/ui/useInstanceCardCollapsed";
 import { withToast } from "@/client/lib/with-toast";
 import { formatEta } from "@/client/lib/format-relative";
-import { isProfileMode } from "@/shared/scoring-mode";
 import type { PublicInstance } from "@/shared/types/api";
 
 interface Props {
@@ -43,28 +40,18 @@ interface Props {
 }
 
 export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
-  const t = useTranslations("settings");
   const tForm = useTranslations("settings.instanceForm");
-  const tAutoSearch = useTranslations("settings.autoSearch");
   const tToast = useTranslations("toast.instance");
   const tCommon = useTranslations("common");
   const tTime = useTranslations("time");
   const deleteInstance = useDeleteInstance();
   const test = useTestConnection();
-  const { data: prefs } = usePreferences(instance.id);
   const { data: queue } = useSearchQueue(instance.id);
   const { collapsed, toggle: toggleCollapsed } = useInstanceCardCollapsed(
     instance.id,
   );
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
   const tConfirmDelete = useTranslations("confirm.deleteInstance");
-  // Only meaningful in manual scoring: profile mode imports its wanted CFs
-  // from the upstream quality profile, so "no CF preferences" is expected,
-  // not a misconfiguration (GAP-5).
-  const noCfs =
-    (prefs?.length ?? 0) === 0 &&
-    instance.enabled &&
-    instance.scoringMode !== "profile";
   const pendingCount = queue?.pendingCount ?? 0;
 
   const runTest = withToast(test, {
@@ -85,15 +72,6 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
     });
     if (ok) runDelete(instance.id);
   };
-
-  const MAX_CF_DISPLAY = 3;
-  const cfTags = prefs ?? [];
-  const visibleCfs = cfTags.slice(0, MAX_CF_DISPLAY);
-  const overflowCfs = cfTags.length - MAX_CF_DISPLAY;
-
-  const scoringModeLabel = isProfileMode(instance.scoringMode)
-    ? tAutoSearch("scoringModeProfile")
-    : tAutoSearch("scoringModeManual");
 
   const ArrIcon = ARR_UI[instance.type].Icon;
 
@@ -127,23 +105,9 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
               {instance.url}
             </p>
             <p className="text-muted-foreground text-xs">
-              {scoringModeLabel} · {instance.searchesPerHour}
+              {instance.searchesPerHour}
               {tForm("searchesPerHourSuffix")}
-              {visibleCfs.length > 0 && (
-                <>
-                  {" · "}
-                  {visibleCfs.map((cf) => cf.cfName).join(" · ")}
-                  {overflowCfs > 0 && (
-                    <> · {tCommon("moreCount", { count: overflowCfs })}</>
-                  )}
-                </>
-              )}
             </p>
-            {noCfs && (
-              <p className="text-warning mt-0.5 text-xs">
-                {t("noCfsConfigured")}
-              </p>
-            )}
           </div>
           {pendingCount > 0 && (
             <Badge
@@ -207,9 +171,6 @@ export function InstanceCard({ instance, failedCount = 0, onEdit }: Props) {
           <>
             <div className="pt-subgroup border-t">
               <ShowAllMediaToggle instanceId={instance.id} />
-            </div>
-            <div className="pt-subgroup border-t">
-              <ScoringModeSection instance={instance} />
             </div>
             <div className="pt-subgroup border-t">
               <AutoSearchSection instance={instance} />

@@ -4,11 +4,7 @@ import { useTranslations } from "next-intl";
 import { type FilterChip } from "@/client/components/common/ActiveFilterChips";
 import { severityLabel } from "@/client/lib/severity";
 import { formatBytes } from "@/client/lib/format";
-import type {
-  CfPreference,
-  QualityProfile,
-  Severity,
-} from "@/shared/types/models";
+import type { QualityProfile, Severity } from "@/shared/types/models";
 import type { MediaFiltersResult } from "./useMediaFilters";
 
 // CF chip-building helper — used only by useFilterChips, so it lives here
@@ -36,7 +32,6 @@ function buildCfChips(args: {
 
 interface Args {
   filters: MediaFiltersResult;
-  prefs: CfPreference[] | undefined;
   profiles: QualityProfile[] | undefined;
 }
 
@@ -47,17 +42,8 @@ export interface FilterChipsResult {
   clearActiveFilters: () => void;
 }
 
-export function useFilterChips({
-  filters,
-  prefs,
-  profiles,
-}: Args): FilterChipsResult {
+export function useFilterChips({ filters, profiles }: Args): FilterChipsResult {
   const t = useTranslations("filters");
-
-  const wantedCfOptions = useMemo(
-    () => (prefs ?? []).map((p) => ({ id: p.cfId, name: p.cfName })),
-    [prefs],
-  );
 
   const negativeCfOptions = useMemo(() => {
     const pairs = (profiles ?? [])
@@ -70,11 +56,6 @@ export function useFilterChips({
   const profileNameOf = (id: number) =>
     profiles?.find((p) => p.id === id)?.name;
 
-  const removeMissingCf = (id: number) =>
-    filters.setFilters((f) => ({
-      ...f,
-      missingCfIds: f.missingCfIds.filter((x) => x !== id),
-    }));
   const removePenaltyCf = (id: number) =>
     filters.setFilters((f) => ({
       ...f,
@@ -86,13 +67,6 @@ export function useFilterChips({
       profileIds: f.profileIds.filter((x) => x !== id),
     }));
 
-  const missingChips = buildCfChips({
-    ids: filters.filters.missingCfIds,
-    options: wantedCfOptions,
-    label: (name) => t("missingLabel", { name }),
-    removeId: removeMissingCf,
-    keyPrefix: "cf",
-  });
   const penaltyChips = buildCfChips({
     ids: filters.filters.hasNegativeCfIds,
     options: negativeCfOptions,
@@ -207,7 +181,6 @@ export function useFilterChips({
     scoreChip,
     sizeChip,
     monitorStatusChip,
-    ...missingChips,
     ...penaltyChips,
   ].filter(Boolean) as FilterChip[];
 
@@ -222,7 +195,6 @@ export function useFilterChips({
       maxScore: null,
       minSize: null,
       maxSize: null,
-      missingCfIds: [],
       hasNegativeCfIds: [],
       monitorStatus: "all",
     }));

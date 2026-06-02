@@ -429,36 +429,4 @@ describe("GET /api/instances/[id]/auto-search", () => {
     expect(body.cooldownHours).toBe(0);
     await instanceService.delete(id);
   });
-
-  test("scoringMode=inherit reflected in response", async () => {
-    const created = await postInstance(
-      postReq({
-        ...baseInstance,
-        autoSearchEnabled: true,
-        autoSearchScoringMode: "inherit",
-      }),
-      { params: Promise.resolve({}) },
-    );
-    const { id } = await created.json();
-
-    const body = await (await GET(getReq(id), ctxFor(id))).json();
-    expect(body.scoringMode).toBe("inherit");
-    await instanceService.delete(id);
-  });
-
-  test("scoringMode=profile reflected in response", async () => {
-    const created = await postInstance(
-      postReq({
-        ...baseInstance,
-        autoSearchEnabled: true,
-        autoSearchScoringMode: "profile",
-      }),
-      { params: Promise.resolve({}) },
-    );
-    const { id } = await created.json();
-
-    const body = await (await GET(getReq(id), ctxFor(id))).json();
-    expect(body.scoringMode).toBe("profile");
-    await instanceService.delete(id);
-  });
 });

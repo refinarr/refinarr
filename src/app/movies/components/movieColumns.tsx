@@ -19,20 +19,13 @@ import type { MediaListShellRenderCtx } from "@/client/components/media/MediaLis
 import { formatBytes } from "@/client/lib/format";
 import { formatRelative } from "@/client/lib/format-relative";
 import { getSeverity } from "@/client/lib/severity";
-import {
-  ISSUES_FOR,
-  ISSUES_HEADER_KEY,
-  SCORE_FOR,
-  isManualMode,
-  isProfileMode,
-} from "@/shared/scoring-mode";
+import { scoreForItem, issuesForItem } from "@/shared/scoring-mode";
 import type { MovieItem } from "@/shared/types/models";
 
 export function movieColumns(
   ctx: MediaListShellRenderCtx<MovieItem>,
 ): ColumnDef<MovieItem>[] {
   const {
-    scoringMode,
     profiles,
     queuedIds,
     recentMap,
@@ -47,13 +40,11 @@ export function movieColumns(
     tA11y,
   } = ctx;
   const issuesVisible = density === "compact" ? 1 : 2;
-  const issuesHeaderLabel = tCols(ISSUES_HEADER_KEY[scoringMode]);
+  const issuesHeaderLabel = tCols("penalties");
   const profileHeaderLabel = tCols("profile");
   const scoreHeaderLabel = tCols("score");
   const sizeHeaderLabel = tCols("size");
-  const cfFunnelOptions = isManualMode(scoringMode)
-    ? cfOptions.missing
-    : cfOptions.penalty;
+  const cfFunnelOptions = cfOptions.penalty;
 
   const renderSearchBadge = (id: number, title: string) => {
     if (queuedIds.has(id))
@@ -90,15 +81,10 @@ export function movieColumns(
         ),
       },
       cell: ({ row: { original: m } }) => {
-        const score = SCORE_FOR[scoringMode](m);
+        const score = scoreForItem(m);
         return (
           <SeverityDot
-            severity={getSeverity(
-              score,
-              m.minProfileScore,
-              scoringMode,
-              m.hasFile,
-            )}
+            severity={getSeverity(score, m.minProfileScore, m.hasFile)}
           />
         );
       },
@@ -185,7 +171,7 @@ export function movieColumns(
     },
     {
       id: "score",
-      accessorFn: (m) => SCORE_FOR[scoringMode](m),
+      accessorFn: (m) => scoreForItem(m),
       header: () => scoreHeaderLabel,
       size: 144,
       minSize: 112,
@@ -195,7 +181,6 @@ export function movieColumns(
         className: "whitespace-nowrap",
         filter: (
           <ScoreColumnFunnel
-            scoringMode={scoringMode}
             filters={filters}
             onChange={onFilterChange}
             columnLabel={scoreHeaderLabel}
@@ -203,14 +188,14 @@ export function movieColumns(
         ),
       },
       cell: ({ row: { original: m } }) => {
-        if (isProfileMode(scoringMode) && !m.hasFile) {
+        if (!m.hasFile) {
           return (
             <span className="text-muted-foreground text-xs">{t("noFile")}</span>
           );
         }
         return (
           <ScoreLabel
-            score={SCORE_FOR[scoringMode](m)}
+            score={scoreForItem(m)}
             minProfileScore={m.minProfileScore}
           />
         );
@@ -247,7 +232,6 @@ export function movieColumns(
         grow: true,
         filter: (
           <CfColumnFunnel
-            scoringMode={scoringMode}
             options={cfFunnelOptions}
             filters={filters}
             onChange={onFilterChange}
@@ -256,7 +240,7 @@ export function movieColumns(
         ),
       },
       cell: ({ row: { original: m } }) => {
-        const items = ISSUES_FOR[scoringMode](m);
+        const items = issuesForItem(m);
         if (!items.length) return null;
         const visible = items.slice(0, issuesVisible);
         const overflow = items.slice(issuesVisible);

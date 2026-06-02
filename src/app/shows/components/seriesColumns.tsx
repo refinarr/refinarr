@@ -19,20 +19,13 @@ import type { MediaListShellRenderCtx } from "@/client/components/media/MediaLis
 import { formatBytes } from "@/client/lib/format";
 import { formatRelative } from "@/client/lib/format-relative";
 import { getSeverity } from "@/client/lib/severity";
-import {
-  ISSUES_FOR,
-  ISSUES_HEADER_KEY,
-  SCORE_FOR,
-  isManualMode,
-  isProfileMode,
-} from "@/shared/scoring-mode";
+import { scoreForItem, issuesForItem } from "@/shared/scoring-mode";
 import type { SeriesItem } from "@/shared/types/models";
 
 export function seriesColumns(
   ctx: MediaListShellRenderCtx<SeriesItem>,
 ): ColumnDef<SeriesItem>[] {
   const {
-    scoringMode,
     profiles,
     queuedIds,
     recentMap,
@@ -47,13 +40,11 @@ export function seriesColumns(
     tA11y,
   } = ctx;
   const issuesVisible = density === "compact" ? 1 : 2;
-  const issuesHeaderLabel = tCols(ISSUES_HEADER_KEY[scoringMode]);
+  const issuesHeaderLabel = tCols("penalties");
   const profileHeaderLabel = tCols("profile");
   const scoreHeaderLabel = tCols("score");
   const sizeHeaderLabel = tCols("size");
-  const cfFunnelOptions = isManualMode(scoringMode)
-    ? cfOptions.missing
-    : cfOptions.penalty;
+  const cfFunnelOptions = cfOptions.penalty;
 
   return [
     {
@@ -73,16 +64,11 @@ export function seriesColumns(
         ),
       },
       cell: ({ row: { original: s } }) => {
-        const score = SCORE_FOR[scoringMode](s);
+        const score = scoreForItem(s);
         const hasFile = s.episodeFiles.length > 0;
         return (
           <SeverityDot
-            severity={getSeverity(
-              score,
-              s.minProfileScore,
-              scoringMode,
-              hasFile,
-            )}
+            severity={getSeverity(score, s.minProfileScore, hasFile)}
           />
         );
       },
@@ -182,7 +168,7 @@ export function seriesColumns(
     },
     {
       id: "score",
-      accessorFn: (s) => SCORE_FOR[scoringMode](s),
+      accessorFn: (s) => scoreForItem(s),
       header: () => scoreHeaderLabel,
       size: 144,
       minSize: 112,
@@ -192,7 +178,6 @@ export function seriesColumns(
         className: "whitespace-nowrap",
         filter: (
           <ScoreColumnFunnel
-            scoringMode={scoringMode}
             filters={filters}
             onChange={onFilterChange}
             columnLabel={scoreHeaderLabel}
@@ -200,14 +185,14 @@ export function seriesColumns(
         ),
       },
       cell: ({ row: { original: s } }) => {
-        if (isProfileMode(scoringMode) && s.episodeFiles.length === 0) {
+        if (s.episodeFiles.length === 0) {
           return (
             <span className="text-muted-foreground text-xs">{t("noFile")}</span>
           );
         }
         return (
           <ScoreLabel
-            score={SCORE_FOR[scoringMode](s)}
+            score={scoreForItem(s)}
             minProfileScore={s.minProfileScore}
           />
         );
@@ -257,7 +242,6 @@ export function seriesColumns(
         grow: true,
         filter: (
           <CfColumnFunnel
-            scoringMode={scoringMode}
             options={cfFunnelOptions}
             filters={filters}
             onChange={onFilterChange}
@@ -266,7 +250,7 @@ export function seriesColumns(
         ),
       },
       cell: ({ row: { original: s } }) => {
-        const items = ISSUES_FOR[scoringMode](s);
+        const items = issuesForItem(s);
         if (!items.length) return null;
         const visible = items.slice(0, issuesVisible);
         const overflow = items.slice(issuesVisible);

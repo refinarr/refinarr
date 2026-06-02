@@ -71,9 +71,6 @@ test("ignoring a movie removes it from the flagged list", async ({ page }) => {
   await page.route("**/api/radarr/qualityprofiles**", (route) =>
     route.fulfill({ status: 200, json: [] }),
   );
-  await page.route("**/api/preferences**", (route) =>
-    route.fulfill({ status: 200, json: [] }),
-  );
   await page.route("**/api/ignore**", (route) => {
     ignored = true;
     return route.fulfill({

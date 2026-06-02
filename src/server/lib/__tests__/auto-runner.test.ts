@@ -1233,7 +1233,6 @@ describe("buildAutoSearchStatus", () => {
     url: "http://localhost:7878",
     apiKey: "key",
     enabled: true,
-    scoringMode: "profile",
     searchesPerHour: 20,
     showAllMedia: false,
     createdAt: new Date(),
@@ -1248,7 +1247,6 @@ describe("buildAutoSearchStatus", () => {
     autoSearchPickStrategy: "balanced",
     autoSearchCooldownHours: 0,
     autoSearchPausedUntil: null,
-    autoSearchScoringMode: "inherit",
     autoSearchFailedStreak: 0,
   };
 
@@ -1382,7 +1380,6 @@ describe("buildAutoSearchStatus", () => {
         autoSearchMonitoredOnly: false,
         autoSearchScope: "missing",
         autoSearchCooldownHours: 4,
-        autoSearchScoringMode: "profile",
         autoSearchPausedUntil: future,
       },
       false,
@@ -1391,7 +1388,6 @@ describe("buildAutoSearchStatus", () => {
     expect(status.monitoredOnly).toBe(false);
     expect(status.scope).toBe("missing");
     expect(status.cooldownHours).toBe(4);
-    expect(status.scoringMode).toBe("profile");
     expect(status.paused).toBe(true);
   });
 

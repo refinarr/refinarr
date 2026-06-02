@@ -14,12 +14,8 @@ import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
 import { getSeverity } from "@/client/lib/severity";
 import { useConfirm } from "@/client/hooks/ui/useConfirm";
-import { SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
-import type {
-  SeriesItem,
-  QualityProfile,
-  ScoringMode,
-} from "@/shared/types/models";
+import { scoreForItem } from "@/shared/scoring-mode";
+import type { SeriesItem, QualityProfile } from "@/shared/types/models";
 import { groupBySeason, filename } from "@/app/shows/components/utils";
 import { SeasonAccordion } from "@/app/shows/components/SeasonAccordion";
 
@@ -27,7 +23,6 @@ interface Props {
   series: SeriesItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  scoringMode: ScoringMode;
   profiles: QualityProfile[] | undefined;
   onIgnore: (series: SeriesItem) => void;
   onSearchSeason: (
@@ -55,7 +50,6 @@ export function SeriesDetailDrawer({
   series,
   open,
   onOpenChange,
-  scoringMode,
   profiles,
   onIgnore,
   onSearchSeason,
@@ -72,22 +66,17 @@ export function SeriesDetailDrawer({
   if (!series) return null;
 
   const hasFiles = series.episodeFiles.length > 0;
-  const score = SCORE_FOR[scoringMode](series);
-  const severity = getSeverity(
-    score,
-    series.minProfileScore,
-    scoringMode,
-    hasFiles,
-  );
+  const score = scoreForItem(series);
+  const severity = getSeverity(score, series.minProfileScore, hasFiles);
   const seasonMap = groupBySeason(series.episodeFiles);
   const seasons = Array.from(seasonMap.keys()).sort((a, b) => a - b);
   const profileName = profiles?.find(
     (p) => p.id === series.qualityProfileId,
   )?.name;
-  // In profile mode the score is meaningless without a file (no
-  // customFormatScore to compare to the cutoff). Card and table show
-  // "No file"; the drawer matches.
-  const showNoFile = isProfileMode(scoringMode) && !hasFiles;
+  // The score is meaningless without a file (no customFormatScore to
+  // compare to the cutoff). Card and table show "No file"; the drawer
+  // matches.
+  const showNoFile = !hasFiles;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -132,11 +121,10 @@ export function SeriesDetailDrawer({
                 {seasons.map((season) => {
                   const files = seasonMap.get(season)!;
                   const affectedFileIds = files
-                    .filter((f) =>
-                      isProfileMode(scoringMode)
-                        ? f.minProfileScore !== undefined &&
-                          f.customFormatScore < f.minProfileScore
-                        : f.missingFormats.length > 0,
+                    .filter(
+                      (f) =>
+                        f.minProfileScore !== undefined &&
+                        f.customFormatScore < f.minProfileScore,
                     )
                     .map((f) => f.id);
                   return (
@@ -144,7 +132,6 @@ export function SeriesDetailDrawer({
                       key={season}
                       season={season}
                       files={files}
-                      scoringMode={scoringMode}
                       onSearch={() => onSearchSeason(series, season)}
                       onDelete={async () => {
                         if (affectedFileIds.length === 0) return;

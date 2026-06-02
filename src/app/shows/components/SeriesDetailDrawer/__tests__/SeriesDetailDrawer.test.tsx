@@ -49,7 +49,6 @@ describe("SeriesDetailDrawer", () => {
         series={series}
         open
         onOpenChange={vi.fn()}
-        scoringMode="profile"
         profiles={profiles}
         {...noopHandlers}
       />,
@@ -64,7 +63,6 @@ describe("SeriesDetailDrawer", () => {
         series={{ ...series, qualityProfileId: 999 }}
         open
         onOpenChange={vi.fn()}
-        scoringMode="profile"
         profiles={profiles}
         {...noopHandlers}
       />,

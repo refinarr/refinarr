@@ -17,7 +17,6 @@ const stubInstance: Instance = {
   url: "http://localhost:7878",
   apiKey: "key",
   enabled: true,
-  scoringMode: "profile",
   searchesPerHour: 20,
   showAllMedia: false,
   createdAt: new Date(),
@@ -32,7 +31,6 @@ const stubInstance: Instance = {
   autoSearchPickStrategy: "balanced",
   autoSearchCooldownHours: 0,
   autoSearchPausedUntil: null,
-  autoSearchScoringMode: "inherit",
   autoSearchFailedStreak: 0,
 };
 

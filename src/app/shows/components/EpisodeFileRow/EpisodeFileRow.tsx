@@ -4,29 +4,21 @@ import { Search, Trash2 } from "lucide-react";
 import { Button } from "@/client/components/ui/button";
 import { ScoreLabel } from "@/client/components/common/ScoreLabel";
 import { CfBreakdown } from "@/client/components/common/CfBreakdown";
-import { isProfileMode } from "@/shared/scoring-mode";
-import type { EpisodeFileEntry, ScoringMode } from "@/shared/types/models";
+import type { EpisodeFileEntry } from "@/shared/types/models";
 import { filename } from "../utils";
 
 interface Props {
   file: EpisodeFileEntry;
-  scoringMode: ScoringMode;
   onSearch: () => Promise<unknown>;
   onDelete: () => Promise<unknown>;
 }
 
-export function EpisodeFileRow({
-  file,
-  scoringMode,
-  onSearch,
-  onDelete,
-}: Props) {
+export function EpisodeFileRow({ file, onSearch, onDelete }: Props) {
   const t = useTranslations("common");
   const name = filename(file.relativePath);
-  const isBad = isProfileMode(scoringMode)
-    ? file.minProfileScore !== undefined &&
-      file.customFormatScore < file.minProfileScore
-    : file.missingFormats.length > 0;
+  const isBad =
+    file.minProfileScore !== undefined &&
+    file.customFormatScore < file.minProfileScore;
 
   return (
     <div
@@ -42,12 +34,10 @@ export function EpisodeFileRow({
           {name}
         </span>
         <div className="flex shrink-0 items-center gap-2">
-          {isProfileMode(scoringMode) && (
-            <ScoreLabel
-              score={file.customFormatScore}
-              minProfileScore={file.minProfileScore}
-            />
-          )}
+          <ScoreLabel
+            score={file.customFormatScore}
+            minProfileScore={file.minProfileScore}
+          />
           <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
             <Button
               variant="ghost"

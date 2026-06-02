@@ -5,11 +5,11 @@
 [![Latest release](https://img.shields.io/github/v/release/refinarr/refinarr)](https://github.com/refinarr/refinarr/releases)
 [![Docker image](https://img.shields.io/badge/ghcr.io-refinarr%2Frefinarr-blue?logo=docker)](https://github.com/refinarr/refinarr/pkgs/container/refinarr)
 
-Self-hosted dashboard that connects to Sonarr/Radarr, identifies media missing your wanted Custom Formats (HDR / Atmos / DV / etc.), and gives you bulk cleanup tools. Runs on port **7272**.
+Self-hosted dashboard that connects to Sonarr/Radarr, identifies media scoring below its quality profile's Custom Format cutoff (HDR / Atmos / DV / etc.), and gives you bulk cleanup tools. Runs on port **7272**.
 
 ## Features
 
-- **Per-instance scoring** — manual (pick wanted CFs) or profile (use Sonarr/Radarr's `customFormatScore` cutoff)
+- **Profile-based flagging** — flags media whose `customFormatScore` is below the quality profile's cutoff, straight from Sonarr/Radarr
 - **Bulk actions** — search, delete, ignore across hundreds of items in one pass
 - **Auto-runner** (optional) — schedules upgrade searches per instance with rate-limit + cooldown controls
 - **Action history** with retry + dry-run mode for everything

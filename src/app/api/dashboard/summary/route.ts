@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createApiHandler } from "@/server/lib/handler";
 import { instanceRepository } from "@/server/repositories/InstanceRepository";
-import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { mediaServiceFor } from "@/server/arr/composition";
 import type {
@@ -20,17 +19,14 @@ export const GET = createApiHandler(async () => {
 
   const perInstance: DashboardInstanceSummary[] = await Promise.all(
     instances.map(async (inst) => {
-      const [prefs, failed] = await Promise.all([
-        preferenceRepository.findByInstance(inst.id),
-        logRepository.findFailedByInstance(inst.id),
-      ]);
+      const failed = await logRepository.findFailedByInstance(inst.id);
 
       let flaggedCount: number | null = null;
       let totalCount: number | null = null;
       if (inst.enabled) {
         const svc = mediaServiceFor(inst.type);
-        flaggedCount = svc.getCachedFlaggedCount(inst.id, inst.scoringMode);
-        totalCount = svc.getCachedTotalCount(inst.id, inst.scoringMode);
+        flaggedCount = svc.getCachedFlaggedCount(inst.id);
+        totalCount = svc.getCachedTotalCount(inst.id);
 
         // Cold cache: kick off a background build so the next dashboard
         // refetch picks up the real count. Errors are swallowed (the
@@ -51,7 +47,6 @@ export const GET = createApiHandler(async () => {
         flaggedCount,
         totalCount,
         failedActionsCount: failed.length,
-        hasPreferences: prefs.length > 0,
       };
     }),
   );

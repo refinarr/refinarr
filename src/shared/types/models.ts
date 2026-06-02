@@ -18,7 +18,6 @@ export const LogSource = {
   System: "system",
 } as const;
 export type LogSource = (typeof LogSource)[keyof typeof LogSource];
-export type ScoringMode = "manual" | "profile";
 export type AutoSearchScheduleMode = "interval" | "cron";
 export type AutoSearchScope =
   | "missing"
@@ -27,7 +26,6 @@ export type AutoSearchScope =
   | "all"
   | "mixed";
 export type AutoSearchPickStrategy = "balanced" | "random";
-export type AutoSearchScoringMode = "inherit" | "profile";
 export type ActionType =
   | "search"
   | "search_season"
@@ -65,7 +63,6 @@ export interface Instance {
   url: string;
   apiKey: string;
   enabled: boolean;
-  scoringMode: ScoringMode;
   searchesPerHour: number;
   // Per-instance opt-in for "Advanced — show all media". When false
   // (default), the API serves flagged-only items even if the request
@@ -86,7 +83,6 @@ export interface Instance {
   autoSearchPickStrategy: AutoSearchPickStrategy;
   autoSearchCooldownHours: number;
   autoSearchPausedUntil: Date | null;
-  autoSearchScoringMode: AutoSearchScoringMode;
   autoSearchFailedStreak: number;
 }
 
@@ -115,8 +111,8 @@ export interface MediaQuery {
   limit: number;
   sortBy: "score" | "title" | "added" | "size";
   order: "asc" | "desc";
-  // Score range — bounds depend on scoring mode (manual: 0..1; profile:
-  // raw integer score). Both omitted means "no filter".
+  // Score range over the profile custom-format score (raw integer). Both
+  // omitted means "no filter".
   minScore?: number;
   maxScore?: number;
   // Size range in bytes. Both omitted means "no filter".
@@ -140,10 +136,6 @@ export interface MediaQuery {
   flaggedOnly?: boolean;
   // Default `"all"` — no monitor filter.
   monitorStatus?: MonitorStatus;
-  // When set, overrides the instance's own scoringMode for this query only.
-  // Used by auto-runner when autoSearchScoringMode = "profile" on a
-  // manual-mode instance so it picks candidates by cutoff, not CF coverage.
-  scoringModeOverride?: ScoringMode;
 }
 
 export interface MediaItem {
@@ -169,11 +161,10 @@ export interface MediaItem {
   // < totalFileCount.
   existingFileCount: number;
   totalFileCount: number;
-  // True when the item satisfies the mode-appropriate flagging predicate
-  // (manual: missing wanted CFs; profile: below cutoff). Computed once
-  // at build time so the cache holds every visible item and the
-  // `flaggedOnly` query filter can include or exclude non-flagged rows
-  // without rebuilding.
+  // True when the item's profile custom-format score is below the quality
+  // profile's cutoff. Computed once at build time so the cache holds every
+  // visible item and the `flaggedOnly` query filter can include or exclude
+  // non-flagged rows without rebuilding.
   flagged: boolean;
 }
 
@@ -232,13 +223,6 @@ export interface ActionLog {
   downloadId?: string | null;
   createdAt: Date;
   lastRetriedAt?: Date | null;
-}
-
-export interface CfPreference {
-  id: number;
-  instanceId: number;
-  cfId: number;
-  cfName: string;
 }
 
 export type LogLevel = "debug" | "info" | "warn" | "error";

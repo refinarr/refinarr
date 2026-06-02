@@ -10,26 +10,21 @@
 // door in `@/server/arr/composition`. This file is type-only — no
 // runtime export — so it can't form a cycle with the composition
 // root that references these types.
-import type {
-  ActionLog,
-  MediaItem,
-  MediaQuery,
-  ScoringMode,
-} from "@/shared/types/models";
+import type { ActionLog, MediaItem, MediaQuery } from "@/shared/types/models";
 
 interface MediaCacheService {
   /**
    * Returns the flagged-item count from cache if warm, or null if cold.
    * Used by the dashboard summary route's "X flagged" numerator.
    */
-  getCachedFlaggedCount(instanceId: number, mode: ScoringMode): number | null;
+  getCachedFlaggedCount(instanceId: number): number | null;
 
   /**
    * Returns the total cached item count (visible-library size) if warm,
    * or null if cold. Used by the dashboard summary route's "/ Y"
    * denominator.
    */
-  getCachedTotalCount(instanceId: number, mode: ScoringMode): number | null;
+  getCachedTotalCount(instanceId: number): number | null;
 
   /**
    * Fires a minimal getMovies/getSeries call to warm the cache. Used as

@@ -59,10 +59,6 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/api/radarr/qualityprofiles**", (route) =>
     route.fulfill({ status: 200, json: [] }),
   );
-
-  await page.route("**/api/preferences**", (route) =>
-    route.fulfill({ status: 200, json: [] }),
-  );
 });
 
 // Default chromium viewport is 1280x720 → md+; both the mobile card list and

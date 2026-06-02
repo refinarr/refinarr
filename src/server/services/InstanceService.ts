@@ -9,15 +9,12 @@ import { searchQueueService } from "@/server/services/SearchQueueService";
 import { arrRateLimiter } from "@/server/lib/arr-rate-limiter";
 import { eventBus } from "@/server/lib/event-bus";
 import { LogSource } from "@/shared/types/models";
-import { DEFAULT_SCORING_MODE } from "@/shared/scoring-mode";
 import type {
   AutoSearchPickStrategy,
   AutoSearchScheduleMode,
   AutoSearchScope,
-  AutoSearchScoringMode,
   Instance,
   ArrType,
-  ScoringMode,
 } from "@/shared/types/models";
 
 class InstanceService {
@@ -49,7 +46,6 @@ class InstanceService {
     url: string;
     apiKey: string;
     enabled?: boolean;
-    scoringMode?: ScoringMode;
     searchesPerHour?: number;
     showAllMedia?: boolean;
     autoSearchEnabled?: boolean;
@@ -62,7 +58,6 @@ class InstanceService {
     autoSearchScope?: AutoSearchScope;
     autoSearchPickStrategy?: AutoSearchPickStrategy;
     autoSearchCooldownHours?: number;
-    autoSearchScoringMode?: AutoSearchScoringMode;
   }): Promise<Instance> {
     assertSafeArrUrl(data.url);
     const created = await instanceRepository.create({
@@ -162,7 +157,6 @@ class InstanceService {
       url: data.url,
       apiKey: data.apiKey,
       enabled: true,
-      scoringMode: DEFAULT_SCORING_MODE,
       searchesPerHour: 20,
       showAllMedia: false,
       createdAt: new Date(),
@@ -177,7 +171,6 @@ class InstanceService {
       autoSearchPickStrategy: "balanced",
       autoSearchCooldownHours: 0,
       autoSearchPausedUntil: null,
-      autoSearchScoringMode: "inherit",
       autoSearchFailedStreak: 0,
     };
     const client = createArrClient(transient);

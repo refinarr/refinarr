@@ -41,8 +41,6 @@ const baseFilters: MediaFilters = {
   mediaId: null,
   profileIds: [],
   severities: [],
-  missingCfIds: [],
-  missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
   flaggedOnly: true,
@@ -50,9 +48,8 @@ const baseFilters: MediaFilters = {
 };
 
 const baseProps = {
-  scoringMode: "manual" as const,
   profiles: undefined,
-  cfOptions: { missing: [], penalty: [] },
+  cfOptions: { penalty: [] },
   filters: baseFilters,
   onChange: vi.fn(),
 };
@@ -78,7 +75,7 @@ describe("MobileFilterBar — base rendering", () => {
           ...baseFilters,
           profileIds: [1],
           severities: ["critical"],
-          missingCfIds: [10],
+          hasNegativeCfIds: [10],
         }}
         onChange={vi.fn()}
       />,

@@ -10,7 +10,6 @@ describe("queryKeys", () => {
 
   test("scoped keys include the id/instanceId", () => {
     expect(queryKeys.instance(7)).toEqual(["instances", 7]);
-    expect(queryKeys.preferences(3)).toEqual(["preferences", 3]);
     expect(queryKeys.ignore(5)).toEqual(["ignore", 5]);
     expect(queryKeys.historyErrors(9)).toEqual(["history", "errors", 9]);
   });

@@ -4,7 +4,7 @@ import { SeverityDot } from "@/client/components/common/SeverityDot";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
 import { formatBytes } from "@/client/lib/format";
 import { getSeverity, severityTextClass } from "@/client/lib/severity";
-import { ISSUES_FOR, SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
+import { scoreForItem, issuesForItem } from "@/shared/scoring-mode";
 import type { SeriesItem } from "@/shared/types/models";
 
 interface Props {
@@ -13,24 +13,17 @@ interface Props {
 }
 
 export function SeriesCard({ item, ctx }: Props) {
-  const { scoringMode, t } = ctx;
+  const { t } = ctx;
   const tCommon = useTranslations("common");
-  const score = SCORE_FOR[scoringMode](item);
+  const score = scoreForItem(item);
   const hasFile = item.episodeFiles.length > 0;
-  const issues = ISSUES_FOR[scoringMode](item);
-  const profile = isProfileMode(scoringMode);
-  const severity = getSeverity(
-    score,
-    item.minProfileScore,
-    scoringMode,
-    hasFile,
-  );
-  const noFileScore = profile && !hasFile;
+  const issues = issuesForItem(item);
+  const severity = getSeverity(score, item.minProfileScore, hasFile);
   let scoreText: string;
-  if (noFileScore) scoreText = t("noFile");
+  if (!hasFile) scoreText = t("noFile");
   else if (item.minProfileScore !== undefined)
     scoreText = `${score} / ${item.minProfileScore}`;
-  else scoreText = `${Math.round(score * 100)}%`;
+  else scoreText = String(score);
 
   return (
     <div className="space-y-1.5">
@@ -64,9 +57,7 @@ export function SeriesCard({ item, ctx }: Props) {
         </span>
         {issues.length > 0 && (
           <span className="text-critical/90 shrink-0">
-            {tCommon(profile ? "penaltyCount" : "missingCount", {
-              count: issues.length,
-            })}
+            {tCommon("penaltyCount", { count: issues.length })}
           </span>
         )}
       </div>

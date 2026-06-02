@@ -135,7 +135,6 @@ describe("GET /api/auto-search/statuses", () => {
       autoSearchIntervalMinutes: 120,
       autoSearchBatchLimit: 3,
       autoSearchCooldownHours: 2,
-      autoSearchScoringMode: "profile" as const,
     });
 
     const body = await (await GET(req())).json();
@@ -147,7 +146,6 @@ describe("GET /api/auto-search/statuses", () => {
       intervalMinutes: 120,
       batchLimit: 3,
       cooldownHours: 2,
-      scoringMode: "profile",
       running: false,
       paused: false,
       pausedUntil: null,

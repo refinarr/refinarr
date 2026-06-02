@@ -10,20 +10,13 @@ import type {
   RetryActionOptions,
 } from "@/server/arr/media-service-facade";
 import { LogSource } from "@/shared/types/models";
-import {
-  isMissingWantedFormats,
-  getMissingFormats,
-  scoreCfCoverage,
-  isBelowProfileScore,
-  scoreProfileCoverage,
-} from "@/shared/scoring";
+import { isBelowProfileScore, scoreProfileCoverage } from "@/shared/scoring";
 import { movieRetryPayloadSchema } from "@/shared/types/schemas";
 import type {
   CustomFormat,
   MovieItem,
   ActionLog,
   MediaQuery,
-  ScoringMode,
 } from "@/shared/types/models";
 import { MediaService } from "./MediaService";
 
@@ -37,13 +30,6 @@ type ProfileCtx = {
   profile: { cutoffFormatScore: number };
   cfScoreMap: Map<number, number>;
   positiveProfileCfs: CustomFormat[];
-};
-
-type ManualCtx = {
-  item: RadarrMovie;
-  file: RadarrMovieFile | undefined;
-  wantedIds: number[];
-  wantedCfs: Array<{ id: number; name: string }>;
 };
 
 export class MovieService
@@ -66,19 +52,17 @@ export class MovieService
     const instance = await instanceRepository.findById(instanceId);
     if (!instance) throw new Error(`Instance ${instanceId} not found`);
 
-    const mode = query.scoringModeOverride ?? instance.scoringMode;
-    const cacheKey = this.mediaCacheKey(instanceId, mode);
+    const cacheKey = this.mediaCacheKey(instanceId);
     const cached = await this.readWithSwr<{ items: MovieItem[] }>({
       cacheKey,
       instanceId: instance.id,
       logSource: LogSource.MovieService,
       backgroundErrorMessage: "Background movies rebuild failed",
-      build: () => this.buildAndLog(instance.id, instance, mode),
+      build: () => this.buildAndLog(instance.id, instance),
     });
     return this.applyQuery(
       cached.items,
       this.enforceShowAllMedia(query, instance),
-      mode,
     );
   }
 
@@ -87,16 +71,14 @@ export class MovieService
     instance: NonNullable<
       Awaited<ReturnType<typeof instanceRepository.findById>>
     >,
-    mode: ScoringMode,
   ): Promise<{ items: MovieItem[] }> {
     const startedAt = Date.now();
-    const items = await this.buildMovies(instance, mode);
+    const items = await this.buildMovies(instance);
     appLogger.debug("Built movies cache", {
       source: LogSource.MovieService,
       context: {
         instanceId,
         instanceName: instance.name,
-        mode,
         items: items.length,
         flagged: items.filter((m) => m.flagged).length,
         durationMs: Date.now() - startedAt,
@@ -109,7 +91,6 @@ export class MovieService
     instance: NonNullable<
       Awaited<ReturnType<typeof instanceRepository.findById>>
     >,
-    mode: ScoringMode,
   ): Promise<MovieItem[]> {
     const client = this.clientFromInstance(instance, "radarr");
     const [movies, profiles] = await Promise.all([
@@ -125,23 +106,15 @@ export class MovieService
 
     return this.runBuildPipeline<RadarrMovie, RadarrMovieFile | undefined>({
       instance,
-      mode,
       mediaType: "movie",
       items: movies,
       profiles,
       filesFor: (m) => fileMap.get(m.id),
-      toProfileItem: (ctx) => this.toMovieProfileItem(ctx),
-      toManualItem: (ctx) =>
-        this.toMovieManualItem({
-          item: ctx.item,
-          file: ctx.file,
-          wantedIds: ctx.wantedIds,
-          wantedCfs: ctx.wantedCfs,
-        }),
+      toItem: (ctx) => this.toMovieItem(ctx),
     });
   }
 
-  private toMovieProfileItem(ctx: ProfileCtx): MovieItem {
+  private toMovieItem(ctx: ProfileCtx): MovieItem {
     const { item, file, profile, cfScoreMap, positiveProfileCfs } = ctx;
     const score = file?.customFormatScore ?? 0;
     const fileCfs = file?.customFormats ?? [];
@@ -169,45 +142,6 @@ export class MovieService
       existingFileCount: item.hasFile ? 1 : 0,
       totalFileCount: 1,
       flagged: isBelowProfileScore(score, profile.cutoffFormatScore),
-    };
-  }
-
-  private toMovieManualItem(ctx: ManualCtx): MovieItem {
-    const { item, file, wantedIds, wantedCfs } = ctx;
-    const fileCfs = file?.customFormats ?? [];
-    // Manual mode doesn't decorate against a profile's positive CFs —
-    // missingFormats is computed against the user's wanted-CF prefs.
-    // We only enrich each file CF with score=undefined (no profile
-    // context to source it from).
-    const formats = fileCfs.map((cf) => ({
-      id: cf.id,
-      name: cf.name,
-      score: undefined,
-    }));
-    // Manual-mode flagged predicate: no file at all OR file is missing
-    // any of the user's wanted CFs. With zero prefs configured no
-    // movie can be flagged — flagged stays false for every item, but
-    // they all still appear in the cache for the "Show all" view.
-    const flagged =
-      wantedIds.length > 0 &&
-      (!item.hasFile || isMissingWantedFormats(fileCfs, wantedIds));
-    return {
-      id: item.id,
-      title: item.title,
-      year: item.year,
-      qualityProfileId: item.qualityProfileId,
-      movieFileId: item.movieFileId,
-      customFormats: formats,
-      customFormatScore: file?.customFormatScore ?? 0,
-      hasFile: item.hasFile,
-      cfScore: item.hasFile ? scoreCfCoverage(formats, wantedIds) : 0,
-      missingFormats: getMissingFormats(formats, wantedCfs),
-      unwantedFormats: [],
-      sizeOnDisk: file?.size ?? 0,
-      monitored: item.monitored,
-      existingFileCount: item.hasFile ? 1 : 0,
-      totalFileCount: 1,
-      flagged,
     };
   }
 

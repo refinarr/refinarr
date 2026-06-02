@@ -17,15 +17,13 @@ import {
   SheetDescription,
 } from "@/client/components/ui/sheet";
 import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
-import { isManualMode } from "@/shared/scoring-mode";
-import type { QualityProfile, ScoringMode } from "@/shared/types/models";
+import type { QualityProfile } from "@/shared/types/models";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  scoringMode: ScoringMode;
   profiles: QualityProfile[] | undefined;
-  cfOptions: { missing: CfOption[]; penalty: CfOption[] };
+  cfOptions: { penalty: CfOption[] };
   filters: MediaFilters;
   onChange: (patch: Partial<MediaFilters>) => void;
 }
@@ -58,7 +56,6 @@ function Section({ title, description, children }: SectionProps) {
 export function FilterSheet({
   open,
   onOpenChange,
-  scoringMode,
   profiles,
   cfOptions,
   filters,
@@ -66,12 +63,9 @@ export function FilterSheet({
 }: Props) {
   const t = useTranslations("filters");
   const tMonitor = useTranslations("filters.monitorStatus");
-  const manual = isManualMode(scoringMode);
-  const cfFunnelOptions = manual ? cfOptions.missing : cfOptions.penalty;
-  const cfTitle = manual ? t("missingHeading") : t("penaltyHeading");
-  const cfDescription = manual
-    ? t("missingColumnDescription")
-    : t("penaltyColumnDescription");
+  const cfFunnelOptions = cfOptions.penalty;
+  const cfTitle = t("penaltyHeading");
+  const cfDescription = t("penaltyColumnDescription");
 
   const anyActive =
     filters.profileIds.length > 0 ||
@@ -80,7 +74,6 @@ export function FilterSheet({
     filters.maxScore !== null ||
     filters.minSize !== null ||
     filters.maxSize !== null ||
-    filters.missingCfIds.length > 0 ||
     filters.hasNegativeCfIds.length > 0 ||
     filters.monitorStatus !== "all";
 
@@ -92,8 +85,6 @@ export function FilterSheet({
       maxScore: null,
       minSize: null,
       maxSize: null,
-      missingCfIds: [],
-      missingCfMatch: "all",
       hasNegativeCfIds: [],
       hasNegativeCfMatch: "all",
       monitorStatus: "all",
@@ -149,11 +140,7 @@ export function FilterSheet({
             title={t("scoreHeading")}
             description={t("scoreColumnDescription")}
           >
-            <ScoreFunnelBody
-              scoringMode={scoringMode}
-              filters={filters}
-              onChange={onChange}
-            />
+            <ScoreFunnelBody filters={filters} onChange={onChange} />
           </Section>
           <Section
             title={t("sizeHeading")}
@@ -163,7 +150,6 @@ export function FilterSheet({
           </Section>
           <Section title={cfTitle} description={cfDescription}>
             <CfFunnelBody
-              scoringMode={scoringMode}
               options={cfFunnelOptions}
               filters={filters}
               onChange={onChange}

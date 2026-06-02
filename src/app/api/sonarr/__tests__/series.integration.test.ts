@@ -1,6 +1,5 @@
 import { describe, test, expect } from "vitest";
 import { NextRequest } from "next/server";
-import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { GET as listSeries } from "@/app/api/sonarr/series/route";
 import { POST as searchSeries } from "@/app/api/sonarr/series/search/route";
@@ -39,9 +38,6 @@ const profile = {
 describe("GET /api/sonarr/series", () => {
   test("returns paginated SeriesItem wrapper", async () => {
     const instanceId = await makeInstance();
-    await preferenceRepository.setForInstance(instanceId, [
-      { cfId: 10, cfName: "HDR" },
-    ]);
     mswServer.use(
       ...sonarrHandlers(
         { baseUrl },

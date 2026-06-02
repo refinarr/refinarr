@@ -4,7 +4,7 @@ import { NoCfsPrompt } from "./NoCfsPrompt";
 import { NoFilterMatchState } from "./NoFilterMatchState";
 
 // One discriminated state instead of three booleans:
-// - "no-cfs": no instance picked yet, or instance has no CF preferences
+// - "no-cfs": no instance picked yet
 // - "filtered-empty": filters/q are active and produce zero rows
 // - "all-clear": every flagged item is resolved (or none ever existed)
 export type EmptyStateKind = "no-cfs" | "filtered-empty" | "all-clear";

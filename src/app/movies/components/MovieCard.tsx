@@ -6,7 +6,7 @@ import type { MediaListShellRenderCtx } from "@/client/components/media/MediaLis
 import { formatBytes } from "@/client/lib/format";
 import { formatRelative } from "@/client/lib/format-relative";
 import { getSeverity, severityTextClass } from "@/client/lib/severity";
-import { ISSUES_FOR, SCORE_FOR, isProfileMode } from "@/shared/scoring-mode";
+import { scoreForItem, issuesForItem } from "@/shared/scoring-mode";
 import type { MovieItem } from "@/shared/types/models";
 
 interface Props {
@@ -15,24 +15,17 @@ interface Props {
 }
 
 export function MovieCard({ item, ctx }: Props) {
-  const { scoringMode, queuedIds, recentMap, activeInstance, t, tTime } = ctx;
+  const { queuedIds, recentMap, activeInstance, t, tTime } = ctx;
   const tCommon = useTranslations("common");
-  const score = SCORE_FOR[scoringMode](item);
-  const issues = ISSUES_FOR[scoringMode](item);
+  const score = scoreForItem(item);
+  const issues = issuesForItem(item);
   const recent = !queuedIds.has(item.id) ? recentMap.get(item.id) : undefined;
-  const profile = isProfileMode(scoringMode);
-  const severity = getSeverity(
-    score,
-    item.minProfileScore,
-    scoringMode,
-    item.hasFile,
-  );
-  const noFileScore = profile && !item.hasFile;
+  const severity = getSeverity(score, item.minProfileScore, item.hasFile);
   let scoreText: string;
-  if (noFileScore) scoreText = t("noFile");
+  if (!item.hasFile) scoreText = t("noFile");
   else if (item.minProfileScore !== undefined)
     scoreText = `${score} / ${item.minProfileScore}`;
-  else scoreText = `${Math.round(score * 100)}%`;
+  else scoreText = String(score);
 
   return (
     <div className="space-y-1.5">
@@ -72,13 +65,8 @@ export function MovieCard({ item, ctx }: Props) {
         <span className="tabular-nums">{formatBytes(item.sizeOnDisk)}</span>
         {issues.length > 0 && (
           <span className="text-critical/90 shrink-0">
-            {tCommon(profile ? "penaltyCount" : "missingCount", {
-              count: issues.length,
-            })}
+            {tCommon("penaltyCount", { count: issues.length })}
           </span>
-        )}
-        {!profile && !item.hasFile && (
-          <span className="shrink-0">{t("noFile")}</span>
         )}
       </div>
     </div>

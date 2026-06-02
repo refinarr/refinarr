@@ -18,8 +18,6 @@ const baseFilters: MediaFilters = {
   mediaId: null,
   profileIds: [],
   severities: [],
-  missingCfIds: [],
-  missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
   flaggedOnly: true,

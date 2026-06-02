@@ -105,20 +105,17 @@ function movie(over: Partial<MovieItem> = {}): MovieItem {
   };
 }
 
-function ctx(
-  scoringMode: "profile" | "manual",
-): MediaListShellRenderCtx<MediaItem> {
+function ctx(): MediaListShellRenderCtx<MediaItem> {
   return {
     arrType: "radarr",
     activeInstance: 3,
-    scoringMode,
     t: (k: string) => k,
   } as unknown as MediaListShellRenderCtx<MediaItem>;
 }
 
 describe("PosterTile", () => {
   it("renders the proxy poster src, title and year", () => {
-    render(<PosterTile item={movie()} ctx={ctx("manual")} />);
+    render(<PosterTile item={movie()} ctx={ctx()} />);
     const img = screen.getByRole("img", { name: "The Thing" });
     expect(img).toHaveAttribute(
       "src",
@@ -132,14 +129,14 @@ describe("PosterTile", () => {
     render(
       <PosterTile
         item={movie({ customFormatScore: 30, minProfileScore: 100 })}
-        ctx={ctx("profile")}
+        ctx={ctx()}
       />,
     );
     expect(screen.getByText("30 / 100")).toBeInTheDocument();
   });
 
   it("falls back to a placeholder with the title when the image fails", () => {
-    render(<PosterTile item={movie()} ctx={ctx("manual")} />);
+    render(<PosterTile item={movie()} ctx={ctx()} />);
     fireEvent.error(screen.getByRole("img", { name: "The Thing" }));
     // The poster <img> is replaced by the placeholder (severity dot,
     // which is also role=img, stays — assert the poster specifically).

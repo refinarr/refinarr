@@ -1,6 +1,6 @@
 "use client";
 
-import type { MediaItem, ScoringMode } from "@/shared/types/models";
+import type { MediaItem } from "@/shared/types/models";
 import type { MediaFilters } from "./useMediaFilters";
 
 // Shape consumed by the query hooks (useMovies / useSeries) and by
@@ -15,7 +15,6 @@ type ForQueryFilters = Omit<
   maxScore?: number;
   minSize?: number;
   maxSize?: number;
-  scoringMode: ScoringMode;
 };
 
 type MediaQueryResult<T> = {

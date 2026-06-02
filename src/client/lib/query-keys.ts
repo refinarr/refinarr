@@ -12,7 +12,6 @@ export const queryKeys = {
     ["series", instanceId, params] as const,
   seriesAll: (instanceId: number) => ["series", instanceId] as const,
   config: () => ["config"] as const,
-  preferences: (instanceId: number) => ["preferences", instanceId] as const,
   ignore: (instanceId: number) => ["ignore", instanceId] as const,
   history: (params?: object) => ["history", params] as const,
   historyAll: () => ["history"] as const,

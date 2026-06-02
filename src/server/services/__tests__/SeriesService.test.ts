@@ -1,14 +1,10 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { seriesService } from "@/server/arr/composition";
 import { instanceService } from "@/server/services/InstanceService";
-import { preferenceRepository } from "@/server/repositories/PreferenceRepository";
 import { ignoreRepository } from "@/server/repositories/IgnoreRepository";
-import type { ScoringMode } from "@/shared/types/models";
 
-// Tests are explicit about scoringMode rather than relying on the column
-// default ("profile"), so a future default-flip doesn't silently break them.
-async function createInstance(scoringMode: ScoringMode = "manual") {
-  return instanceService.create({ ...baseInstance, scoringMode });
+async function createInstance() {
+  return instanceService.create({ ...baseInstance });
 }
 
 const fetchMock = vi.fn();
@@ -127,9 +123,9 @@ const profile: SonarrProfile = {
   ],
 };
 
-describe("SeriesService.getSeries — manual mode", () => {
-  test("returns empty when no preferences are set", async () => {
-    const instance = await createInstance("manual");
+describe("SeriesService.getSeries — flagging & file presence", () => {
+  test("returns empty when there are no series", async () => {
+    const instance = await createInstance();
     setupSonarrMocks({ series: [], files: new Map(), profiles: [] });
     const result = await seriesService.getSeries(instance.id, {
       page: 1,
@@ -140,11 +136,8 @@ describe("SeriesService.getSeries — manual mode", () => {
     expect(result.items).toEqual([]);
   });
 
-  test("flags series with episode files missing wanted CFs", async () => {
-    const instance = await createInstance("manual");
-    await preferenceRepository.setForInstance(instance.id, [
-      { cfId: 10, cfName: "HDR" },
-    ]);
+  test("flags series whose episode files are below the profile cutoff", async () => {
+    const instance = await createInstance();
     setupSonarrMocks({
       series: [{ id: 1, title: "Show A", year: 2024, qualityProfileId: 1 }],
       files: new Map([
@@ -177,10 +170,7 @@ describe("SeriesService.getSeries — manual mode", () => {
   });
 
   test("flags series with no episode files", async () => {
-    const instance = await createInstance("manual");
-    await preferenceRepository.setForInstance(instance.id, [
-      { cfId: 10, cfName: "HDR" },
-    ]);
+    const instance = await createInstance();
     setupSonarrMocks({
       series: [{ id: 1, title: "Empty", year: 2024, qualityProfileId: 1 }],
       files: new Map([[1, []]]),
@@ -197,10 +187,7 @@ describe("SeriesService.getSeries — manual mode", () => {
   });
 
   test("excludes ignored series", async () => {
-    const instance = await createInstance("manual");
-    await preferenceRepository.setForInstance(instance.id, [
-      { cfId: 10, cfName: "HDR" },
-    ]);
+    const instance = await createInstance();
     await ignoreRepository.create({
       instanceId: instance.id,
       mediaId: 1,
@@ -239,7 +226,7 @@ describe("SeriesService.getSeries — manual mode", () => {
 
 describe("SeriesService.getSeries — profile mode", () => {
   test("flags series whose worst episode score is below cutoff", async () => {
-    const instance = await createInstance("profile");
+    const instance = await createInstance();
     setupSonarrMocks({
       series: [{ id: 1, title: "BelowCut", year: 2024, qualityProfileId: 1 }],
       files: new Map([
@@ -271,7 +258,7 @@ describe("SeriesService.getSeries — profile mode", () => {
   });
 
   test("flags fileless series when profile cutoff > 0", async () => {
-    const instance = await createInstance("profile");
+    const instance = await createInstance();
     setupSonarrMocks({
       series: [{ id: 1, title: "NoFiles", year: 2024, qualityProfileId: 1 }],
       files: new Map([[1, []]]),
@@ -287,7 +274,7 @@ describe("SeriesService.getSeries — profile mode", () => {
   });
 
   test("missingFormats carry their profile score (matches the CustomFormat type)", async () => {
-    const instance = await createInstance("profile");
+    const instance = await createInstance();
     setupSonarrMocks({
       series: [{ id: 1, title: "S", year: 2024, qualityProfileId: 1 }],
       files: new Map([
@@ -326,7 +313,7 @@ describe("SeriesService.getSeries — profile mode", () => {
   });
 
   test("populates unwantedFormats from negative-score CFs in episode files", async () => {
-    const instance = await createInstance("profile");
+    const instance = await createInstance();
     setupSonarrMocks({
       series: [{ id: 1, title: "BadFile", year: 2024, qualityProfileId: 1 }],
       files: new Map([
@@ -366,10 +353,7 @@ describe("SeriesService.getSeries — profile mode", () => {
   });
 
   test("profile mode populates episodeFiles[].customFormats with profile scores", async () => {
-    const instance = await createInstance("profile");
-    await preferenceRepository.setForInstance(instance.id, [
-      { cfId: 11, cfName: "Atmos" },
-    ]);
+    const instance = await createInstance();
     setupSonarrMocks({
       series: [{ id: 1, title: "Show", year: 2024, qualityProfileId: 1 }],
       files: new Map([
@@ -403,10 +387,7 @@ describe("SeriesService.getSeries — profile mode", () => {
 
 describe("SeriesService — query application", () => {
   beforeEach(async () => {
-    const instance = await createInstance("manual");
-    await preferenceRepository.setForInstance(instance.id, [
-      { cfId: 10, cfName: "HDR" },
-    ]);
+    await createInstance();
     setupSonarrMocks({
       series: [
         { id: 1, title: "Alpha", year: 2024, qualityProfileId: 1 },
@@ -600,12 +581,9 @@ describe("SeriesService — actions", () => {
   });
 });
 
-describe("SeriesService — manual mode with file lacking customFormats", () => {
+describe("SeriesService — file lacking customFormats", () => {
   test("treats undefined customFormats as empty array on episode files", async () => {
-    const instance = await createInstance("manual");
-    await preferenceRepository.setForInstance(instance.id, [
-      { cfId: 10, cfName: "HDR" },
-    ]);
+    const instance = await createInstance();
     setupSonarrMocks({
       series: [
         { id: 1, title: "ShowMissingCfs", year: 2024, qualityProfileId: 1 },
@@ -640,10 +618,7 @@ describe("SeriesService — manual mode with file lacking customFormats", () => 
 
 describe("SeriesService — sort edge cases", () => {
   beforeEach(async () => {
-    const instance = await createInstance("manual");
-    await preferenceRepository.setForInstance(instance.id, [
-      { cfId: 10, cfName: "HDR" },
-    ]);
+    await createInstance();
     setupSonarrMocks({
       series: [
         { id: 1, title: "WithFiles", year: 2024, qualityProfileId: 1 },
@@ -720,45 +695,6 @@ describe("SeriesService — sort edge cases", () => {
     expect(result.items.every((s) => s.qualityProfileId === 1)).toBe(true);
   });
 
-  test("filters by missingCfIds (single)", async () => {
-    const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getSeries(inst.id, {
-      page: 1,
-      limit: 50,
-      sortBy: "title",
-      order: "asc",
-      missingCfIds: [10],
-    });
-    expect(result.items.length).toBeGreaterThan(0);
-  });
-
-  test("filters by missingCfIds (multiple — ALL match, default)", async () => {
-    const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getSeries(inst.id, {
-      page: 1,
-      limit: 50,
-      sortBy: "title",
-      order: "asc",
-      missingCfIds: [10, 999],
-    });
-    // 999 doesn't exist on any series; default ALL-match returns empty.
-    expect(result.items).toEqual([]);
-  });
-
-  test("filters by missingCfIds (multiple — ANY match)", async () => {
-    const inst = (await instanceService.getAll())[0];
-    const result = await seriesService.getSeries(inst.id, {
-      page: 1,
-      limit: 50,
-      sortBy: "title",
-      order: "asc",
-      missingCfIds: [10, 999],
-      missingCfMatch: "any",
-    });
-    // ANY-match: series missing 10 still pass.
-    expect(result.items.length).toBeGreaterThan(0);
-  });
-
   test("filters by hasNegativeCfIds (no match → empty)", async () => {
     const inst = (await instanceService.getAll())[0];
     const result = await seriesService.getSeries(inst.id, {
@@ -774,10 +710,7 @@ describe("SeriesService — sort edge cases", () => {
 
 describe("SeriesService — cache reuse", () => {
   test("second call within TTL returns cached data", async () => {
-    const instance = await createInstance("manual");
-    await preferenceRepository.setForInstance(instance.id, [
-      { cfId: 10, cfName: "HDR" },
-    ]);
+    const instance = await createInstance();
     setupSonarrMocks({
       series: [{ id: 1, title: "Show", year: 2024, qualityProfileId: 1 }],
       files: new Map([

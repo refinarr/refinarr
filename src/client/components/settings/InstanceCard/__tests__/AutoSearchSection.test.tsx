@@ -54,7 +54,6 @@ const baseInstance: PublicInstance = {
   name: "Test Radarr",
   url: "http://localhost:7878",
   enabled: true,
-  scoringMode: "profile",
   searchesPerHour: 20,
   showAllMedia: false,
   createdAt: "2025-01-01T00:00:00Z",
@@ -69,7 +68,6 @@ const baseInstance: PublicInstance = {
   autoSearchPickStrategy: "balanced",
   autoSearchCooldownHours: 0,
   autoSearchPausedUntil: null,
-  autoSearchScoringMode: "inherit",
 };
 
 // Shared status shape used across tests that need enabled status.
@@ -88,7 +86,6 @@ const enabledStatus: AutoSearchStatus = {
   paused: false,
   pausedUntil: null,
   cooldownHours: 0,
-  scoringMode: "inherit",
   overdue: false,
   failedStreak: 0,
   health: "ok",

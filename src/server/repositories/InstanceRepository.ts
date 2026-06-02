@@ -1,13 +1,10 @@
 import { encryptSecret, decryptSecret, isEncrypted } from "@/server/lib/crypto";
-import { isAutoSearchScoringMode } from "@/shared/scoring-mode";
 import type {
   ArrType,
   AutoSearchPickStrategy,
   AutoSearchScheduleMode,
   AutoSearchScope,
-  AutoSearchScoringMode,
   Instance,
-  ScoringMode,
 } from "@/shared/types/models";
 import { BaseRepository } from "./BaseRepository";
 
@@ -18,7 +15,6 @@ interface RawInstanceRow {
   url: string;
   apiKey: string;
   enabled: boolean;
-  scoringMode: string;
   searchesPerHour: number;
   showAllMedia: boolean;
   createdAt: Date;
@@ -33,12 +29,7 @@ interface RawInstanceRow {
   autoSearchPickStrategy: string;
   autoSearchCooldownHours: number;
   autoSearchPausedUntil: Date | null;
-  autoSearchScoringMode: string;
   autoSearchFailedStreak: number;
-}
-
-function toAutoSearchScoringMode(v: string): AutoSearchScoringMode {
-  return isAutoSearchScoringMode(v) ? v : "inherit";
 }
 
 function toInstance(row: RawInstanceRow): Instance {
@@ -46,13 +37,11 @@ function toInstance(row: RawInstanceRow): Instance {
     ...row,
     apiKey: decryptSecret(row.apiKey),
     type: row.type as ArrType,
-    scoringMode: row.scoringMode as ScoringMode,
     autoSearchScheduleMode:
       row.autoSearchScheduleMode as AutoSearchScheduleMode,
     autoSearchScope: row.autoSearchScope as AutoSearchScope,
     autoSearchPickStrategy:
       row.autoSearchPickStrategy as AutoSearchPickStrategy,
-    autoSearchScoringMode: toAutoSearchScoringMode(row.autoSearchScoringMode),
   };
 }
 
@@ -62,7 +51,6 @@ type CreateInstanceInput = Omit<
   Instance,
   | "id"
   | "createdAt"
-  | "scoringMode"
   | "searchesPerHour"
   | "showAllMedia"
   | "autoSearchEnabled"
@@ -76,10 +64,8 @@ type CreateInstanceInput = Omit<
   | "autoSearchPickStrategy"
   | "autoSearchCooldownHours"
   | "autoSearchPausedUntil"
-  | "autoSearchScoringMode"
   | "autoSearchFailedStreak"
 > & {
-  scoringMode?: ScoringMode;
   searchesPerHour?: number;
   showAllMedia?: boolean;
   autoSearchEnabled?: boolean;
@@ -93,7 +79,6 @@ type CreateInstanceInput = Omit<
   autoSearchPickStrategy?: AutoSearchPickStrategy;
   autoSearchCooldownHours?: number;
   autoSearchPausedUntil?: Date | null;
-  autoSearchScoringMode?: AutoSearchScoringMode;
   autoSearchFailedStreak?: number;
 };
 

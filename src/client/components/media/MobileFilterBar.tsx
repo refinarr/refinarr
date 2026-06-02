@@ -6,14 +6,13 @@ import type { MediaFilters } from "@/client/hooks/media/useMediaFilters";
 import { usePrefersReducedMotion } from "@/client/hooks/ui/useMediaQuery";
 import { useScrollDirection } from "@/client/hooks/ui/useScrollDirection";
 import { cn } from "@/client/lib/utils";
-import type { QualityProfile, ScoringMode } from "@/shared/types/models";
+import type { QualityProfile } from "@/shared/types/models";
 import { FilterSheet } from "./FilterSheet";
 import type { CfOption } from "./CfColumnFunnel";
 
 interface Props {
-  scoringMode: ScoringMode;
   profiles: QualityProfile[] | undefined;
-  cfOptions: { missing: CfOption[]; penalty: CfOption[] };
+  cfOptions: { penalty: CfOption[] };
   filters: MediaFilters;
   onChange: (patch: Partial<MediaFilters>) => void;
 }
@@ -27,7 +26,6 @@ function countActiveFilters(f: MediaFilters): number {
   if (f.severities.length > 0) n += 1;
   if (f.minScore !== null || f.maxScore !== null) n += 1;
   if (f.minSize !== null || f.maxSize !== null) n += 1;
-  if (f.missingCfIds.length > 0) n += 1;
   if (f.hasNegativeCfIds.length > 0) n += 1;
   if (f.monitorStatus !== "all") n += 1;
   return n;
@@ -38,7 +36,6 @@ function countActiveFilters(f: MediaFilters): number {
 // the FilterSheet; the previous "Only missing" pill duplicated the
 // severity-funnel "No file" bucket, so it lives in the sheet now.
 export function MobileFilterBar({
-  scoringMode,
   profiles,
   cfOptions,
   filters,
@@ -106,7 +103,6 @@ export function MobileFilterBar({
       <FilterSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        scoringMode={scoringMode}
         profiles={profiles}
         cfOptions={cfOptions}
         filters={filters}

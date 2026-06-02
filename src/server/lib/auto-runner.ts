@@ -5,17 +5,12 @@ import { logRepository } from "@/server/repositories/LogRepository";
 import { mediaServiceFor } from "@/server/arr/composition";
 import { searchQueueRepository } from "@/server/repositories/SearchQueueRepository";
 import { searchQueueService } from "@/server/services/SearchQueueService";
-import type {
-  AutoSearchScoringMode,
-  Instance,
-  MediaItem,
-  ScoringMode,
-} from "@/shared/types/models";
+import type { Instance, MediaItem } from "@/shared/types/models";
 
 import { ARR_META } from "@/shared/arr-meta";
 import type { AutoSearchStatus } from "@/shared/types/api";
 import { LogSource } from "@/shared/types/models";
-import { SCORE_FOR } from "@/shared/scoring-mode";
+import { scoreForItem } from "@/shared/scoring-mode";
 import { isValidCronExpression } from "@/shared/cron";
 import { appLogger } from "./app-logger";
 import {
@@ -33,14 +28,6 @@ declare global {
   var autoRunner: AutoRunner | undefined;
   var autoRunnerStopPromise: Promise<void> | undefined;
 }
-
-const AUTO_SEARCH_SCORING_OVERRIDE: Record<
-  AutoSearchScoringMode,
-  ScoringMode | undefined
-> = {
-  profile: "profile",
-  inherit: undefined,
-};
 
 // Pure function — exported for unit tests. Returns the most recent cron
 // occurrence at or before `now`. Used in tick() to detect a due cron slot
@@ -193,7 +180,6 @@ export function buildAutoSearchStatus(
     paused,
     pausedUntil: paused ? pausedUntil!.toISOString() : null,
     cooldownHours: instance.autoSearchCooldownHours,
-    scoringMode: instance.autoSearchScoringMode,
     overdue,
     failedStreak,
     health,
@@ -201,8 +187,8 @@ export function buildAutoSearchStatus(
 }
 
 // Pure picker — exported for unit tests. `scoreOf` must be signed
-// (use SCORE_FOR[mode] so profile mode reaches negative-penalty items
-// — scoreProfileCoverage clamps to [0,1] and would collapse them).
+// (use scoreForItem so it reaches negative-penalty items —
+// scoreProfileCoverage clamps to [0,1] and would collapse them).
 export function pickAutoSearchBatch<T extends { id: number }>(
   items: T[],
   lastSearchedMap: Map<number, { at: Date; failed: boolean }>,
@@ -687,8 +673,6 @@ class AutoRunner {
 
   private async fanOut(inst: Instance): Promise<{ enqueued: number }> {
     const service = mediaServiceFor(inst.type);
-    const scoringModeOverride =
-      AUTO_SEARCH_SCORING_OVERRIDE[inst.autoSearchScoringMode];
 
     const { items: rawItems } = await service.getItems(inst.id, {
       page: 1,
@@ -705,7 +689,6 @@ class AutoRunner {
       // (`existingFileCount === 0`). Severity "missing" is the canonical
       // server-side encoding of that predicate.
       severities: inst.autoSearchScope === "missing" ? ["missing"] : undefined,
-      scoringModeOverride,
     });
 
     // "upgrade" = flagged items that already have a file. No query-layer
@@ -716,13 +699,13 @@ class AutoRunner {
         : rawItems;
 
     const lastSearched = await logRepository.findLastSearchedAtByMedia(inst.id);
-    const effectiveMode: ScoringMode = scoringModeOverride ?? inst.scoringMode;
     // Missing-file items resolve to -Infinity so they outrank every
     // finite negative score. (compareMedia sinks them to the bottom
     // for page display; the picker needs the opposite.)
-    const baseScore = SCORE_FOR[effectiveMode];
     const scoreOf = (item: MediaItem): number =>
-      item.existingFileCount === 0 ? Number.NEGATIVE_INFINITY : baseScore(item);
+      item.existingFileCount === 0
+        ? Number.NEGATIVE_INFINITY
+        : scoreForItem(item);
     const picked =
       inst.autoSearchScope === "mixed"
         ? pickAutoSearchMixedBatch(

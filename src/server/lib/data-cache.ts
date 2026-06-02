@@ -172,10 +172,14 @@ class DataCache {
   }
 
   invalidate(instanceId: number): void {
-    const prefix = `:${instanceId}:`;
+    // Cache keys are `${namespace}:${instanceId}` (e.g. "movies:1"). Match
+    // on a `:`-delimited segment so the instance id is found whether it's
+    // the final segment or carries a trailing suffix — a bare substring
+    // check would also match "movies:10" when invalidating instance 1.
+    const target = String(instanceId);
     const keys = new Set([...this.store.keys(), ...this.inflight.keys()]);
     for (const key of keys) {
-      if (!key.includes(prefix)) continue;
+      if (!key.split(":").includes(target)) continue;
       this.store.delete(key);
       this.inflight.delete(key);
       this.bumpVersion(key);

@@ -26,7 +26,6 @@ export function SeriesDrawer({ item, ctx, close }: Props) {
       series={item}
       open={item !== null}
       onOpenChange={(open) => !open && close()}
-      scoringMode={ctx.scoringMode}
       profiles={ctx.profiles}
       onIgnore={async () => {
         if (!item) return;

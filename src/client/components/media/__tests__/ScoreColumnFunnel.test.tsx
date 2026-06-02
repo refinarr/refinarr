@@ -16,8 +16,6 @@ const baseFilters: MediaFilters = {
   mediaId: null,
   profileIds: [],
   severities: [],
-  missingCfIds: [],
-  missingCfMatch: "all",
   hasNegativeCfIds: [],
   hasNegativeCfMatch: "all",
   flaggedOnly: true,
@@ -41,95 +39,29 @@ describe("ScoreColumnFunnel", () => {
     Element.prototype.scrollIntoView = original.scrollIntoView;
   });
 
-  describe("manual mode", () => {
-    it("renders the four manual-mode buckets", async () => {
-      renderWithProviders(
-        <ScoreColumnFunnel
-          scoringMode="manual"
-          filters={baseFilters}
-          onChange={() => {}}
-          columnLabel="Score"
-        />,
-      );
-      await userEvent.click(
-        screen.getByRole("button", { name: /filter score/i }),
-      );
-      for (const label of ["< 30%", "30 – 60%", "60 – 85%", "85%+"]) {
-        expect(
-          await screen.findByRole("button", { name: label }),
-        ).toBeInTheDocument();
-      }
-    });
-
-    it("clicking a bucket sets the score range", async () => {
-      const onChange = vi.fn();
-      renderWithProviders(
-        <ScoreColumnFunnel
-          scoringMode="manual"
-          filters={baseFilters}
-          onChange={onChange}
-          columnLabel="Score"
-        />,
-      );
-      await userEvent.click(
-        screen.getByRole("button", { name: /filter score/i }),
-      );
-      await userEvent.click(
-        await screen.findByRole("button", { name: "30 – 60%" }),
-      );
-      expect(onChange).toHaveBeenCalledWith({
-        minScore: 0.3,
-        maxScore: 0.5999,
-      });
-    });
+  it("renders the three profile-mode buckets", async () => {
+    renderWithProviders(
+      <ScoreColumnFunnel
+        filters={baseFilters}
+        onChange={() => {}}
+        columnLabel="Score"
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /filter score/i }),
+    );
+    for (const label of ["Negative", "Zero", "Positive"]) {
+      expect(
+        await screen.findByRole("button", { name: label }),
+      ).toBeInTheDocument();
+    }
   });
 
-  describe("profile mode", () => {
-    it("renders the three profile-mode buckets", async () => {
-      renderWithProviders(
-        <ScoreColumnFunnel
-          scoringMode="profile"
-          filters={baseFilters}
-          onChange={() => {}}
-          columnLabel="Score"
-        />,
-      );
-      await userEvent.click(
-        screen.getByRole("button", { name: /filter score/i }),
-      );
-      for (const label of ["Negative", "Zero", "Positive"]) {
-        expect(
-          await screen.findByRole("button", { name: label }),
-        ).toBeInTheDocument();
-      }
-    });
-
-    it("clicking Negative sets minScore=null, maxScore=-1", async () => {
-      const onChange = vi.fn();
-      renderWithProviders(
-        <ScoreColumnFunnel
-          scoringMode="profile"
-          filters={baseFilters}
-          onChange={onChange}
-          columnLabel="Score"
-        />,
-      );
-      await userEvent.click(
-        screen.getByRole("button", { name: /filter score/i }),
-      );
-      await userEvent.click(
-        await screen.findByRole("button", { name: "Negative" }),
-      );
-      expect(onChange).toHaveBeenCalledWith({ minScore: null, maxScore: -1 });
-    });
-  });
-
-  it("clicking the active bucket clears the filter", async () => {
+  it("clicking Negative sets minScore=null, maxScore=-1", async () => {
     const onChange = vi.fn();
     renderWithProviders(
       <ScoreColumnFunnel
-        scoringMode="manual"
-        filters={{ ...baseFilters, minScore: 0.3, maxScore: 0.5999 }}
+        filters={baseFilters}
         onChange={onChange}
         columnLabel="Score"
       />,
@@ -137,7 +69,25 @@ describe("ScoreColumnFunnel", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /filter score/i }),
     );
-    const activeChip = await screen.findByRole("button", { name: "30 – 60%" });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Negative" }),
+    );
+    expect(onChange).toHaveBeenCalledWith({ minScore: null, maxScore: -1 });
+  });
+
+  it("clicking the active bucket clears the filter", async () => {
+    const onChange = vi.fn();
+    renderWithProviders(
+      <ScoreColumnFunnel
+        filters={{ ...baseFilters, minScore: null, maxScore: -1 }}
+        onChange={onChange}
+        columnLabel="Score"
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /filter score/i }),
+    );
+    const activeChip = await screen.findByRole("button", { name: "Negative" });
     expect(activeChip).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(activeChip);
     expect(onChange).toHaveBeenCalledWith({ minScore: null, maxScore: null });

@@ -12,7 +12,6 @@ export const RADARR = {
   name: "Mock Radarr",
   url: "http://192.168.1.100:7878",
   enabled: true,
-  scoringMode: "profile",
   showAllMedia: false,
   createdAt: new Date().toISOString(),
 };
@@ -23,7 +22,6 @@ export const SONARR = {
   name: "Mock Sonarr",
   url: "http://192.168.1.100:8989",
   enabled: true,
-  scoringMode: "profile",
   showAllMedia: false,
   createdAt: new Date().toISOString(),
 };
@@ -81,9 +79,6 @@ export async function stubMediaApis(
     route.fulfill({ status: 200, json: [] }),
   );
   await pg.route("**/api/sonarr/qualityprofiles**", (route) =>
-    route.fulfill({ status: 200, json: [] }),
-  );
-  await pg.route("**/api/preferences**", (route) =>
     route.fulfill({ status: 200, json: [] }),
   );
   await pg.route("**/api/dashboard/summary**", (route) =>

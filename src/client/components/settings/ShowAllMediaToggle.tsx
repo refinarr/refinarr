@@ -12,11 +12,10 @@ interface Props {
   instanceId: number;
 }
 
-// Per-instance opt-in for "Advanced — show all media". Mirrors the
-// shape of ScoringModeSelector so each instance gets its own row in
-// the Instances section. When enabled, that instance defaults library
-// pages to all media; when disabled, the server enforces flagged-only
-// results even if a client sends flaggedOnly=false.
+// Per-instance opt-in for "Advanced — show all media". Each instance
+// gets its own row in the Instances section. When enabled, that instance
+// defaults library pages to all media; when disabled, the server enforces
+// flagged-only results even if a client sends flaggedOnly=false.
 export function ShowAllMediaToggle({ instanceId }: Props) {
   const t = useTranslations("settings");
   const tToast = useTranslations("toast");

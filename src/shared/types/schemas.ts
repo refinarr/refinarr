@@ -49,7 +49,6 @@ const autoSearchFields = {
   autoSearchPickStrategy: z.enum(["balanced", "random"]).optional(),
   autoSearchCooldownHours: z.number().int().min(0).max(8760).optional(),
   autoSearchPausedUntil: z.iso.datetime().nullable().optional(),
-  autoSearchScoringMode: z.enum(["inherit", "profile"]).optional(),
 };
 
 export const instanceCreateSchema = z.object({
@@ -72,7 +71,6 @@ export const instanceUpdateSchema = z.object({
   url: z.string().min(1).max(2048).optional(),
   apiKey: z.string().min(1).max(256).optional(),
   enabled: z.boolean().optional(),
-  scoringMode: z.enum(["manual", "profile"]).optional(),
   searchesPerHour: z.number().int().min(1).max(1000).optional(),
   showAllMedia: z.boolean().optional(),
   ...autoSearchFields,
@@ -89,18 +87,6 @@ export const ignoreCreateSchema = z.object({
   mediaId: z.number().int().positive(),
   mediaType: z.enum(["movie", "series"]),
   title: z.string().min(1).max(512),
-});
-
-export const preferencesSchema = z.object({
-  instanceId: z.number().int().positive(),
-  cfs: z
-    .array(
-      z.object({
-        cfId: z.number().int().nonnegative(),
-        cfName: z.string().min(1).max(256),
-      }),
-    )
-    .max(500),
 });
 
 // Optional UUID linking sibling rows from one bulk submission. Generated
