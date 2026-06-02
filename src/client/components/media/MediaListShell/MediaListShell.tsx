@@ -690,6 +690,10 @@ function Body<T extends MediaItem>({ columns, Card, tableId }: BodyProps<T>) {
                 }}
               />
             )}
+            swipeActions={(item) => ({
+              onSearch: () => void ctx.runSearch(item),
+              onIgnore: () => void ctx.runIgnore(item),
+            })}
             renderCard={(item) => <Card item={item} ctx={ctx} />}
             renderPoster={(item) => <PosterTile item={item} ctx={ctx} />}
           />

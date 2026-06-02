@@ -1,7 +1,7 @@
 "use client";
 import { useRef, type ReactNode } from "react";
 import { useVirtList } from "@/client/hooks/ui/useVirtList";
-import { MediaCard } from "./MediaCard";
+import { MediaCard, type SwipeActions } from "./MediaCard";
 import { MediaCardSkeleton } from "./MediaCardSkeleton";
 
 // Cards measure ~90px (no CF row) to ~118px (with the CF-chip row that
@@ -27,6 +27,9 @@ interface Props<T extends { id: number }> {
   onRowClick: (id: number) => void;
   renderCard: (row: T) => ReactNode;
   rowActions?: (row: T) => ReactNode;
+  // Per-row handlers for the mobile swipe-to-reveal panel. When omitted,
+  // cards fall back to the inline hover actions on every viewport.
+  swipeActions?: (row: T) => SwipeActions;
   fetchNextPage?: () => unknown;
   hasNextPage?: boolean;
   isFetchingNextPage?: boolean;
@@ -47,12 +50,16 @@ export function MediaCardList<T extends { id: number }>({
   onRowClick,
   renderCard,
   rowActions,
+  swipeActions,
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
   focusedId,
 }: Props<T>) {
   const listRef = useRef<HTMLUListElement | null>(null);
+  // Any selection active → suppress swipe so it doesn't fight the
+  // checkbox tap / bulk bar.
+  const selectionActive = selectedIds.size > 0;
 
   const { items, virtEnabled, containerStyle } = useVirtList<T>({
     rows,
@@ -130,6 +137,8 @@ export function MediaCardList<T extends { id: number }>({
                   onRowClick={() => onRowClick(row.id)}
                   renderCard={renderCard}
                   actions={rowActions?.(row)}
+                  swipeActions={swipeActions?.(row)}
+                  selectionActive={selectionActive}
                   focused={isFocused}
                 />
               </div>
@@ -144,6 +153,8 @@ export function MediaCardList<T extends { id: number }>({
                 onRowClick={() => onRowClick(row.id)}
                 renderCard={renderCard}
                 actions={rowActions?.(row)}
+                swipeActions={swipeActions?.(row)}
+                selectionActive={selectionActive}
                 focused={isFocused}
               />
             </div>

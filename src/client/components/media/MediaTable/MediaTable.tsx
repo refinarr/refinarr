@@ -13,6 +13,7 @@ import { useColumnSizing } from "@/client/hooks/media/useColumnSizing";
 import { useVirtList } from "@/client/hooks/ui/useVirtList";
 import { MediaPosterGrid } from "@/client/components/media/MediaPosterGrid";
 import { MediaCardList } from "./MediaCardList";
+import type { SwipeActions } from "./MediaCard";
 import { MediaTableHeader } from "./MediaTableHeader";
 import { MediaTableRow } from "./MediaTableRow";
 import { MediaTableSkeletonRow } from "./MediaTableSkeletonRow";
@@ -58,6 +59,8 @@ interface Props<T extends { id: number }> {
   // Poster-tile content for density="poster". Same role as renderCard
   // but for the grid view; supplied for movies/shows.
   renderPoster?: (row: T) => ReactNode;
+  // Per-row handlers for the mobile card swipe-to-reveal actions.
+  swipeActions?: (row: T) => SwipeActions;
   emptyState?: ReactNode;
   // Active row density (desktop only). "compact" = h-row-compact (~36px),
   // "cozy" = h-row-cozy (~48px, default). Read from useDensity().
@@ -124,6 +127,7 @@ export function MediaTable<T extends { id: number }>(props: Props<T>) {
         onRowClick={props.onRowClick}
         renderCard={props.renderCard!}
         rowActions={props.rowActions}
+        swipeActions={props.swipeActions}
         focusedId={props.focusedId}
         fetchNextPage={props.fetchNextPage}
         hasNextPage={props.hasNextPage}
