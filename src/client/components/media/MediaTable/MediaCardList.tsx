@@ -9,9 +9,10 @@ import { MediaCardSkeleton } from "./MediaCardSkeleton";
 // With a UNIFORM height the estimate is exact: virt can't gap (estimate
 // too tall) or overlap (estimate too short) during a fast flick, which
 // is the trade-off a single estimate forced when card heights differed.
-// ~p-3 shell 26 + header 24 + gap 6 + meta 16 + pb-card-gap 8 ≈ 80–88.
-// Keep in sync with --spacing-card-min in globals.css (skeleton height).
-export const CARD_HEIGHT_ESTIMATE_PX = 84;
+// Measured at exactly 70px on mobile (0px variance, #96); the old 84
+// over-estimate also drove a 14px skeleton→content shift. Keep in sync
+// with --spacing-card-min in globals.css (skeleton height).
+export const CARD_HEIGHT_ESTIMATE_PX = 70;
 
 function pickCardOverscan(count: number): number {
   if (count > 5000) return 3;
