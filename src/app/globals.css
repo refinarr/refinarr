@@ -133,7 +133,11 @@
      not the intended ratio. Lowering chroma to 0.19 brings it IN gamut at the
      same L, so the rendered red is the intended darker tone (#b31418) and the
      soft-tint text clears AA with margin (~5.3:1 worst case). Dark mode keeps
-     its own value below. */
+     its own value below.
+     NOTE: at runtime this base value is OVERRIDDEN by the inline brand vars in
+     src/client/themes/_surface-vars.ts (injected by the head script) — that is
+     the value the Badge actually renders. Keep the two in sync; editing here
+     alone does NOT reach the DOM (the cause #106's first fix attempt missed). */
   --destructive: oklch(0.49 0.19 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
