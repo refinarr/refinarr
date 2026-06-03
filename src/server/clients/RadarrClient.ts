@@ -113,11 +113,12 @@ export class RadarrClient extends ArrClient {
   }
 
   // Per-arr projection — Radarr history records carry `movieId` as the
-  // sole id field. ArrClient owns the fetch + filter loop.
+  // sole id field, so a record maps to at most one movie-scoped event.
+  // ArrClient owns the fetch + filter loop.
   protected projectHistoryRecord(
     r: UpstreamHistoryRecord,
-  ): { mediaId: number; scope: UpstreamHistoryEvent["scope"] } | null {
-    if (typeof r.movieId !== "number") return null;
-    return { mediaId: r.movieId, scope: "movie" };
+  ): Array<{ mediaId: number; scope: UpstreamHistoryEvent["scope"] }> {
+    if (typeof r.movieId !== "number") return [];
+    return [{ mediaId: r.movieId, scope: "movie" }];
   }
 }

@@ -47,8 +47,8 @@ class TestClient extends ArrClient {
   }
   protected projectHistoryRecord(
     _r: UpstreamHistoryRecord,
-  ): { mediaId: number; scope: UpstreamHistoryEvent["scope"] } | null {
-    return null;
+  ): Array<{ mediaId: number; scope: UpstreamHistoryEvent["scope"] }> {
+    return [];
   }
   callFetch<T>(path: string, init?: RequestInit) {
     return this.fetch<T>(path, init);
@@ -296,7 +296,7 @@ describe("ArrClient.getCommandById", () => {
 });
 
 // Projects movie-scope records so getRecentHistory emits events (the
-// base TestClient returns null and would drop everything).
+// base TestClient returns an empty array and would drop everything).
 class MovieHistoryClient extends ArrClient {
   protected readonly expectedAppName = "Radarr";
   getQualityProfiles() {
@@ -309,7 +309,7 @@ class MovieHistoryClient extends ArrClient {
     return Promise.resolve();
   }
   protected projectHistoryRecord(r: UpstreamHistoryRecord) {
-    return r.movieId ? { mediaId: r.movieId, scope: "movie" as const } : null;
+    return r.movieId ? [{ mediaId: r.movieId, scope: "movie" as const }] : [];
   }
 }
 

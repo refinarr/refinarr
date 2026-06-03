@@ -156,22 +156,29 @@ export class SonarrClient extends ArrClient {
   }
 
   // Per-arr projection — Sonarr history records carry both `episodeId`
-  // and `seriesId`. We tag each record at the granularity that matches
-  // how refinarr triggered the search:
-  //   - episodeId > 0 → scope="episode" (triggerEpisodeFileSearch)
-  //   - else          → scope="series"  (triggerSearch / Season)
-  // The service-side correlator picks the right ActionLog row by
-  // (instanceId, mediaId, action) so the scope tag prevents an episode
-  // event from updating a series-level action row by accident.
+  // and `seriesId`, so one record fans out to BOTH an episode-scoped and a
+  // series-scoped event (an episode lifecycle event is also a series
+  // lifecycle event). The episode event correlates per-episode search rows;
+  // the series event lets series-level rows correlate to the same
+  // grab/import/fail — specifically a season force-grab, which lands at
+  // "grabbed" with mediaId=seriesId and would otherwise NEVER advance past
+  // "grabbed" because Sonarr only reports lifecycle events at episode
+  // granularity (#111). The service-side correlator still picks the right
+  // row by (instanceId, mediaId, action), so the two scopes address
+  // disjoint row sets and can't cross-update.
   protected projectHistoryRecord(
     r: UpstreamHistoryRecord,
-  ): { mediaId: number; scope: UpstreamHistoryEvent["scope"] } | null {
+  ): Array<{ mediaId: number; scope: UpstreamHistoryEvent["scope"] }> {
+    const tags: Array<{
+      mediaId: number;
+      scope: UpstreamHistoryEvent["scope"];
+    }> = [];
     if (typeof r.episodeId === "number" && r.episodeId > 0) {
-      return { mediaId: r.episodeId, scope: "episode" };
+      tags.push({ mediaId: r.episodeId, scope: "episode" });
     }
     if (typeof r.seriesId === "number" && r.seriesId > 0) {
-      return { mediaId: r.seriesId, scope: "series" };
+      tags.push({ mediaId: r.seriesId, scope: "series" });
     }
-    return null;
+    return tags;
   }
 }

@@ -7,6 +7,7 @@ import {
 } from "@/server/services/StatusPollerService";
 import { logRepository } from "@/server/repositories/LogRepository";
 import { instanceService } from "@/server/services/InstanceService";
+import { SonarrClient } from "@/server/clients/SonarrClient";
 import type {
   ArrClient,
   UpstreamCommand,
@@ -185,6 +186,34 @@ describe("deriveCommandUpdate — command-sync correlation", () => {
           id: 1,
           mediaId: 42,
           scope: "movie",
+          eventType: "grabbed",
+          date: "2026-05-08T07:00:30Z",
+          sourceTitle: null,
+        },
+      ],
+    );
+    expect(patch).toBeNull();
+  });
+
+  // #111: a Sonarr import/grab record dual-emits a SERIES-scoped event, so a
+  // season-search row's history bucket now contains a series `grabbed` event.
+  // The suppression keys on eventType only (not scope), so the synthetic "No
+  // releases grabbed" message is correctly suppressed for the season search —
+  // pins that the uniform dual-emit's effect on completionMessage is intended.
+  test("series grabbed event (Sonarr dual-emit, #111) suppresses 'No releases grabbed' for a season-search row", () => {
+    const patch = deriveCommandUpdate(
+      row({ action: "search_season", mediaId: 100 }),
+      {
+        id: 7777,
+        name: "SeasonSearch",
+        status: "completed",
+        started: "2026-05-08T07:00:00Z",
+      },
+      [
+        {
+          id: 1,
+          mediaId: 100,
+          scope: "series",
           eventType: "grabbed",
           date: "2026-05-08T07:00:30Z",
           sourceTitle: null,
@@ -846,6 +875,83 @@ describe("StatusPollerService.pollHistory (history sync)", () => {
     );
     const after = await logRepository.findById(row.id);
     expect(after?.status).toBe("downloaded");
+  });
+
+  // End-to-end regression for #111: drives a REAL SonarrClient (not a
+  // hand-built series event) so the chain projectHistoryRecord → dual-emit →
+  // correlation is exercised. A raw Sonarr import record carries both an
+  // episodeId and a seriesId; the series-scoped event it now emits is what
+  // advances the season force-grab row. Before the fix this stayed "grabbed".
+  test("#111 end-to-end: a real Sonarr import record advances a series grab row grabbed → downloaded", async () => {
+    const inst = await instanceService.create({
+      ...baseInstance,
+      type: "sonarr" as const,
+    });
+    const row = await seedRow(inst, {
+      action: "grab",
+      mediaId: 100,
+      status: "grabbed",
+      commandId: null,
+    });
+    // mockImplementation (not mockResolvedValue) so each call builds a fresh
+    // Response — a reused Response body is consumed on first read and would
+    // throw "Body is unusable" if retry/pagination is ever added upstream.
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            records: [
+              {
+                id: 331,
+                eventType: "downloadFolderImported",
+                date: new Date().toISOString(),
+                episodeId: 158,
+                seriesId: 100,
+                sourceTitle: null,
+              },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
+    try {
+      await service.pollHistory(inst, new SonarrClient(inst), new Date(0));
+    } finally {
+      fetchSpy.mockRestore();
+    }
+    const after = await logRepository.findById(row.id);
+    expect(after?.status).toBe("downloaded");
+  });
+
+  test("force-grab (series) row advances grabbed → failed on a downloadFailed event (A3)", async () => {
+    const inst = await instanceService.create({
+      ...baseInstance,
+      type: "sonarr" as const,
+    });
+    const row = await seedRow(inst, {
+      action: "grab",
+      mediaId: 100,
+      status: "grabbed",
+      commandId: null,
+    });
+    await service.pollHistory(
+      inst,
+      mockClient({
+        history: [
+          {
+            id: 1,
+            mediaId: 100,
+            scope: "series",
+            eventType: "downloadFailed",
+            date: new Date().toISOString(),
+            sourceTitle: null,
+          },
+        ],
+      }),
+      new Date(0),
+    );
+    const after = await logRepository.findById(row.id);
+    expect(after?.status).toBe("failed");
   });
 
   test("episode event matches search_episode rows, not search rows", async () => {
