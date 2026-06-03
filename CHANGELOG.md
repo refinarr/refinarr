@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/refinarr/refinarr/compare/v0.8.2...v0.8.3) (2026-06-03)
+
+
+### Bug Fixes
+
+* advance Sonarr series-grab ActionLog to downloaded on import ([#111](https://github.com/refinarr/refinarr/issues/111)) ([#112](https://github.com/refinarr/refinarr/issues/112)) ([4fee7c1](https://github.com/refinarr/refinarr/commit/4fee7c1dc0ea9bc38f4de162421e49cd8051f75d))
+
 ## [0.8.2](https://github.com/refinarr/refinarr/compare/v0.8.1...v0.8.2) (2026-06-03)
 
 
