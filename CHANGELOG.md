@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0](https://github.com/refinarr/refinarr/compare/v0.7.0...v0.8.0) (2026-06-03)
+
+
+### Features
+
+* interactive search + force-grab (movie + Sonarr season) ([#99](https://github.com/refinarr/refinarr/issues/99)) ([1f08ff2](https://github.com/refinarr/refinarr/commit/1f08ff29c510a440465eac0bc4cf2815d7eb20ae))
+* remove manual scoring mode ([#97](https://github.com/refinarr/refinarr/issues/97)) ([9bb2134](https://github.com/refinarr/refinarr/commit/9bb2134f0ac3b8a4883dad09aedc83a0d9b865b2))
+
 ## [0.7.0](https://github.com/refinarr/refinarr/compare/v0.6.2...v0.7.0) (2026-06-02)
 
 
