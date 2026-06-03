@@ -18,7 +18,11 @@ export const LIGHT_SURFACE_VARS: Record<string, string> = {
   "--muted-foreground": "oklch(0.556 0 0)",
   "--accent": "oklch(0.97 0 0)",
   "--accent-foreground": "oklch(0.205 0 0)",
-  "--destructive": "oklch(0.577 0.245 27.325)",
+  // chroma 0.245 sat OUT of sRGB gamut at L=0.577 → browser gamut-mapped
+  // to ~#e7000b, dropping the soft-tint Badge contrast to 3.67-4.0 on the
+  // light-card surfaces axe flagged in #106. Aligning with the in-gamut
+  // L=0.49 / chroma 0.19 chosen for the same token in globals.css.
+  "--destructive": "oklch(0.49 0.19 27.325)",
   "--border": "oklch(0.922 0 0)",
   "--input": "oklch(0.922 0 0)",
   "--ring": "oklch(0.708 0 0)",
