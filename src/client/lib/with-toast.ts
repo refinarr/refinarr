@@ -48,7 +48,8 @@ export function withToast<TData, TError, TVariables>(
       // the caller's generic "failed" copy so the user knows to free space.
       if (
         err instanceof Error &&
-        (err as { code?: string }).code === "STORAGE_FULL"
+        "code" in err &&
+        err.code === "STORAGE_FULL"
       ) {
         return err.message;
       }
