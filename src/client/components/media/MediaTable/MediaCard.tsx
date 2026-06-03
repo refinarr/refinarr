@@ -166,7 +166,12 @@ export function MediaCard<T extends { id: number }>({
         {...surfaceProps}
       >
         <span
-          className="pt-0.5"
+          data-testid="media-select-target"
+          // On a coarse pointer the whole pill is the tap target, so it
+          // must meet the 44px minimum (same fix as the poster tile, #94 —
+          // the size-4 checkbox + its after:-inset hit-expander only reach
+          // ~32px tall). Fine pointers keep the compact box.
+          className="flex items-start pt-0.5 pointer-coarse:size-11 pointer-coarse:items-center pointer-coarse:justify-center pointer-coarse:pt-0"
           onClick={(e) => {
             e.stopPropagation();
             onToggleSelect();

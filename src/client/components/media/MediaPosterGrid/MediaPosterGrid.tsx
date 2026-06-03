@@ -70,8 +70,14 @@ export function MediaPosterGrid<T extends { id: number }>({
             )}
           >
             <span
+              data-testid="media-select-target"
               className={cn(
+                // On a coarse pointer the whole pill is the tap target, so
+                // it must meet the 44px minimum (#94 — the bare p-0.5 box
+                // around a size-4 checkbox was ~20px). Fine pointers keep
+                // the compact corner badge.
                 "bg-background/85 absolute top-1 left-1 z-10 rounded-sm p-0.5 backdrop-blur-sm transition-opacity",
+                "pointer-coarse:flex pointer-coarse:size-11 pointer-coarse:items-center pointer-coarse:justify-center pointer-coarse:p-0",
                 selectedIds.has(row.id)
                   ? "opacity-100"
                   : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100",
