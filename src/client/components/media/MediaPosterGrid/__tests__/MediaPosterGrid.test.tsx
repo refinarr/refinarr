@@ -55,6 +55,7 @@ describe("MediaPosterGrid", () => {
     const checkboxes = screen.getAllByRole("checkbox");
     await userEvent.click(checkboxes[0]);
     expect(onToggleSelect).toHaveBeenCalledWith(1);
+    expect(onToggleSelect).toHaveBeenCalledTimes(1);
     expect(onRowClick).not.toHaveBeenCalled();
   });
 

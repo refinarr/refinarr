@@ -49,8 +49,51 @@ export function movie(over: Partial<MovieItem> = {}): MovieItem {
   };
 }
 
+export function series(over: Partial<SeriesItem> = {}): SeriesItem {
+  return {
+    id: 1,
+    title: "The Missing Series",
+    year: 2024,
+    qualityProfileId: 1,
+    customFormats: [],
+    customFormatScore: 0,
+    cfScore: 0,
+    missingFormats: [{ id: 99, name: "HDR" }],
+    unwantedFormats: [],
+    minProfileScore: 100,
+    sizeOnDisk: 5_000_000_000,
+    monitored: true,
+    existingFileCount: 1,
+    totalFileCount: 10,
+    flagged: true,
+    affectedEpisodeCount: 3,
+    totalEpisodeCount: 10,
+    episodeFiles: [],
+    ...over,
+  };
+}
+
 function page<T>(items: T[]): PaginatedResponse<T> {
   return { items, total: items.length, page: 1, limit: 50, hasMore: false };
+}
+
+// The four library densities and the surface (testid) each renders on a
+// DESKTOP viewport. On mobile the table densities collapse to the card
+// list, so the density loops below run desktop-width.
+export const DENSITY_SURFACES: ReadonlyArray<{
+  density: string;
+  testid: string;
+}> = [
+  { density: "cozy", testid: "media-table-body" },
+  { density: "compact", testid: "media-table-body" },
+  { density: "card", testid: "media-card-list" },
+  { density: "poster", testid: "media-poster-grid" },
+];
+
+// Persist a density and reload so the app reads it on the next paint.
+export async function setDensity(pg: Page, density: string): Promise<void> {
+  await pg.evaluate((d) => localStorage.setItem("rfn-density", d), density);
+  await pg.reload();
 }
 
 interface StubOptions {

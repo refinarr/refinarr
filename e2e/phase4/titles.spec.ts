@@ -1,12 +1,13 @@
 import { test, expect } from "@playwright/test";
-import { stubMediaApis, movie } from "./mocks";
+import { stubMediaApis, movie, setDensity, DENSITY_SURFACES } from "./mocks";
 
-// I3 — long / unicode / RTL titles render without breaking the layout
-// (the card title truncates rather than forcing horizontal overflow).
+// I3 — long / unicode / RTL titles render without breaking the layout in
+// EVERY density (cozy/compact table, card, poster). The title truncates
+// rather than forcing the page wider than the viewport.
 
 test.use({
   storageState: "e2e/.auth/user.json",
-  viewport: { width: 393, height: 852 }, // mobile → always the card list
+  viewport: { width: 1280, height: 800 }, // desktop → all four densities apply
 });
 
 const TITLES = {
@@ -25,24 +26,32 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("long / unicode / RTL titles render without horizontal overflow", async ({
-  page,
-}) => {
-  await page.goto("/movies");
+for (const surface of DENSITY_SURFACES) {
+  test(`${surface.density}: long / unicode / RTL titles render without horizontal overflow`, async ({
+    page,
+  }) => {
+    await page.goto("/movies");
+    await setDensity(page, surface.density);
+    await expect(page.getByTestId(surface.testid)).toBeVisible({
+      timeout: 10_000,
+    });
 
-  const cardList = page.getByTestId("media-card-list");
-  await expect(cardList).toBeVisible({ timeout: 10_000 });
+    // The text-bearing surfaces (table + card) render the full title in
+    // the DOM (truncation is CSS-only). The poster grid shows it in the
+    // tile caption, which may line-clamp — there we only assert layout.
+    if (surface.testid !== "media-poster-grid") {
+      for (const title of Object.values(TITLES)) {
+        await expect(
+          page.getByTestId(surface.testid).getByText(title),
+        ).toBeVisible();
+      }
+    }
 
-  // Full title text is present in the DOM (truncation is CSS-only).
-  for (const title of Object.values(TITLES)) {
-    await expect(cardList.getByText(title)).toBeVisible();
-  }
-
-  // No horizontal overflow at the document level — the long title must
-  // truncate, not push the page wider than the viewport.
-  const overflows = await page.evaluate(() => {
-    const el = document.documentElement;
-    return el.scrollWidth > el.clientWidth + 1;
+    // No horizontal overflow at the document level in any density.
+    const overflows = await page.evaluate(() => {
+      const el = document.documentElement;
+      return el.scrollWidth > el.clientWidth + 1;
+    });
+    expect(overflows).toBe(false);
   });
-  expect(overflows).toBe(false);
-});
+}
