@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.2](https://github.com/refinarr/refinarr/compare/v0.8.1...v0.8.2) (2026-06-03)
+
+
+### Bug Fixes
+
+* Phase 5 QA-5 a11y + disk-full resilience ([#105](https://github.com/refinarr/refinarr/issues/105)/[#106](https://github.com/refinarr/refinarr/issues/106)/[#107](https://github.com/refinarr/refinarr/issues/107)) ([#109](https://github.com/refinarr/refinarr/issues/109)) ([bbea104](https://github.com/refinarr/refinarr/commit/bbea104807e2930d8ce451c0ed95f2078e3fc604))
+
 ## [0.8.1](https://github.com/refinarr/refinarr/compare/v0.8.0...v0.8.1) (2026-06-03)
 
 
