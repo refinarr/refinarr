@@ -422,27 +422,35 @@ export abstract class ArrClient {
     for (const r of page.records ?? []) {
       const d = Date.parse(r.date);
       if (Number.isFinite(d) && d < sinceMs) continue;
-      const tag = this.projectHistoryRecord(r);
-      if (!tag) continue;
-      out.push({
-        id: r.id,
-        mediaId: tag.mediaId,
-        scope: tag.scope,
-        eventType: r.eventType,
-        date: r.date,
-        sourceTitle: r.sourceTitle,
-        downloadId: r.downloadId ?? null,
-      });
+      // One record can project to MULTIPLE events: a Sonarr lifecycle
+      // record carries both an episodeId and a seriesId, so it fans out to
+      // an episode-scoped AND a series-scoped event — the latter lets a
+      // series grab / season-search row correlate to the import (it has no
+      // episode-level row of its own). All events from one record share its
+      // id / eventType / date / sourceTitle / downloadId.
+      for (const tag of this.projectHistoryRecord(r)) {
+        out.push({
+          id: r.id,
+          mediaId: tag.mediaId,
+          scope: tag.scope,
+          eventType: r.eventType,
+          date: r.date,
+          sourceTitle: r.sourceTitle,
+          downloadId: r.downloadId ?? null,
+        });
+      }
     }
     return out;
   }
 
   // Subclass hook: project the per-arr id field(s) into the uniform
-  // `mediaId + scope` shape statusPoller correlates against. Return
-  // null to skip a record (e.g. one with no id field populated).
+  // `mediaId + scope` shapes statusPoller correlates against. Return an
+  // empty array to skip a record (e.g. one with no id field populated), or
+  // more than one tag to fan a single record out to multiple scopes (e.g.
+  // Sonarr's episode + series).
   protected abstract projectHistoryRecord(
     record: UpstreamHistoryRecord,
-  ): { mediaId: number; scope: UpstreamHistoryEvent["scope"] } | null;
+  ): Array<{ mediaId: number; scope: UpstreamHistoryEvent["scope"] }>;
 }
 
 // Command-sync response shape — narrow projection of Radarr/Sonarr's
