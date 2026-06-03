@@ -17,12 +17,26 @@ const selectAll = (p: Page) =>
   p.getByRole("checkbox", { name: /select all visible items/i });
 const toolbar = (p: Page) => p.getByRole("region", { name: /selected/i });
 
+function hasMediaId(body: unknown): body is { mediaId: number } {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    "mediaId" in body &&
+    typeof (body as { mediaId: unknown }).mediaId === "number"
+  );
+}
+
 // Intercept the per-item search POSTs, recording the queued media ids.
-function captureSearches(page: Page, queued: number[], delayMs = 0) {
+// `queued` is optional — the cancel/navigate specs only need the delay.
+function captureSearches(page: Page, queued?: number[], delayMs = 0) {
   return page.route(SEARCH, async (route: Route) => {
-    queued.push(
-      (route.request().postDataJSON() as { mediaId: number }).mediaId,
-    );
+    if (queued) {
+      const body = route.request().postDataJSON();
+      if (!hasMediaId(body)) {
+        throw new Error(`Unexpected search body: ${JSON.stringify(body)}`);
+      }
+      queued.push(body.mediaId);
+    }
     if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
     return route.fulfill({ status: 200, json: {} });
   });
@@ -98,7 +112,7 @@ test("C6: navigating away mid-bulk lands on the next page cleanly", async ({
   await stubMediaApis(page, {
     movies: [movie({ id: 1 }), movie({ id: 2 }), movie({ id: 3 })],
   });
-  await captureSearches(page, [], 400);
+  await captureSearches(page, undefined, 400);
 
   await openMovies(page, "cozy", "media-table-body");
   await selectAll(page).click();

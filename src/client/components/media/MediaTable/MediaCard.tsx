@@ -52,6 +52,7 @@ export function MediaCard<T extends { id: number }>({
   focused,
 }: Props<T>) {
   const t = useTranslations("common");
+  const tBulk = useTranslations("bulk");
   const isMobile = useIsMobile();
   const reduceMotion = usePrefersReducedMotion();
 
@@ -165,19 +166,36 @@ export function MediaCard<T extends { id: number }>({
         onClick={handleContentClick}
         {...surfaceProps}
       >
+        {/* The pill IS the control (role=checkbox): meets the 44px minimum
+            on a coarse pointer (#101) and is the single click handler. The
+            inner Checkbox is purely visual (aria-hidden + pointer-events-
+            none) — interactive, it emitted two bubbling clicks that
+            double-toggled to a no-op. */}
         <span
           data-testid="media-select-target"
-          // On a coarse pointer the whole pill is the tap target, so it
-          // must meet the 44px minimum (same fix as the poster tile, #94 —
-          // the size-4 checkbox + its after:-inset hit-expander only reach
-          // ~32px tall). Fine pointers keep the compact box.
-          className="flex items-start pt-0.5 pointer-coarse:size-11 pointer-coarse:items-center pointer-coarse:justify-center pointer-coarse:pt-0"
+          role="checkbox"
+          aria-checked={selected}
+          aria-label={tBulk("selectRow")}
+          tabIndex={0}
+          className="focus-visible:ring-brand flex items-start pt-0.5 outline-none focus-visible:ring-2 pointer-coarse:size-11 pointer-coarse:items-center pointer-coarse:justify-center pointer-coarse:pt-0"
           onClick={(e) => {
             e.stopPropagation();
             onToggleSelect();
           }}
+          onKeyDown={(e) => {
+            if (e.key === " " || e.key === "Enter") {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSelect();
+            }
+          }}
         >
-          <Checkbox checked={selected} onCheckedChange={onToggleSelect} />
+          <Checkbox
+            checked={selected}
+            aria-hidden
+            tabIndex={-1}
+            className="pointer-events-none"
+          />
         </span>
         <div className="min-w-0 flex-1">{renderCard(row)}</div>
         <div className="flex shrink-0 items-center gap-0.5 self-center">

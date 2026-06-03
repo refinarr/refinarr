@@ -82,6 +82,13 @@ test.describe("QA-4 (#94) — selection checkbox tap target", () => {
         expect(box!.height).toBeGreaterThanOrEqual(MIN_TAP_PX - 0.5);
         expect(box!.width).toBeGreaterThanOrEqual(MIN_TAP_PX - 0.5);
       }
+
+      // Geometry isn't enough — a center tap must actually toggle selection
+      // (guards the double-toggle no-op the size check alone would miss).
+      await targets[0].click();
+      await expect(
+        page.getByRole("region", { name: /1 selected/i }),
+      ).toBeVisible({ timeout: 5_000 });
     });
   }
 });

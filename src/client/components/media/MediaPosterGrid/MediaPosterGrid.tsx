@@ -69,14 +69,20 @@ export function MediaPosterGrid<T extends { id: number }>({
               focusedId === row.id && "ring-brand ring-2 ring-offset-2",
             )}
           >
+            {/* The pill IS the control (role=checkbox): the whole 44px tap
+                area toggles on a coarse pointer (#94/#101), and it's the
+                single click handler. The inner Checkbox is purely visual
+                (aria-hidden + pointer-events-none) — leaving it interactive
+                made it emit two bubbling clicks (button + hidden form input)
+                that double-toggled to a no-op. */}
             <span
               data-testid="media-select-target"
+              role="checkbox"
+              aria-checked={selectedIds.has(row.id)}
+              aria-label={tBulk("selectRow")}
+              tabIndex={0}
               className={cn(
-                // On a coarse pointer the whole pill is the tap target, so
-                // it must meet the 44px minimum (#94 — the bare p-0.5 box
-                // around a size-4 checkbox was ~20px). Fine pointers keep
-                // the compact corner badge.
-                "bg-background/85 absolute top-1 left-1 z-10 rounded-sm p-0.5 backdrop-blur-sm transition-opacity",
+                "bg-background/85 focus-visible:ring-brand absolute top-1 left-1 z-10 rounded-sm p-0.5 backdrop-blur-sm transition-opacity outline-none focus-visible:ring-2",
                 "pointer-coarse:flex pointer-coarse:size-11 pointer-coarse:items-center pointer-coarse:justify-center pointer-coarse:p-0",
                 selectedIds.has(row.id)
                   ? "opacity-100"
@@ -86,11 +92,19 @@ export function MediaPosterGrid<T extends { id: number }>({
                 e.stopPropagation();
                 onToggleSelect(row.id);
               }}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleSelect(row.id);
+                }
+              }}
             >
               <Checkbox
                 checked={selectedIds.has(row.id)}
-                onCheckedChange={() => onToggleSelect(row.id)}
-                aria-label={tBulk("selectRow")}
+                aria-hidden
+                tabIndex={-1}
+                className="pointer-events-none"
               />
             </span>
             {renderPoster(row)}
