@@ -757,6 +757,97 @@ describe("StatusPollerService.pollHistory (history sync)", () => {
     expect(after?.status).toBe("dry_run");
   });
 
+  // Interactive force-grab rows land at "grabbed" with no commandId. The
+  // import event must still advance them to "downloaded" — "grab" is in
+  // MOVIE_ACTIONS / SERIES_ACTIONS so the correlator picks the row up.
+  test("force-grab (movie) row advances grabbed → downloaded on import event", async () => {
+    const inst = await instanceService.create(baseInstance);
+    const row = await seedRow(inst, {
+      action: "grab",
+      mediaId: 42,
+      status: "grabbed",
+      commandId: null,
+    });
+    const result = await service.pollHistory(
+      inst,
+      mockClient({
+        history: [
+          {
+            id: 1,
+            mediaId: 42,
+            scope: "movie",
+            eventType: "downloadFolderImported",
+            date: new Date().toISOString(),
+            sourceTitle: null,
+          },
+        ],
+      }),
+      new Date(0),
+    );
+    expect(result.updates).toBe(1);
+    const after = await logRepository.findById(row.id);
+    expect(after?.status).toBe("downloaded");
+  });
+
+  test("a grabbed event is a no-op on a row already at 'grabbed'", async () => {
+    const inst = await instanceService.create(baseInstance);
+    const row = await seedRow(inst, {
+      action: "grab",
+      mediaId: 42,
+      status: "grabbed",
+      commandId: null,
+    });
+    await service.pollHistory(
+      inst,
+      mockClient({
+        history: [
+          {
+            id: 1,
+            mediaId: 42,
+            scope: "movie",
+            eventType: "grabbed",
+            date: new Date().toISOString(),
+            sourceTitle: null,
+          },
+        ],
+      }),
+      new Date(0),
+    );
+    const after = await logRepository.findById(row.id);
+    expect(after?.status).toBe("grabbed");
+  });
+
+  test("force-grab (series) row advances grabbed → downloaded on import event", async () => {
+    const inst = await instanceService.create({
+      ...baseInstance,
+      type: "sonarr" as const,
+    });
+    const row = await seedRow(inst, {
+      action: "grab",
+      mediaId: 100,
+      status: "grabbed",
+      commandId: null,
+    });
+    await service.pollHistory(
+      inst,
+      mockClient({
+        history: [
+          {
+            id: 1,
+            mediaId: 100,
+            scope: "series",
+            eventType: "downloadFolderImported",
+            date: new Date().toISOString(),
+            sourceTitle: null,
+          },
+        ],
+      }),
+      new Date(0),
+    );
+    const after = await logRepository.findById(row.id);
+    expect(after?.status).toBe("downloaded");
+  });
+
   test("episode event matches search_episode rows, not search rows", async () => {
     const inst = await instanceService.create({
       ...baseInstance,

@@ -34,10 +34,28 @@ export function radarrHandlers(
     customFormats?: unknown[];
     onCommand?: () => void;
     onDeleteFile?: (fileId: number) => void;
+    // Interactive search: raw upstream UpstreamRelease[] returned by
+    // GET /release. The client maps them to ReleaseCandidate, so this is
+    // the un-mapped shape.
+    releases?: unknown[];
+    // Force-grab: invoked with the parsed POST /release body.
+    onGrab?: (body: unknown) => void;
   } = {},
 ): HttpHandler[] {
   const base = `${instance.baseUrl.replace(/\/$/, "")}/api/v3`;
   const handlers: HttpHandler[] = [];
+
+  if (opts.releases !== undefined) {
+    handlers.push(
+      http.get(`${base}/release`, () => HttpResponse.json(opts.releases)),
+    );
+  }
+  handlers.push(
+    http.post(`${base}/release`, async ({ request }) => {
+      opts.onGrab?.(await request.json().catch(() => null));
+      return HttpResponse.json({}, { status: 201 });
+    }),
+  );
 
   if (opts.systemStatus) {
     handlers.push(
@@ -128,10 +146,26 @@ export function sonarrHandlers(
     episodes?: unknown[];
     onCommand?: () => void;
     onDeleteEpisodeFile?: (fileId: number) => void;
+    // Interactive search: raw upstream UpstreamRelease[] from GET /release.
+    releases?: unknown[];
+    // Force-grab: invoked with the parsed POST /release body.
+    onGrab?: (body: unknown) => void;
   } = {},
 ): HttpHandler[] {
   const base = `${instance.baseUrl.replace(/\/$/, "")}/api/v3`;
   const handlers: HttpHandler[] = [];
+
+  if (opts.releases !== undefined) {
+    handlers.push(
+      http.get(`${base}/release`, () => HttpResponse.json(opts.releases)),
+    );
+  }
+  handlers.push(
+    http.post(`${base}/release`, async ({ request }) => {
+      opts.onGrab?.(await request.json().catch(() => null));
+      return HttpResponse.json({}, { status: 201 });
+    }),
+  );
 
   if (opts.systemStatus) {
     handlers.push(

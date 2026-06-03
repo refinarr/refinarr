@@ -19,6 +19,8 @@ export const queryKeys = {
     ["history", "errors", instanceId] as const,
   qualityProfiles: (type: ArrType, instanceId: number) =>
     ["qualityProfiles", type, instanceId] as const,
+  releases: (type: ArrType, instanceId: number, sel: object) =>
+    ["releases", type, instanceId, sel] as const,
   customFormats: (type: ArrType, instanceId: number) =>
     ["customFormats", type, instanceId] as const,
   health: () => ["health"] as const,

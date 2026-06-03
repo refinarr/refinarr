@@ -146,13 +146,18 @@ export function deriveCommandUpdate(
 // that could have produced it. Episode events match episode-search
 // rows; series-scope events match the series + season + episode search
 // rows alike (the user asked about the series; any grab counts).
+// "grab" is included so an interactive force-grab row (which lands at
+// "grabbed" with no commandId) gets advanced to "downloaded" by the
+// import event — its only lifecycle correlation, since it has no command
+// to poll.
 const EPISODE_ACTIONS: ActionType[] = ["search_episode"];
 const SERIES_ACTIONS: ActionType[] = [
   "search",
   "search_season",
   "search_episode",
+  "grab",
 ];
-const MOVIE_ACTIONS: ActionType[] = ["search"];
+const MOVIE_ACTIONS: ActionType[] = ["search", "grab"];
 
 function actionsForEvent(ev: UpstreamHistoryEvent): ActionType[] {
   if (ev.scope === "movie") return MOVIE_ACTIONS;

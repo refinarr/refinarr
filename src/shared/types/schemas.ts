@@ -142,6 +142,34 @@ export const sonarrDeleteSchema = z.object({
   groupId: groupIdField,
 });
 
+// Interactive force-grab. `guid` + `indexerId` identify the release the
+// user picked from the interactive-search list; the *arr re-resolves it
+// from its own decision cache. indexerId is nonnegative because some
+// release sources surface id 0. The guid is echoed back from a release we
+// already fetched, so the cap is only a DoS bound — set generously (8192)
+// because magnet-link guids carry the full tracker list and routinely run
+// past 1KB (Forge QA: 100% of some Sonarr season packs exceeded 1024).
+const RELEASE_GUID_MAX = 8192;
+export const radarrGrabSchema = z.object({
+  instanceId: z.number().int().positive(),
+  mediaId: z.number().int().positive(),
+  guid: z.string().min(1).max(RELEASE_GUID_MAX),
+  indexerId: z.number().int().nonnegative(),
+  title: z.string().min(1).max(512),
+  groupId: groupIdField,
+});
+
+// No seasonNumber: a Sonarr grab is fully identified by guid + indexerId
+// (the release encodes the season); the season is carried in `title`.
+export const sonarrGrabSchema = z.object({
+  instanceId: z.number().int().positive(),
+  mediaId: z.number().int().positive(),
+  guid: z.string().min(1).max(RELEASE_GUID_MAX),
+  indexerId: z.number().int().nonnegative(),
+  title: z.string().min(1).max(512),
+  groupId: groupIdField,
+});
+
 export const configUpdateSchema = z.record(
   z.string().max(128),
   z.string().max(2048),

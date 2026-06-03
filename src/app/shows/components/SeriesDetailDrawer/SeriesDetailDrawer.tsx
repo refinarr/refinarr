@@ -44,6 +44,11 @@ interface Props {
     fileId: number,
     label: string,
   ) => Promise<unknown>;
+  // Opens the interactive-search release picker for one season.
+  onInteractiveSearchSeason?: (
+    series: SeriesItem,
+    seasonNumber: number,
+  ) => void;
 }
 
 export function SeriesDetailDrawer({
@@ -56,6 +61,7 @@ export function SeriesDetailDrawer({
   onSearchEpisode,
   onDeleteSeason,
   onDeleteEpisode,
+  onInteractiveSearchSeason,
 }: Props) {
   const tSeason = useTranslations("confirm.deleteSeason");
   const tEpisode = useTranslations("confirm.deleteEpisode");
@@ -133,6 +139,11 @@ export function SeriesDetailDrawer({
                       season={season}
                       files={files}
                       onSearch={() => onSearchSeason(series, season)}
+                      onInteractive={
+                        onInteractiveSearchSeason
+                          ? () => onInteractiveSearchSeason(series, season)
+                          : undefined
+                      }
                       onDelete={async () => {
                         if (affectedFileIds.length === 0) return;
                         const ok = await askConfirm({

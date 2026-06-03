@@ -49,6 +49,7 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "search": "Search",
+    "interactiveSearch": "Interactive",
     "ignore": "Ignore",
     "refresh": "Refresh",
     "clear": "Clear",
@@ -238,6 +239,7 @@
     "noEpisodeFiles": "No episode files found.",
     "episodeCountShort": "{affected}/{total} ep",
     "searchSeasonAria": "Search Season {season}",
+    "interactiveSeasonAria": "Interactive search for Season {season}",
     "deleteSeasonAria": "Delete affected files in Season {season}",
     "drawer": {
       "score": "Score",
@@ -387,6 +389,7 @@
       "search": "Search",
       "search_season": "Season search",
       "search_episode": "Episode search",
+      "grab": "Grab",
       "delete": "Delete",
       "ignore": "Ignore"
     },
@@ -750,6 +753,20 @@
       "proxy": "proxy · {username}"
     }
   },
+  "releasePicker": {
+    "title": "Interactive search",
+    "subtitle": "Pick a release to grab — {title}",
+    "loading": "Searching indexers…",
+    "error": "Couldn't fetch releases. Your *arr may still be searching, or no indexers are configured.",
+    "retry": "Try again",
+    "empty": "No releases found.",
+    "grab": "Grab",
+    "scoreLabel": "Score {score}",
+    "rejected": "Rejected: {reason}",
+    "notAllowed": "This release was rejected by your *arr",
+    "ageDays": "{n}d",
+    "ageHours": "{n}h"
+  },
   "toast": {
     "system": {
       "refreshed": "Update check refreshed",
@@ -765,6 +782,11 @@
       "episodeStarted": "Episode search started",
       "episodeQueuedDryRun": "Episode search queued (dry run)",
       "episodeFailed": "Couldn't start episode search"
+    },
+    "grab": {
+      "started": "Release grabbed",
+      "queuedDryRun": "Grab queued (dry run)",
+      "failed": "Couldn't grab release"
     },
     "delete": {
       "fileDone": "File deleted",

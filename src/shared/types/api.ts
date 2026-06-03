@@ -7,7 +7,32 @@ import type {
   AutoSearchPickStrategy,
   AutoSearchScheduleMode,
   AutoSearchScope,
+  CustomFormat,
 } from "./models";
+
+// One candidate release from an interactive search (Radarr/Sonarr
+// `GET /api/v3/release`). `guid` + `indexerId` round-trip to the grab
+// POST so the *arr can re-resolve the exact release from its decision
+// cache. `customFormatScore` is the upstream total scored against the
+// item's quality profile; each `customFormats` entry carries its own
+// per-format score (enriched from the instance's profile map) for badge
+// colouring. `downloadAllowed=false` means the *arr rejected it — the
+// reasons are in `rejections`, and the UI disables Grab.
+export interface ReleaseCandidate {
+  guid: string;
+  indexerId: number;
+  indexer: string;
+  title: string;
+  protocol: "torrent" | "usenet";
+  quality: string;
+  size: number;
+  seeders?: number | null;
+  ageHours?: number;
+  customFormats: CustomFormat[];
+  customFormatScore: number;
+  rejections: string[];
+  downloadAllowed: boolean;
+}
 
 export interface PaginatedResponse<T> {
   items: T[];

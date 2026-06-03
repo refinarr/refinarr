@@ -1,6 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Search, EyeOff, Trash2 } from "lucide-react";
+import { Search, EyeOff, Trash2, ListVideo } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -24,6 +24,8 @@ interface Props {
   onSearch: (movie: MovieItem) => void;
   onIgnore: (movie: MovieItem) => void;
   onDelete?: (movie: MovieItem) => void;
+  // Opens the interactive-search release picker for this movie.
+  onInteractiveSearch?: (movie: MovieItem) => void;
 }
 
 export function MovieDetailDrawer({
@@ -34,6 +36,7 @@ export function MovieDetailDrawer({
   onSearch,
   onIgnore,
   onDelete,
+  onInteractiveSearch,
 }: Props) {
   const tDrawer = useTranslations("movies.drawer");
   const tCommon = useTranslations("common");
@@ -108,6 +111,16 @@ export function MovieDetailDrawer({
             <Button variant="outline" size="sm" onClick={() => onDelete(movie)}>
               <Trash2 className="text-destructive mr-1 size-4" />{" "}
               {tCommon("delete")}
+            </Button>
+          )}
+          {onInteractiveSearch && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onInteractiveSearch(movie)}
+            >
+              <ListVideo className="mr-1 size-4" />{" "}
+              {tCommon("interactiveSearch")}
             </Button>
           )}
           <Button size="sm" onClick={() => onSearch(movie)}>

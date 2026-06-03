@@ -4,6 +4,51 @@ import { redactString } from "@/server/lib/redact";
 import { arrRateLimiter } from "@/server/lib/arr-rate-limiter";
 import { LogSource } from "@/shared/types/models";
 import type { Instance } from "@/shared/types/models";
+import type { ReleaseCandidate } from "@/shared/types/api";
+
+// Servarr's ReleaseResource is identical across Radarr and Sonarr, so the
+// upstream shape + the projection to our ReleaseCandidate live here on the
+// base and both subclasses reuse them. Only the fields the picker renders
+// are kept. Per-CF scores aren't carried by the release payload (score is
+// profile-relative); the prominent decision number is the upstream
+// `customFormatScore` total, which the *arr already computed against the
+// item's quality profile.
+export interface UpstreamRelease {
+  guid: string;
+  indexerId?: number;
+  indexer?: string;
+  title: string;
+  protocol?: string;
+  quality?: { quality?: { name?: string } };
+  size?: number;
+  seeders?: number | null;
+  ageHours?: number;
+  customFormats?: Array<{ id: number; name: string }>;
+  customFormatScore?: number;
+  rejections?: string[];
+  downloadAllowed?: boolean;
+}
+
+export function mapReleaseCandidate(r: UpstreamRelease): ReleaseCandidate {
+  return {
+    guid: r.guid,
+    indexerId: r.indexerId ?? 0,
+    indexer: r.indexer ?? "",
+    title: r.title,
+    protocol: r.protocol === "usenet" ? "usenet" : "torrent",
+    quality: r.quality?.quality?.name ?? "Unknown",
+    size: r.size ?? 0,
+    seeders: r.seeders ?? null,
+    ageHours: r.ageHours,
+    customFormats: (r.customFormats ?? []).map((cf) => ({
+      id: cf.id,
+      name: cf.name,
+    })),
+    customFormatScore: r.customFormatScore ?? 0,
+    rejections: r.rejections ?? [],
+    downloadAllowed: r.downloadAllowed ?? false,
+  };
+}
 
 // Node's fetch wraps the underlying network error and surfaces a generic
 // "fetch failed" message. The real diagnostic (ECONNREFUSED / ENOTFOUND /
@@ -61,6 +106,12 @@ class ArrHttpError extends Error {
 // timeout fires (minutes), which blocks DataCache.rebuild() and makes
 // the dashboard skeleton spin forever.
 const ARR_FETCH_TIMEOUT_MS = 10_000;
+
+// Interactive-search release queries hit the indexers live and routinely
+// take far longer than a normal LAN call — Servarr's own UI waits ~30-60s.
+// Override the default ceiling for `getReleases` only; every other call
+// keeps the tight 10s bound.
+export const RELEASE_FETCH_TIMEOUT_MS = 90_000;
 
 // Bounded fetch — pageSize 200, single page only. Stale event windows
 // resolve via `since` filtering; we never paginate the upstream's full
@@ -170,12 +221,13 @@ export abstract class ArrClient {
   private async performFetch(
     path: string,
     init?: RequestInit,
+    timeoutMs: number = ARR_FETCH_TIMEOUT_MS,
   ): Promise<Response> {
     const url = `${this.baseUrl}/api/v3${path}`;
     const ac = new AbortController();
     const timeoutId = setTimeout(
       () => ac.abort(new DOMException("TimeoutError", "TimeoutError")),
-      ARR_FETCH_TIMEOUT_MS,
+      timeoutMs,
     );
     let onCallerAbort: (() => void) | undefined;
     if (init?.signal) {
@@ -208,11 +260,19 @@ export abstract class ArrClient {
     }
   }
 
-  protected async fetch<T>(path: string, init?: RequestInit): Promise<T> {
-    const res = await this.performFetch(path, {
-      ...init,
-      headers: { "Content-Type": "application/json", ...init?.headers },
-    });
+  protected async fetch<T>(
+    path: string,
+    init?: RequestInit,
+    timeoutMs?: number,
+  ): Promise<T> {
+    const res = await this.performFetch(
+      path,
+      {
+        ...init,
+        headers: { "Content-Type": "application/json", ...init?.headers },
+      },
+      timeoutMs,
+    );
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");

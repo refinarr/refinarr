@@ -30,6 +30,7 @@ export type ActionType =
   | "search"
   | "search_season"
   | "search_episode"
+  | "grab"
   | "delete"
   | "ignore";
 // Forward-only status flow.

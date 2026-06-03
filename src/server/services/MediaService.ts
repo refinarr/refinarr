@@ -15,6 +15,7 @@ import { scoreForItem } from "@/shared/scoring-mode";
 import { getSeverity } from "@/shared/severity";
 import type {
   ActionLog,
+  ActionStatus,
   ActionType,
   CustomFormat,
   ArrType,
@@ -81,6 +82,11 @@ interface ExecuteActionOptions {
   // UUID linking sibling rows from one bulk submission. Stamped on the
   // ActionLog row at write time. Undefined for single-item dispatches.
   groupId?: string;
+  // Explicit terminal status to stamp on success, overriding the default
+  // commandId-vs-void logic. Used by force-grab: POST /release returns no
+  // commandId yet the row should land at "grabbed" (not "success") so the
+  // status poller advances it to "downloaded" on the import event.
+  successStatus?: ActionStatus;
   // Run the upstream effect. Optionally returns { commandId } from the
   // *arr response — when present, it's stamped on the ActionLog row
   // alongside the success transition. Non-search actions (delete,
@@ -683,16 +689,21 @@ export abstract class MediaService<TItem extends MediaItem> {
         source: LogSource.MediaAction,
         context: logContext(opts, false),
       });
-      // Stamp the upstream commandId when the run returned one (search
-      // actions) and use the "searched" status so the row reads as
-      // "search command queued upstream" rather than the misleading
-      // "success" — actual outcome lands later via statusPoller. For
-      // delete/ignore (no commandId), "success" remains accurate
-      // because there's no post-dispatch lifecycle to wait on.
-      const successUpdate: Partial<ActionLog> =
-        result && "commandId" in result
-          ? { status: "searched", commandId: result.commandId }
-          : { status: "success" };
+      // An explicit successStatus wins (force-grab → "grabbed"; no
+      // commandId to poll, but the import event still advances it). Else:
+      // stamp the upstream commandId when the run returned one (search
+      // actions) and use "searched" so the row reads as "search command
+      // queued upstream" rather than the misleading "success" — actual
+      // outcome lands later via statusPoller. For delete/ignore (no
+      // commandId), "success" remains accurate (no post-dispatch lifecycle).
+      let successUpdate: Partial<ActionLog>;
+      if (opts.successStatus) {
+        successUpdate = { status: opts.successStatus };
+      } else if (result && "commandId" in result) {
+        successUpdate = { status: "searched", commandId: result.commandId };
+      } else {
+        successUpdate = { status: "success" };
+      }
       return logRepository.update(logEntry.id, successUpdate);
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
