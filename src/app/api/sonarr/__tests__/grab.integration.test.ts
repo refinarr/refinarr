@@ -158,6 +158,36 @@ describe("POST /api/sonarr/series/grab", () => {
     expect(res.status).toBe(400);
   });
 
+  // Regression (Forge QA): magnet-link guids carry the full tracker list
+  // and routinely exceed 1KB — the schema must accept them, or force-grab
+  // 400s before reaching Sonarr for any magnet-returning indexer.
+  test("accepts a long magnet-style guid (>1024 chars)", async () => {
+    const instanceId = await makeInstance("sonarr", baseUrl);
+    mswServer.use(...sonarrHandlers({ baseUrl }, { onGrab: () => {} }));
+    const longGuid =
+      "magnet:?xt=urn:btih:" +
+      "a".repeat(40) +
+      "&dn=Show.S02.2160p" +
+      "&tr=http://tracker.example/announce".repeat(40); // ~1.5KB
+    expect(longGuid.length).toBeGreaterThan(1024);
+    const res = await grabRelease(
+      new NextRequest("http://localhost/api/sonarr/series/grab", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          instanceId,
+          mediaId: 12,
+          guid: longGuid,
+          indexerId: 4,
+          title: "My Show — Season 2",
+        }),
+      }),
+      ctxNone,
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe("grabbed");
+  });
+
   test("a radarr instance id returns 400 (wrong arr type)", async () => {
     const instanceId = await makeInstance("radarr", radarrUrl);
     const res = await grabRelease(
