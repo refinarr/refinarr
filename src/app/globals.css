@@ -125,11 +125,16 @@
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  /* Darkened from L=0.577 → 0.49 so the soft destructive treatment
-     (bg-destructive/10 + text-destructive, used by badges/buttons/icons)
-     clears WCAG AA 4.5:1 in light mode — even on the destructive-tinted
-     dry-run card (worst case ≈4.68:1). Dark mode keeps its own value below. */
-  --destructive: oklch(0.49 0.245 27.325);
+  /* Soft destructive treatment (bg-destructive/10 + text-destructive, used
+     by badges/buttons/icons) must clear WCAG AA 4.5:1 in light mode. The
+     earlier L=0.49 fix kept chroma 0.245, which is OUT of the sRGB gamut at
+     this lightness — the browser gamut-maps it back to a much lighter red
+     (~#e7000b), so the real measured contrast was only 3.67–4.0 (axe, #106),
+     not the intended ratio. Lowering chroma to 0.19 brings it IN gamut at the
+     same L, so the rendered red is the intended darker tone (#b31418) and the
+     soft-tint text clears AA with margin (~5.3:1 worst case). Dark mode keeps
+     its own value below. */
+  --destructive: oklch(0.49 0.19 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.78 0.16 75);

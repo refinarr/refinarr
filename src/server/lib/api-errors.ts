@@ -110,6 +110,42 @@ export function internal(
   });
 }
 
+// 507 Insufficient Storage — the data volume backing SQLite is full
+// (ENOSPC / SQLITE_FULL). Surfaced as a structured `STORAGE_FULL` code +
+// user-readable message so the UI can show "free space on /data and retry"
+// instead of a bare 500. `expose: true` because the message is intentional
+// operator-facing copy, and `logLevel: "warn"` (not error) — a full disk is
+// an operational condition, not a Refinarr bug, and the DB write to persist
+// an error-level row would itself fail under the same disk pressure.
+export function insufficientStorage(
+  message = "Data volume is full. Free space on the /data volume and retry.",
+  code = "STORAGE_FULL",
+): HttpError {
+  return new HttpError({
+    status: 507,
+    message,
+    code,
+    expose: true,
+    logLevel: "warn",
+  });
+}
+
+// Detects a SQLite "database or disk is full" failure surfacing through
+// Prisma (ENOSPC on the /data volume). Prisma wraps it as a
+// PrismaClientKnownRequestError, but the surfaced driver code / message
+// varies across Prisma + better-sqlite3 versions, so match defensively on
+// both the code and the canonical SQLite message rather than a single field.
+export function isStorageFullError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const code = (err as { code?: unknown }).code;
+  if (code === "SQLITE_FULL") return true;
+  const message = (err as { message?: unknown }).message;
+  return (
+    typeof message === "string" &&
+    /database or disk is full|disk is full|SQLITE_FULL|ENOSPC/i.test(message)
+  );
+}
+
 export async function parseJson<T>(
   req: NextRequest,
   schema: ZodType<T>,

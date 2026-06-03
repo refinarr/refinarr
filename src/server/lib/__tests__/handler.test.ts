@@ -119,6 +119,30 @@ describe("createApiHandler", () => {
     expect(body.traceId).toBe(res.headers.get("X-Trace-Id"));
   });
 
+  test("SQLITE_FULL (disk full) maps to a structured 507 STORAGE_FULL", async () => {
+    const handler = createApiHandler(async () => {
+      // Shape mirrors Prisma's PrismaClientKnownRequestError under ENOSPC.
+      throw Object.assign(new Error("database or disk is full"), {
+        code: "SQLITE_FULL",
+      });
+    });
+    const res = await handler(makeReq(), makeCtx());
+    expect(res.status).toBe(507);
+    const body = await res.json();
+    expect(body.code).toBe("STORAGE_FULL");
+    expect(body.error).toMatch(/full/i);
+    expect(body.traceId).toBe(res.headers.get("X-Trace-Id"));
+  });
+
+  test("disk-full detected by message alone (no code) still maps to 507", async () => {
+    const handler = createApiHandler(async () => {
+      throw new Error("SqliteError: database or disk is full");
+    });
+    const res = await handler(makeReq(), makeCtx());
+    expect(res.status).toBe(507);
+    expect((await res.json()).code).toBe("STORAGE_FULL");
+  });
+
   test("HttpError from handler returns canonical error response", async () => {
     const handler = createApiHandler(async () => {
       throw badRequest("Nope", "NOPE");

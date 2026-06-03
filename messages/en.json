@@ -441,6 +441,9 @@
     "noMatches": "No logs match the current filters.",
     "instanceAll": "All instances",
     "sourceAll": "All sources",
+    "filterLevel": "Filter by level",
+    "filterSource": "Filter by source",
+    "filterInstance": "Filter by instance",
     "source": {
       "api": "API",
       "client": "Client",

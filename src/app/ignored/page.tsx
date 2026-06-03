@@ -61,7 +61,10 @@ export default function IgnoredPage() {
                 value={String(activeInstance)}
                 onValueChange={(v) => setInstanceId(Number(v ?? 0))}
               >
-                <SelectTrigger className="w-44">
+                <SelectTrigger
+                  className="w-44"
+                  aria-label={t("selectInstance")}
+                >
                   <SelectValue>
                     {instances?.find((i) => i.id === activeInstance)?.name ??
                       t("selectInstance")}

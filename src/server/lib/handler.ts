@@ -5,7 +5,12 @@ import type { ApiErrorResponse } from "@/shared/types/api";
 import { LogSource } from "@/shared/types/models";
 import { ensureSeeded } from "./bootstrap";
 import { appLogger } from "./app-logger";
-import { HttpError, ZodPayloadError } from "./api-errors";
+import {
+  HttpError,
+  ZodPayloadError,
+  insufficientStorage,
+  isStorageFullError,
+} from "./api-errors";
 import { UnsafeUrlError } from "./url-guard";
 
 export type RouteContext = { params: Promise<Record<string, string>> };
@@ -91,6 +96,22 @@ function handleApiError(
 
   const validationResponse = validationErrorResponse(err, traceId);
   if (validationResponse) return validationResponse;
+
+  // Disk-full (SQLITE_FULL / ENOSPC) is an operational condition, not a bug —
+  // surface it as a structured 507 STORAGE_FULL so the UI can guide the user
+  // to free space, instead of a generic 500. logHttpError persists at warn;
+  // if that write itself fails under the same disk pressure, AppLog persist
+  // already swallows it (no recursive ENOSPC), so the 507 still returns.
+  if (isStorageFullError(err)) {
+    const storageError = insufficientStorage();
+    logHttpError(storageError, requestContext);
+    return errorResponse({
+      error: storageError.message,
+      code: storageError.code,
+      traceId,
+      status: storageError.status,
+    });
+  }
 
   appLogger.error("Unhandled API error", {
     source: LogSource.Api,
