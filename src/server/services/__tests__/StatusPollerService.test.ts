@@ -893,22 +893,26 @@ describe("StatusPollerService.pollHistory (history sync)", () => {
       status: "grabbed",
       commandId: null,
     });
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          records: [
-            {
-              id: 331,
-              eventType: "downloadFolderImported",
-              date: new Date().toISOString(),
-              episodeId: 158,
-              seriesId: 100,
-              sourceTitle: null,
-            },
-          ],
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      ),
+    // mockImplementation (not mockResolvedValue) so each call builds a fresh
+    // Response — a reused Response body is consumed on first read and would
+    // throw "Body is unusable" if retry/pagination is ever added upstream.
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            records: [
+              {
+                id: 331,
+                eventType: "downloadFolderImported",
+                date: new Date().toISOString(),
+                episodeId: 158,
+                seriesId: 100,
+                sourceTitle: null,
+              },
+            ],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
     );
     try {
       await service.pollHistory(inst, new SonarrClient(inst), new Date(0));
