@@ -206,13 +206,12 @@ export class MovieService
 
   // Interactive search — candidate releases for a movie, each with its CF
   // score + rejection reasons. Read-only; not an ActionLog action.
-  getReleases(
+  async getReleases(
     instanceId: number,
     movieId: number,
   ): Promise<ReleaseCandidate[]> {
-    return this.withClient(instanceId, "radarr").then(({ client }) =>
-      client.getReleases(movieId),
-    );
+    const { client } = await this.withClient(instanceId, "radarr");
+    return client.getReleases(movieId);
   }
 
   // Force-grab a specific release. Lands the row at "grabbed" (POST

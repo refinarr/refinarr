@@ -103,4 +103,20 @@ describe("useGrabRelease", () => {
       expect.objectContaining({ instanceId: 5, mediaId: 12 }),
     );
   });
+
+  test("invalidates the history query after a successful grab", async () => {
+    mockApi.post.mockResolvedValue({ id: 1, status: "grabbed" });
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+    const { result } = renderHook(() => useGrabRelease("radarr"), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({
+        instanceId: 1,
+        mediaId: 42,
+        guid: "g",
+        indexerId: 7,
+        title: "X",
+      });
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["history"] });
+  });
 });

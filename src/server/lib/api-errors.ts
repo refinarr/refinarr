@@ -151,6 +151,11 @@ export function nonNegativeInt(
   name: string,
   max?: number,
 ): number {
+  // `Number("")` / `Number(" ")` coerce to 0, which would silently pass as
+  // a valid 0 here — reject empty/whitespace before coercion.
+  if (value === undefined || value.trim() === "") {
+    throw badRequest(`Invalid ${name}`);
+  }
   const numericValue = Number(value);
   if (!Number.isInteger(numericValue) || numericValue < 0) {
     throw badRequest(`Invalid ${name}`);

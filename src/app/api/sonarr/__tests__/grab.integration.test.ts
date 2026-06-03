@@ -98,6 +98,16 @@ describe("GET /api/sonarr/series/releases", () => {
     );
     expect(res.status).toBe(400);
   });
+
+  test("missing instance returns 404", async () => {
+    const res = await listReleases(
+      new NextRequest(
+        "http://localhost/api/sonarr/series/releases?instanceId=99999&seriesId=1&seasonNumber=1",
+      ),
+      ctxNone,
+    );
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("POST /api/sonarr/series/grab", () => {
@@ -165,5 +175,23 @@ describe("POST /api/sonarr/series/grab", () => {
       ctxNone,
     );
     expect(res.status).toBe(400);
+  });
+
+  test("missing instance returns 404", async () => {
+    const res = await grabRelease(
+      new NextRequest("http://localhost/api/sonarr/series/grab", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          instanceId: 99999,
+          mediaId: 1,
+          guid: "g",
+          indexerId: 0,
+          title: "X",
+        }),
+      }),
+      ctxNone,
+    );
+    expect(res.status).toBe(404);
   });
 });

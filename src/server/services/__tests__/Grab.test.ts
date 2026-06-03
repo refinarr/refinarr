@@ -4,7 +4,8 @@ import { instanceService } from "@/server/services/InstanceService";
 import { configRepository } from "@/server/repositories/ConfigRepository";
 import { logRepository } from "@/server/repositories/LogRepository";
 
-const fetchMock = vi.fn();
+const fetchMock =
+  vi.fn<(url: string, init?: RequestInit) => Promise<Response>>();
 
 beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
@@ -41,9 +42,12 @@ const sonarrInstance = {
 // to a 201 with an empty body.
 function setupArrMocks() {
   fetchMock.mockImplementation(async (url: string) => {
+    // Query (GET /release?…) must be matched before the bare POST /release
+    // grab, or the generic substring check shadows it and a list query
+    // gets a 201 empty body instead of JSON.
+    if (url.includes("/api/v3/release?")) return jsonResponse([]);
     if (url.includes("/api/v3/release"))
       return new Response(null, { status: 201 });
-    if (url.includes("/api/v3/release?")) return jsonResponse([]);
     return new Response("", { status: 200 });
   });
 }
@@ -106,8 +110,7 @@ describe("MovieService.grabRelease", () => {
     expect(log.isDryRun).toBe(true);
     const grabPosts = fetchMock.mock.calls.filter(
       ([url, init]) =>
-        (url as string).includes("/api/v3/release") &&
-        (init as RequestInit | undefined)?.method === "POST",
+        url.includes("/api/v3/release") && init?.method === "POST",
     );
     expect(grabPosts).toHaveLength(0);
   });
@@ -203,8 +206,7 @@ describe("SeriesService.grabSeasonRelease", () => {
     expect(log.status).toBe("dry_run");
     const grabPosts = fetchMock.mock.calls.filter(
       ([url, init]) =>
-        (url as string).includes("/api/v3/release") &&
-        (init as RequestInit | undefined)?.method === "POST",
+        url.includes("/api/v3/release") && init?.method === "POST",
     );
     expect(grabPosts).toHaveLength(0);
   });

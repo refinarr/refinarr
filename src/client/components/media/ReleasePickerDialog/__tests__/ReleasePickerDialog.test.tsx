@@ -193,4 +193,35 @@ describe("ReleasePickerDialog", () => {
     );
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
+
+  test("disables every Grab while one is in flight (prevents duplicate grabs)", async () => {
+    // A never-resolving grab keeps the in-flight state active so we can
+    // assert the other rows are locked out.
+    let resolveGrab: (v: { isDryRun: boolean }) => void = () => {};
+    mockGrabMutateAsync.mockReturnValue(
+      new Promise<{ isDryRun: boolean }>((res) => {
+        resolveGrab = res;
+      }),
+    );
+    setReleases({
+      data: [
+        release({ guid: "g1", title: "First" }),
+        release({ guid: "g2", title: "Second" }),
+      ],
+    });
+    renderWithProviders(<ReleasePickerDialog {...baseProps} />);
+    const grabButtons = screen.getAllByRole("button", { name: /grab/i });
+    expect(grabButtons).toHaveLength(2);
+
+    await userEvent.click(grabButtons[0]);
+    await waitFor(() => {
+      for (const btn of screen.getAllByRole("button", { name: /grab/i })) {
+        expect((btn as HTMLButtonElement).disabled).toBe(true);
+      }
+    });
+    // Only the one grab fired even though a second button exists.
+    expect(mockGrabMutateAsync).toHaveBeenCalledTimes(1);
+
+    resolveGrab({ isDryRun: false });
+  });
 });

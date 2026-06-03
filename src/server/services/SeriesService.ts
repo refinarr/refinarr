@@ -365,14 +365,13 @@ export class SeriesService
 
   // Interactive season-pack search — candidate releases for one season.
   // Read-only; not an ActionLog action.
-  getSeasonReleases(
+  async getSeasonReleases(
     instanceId: number,
     seriesId: number,
     seasonNumber: number,
   ): Promise<ReleaseCandidate[]> {
-    return this.withClient(instanceId, "sonarr").then(({ client }) =>
-      client.getSeasonReleases(seriesId, seasonNumber),
-    );
+    const { client } = await this.withClient(instanceId, "sonarr");
+    return client.getSeasonReleases(seriesId, seasonNumber);
   }
 
   // Force-grab a season-pack release. The release guid encodes the season,

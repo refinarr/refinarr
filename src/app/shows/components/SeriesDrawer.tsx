@@ -22,17 +22,21 @@ export function SeriesDrawer({ item, ctx, close }: Props) {
     instanceId: ctx.activeInstance,
     refetch: ctx.refetch,
   });
-  const [picker, setPicker] = useState<{
-    seasonNumber: number;
-    title: string;
-  } | null>(null);
+  // Store just the season identity; derive the title from the current
+  // series at render so a stale preformatted string can't leak across a
+  // drawer close/reopen for a different series.
+  const [pickerSeason, setPickerSeason] = useState<number | null>(null);
 
   return (
     <>
       <SeriesDetailDrawer
         series={item}
         open={item !== null}
-        onOpenChange={(open) => !open && close()}
+        onOpenChange={(open) => {
+          if (open) return;
+          setPickerSeason(null);
+          close();
+        }}
         profiles={ctx.profiles}
         onIgnore={async () => {
           if (!item) return;
@@ -43,24 +47,21 @@ export function SeriesDrawer({ item, ctx, close }: Props) {
         onSearchEpisode={seasonEpisode.runSearchEpisode}
         onDeleteSeason={seasonEpisode.runDeleteSeason}
         onDeleteEpisode={seasonEpisode.runDeleteEpisode}
-        onInteractiveSearchSeason={(series, seasonNumber) =>
-          setPicker({
-            seasonNumber,
-            title: `${series.title} — Season ${seasonNumber}`,
-          })
+        onInteractiveSearchSeason={(_series, seasonNumber) =>
+          setPickerSeason(seasonNumber)
         }
       />
-      {item && picker && (
+      {item && pickerSeason !== null && (
         <ReleasePickerDialog
           open
-          onOpenChange={(open) => !open && setPicker(null)}
+          onOpenChange={(open) => !open && setPickerSeason(null)}
           arrType={ctx.arrType}
           instanceId={ctx.activeInstance}
-          title={picker.title}
+          title={`${item.title} — Season ${pickerSeason}`}
           target={{
             kind: "season",
             seriesId: item.id,
-            seasonNumber: picker.seasonNumber,
+            seasonNumber: pickerSeason,
           }}
         />
       )}

@@ -21,16 +21,22 @@ interface Props {
 export function MovieDrawer({ item, ctx, close }: Props) {
   const tConfirmDeleteFile = useTranslations("confirm.deleteFile");
   const { confirm: askConfirm, dialog: confirmDialog } = useConfirm();
-  const [pickerOpen, setPickerOpen] = useState(false);
+  // Key the picker to the movie that opened it (not a bare boolean) so it
+  // can't survive a close() and reopen when a different movie is selected.
+  const [pickerMovieId, setPickerMovieId] = useState<number | null>(null);
 
   return (
     <>
       <MovieDetailDrawer
         movie={item}
         open={item !== null}
-        onOpenChange={(open) => !open && close()}
+        onOpenChange={(open) => {
+          if (open) return;
+          setPickerMovieId(null);
+          close();
+        }}
         profiles={ctx.profiles}
-        onInteractiveSearch={() => setPickerOpen(true)}
+        onInteractiveSearch={(movie) => setPickerMovieId(movie.id)}
         onSearch={async () => {
           if (!item) return;
           await ctx.runSearch(item);
@@ -53,10 +59,10 @@ export function MovieDrawer({ item, ctx, close }: Props) {
           close();
         }}
       />
-      {item && (
+      {item && pickerMovieId === item.id && (
         <ReleasePickerDialog
-          open={pickerOpen}
-          onOpenChange={setPickerOpen}
+          open
+          onOpenChange={(open) => !open && setPickerMovieId(null)}
           arrType={ctx.arrType}
           instanceId={ctx.activeInstance}
           title={item.title}

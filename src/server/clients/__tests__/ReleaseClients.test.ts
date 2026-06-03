@@ -162,8 +162,8 @@ describe("RadarrClient interactive search", () => {
     await client.grabRelease({ guid: "g9", indexerId: 3, movieId: 77 });
     const [url, init] = fetchSpy.mock.calls[0];
     expect(url).toBe("http://localhost:7878/api/v3/release");
-    expect((init as RequestInit).method).toBe("POST");
-    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(init?.body as string)).toEqual({
       guid: "g9",
       indexerId: 3,
       movieId: 77,
@@ -209,8 +209,8 @@ describe("SonarrClient interactive search", () => {
     await client.grabRelease({ guid: "sx", indexerId: 4 });
     const [url, init] = fetchSpy.mock.calls[0];
     expect(url).toBe("http://localhost:8989/api/v3/release");
-    expect((init as RequestInit).method).toBe("POST");
-    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(init?.body as string)).toEqual({
       guid: "sx",
       indexerId: 4,
     });
