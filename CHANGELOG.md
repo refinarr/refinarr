@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/refinarr/refinarr/compare/v0.8.0...v0.8.1) (2026-06-03)
+
+
+### Bug Fixes
+
+* cut 0.8.1 with the Phase 4 QA-4 fixes ([#103](https://github.com/refinarr/refinarr/issues/103)) ([fccdd1a](https://github.com/refinarr/refinarr/commit/fccdd1a444cf6e8088385dcf4daf2c2db2ed8231))
+
 ## [0.8.0](https://github.com/refinarr/refinarr/compare/v0.7.0...v0.8.0) (2026-06-03)
 
 
