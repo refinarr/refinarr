@@ -127,6 +127,25 @@ describe("withToast", () => {
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
+  test("prefers the server STORAGE_FULL message over the caller's error copy", async () => {
+    const run = withToast(
+      makeMutation(async () => {
+        throw Object.assign(
+          new Error(
+            "Data volume is full. Free space on the /data volume and retry.",
+          ),
+          { code: "STORAGE_FULL" },
+        );
+      }),
+      { success: "ok", error: "Delete failed" },
+    );
+    await expect(run(undefined)).rejects.toBeInstanceOf(Error);
+    expect(errorSpy).toHaveBeenCalledWith(
+      "Data volume is full. Free space on the /data volume and retry.",
+      undefined,
+    );
+  });
+
   test("success formatter receives resolved data and variables", async () => {
     const mutation = makeMutation<string, { id: number }>(
       async ({ id }) => `done-${id}`,

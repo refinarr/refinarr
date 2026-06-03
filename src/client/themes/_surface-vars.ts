@@ -18,7 +18,14 @@ export const LIGHT_SURFACE_VARS: Record<string, string> = {
   "--muted-foreground": "oklch(0.556 0 0)",
   "--accent": "oklch(0.97 0 0)",
   "--accent-foreground": "oklch(0.205 0 0)",
-  "--destructive": "oklch(0.577 0.245 27.325)",
+  // Chroma 0.245 was OUT of the sRGB gamut at this lightness, so the browser
+  // gamut-mapped it to a lighter red (~#e7000b) → the soft Badge treatment
+  // (bg-destructive/10 + text-destructive) measured only 3.67–4.0:1, below AA
+  // (#106). Lowering chroma to 0.19 at a darker L=0.49 keeps it in gamut so it
+  // renders #b31418 and clears AA (~5.3:1). These inline brand vars OVERRIDE
+  // the base globals.css selector — keep this value and globals.css's
+  // --destructive in sync (editing globals.css alone does not reach the DOM).
+  "--destructive": "oklch(0.49 0.19 27.325)",
   "--border": "oklch(0.922 0 0)",
   "--input": "oklch(0.922 0 0)",
   "--ring": "oklch(0.708 0 0)",

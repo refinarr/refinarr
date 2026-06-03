@@ -43,6 +43,16 @@ export function withToast<TData, TError, TVariables>(
         : messages.success;
 
     const formatError = (err: unknown): string | null => {
+      // A full data volume (507 STORAGE_FULL) is an operational condition any
+      // mutation can hit — always surface the server's readable message over
+      // the caller's generic "failed" copy so the user knows to free space.
+      if (
+        err instanceof Error &&
+        "code" in err &&
+        err.code === "STORAGE_FULL"
+      ) {
+        return err.message;
+      }
       if (messages.error !== undefined) {
         return typeof messages.error === "function"
           ? messages.error(err as TError, variables)

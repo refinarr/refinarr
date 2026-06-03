@@ -248,7 +248,7 @@ function LogsPageBody() {
             else if (isLogLevel(v)) setLevel(v);
           }}
         >
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="w-36" aria-label={t("filterLevel")}>
             <SelectValue>
               {activeLevel === null ? tLevel("all") : tLevel(activeLevel)}
             </SelectValue>
@@ -268,7 +268,7 @@ function LogsPageBody() {
             value={activeSource ?? ALL}
             onValueChange={(v) => setSource(v === null || v === ALL ? null : v)}
           >
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-36" aria-label={t("filterSource")}>
               <SelectValue>
                 {activeSource === null
                   ? t("sourceAll")
@@ -291,7 +291,7 @@ function LogsPageBody() {
             setInstanceId(v === null || v === ALL ? null : Number(v) || null)
           }
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-40" aria-label={t("filterInstance")}>
             <SelectValue>
               {activeInstanceId
                 ? (instances?.find((i) => i.id === activeInstanceId)?.name ??
