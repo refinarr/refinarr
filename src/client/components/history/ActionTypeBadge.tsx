@@ -1,6 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Search, Trash2, EyeOff, Activity } from "lucide-react";
+import { Search, Trash2, EyeOff, Activity, DownloadCloud } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/client/components/ui/badge";
 import type { ActionType } from "@/shared/types/models";
@@ -10,6 +10,7 @@ import type { ActionType } from "@/shared/types/models";
 type BadgeKey = ActionType;
 
 const SEARCH_CLASSES = "bg-info-soft text-info border-info/30";
+const GRAB_CLASSES = "bg-ok-soft text-ok border-ok/30";
 const DELETE_CLASSES = "bg-warning-soft text-warning border-warning/30";
 const NEUTRAL_CLASSES = "bg-neutral-soft text-neutral-foreground border-border";
 
@@ -28,6 +29,7 @@ const meta: Record<
     icon: Search,
     classes: SEARCH_CLASSES,
   },
+  grab: { labelKey: "grab", icon: DownloadCloud, classes: GRAB_CLASSES },
   delete: { labelKey: "delete", icon: Trash2, classes: DELETE_CLASSES },
   ignore: { labelKey: "ignore", icon: EyeOff, classes: NEUTRAL_CLASSES },
 };

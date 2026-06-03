@@ -18,6 +18,7 @@ import type {
   ActionLog,
   MediaQuery,
 } from "@/shared/types/models";
+import type { ReleaseCandidate } from "@/shared/types/api";
 import { MediaService } from "./MediaService";
 
 // Local shorthand for the RadarrMovie shape — derived from the client's
@@ -200,6 +201,46 @@ export class MovieService
       groupId: opts.groupId,
       payload: { instanceId, action: "search", mediaId, title },
       run: () => client.triggerSearch(mediaId),
+    });
+  }
+
+  // Interactive search — candidate releases for a movie, each with its CF
+  // score + rejection reasons. Read-only; not an ActionLog action.
+  getReleases(
+    instanceId: number,
+    movieId: number,
+  ): Promise<ReleaseCandidate[]> {
+    return this.withClient(instanceId, "radarr").then(({ client }) =>
+      client.getReleases(movieId),
+    );
+  }
+
+  // Force-grab a specific release. Lands the row at "grabbed" (POST
+  // /release returns no commandId) and stores no payload, so it's
+  // non-retryable (release guids expire) and dry-run-safe via executeAction.
+  async grabRelease(
+    instanceId: number,
+    movieId: number,
+    release: { guid: string; indexerId: number },
+    title: string,
+    opts: RetryActionOptions = {},
+  ): Promise<ActionLog> {
+    const { instance, client } = await this.withClient(instanceId, "radarr");
+
+    return this.executeAction({
+      instanceName: instance.name,
+      instanceId,
+      action: "grab",
+      mediaId: movieId,
+      title,
+      groupId: opts.groupId,
+      successStatus: "grabbed",
+      run: () =>
+        client.grabRelease({
+          guid: release.guid,
+          indexerId: release.indexerId,
+          movieId,
+        }),
     });
   }
 

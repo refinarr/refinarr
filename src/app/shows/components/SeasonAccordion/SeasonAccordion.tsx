@@ -1,6 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { Search, Trash2 } from "lucide-react";
+import { Search, Trash2, ListVideo } from "lucide-react";
 import {
   AccordionItem,
   AccordionTrigger,
@@ -18,6 +18,9 @@ interface Props {
   onDelete: () => Promise<unknown>;
   onSearchFile: (fileId: number, relativePath: string) => Promise<unknown>;
   onDeleteFile: (fileId: number, relativePath: string) => Promise<unknown>;
+  // Opens the interactive-search release picker for this season. Available
+  // regardless of affectedCount — interactive grab is a manual override.
+  onInteractive?: () => void;
 }
 
 export function SeasonAccordion({
@@ -28,12 +31,13 @@ export function SeasonAccordion({
   onDelete,
   onSearchFile,
   onDeleteFile,
+  onInteractive,
 }: Props) {
   const t = useTranslations("shows");
   return (
     <AccordionItem value={`season-${season}`}>
       <div className="relative">
-        <AccordionTrigger className="px-3 pr-24">
+        <AccordionTrigger className="px-3 pr-32">
           <div className="flex w-full items-center justify-between gap-2 pr-2">
             <span className="text-sm font-medium">
               {t("season", { season })}
@@ -46,26 +50,41 @@ export function SeasonAccordion({
             </span>
           </div>
         </AccordionTrigger>
-        {affectedCount > 0 && (
+        {(affectedCount > 0 || onInteractive) && (
           <div className="absolute top-1/2 right-2 z-10 flex -translate-y-1/2 items-center gap-1.5">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              title={t("searchSeasonAria", { season })}
-              aria-label={t("searchSeasonAria", { season })}
-              onClick={() => onSearch()}
-            >
-              <Search className="size-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              title={t("deleteSeasonAria", { season })}
-              aria-label={t("deleteSeasonAria", { season })}
-              onClick={() => onDelete()}
-            >
-              <Trash2 className="text-destructive size-3.5" />
-            </Button>
+            {onInteractive && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title={t("interactiveSeasonAria", { season })}
+                aria-label={t("interactiveSeasonAria", { season })}
+                onClick={onInteractive}
+              >
+                <ListVideo className="size-3.5" />
+              </Button>
+            )}
+            {affectedCount > 0 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  title={t("searchSeasonAria", { season })}
+                  aria-label={t("searchSeasonAria", { season })}
+                  onClick={() => onSearch()}
+                >
+                  <Search className="size-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  title={t("deleteSeasonAria", { season })}
+                  aria-label={t("deleteSeasonAria", { season })}
+                  onClick={() => onDelete()}
+                >
+                  <Trash2 className="text-destructive size-3.5" />
+                </Button>
+              </>
+            )}
           </div>
         )}
       </div>

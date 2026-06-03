@@ -1,8 +1,12 @@
 import type { Instance } from "@/shared/types/models";
+import type { ReleaseCandidate } from "@/shared/types/api";
 import {
   ArrClient,
+  mapReleaseCandidate,
+  RELEASE_FETCH_TIMEOUT_MS,
   type UpstreamHistoryEvent,
   type UpstreamHistoryRecord,
+  type UpstreamRelease,
 } from "./ArrClient";
 
 interface SonarrSeries {
@@ -100,6 +104,29 @@ export class SonarrClient extends ArrClient {
       body: JSON.stringify({ name: "EpisodeSearch", episodeIds }),
     });
     return { commandId: res.id };
+  }
+
+  // Interactive season-pack search — live indexer query, longer timeout.
+  async getSeasonReleases(
+    seriesId: number,
+    seasonNumber: number,
+  ): Promise<ReleaseCandidate[]> {
+    const raw = await this.fetch<UpstreamRelease[]>(
+      `/release?seriesId=${seriesId}&seasonNumber=${seasonNumber}`,
+      undefined,
+      RELEASE_FETCH_TIMEOUT_MS,
+    );
+    return (raw ?? []).map(mapReleaseCandidate);
+  }
+
+  // Force-grab a release the *arr re-resolves from its decision cache by
+  // guid + indexerId. No command id is returned (the row is marked
+  // "grabbed" directly).
+  async grabRelease(opts: { guid: string; indexerId: number }): Promise<void> {
+    await this.fetch("/release", {
+      method: "POST",
+      body: JSON.stringify({ guid: opts.guid, indexerId: opts.indexerId }),
+    });
   }
 
   async getEpisodes(seriesId: number): Promise<

@@ -23,6 +23,7 @@ import type {
   ActionLog,
   MediaQuery,
 } from "@/shared/types/models";
+import type { ReleaseCandidate } from "@/shared/types/api";
 import { MediaService } from "./MediaService";
 
 // Local shorthand for the SonarrSeries shape — derived from the client's
@@ -359,6 +360,46 @@ export class SeriesService
         title,
       },
       run: () => client.triggerSeasonSearch(mediaId, seasonNumber),
+    });
+  }
+
+  // Interactive season-pack search — candidate releases for one season.
+  // Read-only; not an ActionLog action.
+  getSeasonReleases(
+    instanceId: number,
+    seriesId: number,
+    seasonNumber: number,
+  ): Promise<ReleaseCandidate[]> {
+    return this.withClient(instanceId, "sonarr").then(({ client }) =>
+      client.getSeasonReleases(seriesId, seasonNumber),
+    );
+  }
+
+  // Force-grab a season-pack release. The release guid encodes the season,
+  // so no seasonNumber is needed here (it lives in `title`). Lands at
+  // "grabbed" with no payload (non-retryable), dry-run-safe via executeAction.
+  async grabSeasonRelease(
+    instanceId: number,
+    seriesId: number,
+    release: { guid: string; indexerId: number },
+    title: string,
+    opts: RetryActionOptions = {},
+  ): Promise<ActionLog> {
+    const { instance, client } = await this.withClient(instanceId, "sonarr");
+
+    return this.executeAction({
+      instanceName: instance.name,
+      instanceId,
+      action: "grab",
+      mediaId: seriesId,
+      title,
+      groupId: opts.groupId,
+      successStatus: "grabbed",
+      run: () =>
+        client.grabRelease({
+          guid: release.guid,
+          indexerId: release.indexerId,
+        }),
     });
   }
 

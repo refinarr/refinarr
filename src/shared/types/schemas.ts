@@ -142,6 +142,30 @@ export const sonarrDeleteSchema = z.object({
   groupId: groupIdField,
 });
 
+// Interactive force-grab. `guid` + `indexerId` identify the release the
+// user picked from the interactive-search list; the *arr re-resolves it
+// from its own decision cache. indexerId is nonnegative because some
+// release sources surface id 0.
+export const radarrGrabSchema = z.object({
+  instanceId: z.number().int().positive(),
+  mediaId: z.number().int().positive(),
+  guid: z.string().min(1).max(1024),
+  indexerId: z.number().int().nonnegative(),
+  title: z.string().min(1).max(512),
+  groupId: groupIdField,
+});
+
+// No seasonNumber: a Sonarr grab is fully identified by guid + indexerId
+// (the release encodes the season); the season is carried in `title`.
+export const sonarrGrabSchema = z.object({
+  instanceId: z.number().int().positive(),
+  mediaId: z.number().int().positive(),
+  guid: z.string().min(1).max(1024),
+  indexerId: z.number().int().nonnegative(),
+  title: z.string().min(1).max(512),
+  groupId: groupIdField,
+});
+
 export const configUpdateSchema = z.record(
   z.string().max(128),
   z.string().max(2048),

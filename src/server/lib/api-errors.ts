@@ -144,6 +144,23 @@ export function positiveInt(
   return numericValue;
 }
 
+// Like `positiveInt` but allows 0 — for params where zero is meaningful
+// (e.g. Sonarr's seasonNumber 0 = "Specials").
+export function nonNegativeInt(
+  value: string | undefined,
+  name: string,
+  max?: number,
+): number {
+  const numericValue = Number(value);
+  if (!Number.isInteger(numericValue) || numericValue < 0) {
+    throw badRequest(`Invalid ${name}`);
+  }
+  if (max !== undefined && numericValue > max) {
+    throw badRequest(`${name} exceeds maximum of ${max}`);
+  }
+  return numericValue;
+}
+
 // Assertion predicate for route handlers that take a user-supplied
 // `instanceId` and need the resolved instance to be a specific arr type
 // (e.g. `/api/radarr/*` routes require a radarr instance). Throws

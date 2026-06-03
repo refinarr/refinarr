@@ -1,8 +1,12 @@
 import type { Instance } from "@/shared/types/models";
+import type { ReleaseCandidate } from "@/shared/types/api";
 import {
   ArrClient,
+  mapReleaseCandidate,
+  RELEASE_FETCH_TIMEOUT_MS,
   type UpstreamHistoryEvent,
   type UpstreamHistoryRecord,
+  type UpstreamRelease,
 } from "./ArrClient";
 
 interface RadarrMovie {
@@ -71,6 +75,37 @@ export class RadarrClient extends ArrClient {
 
   async deleteFile(fileId: number): Promise<void> {
     await this.fetch(`/moviefile/${fileId}`, { method: "DELETE" });
+  }
+
+  // Interactive search — live indexer query, so it gets the longer
+  // RELEASE_FETCH_TIMEOUT_MS ceiling instead of the default 10s.
+  async getReleases(movieId: number): Promise<ReleaseCandidate[]> {
+    const raw = await this.fetch<UpstreamRelease[]>(
+      `/release?movieId=${movieId}`,
+      undefined,
+      RELEASE_FETCH_TIMEOUT_MS,
+    );
+    return (raw ?? []).map(mapReleaseCandidate);
+  }
+
+  // Force-grab a specific release. POST /release re-resolves the release
+  // from the *arr's own decision cache by guid + indexerId and hands it to
+  // the download client, bypassing the auto-upgrade gate. Returns no
+  // command id (unlike /command searches), so the caller marks the row
+  // "grabbed" directly.
+  async grabRelease(opts: {
+    guid: string;
+    indexerId: number;
+    movieId: number;
+  }): Promise<void> {
+    await this.fetch("/release", {
+      method: "POST",
+      body: JSON.stringify({
+        guid: opts.guid,
+        indexerId: opts.indexerId,
+        movieId: opts.movieId,
+      }),
+    });
   }
 
   async getQualityProfiles(): Promise<RadarrQualityProfile[]> {
