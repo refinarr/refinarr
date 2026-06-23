@@ -22,6 +22,7 @@ import { Button } from "@/client/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -683,33 +684,37 @@ function PosterDesktopControls({
           <ChevronDown className="size-3.5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuLabel>{t("sort.sortBy")}</DropdownMenuLabel>
-          <DropdownMenuRadioGroup
-            value={filters.sortBy}
-            onValueChange={(value) => {
-              if (isSortKey(value)) onChange({ sortBy: value });
-            }}
-          >
-            {SORT_KEYS.map((key) => (
-              <DropdownMenuRadioItem key={key} value={key}>
-                {t(`sort.keys.${key}`)}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{t("sort.sortBy")}</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={filters.sortBy}
+              onValueChange={(value) => {
+                if (isSortKey(value)) onChange({ sortBy: value });
+              }}
+            >
+              {SORT_KEYS.map((key) => (
+                <DropdownMenuRadioItem key={key} value={key}>
+                  {t(`sort.keys.${key}`)}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuLabel>{t("sort.direction")}</DropdownMenuLabel>
-          <DropdownMenuRadioGroup
-            value={filters.order}
-            onValueChange={(value) => {
-              if (isSortOrder(value)) onChange({ order: value });
-            }}
-          >
-            {SORT_ORDERS.map((order) => (
-              <DropdownMenuRadioItem key={order} value={order}>
-                {t(`sort.orders.${order}`)}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{t("sort.direction")}</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={filters.order}
+              onValueChange={(value) => {
+                if (isSortOrder(value)) onChange({ order: value });
+              }}
+            >
+              {SORT_ORDERS.map((order) => (
+                <DropdownMenuRadioItem key={order} value={order}>
+                  {t(`sort.orders.${order}`)}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
