@@ -52,8 +52,8 @@ test("F22: density switch is client-side and instant (no reload)", async ({
   // A row must exist for the density surfaces to render (vs the empty state).
   await stubMediaApis(page, { movies: [movie()] });
   await page.goto("/movies");
-  // Start from compact (a table density) so one `,` cycle reaches `card`,
-  // a visibly different surface.
+  // Start from compact (a table density) so one `,` cycle reaches `poster`,
+  // a visibly different desktop surface (#129 removed desktop card view).
   await page.evaluate(() => localStorage.setItem("rfn-density", "compact"));
   await page.reload();
   await expect(page.getByTestId("media-table-body")).toBeVisible({
@@ -66,8 +66,8 @@ test("F22: density switch is client-side and instant (no reload)", async ({
   });
 
   const start = Date.now();
-  await page.keyboard.press(","); // cycle compact → card
-  await expect(page.getByTestId("media-card-list")).toBeVisible({
+  await page.keyboard.press(","); // cycle compact → poster
+  await expect(page.getByTestId("media-poster-grid")).toBeVisible({
     timeout: 5_000,
   });
   const elapsed = Date.now() - start;

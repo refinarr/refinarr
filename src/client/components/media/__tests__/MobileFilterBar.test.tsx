@@ -23,6 +23,13 @@ vi.mock("@/client/hooks/ui/useMediaQuery", () => ({
 }));
 
 vi.mock("../FilterSheet", () => ({
+  countActiveFilters: (f: MediaFilters) =>
+    Number(f.profileIds.length > 0) +
+    Number(f.severities.length > 0) +
+    Number(f.minScore !== null || f.maxScore !== null) +
+    Number(f.minSize !== null || f.maxSize !== null) +
+    Number(f.hasNegativeCfIds.length > 0) +
+    Number(f.monitorStatus !== "all"),
   FilterSheet: ({ open }: { open: boolean }) => (
     <div data-testid="filter-sheet" data-open={open ? "true" : "false"} />
   ),

@@ -280,6 +280,22 @@
       "card": "Cards",
       "poster": "Posters"
     },
+    "sort": {
+      "label": "Sort",
+      "trigger": "Sort: {key} · {order}",
+      "sortBy": "Sort by",
+      "direction": "Direction",
+      "keys": {
+        "score": "Score",
+        "title": "Title",
+        "added": "Added",
+        "size": "Size"
+      },
+      "orders": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
+    },
     "toolbarAriaLabel": "Filter toolbar",
     "activeCountAriaLabel": "{count, plural, one {# active filter} other {# active filters}}",
     "sheetDescription": "Toggle filters that apply to the visible items.",
