@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.4-rc.1](https://github.com/refinarr/refinarr/compare/v0.8.3...v0.8.4-rc.1) (2026-06-23)
+
+
+### Miscellaneous Chores
+
+* trigger v0.8.4-rc.1 release candidate ([#122](https://github.com/refinarr/refinarr/issues/122)) ([ca4e54b](https://github.com/refinarr/refinarr/commit/ca4e54b581d561b1cd03eacbadd4bffe1c6b8744))
+
 ## [0.8.3](https://github.com/refinarr/refinarr/compare/v0.8.2...v0.8.3) (2026-06-03)
 
 
