@@ -91,16 +91,10 @@ export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
             />
           </>
         )}
-        {/* Glanceable severity-colored score, top-right (the grid wrapper's
-            selection checkbox owns top-left). */}
-        <span
-          className={cn(
-            "bg-background/85 absolute top-1 right-1 flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs font-semibold tabular-nums backdrop-blur-sm",
-            severityTextClass[severity],
-          )}
-        >
+        {/* Severity dot, top-right (the grid wrapper's selection checkbox
+            owns top-left). The numeric score sits with the bar below. */}
+        <span className="bg-background/85 absolute top-1 right-1 flex items-center rounded-sm p-1 backdrop-blur-sm">
           <SeverityDot severity={severity} />
-          {scoreText}
         </span>
       </div>
 
@@ -127,26 +121,40 @@ export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
           className="text-muted-foreground truncate text-[10px] leading-tight"
           title={profileName}
         >
-          {[item.year, formatBytes(item.sizeOnDisk), profileName]
-            .filter(Boolean)
-            .join(" · ")}
+          {profileName ? `${item.year} · ${profileName}` : String(item.year)}
         </p>
 
-        {/* Score-vs-cutoff progress bar — the Profilarr-style visual. The
-            numeric score/cutoff lives in the poster overlay above. */}
-        {hasFile && cutoff !== undefined && (
-          <div
-            role="progressbar"
-            aria-valuenow={score}
-            aria-valuemax={cutoff}
-            className="bg-muted mt-0.5 h-1 w-full overflow-hidden rounded-full"
-          >
-            <div
-              className={cn("h-full rounded-full", severityClass[severity])}
-              style={{ width: `${scorePct(score, cutoff)}%` }}
-            />
+        {/* Score-vs-cutoff: the value plus a Profilarr-style progress bar.
+            The bar fills toward the cutoff; the numeric value stays visible
+            even when a penalty drags the score to an empty bar. */}
+        <div className="mt-0.5 space-y-0.5">
+          <div className="flex items-center justify-between gap-1 text-[10px]/4 tabular-nums">
+            <span className="text-muted-foreground truncate">
+              {formatBytes(item.sizeOnDisk)}
+            </span>
+            <span
+              className={cn(
+                "shrink-0 font-semibold",
+                severityTextClass[severity],
+              )}
+            >
+              {scoreText}
+            </span>
           </div>
-        )}
+          {hasFile && cutoff !== undefined && (
+            <div
+              role="progressbar"
+              aria-valuenow={score}
+              aria-valuemax={cutoff}
+              className="bg-muted h-1.5 w-full overflow-hidden rounded-full"
+            >
+              <div
+                className={cn("h-full rounded-full", severityClass[severity])}
+                style={{ width: `${scorePct(score, cutoff)}%` }}
+              />
+            </div>
+          )}
+        </div>
 
         {/* Penalties (negative CFs present) + a missing-format count — the
             named detail lives in the drawer; the card surfaces the signal. */}
