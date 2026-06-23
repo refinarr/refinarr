@@ -286,10 +286,10 @@ function Root<T extends MediaItem>({
 
   const { density, cycle: cycleDensity } = useDensity();
   // `,` keyboard shortcut cycles density — matches the top-bar density
-  // button (cozy → compact → card → cozy). Previously used the legacy
-  // toggle() which only flipped compact ↔ cozy, so the shortcut could
-  // never reach "card" and would kick the user OUT of card unexpectedly.
-  // Skips when typing in inputs so search-bar text entry isn't hijacked.
+  // button (cozy → compact → poster → cozy). Uses cycle() (not the legacy
+  // toggle() which only flipped compact ↔ cozy) so the shortcut reaches
+  // every desktop mode. Skips when typing in inputs so search-bar text
+  // entry isn't hijacked.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       // Bare `,` only — Cmd+, / Ctrl+, is the OS "Preferences" shortcut

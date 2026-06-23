@@ -4,9 +4,11 @@ import { useCallback, useSyncExternalStore } from "react";
 const STORAGE_KEY = "rfn-density";
 const CHANGE_EVENT = "rfn:density-change";
 
-// "compact"/"cozy" = table row densities; "card" = full card view on
-// desktop (reuses the mobile MediaCardList); "poster" = responsive
-// poster grid (visual browse).
+// "compact"/"cozy" = desktop table row densities; "poster" = responsive
+// poster grid (visual browse, desktop + mobile). "card" is the MOBILE
+// rendering only — it's no longer a desktop-selectable view (#129), but
+// the value is still accepted so a previously-stored "card" degrades
+// gracefully (desktop → cozy table; mobile → card list either way).
 export type Density = "compact" | "cozy" | "card" | "poster";
 
 interface Result {
@@ -16,14 +18,16 @@ interface Result {
   // wants binary toggling; the new top-bar button uses `cycle()` instead.
   toggle: () => void;
   // Advance density to the next mode in the cycle. Order: cozy →
-  // compact → card → poster → cozy.
+  // compact → poster → cozy.
   cycle: () => void;
 }
 
-// Single source of truth for the view-mode cycle. DensityToggle imports
-// this for its "next mode" tooltip so the label can't drift from the
-// actual cycling logic below.
-export const CYCLE_ORDER: Density[] = ["cozy", "compact", "card", "poster"];
+// Single source of truth for the desktop view-mode cycle. DensityToggle
+// imports this for its "next mode" tooltip so the label can't drift from
+// the actual cycling logic below. "card" is intentionally absent — it's
+// the mobile-only rendering; cycling from a stale stored "card" restarts
+// at cozy (indexOf returns -1 → nextIdx 0, see cycle() below).
+export const CYCLE_ORDER: Density[] = ["cozy", "compact", "poster"];
 
 // In-memory fallback for storage-restricted environments (private mode,
 // sandboxed iframes, locked-down corporate browsers). Without this,

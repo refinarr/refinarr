@@ -112,12 +112,12 @@ export function MediaTable<T extends { id: number }>(props: Props<T>) {
     );
   }
 
-  // Card list is rendered when:
-  //   - viewport is mobile (mobile path is always cards), OR
-  //   - desktop and the user picked density="card" in the top bar.
-  // Both require renderCard to be supplied (we pass it for movies/shows).
-  const useCardList =
-    props.renderCard && (!isDesktop || props.density === "card");
+  // Card list is the MOBILE rendering (the mobile path is always cards;
+  // the poster grid above wins when that density is active). Desktop no
+  // longer exposes a "card" view (#129) — a stale stored density="card"
+  // on desktop falls through to the cozy table below. Requires renderCard
+  // (we pass it for movies/shows).
+  const useCardList = props.renderCard && !isDesktop;
   if (useCardList) {
     return (
       <MediaCardList
@@ -161,8 +161,9 @@ function MediaTableDesktopBody<T extends { id: number }>({
 }: Props<T>) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
-  // Only "compact" and "cozy" reach the desktop table; the parent
-  // short-circuits "card"/"poster" to MediaCardList before getting here.
+  // "poster" short-circuits to the grid and "card" only renders on mobile
+  // before getting here, so the desktop table sees "compact"/"cozy" — and
+  // coerces anything else (e.g. a stale stored "card") to cozy.
   const rowDensity: "compact" | "cozy" =
     density === "compact" ? "compact" : "cozy";
   const rowHeight = ROW_HEIGHT_PX[rowDensity];

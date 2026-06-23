@@ -35,6 +35,28 @@ describe("useDensity", () => {
     expect(result.current.density).toBe("cozy");
   });
 
+  test("cycle advances cozy → compact → poster → cozy (card not in the desktop cycle)", () => {
+    const { result } = renderHook(() => useDensity());
+    expect(result.current.density).toBe("cozy");
+    act(() => result.current.cycle());
+    expect(result.current.density).toBe("compact");
+    act(() => result.current.cycle());
+    expect(result.current.density).toBe("poster");
+    act(() => result.current.cycle());
+    expect(result.current.density).toBe("cozy");
+  });
+
+  test("cycle from a stored 'card' (removed desktop mode) restarts at cozy (#129)", () => {
+    localStorage.setItem("rfn-density", "card");
+    const { result } = renderHook(() => useDensity());
+    // The value is still accepted (mobile renders a card list for it)…
+    expect(result.current.density).toBe("card");
+    // …but cycling on desktop drops out of the removed mode rather than
+    // leaving the user stuck on it.
+    act(() => result.current.cycle());
+    expect(result.current.density).toBe("cozy");
+  });
+
   test("ignores garbage values in localStorage", () => {
     localStorage.setItem("rfn-density", "garbage");
     const { result } = renderHook(() => useDensity());
