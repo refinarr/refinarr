@@ -1,10 +1,16 @@
 "use client";
 import { useState } from "react";
-import { ImageOff } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Bookmark, ImageOff } from "lucide-react";
 import { cn } from "@/client/lib/utils";
 import { posterUrl } from "@/client/lib/poster";
+import { formatBytes } from "@/client/lib/format";
 import { SeverityDot } from "@/client/components/common/SeverityDot";
-import { getSeverity, severityTextClass } from "@/client/lib/severity";
+import {
+  getSeverity,
+  severityClass,
+  severityTextClass,
+} from "@/client/lib/severity";
 import type { MediaListShellRenderCtx } from "@/client/components/media/MediaListShell";
 import { scoreForItem } from "@/shared/scoring-mode";
 import type { MediaItem } from "@/shared/types/models";
@@ -14,30 +20,48 @@ interface Props<T extends MediaItem> {
   ctx: MediaListShellRenderCtx<T>;
 }
 
-// Poster-grid tile content (image + score overlay + title). The grid
-// wrapper owns selection / click / focus; this is pure presentation,
-// mirroring the MovieCard ⟷ MediaCard split. Generic over MediaItem:
-// file presence comes from `existingFileCount` (movies: 0/1, series:
-// episode-file count) so it works for both arrs without a subclass.
 type ImgState = "loading" | "loaded" | "failed";
 
+// Fraction (0–100) of the way to the cutoff. Below-zero scores (penalties
+// dragging the file under 0) clamp to an empty bar; at/above cutoff fills.
+function scorePct(score: number, cutoff: number): number {
+  if (cutoff <= 0) return score >= cutoff ? 100 : 0;
+  return Math.max(0, Math.min(100, (score / cutoff) * 100));
+}
+
+// Poster-grid tile: a self-contained card — poster + a metadata body
+// (quality profile · size, monitored state, a score-vs-cutoff progress
+// bar, and the penalty / missing-format detail that is the whole point of
+// the app). The grid wrapper owns selection / click / focus; this is pure
+// presentation. Generic over MediaItem so it serves movies and series:
+// file presence comes from `existingFileCount` (movies 0/1, series the
+// episode-file count).
 export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
-  const { arrType, activeInstance } = ctx;
+  const { arrType, activeInstance, profiles } = ctx;
+  const tCommon = useTranslations("common");
   const [imgState, setImgState] = useState<ImgState>("loading");
 
   const score = scoreForItem(item);
   const hasFile = item.existingFileCount > 0;
-  const severity = getSeverity(score, item.minProfileScore, hasFile);
+  const cutoff = item.minProfileScore;
+  const severity = getSeverity(score, cutoff, hasFile);
+  const profileName = profiles?.find(
+    (p) => p.id === item.qualityProfileId,
+  )?.name;
+  const penalties = item.unwantedFormats ?? [];
+  const missing = item.missingFormats ?? [];
 
   let scoreText: string;
   if (!hasFile) scoreText = ctx.t("noFile");
-  else if (item.minProfileScore !== undefined)
-    scoreText = `${score} / ${item.minProfileScore}`;
+  else if (cutoff !== undefined) scoreText = `${score} / ${cutoff}`;
   else scoreText = String(score);
 
   return (
-    <div className="space-y-1.5">
-      <div className="bg-muted relative aspect-2/3 overflow-hidden rounded-md border">
+    <div
+      data-testid="poster-tile"
+      className="bg-card flex h-full flex-col overflow-hidden rounded-md border"
+    >
+      <div className="bg-muted relative aspect-2/3 overflow-hidden">
         {imgState === "failed" ? (
           <div className="text-muted-foreground flex size-full flex-col items-center justify-center gap-1 p-2 text-center">
             <ImageOff className="size-5" aria-hidden />
@@ -46,15 +70,13 @@ export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
         ) : (
           <>
             {/* Shimmer placeholder until the poster paints — reserves the
-                2:3 box (no layout shift) and covers the blank gap while
-                the proxied image streams in. */}
+                2:3 box (no layout shift) while the proxied image streams in. */}
             {imgState === "loading" && (
               <div className="bg-muted absolute inset-0 animate-pulse" />
             )}
             {/* Plain <img> (no next/image — sharp is excluded from the
-                standalone build; posters are already correctly sized by
-                the *arr). loading=lazy so off-screen posters never hit
-                the proxy until scrolled near. Fade in on load. */}
+                standalone build). loading=lazy so off-screen posters never
+                hit the proxy until scrolled near. Fade in on load. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={posterUrl(arrType, activeInstance, item.id)}
@@ -69,23 +91,109 @@ export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
             />
           </>
         )}
-        <span
-          className={cn(
-            "bg-background/85 absolute top-1 right-1 flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs font-semibold tabular-nums backdrop-blur-sm",
-            severityTextClass[severity],
-          )}
-        >
+        {/* Severity dot, top-right (the grid wrapper's selection checkbox
+            owns top-left). The numeric score sits with the bar below. */}
+        <span className="bg-background/85 absolute top-1 right-1 flex items-center rounded-sm p-1 backdrop-blur-sm">
           <SeverityDot severity={severity} />
-          {scoreText}
         </span>
       </div>
-      <div className="min-w-0">
-        <p className="truncate text-xs font-medium" title={item.title}>
-          {item.title}
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1 p-2">
+        <div className="flex items-start gap-1">
+          <p
+            className="min-w-0 flex-1 truncate text-xs/tight font-medium"
+            title={item.title}
+          >
+            {item.title}
+          </p>
+          <Bookmark
+            className={cn(
+              "mt-0.5 size-3 shrink-0",
+              item.monitored
+                ? "text-foreground/70 fill-current"
+                : "text-muted-foreground/40",
+            )}
+            aria-label={tCommon(item.monitored ? "monitored" : "unmonitored")}
+          />
+        </div>
+
+        <p
+          className="text-muted-foreground truncate text-[10px] leading-tight"
+          title={profileName}
+        >
+          {profileName ? `${item.year} · ${profileName}` : String(item.year)}
         </p>
-        <p className="text-muted-foreground text-xs tabular-nums">
-          {item.year}
-        </p>
+
+        {/* Score-vs-cutoff: the value plus a Profilarr-style progress bar.
+            The bar fills toward the cutoff; the numeric value stays visible
+            even when a penalty drags the score to an empty bar. */}
+        <div className="mt-0.5 space-y-0.5">
+          <div className="flex items-center justify-between gap-1 text-[10px]/4 tabular-nums">
+            <span className="text-muted-foreground truncate">
+              {formatBytes(item.sizeOnDisk)}
+            </span>
+            <span
+              className={cn(
+                "shrink-0 font-semibold",
+                severityTextClass[severity],
+              )}
+            >
+              {scoreText}
+            </span>
+          </div>
+          {hasFile && cutoff !== undefined && (
+            <div
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuenow={Math.max(0, Math.min(score, cutoff))}
+              aria-valuemax={cutoff}
+              className="bg-muted h-1.5 w-full overflow-hidden rounded-full"
+            >
+              <div
+                className={cn("h-full rounded-full", severityClass[severity])}
+                style={{ width: `${scorePct(score, cutoff)}%` }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Two fixed lines so every card aligns: penalties on one line
+            (truncated, with a +N overflow), the missing-format count on the
+            next. The named CF detail lives in the detail drawer. */}
+        {(penalties.length > 0 || missing.length > 0) && (
+          <div className="mt-1 space-y-1 text-[10px]/4">
+            {penalties.length > 0 && (
+              <div className="flex items-center gap-1 overflow-hidden">
+                {penalties.slice(0, 2).map((cf) => (
+                  // Destructive tint (not bg-critical/15 text-critical): at
+                  // 10px the critical pair is only 4.17:1 in light mode (sub
+                  // AA, same class as #106). The destructive token was made
+                  // in-gamut in #106, so this pair clears AA both modes and
+                  // matches how CfBadge renders missing CFs.
+                  <span
+                    key={cf.id}
+                    title={cf.name}
+                    className="bg-destructive/10 text-destructive min-w-0 truncate rounded-sm px-1 font-medium"
+                  >
+                    {cf.name}
+                  </span>
+                ))}
+                {penalties.length > 2 && (
+                  <span className="text-destructive shrink-0">
+                    +{penalties.length - 2}
+                  </span>
+                )}
+              </div>
+            )}
+            {missing.length > 0 && (
+              <div className="flex">
+                <span className="bg-muted text-muted-foreground rounded-sm px-1">
+                  {tCommon("missingCount", { count: missing.length })}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

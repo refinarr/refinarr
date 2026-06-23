@@ -66,6 +66,9 @@
     "viewToggleHint": "Toggle showing all media (not just flagged) for this instance",
     "moreCount": "+{count} more",
     "penaltyCount": "{count, plural, one {# penalty} other {# penalties}}",
+    "monitored": "Monitored",
+    "unmonitored": "Unmonitored",
+    "missingCount": "{count, plural, one {# missing} other {# missing}}",
     "currentFormats": "Current formats",
     "missingFormats": "Missing",
     "on": "On",
@@ -278,6 +281,22 @@
       "compact": "Compact",
       "card": "Cards",
       "poster": "Posters"
+    },
+    "sort": {
+      "label": "Sort",
+      "trigger": "Sort: {key} · {order}",
+      "sortBy": "Sort by",
+      "direction": "Direction",
+      "keys": {
+        "score": "Score",
+        "title": "Title",
+        "added": "Added",
+        "size": "Size"
+      },
+      "orders": {
+        "asc": "Asc",
+        "desc": "Desc"
+      }
     },
     "toolbarAriaLabel": "Filter toolbar",
     "activeCountAriaLabel": "{count, plural, one {# active filter} other {# active filters}}",

@@ -79,14 +79,15 @@ function page<T>(items: T[]): PaginatedResponse<T> {
 
 // The four library densities and the surface (testid) each renders on a
 // DESKTOP viewport. On mobile the table densities collapse to the card
-// list, so the density loops below run desktop-width.
+// list, so the density loops below run desktop-width. "card" is NOT a
+// desktop surface (#129 — it's the mobile-only rendering); a stored
+// "card" degrades to the cozy table on desktop (guarded separately).
 export const DENSITY_SURFACES: ReadonlyArray<{
   density: string;
   testid: string;
 }> = [
   { density: "cozy", testid: "media-table-body" },
   { density: "compact", testid: "media-table-body" },
-  { density: "card", testid: "media-card-list" },
   { density: "poster", testid: "media-poster-grid" },
 ];
 

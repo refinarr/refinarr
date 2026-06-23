@@ -7,7 +7,7 @@ import { usePrefersReducedMotion } from "@/client/hooks/ui/useMediaQuery";
 import { useScrollDirection } from "@/client/hooks/ui/useScrollDirection";
 import { cn } from "@/client/lib/utils";
 import type { QualityProfile } from "@/shared/types/models";
-import { FilterSheet } from "./FilterSheet";
+import { countActiveFilters, FilterSheet } from "./FilterSheet";
 import type { CfOption } from "./CfColumnFunnel";
 
 interface Props {
@@ -15,20 +15,6 @@ interface Props {
   cfOptions: { penalty: CfOption[] };
   filters: MediaFilters;
   onChange: (patch: Partial<MediaFilters>) => void;
-}
-
-// Count of filter axes currently mutating the table. Mirrors the chips
-// strip's notion of "active filters" — multi-select axes count once
-// (not per chip) so "Filters · N" reads as axes, not individual chips.
-function countActiveFilters(f: MediaFilters): number {
-  let n = 0;
-  if (f.profileIds.length > 0) n += 1;
-  if (f.severities.length > 0) n += 1;
-  if (f.minScore !== null || f.maxScore !== null) n += 1;
-  if (f.minSize !== null || f.maxSize !== null) n += 1;
-  if (f.hasNegativeCfIds.length > 0) n += 1;
-  if (f.monitorStatus !== "all") n += 1;
-  return n;
 }
 
 // Mobile-only fixed-bottom toolbar. Sits above the AppShell's

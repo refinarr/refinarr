@@ -10,10 +10,30 @@ import {
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { RefreshCw } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronDown,
+  SlidersHorizontal,
+  RefreshCw,
+} from "lucide-react";
 import { cn } from "@/client/lib/utils";
 import { AppShell } from "@/client/components/layout/AppShell";
 import { Button } from "@/client/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/client/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/client/components/ui/popover";
 import {
   BulkActionToolbar,
   type BulkProgress,
@@ -25,9 +45,15 @@ import { MediaTableSkeleton } from "@/client/components/media/MediaTableSkeleton
 import { MediaSearchBar } from "@/client/components/media/MediaSearchBar";
 import { MobileFilterBar } from "@/client/components/media/MobileFilterBar";
 import {
+  clearFilterAxes,
+  countActiveFilters,
+  FilterFunnelStack,
+} from "@/client/components/media/FilterSheet";
+import {
   MediaTable,
   type ColumnDef,
 } from "@/client/components/media/MediaTable";
+import type { SortKey } from "@/client/components/media/MediaTable/types";
 import { PosterTile } from "@/client/components/media/MediaPosterGrid";
 import { ActiveFilterChips } from "@/client/components/common/ActiveFilterChips";
 import { RowHoverActions } from "@/client/components/common/RowHoverActions";
@@ -286,10 +312,10 @@ function Root<T extends MediaItem>({
 
   const { density, cycle: cycleDensity } = useDensity();
   // `,` keyboard shortcut cycles density — matches the top-bar density
-  // button (cozy → compact → card → cozy). Previously used the legacy
-  // toggle() which only flipped compact ↔ cozy, so the shortcut could
-  // never reach "card" and would kick the user OUT of card unexpectedly.
-  // Skips when typing in inputs so search-bar text entry isn't hijacked.
+  // button (cozy → compact → poster → cozy). Uses cycle() (not the legacy
+  // toggle() which only flipped compact ↔ cozy) so the shortcut reaches
+  // every desktop mode. Skips when typing in inputs so search-bar text
+  // entry isn't hijacked.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       // Bare `,` only — Cmd+, / Ctrl+, is the OS "Preferences" shortcut
@@ -468,6 +494,22 @@ function MediaListShellBulkBar() {
   );
 }
 
+const SORT_KEYS: SortKey[] = ["score", "title", "added", "size"];
+const SORT_ORDERS: MediaFilters["order"][] = ["asc", "desc"];
+
+function isSortKey(value: string): value is SortKey {
+  return (
+    value === "score" ||
+    value === "title" ||
+    value === "added" ||
+    value === "size"
+  );
+}
+
+function isSortOrder(value: string): value is MediaFilters["order"] {
+  return value === "asc" || value === "desc";
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // MediaListShellTopBar — private. Composes the per-page chrome that
 // fills AppShell's TopHeader slot on movies/shows pages: instance
@@ -478,7 +520,7 @@ function MediaListShellBulkBar() {
 // ─────────────────────────────────────────────────────────────────────
 
 function MediaListShellTopBar() {
-  const { inst, data, refreshMutation, filters } = useShellContext();
+  const { ctx, inst, data, refreshMutation, filters } = useShellContext();
   const tRefresh = useTranslations("toast.refresh");
   const tCommon = useTranslations("common");
   const tInstSel = useTranslations("instanceSelector");
@@ -535,9 +577,147 @@ function MediaListShellTopBar() {
         {showInstanceContext && (
           <MediaShowAllToggle instanceId={inst.activeInstance} />
         )}
+        {ctx.density === "poster" && (
+          <PosterDesktopControls
+            profiles={ctx.profiles}
+            cfOptions={ctx.cfOptions}
+            filters={filters.filters}
+            onChange={(patch) =>
+              filters.setFilters((prev) => ({ ...prev, ...patch }))
+            }
+          />
+        )}
         <DensityToggle />
       </div>
     </>
+  );
+}
+
+interface PosterDesktopControlsProps {
+  profiles: QualityProfile[] | undefined;
+  cfOptions: MediaListShellRenderCtx<MediaItem>["cfOptions"];
+  filters: MediaFilters;
+  onChange: (patch: Partial<MediaFilters>) => void;
+}
+
+function PosterDesktopControls({
+  profiles,
+  cfOptions,
+  filters,
+  onChange,
+}: PosterDesktopControlsProps) {
+  const t = useTranslations("filters");
+  const activeCount = countActiveFilters(filters);
+  const hasActiveFilters = activeCount > 0;
+  const sortLabel = t(`sort.keys.${filters.sortBy}`);
+  const orderLabel = t(`sort.orders.${filters.order}`);
+
+  return (
+    <div
+      className="hidden items-center gap-2 md:flex"
+      data-testid="poster-desktop-controls"
+    >
+      <Popover>
+        <PopoverTrigger
+          type="button"
+          aria-label={t("openFilters")}
+          className={cn(
+            "border-input bg-background hover:bg-accent/50 text-muted-foreground h-control-sm inline-flex items-center gap-1.5 rounded-md border px-2 text-xs transition-colors",
+            hasActiveFilters && "border-primary text-primary",
+          )}
+          data-testid="poster-filter-trigger"
+        >
+          <SlidersHorizontal className="size-3.5" />
+          <span>{t("openFilters")}</span>
+          {hasActiveFilters && (
+            <span
+              aria-label={t("activeCountAriaLabel", { count: activeCount })}
+              className="bg-primary text-primary-foreground inline-flex min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums"
+            >
+              {activeCount}
+            </span>
+          )}
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          className="max-h-[min(72vh,44rem)] w-80 overflow-y-auto p-0"
+        >
+          <header className="bg-popover sticky top-0 z-10 flex items-center justify-between border-b px-4 py-3">
+            <div>
+              <h3 className="text-sm font-semibold">{t("title")}</h3>
+              <p className="text-muted-foreground text-xs">
+                {t("sheetDescription")}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => clearFilterAxes(onChange)}
+              disabled={!hasActiveFilters}
+              className="text-muted-foreground hover:text-foreground text-xs disabled:opacity-40"
+            >
+              {t("clearAll")}
+            </button>
+          </header>
+          <FilterFunnelStack
+            profiles={profiles}
+            cfOptions={cfOptions}
+            filters={filters}
+            onChange={onChange}
+          />
+        </PopoverContent>
+      </Popover>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          type="button"
+          aria-label={t("sort.label")}
+          className="border-input bg-background hover:bg-accent/50 text-muted-foreground h-control-sm inline-flex items-center gap-1.5 rounded-md border px-2 text-xs transition-colors"
+          data-testid="poster-sort-trigger"
+        >
+          <ArrowUpDown className="size-3.5" />
+          <span>
+            {t("sort.trigger", {
+              key: sortLabel,
+              order: orderLabel,
+            })}
+          </span>
+          <ChevronDown className="size-3.5" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{t("sort.sortBy")}</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={filters.sortBy}
+              onValueChange={(value) => {
+                if (isSortKey(value)) onChange({ sortBy: value });
+              }}
+            >
+              {SORT_KEYS.map((key) => (
+                <DropdownMenuRadioItem key={key} value={key}>
+                  {t(`sort.keys.${key}`)}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{t("sort.direction")}</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={filters.order}
+              onValueChange={(value) => {
+                if (isSortOrder(value)) onChange({ order: value });
+              }}
+            >
+              {SORT_ORDERS.map((order) => (
+                <DropdownMenuRadioItem key={order} value={order}>
+                  {t(`sort.orders.${order}`)}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
 

@@ -46,26 +46,39 @@ test.describe("A12 — mobile bottom nav", () => {
   });
 });
 
-test.describe("QA-4 (#94) — selection checkbox tap target", () => {
-  // Coarse pointer on a desktop viewport so the card / poster densities
-  // both render (mobile collapses them to the card list).
-  test.use({
-    storageState: "e2e/.auth/user.json",
+// Card list is now the MOBILE-only rendering (#129) — desktop dropped the
+// "card" view — so each surface is exercised on the viewport where it
+// actually renders: the card list on a mobile viewport, the poster grid on
+// desktop (the grid renders on both, desktop is fine). hasTouch makes
+// `pointer: coarse` match so the 44px tap-target rules apply.
+for (const surface of [
+  {
+    name: "card",
+    viewport: { width: 393, height: 852 },
+    density: "cozy", // any non-poster density → mobile card list
+    testid: "media-card-list",
+  },
+  {
+    name: "poster",
     viewport: { width: 1024, height: 800 },
-    hasTouch: true,
-  });
-
-  test.beforeEach(async ({ page }) => {
-    await stubMediaApis(page, {
-      movies: [movie({ id: 1 }), movie({ id: 2, title: "Second" })],
+    density: "poster",
+    testid: "media-poster-grid",
+  },
+] as const) {
+  test.describe(`QA-4 (#94) — ${surface.name} selection checkbox tap target`, () => {
+    test.use({
+      storageState: "e2e/.auth/user.json",
+      viewport: surface.viewport,
+      hasTouch: true,
     });
-  });
 
-  for (const surface of [
-    { density: "card", testid: "media-card-list" },
-    { density: "poster", testid: "media-poster-grid" },
-  ]) {
-    test(`${surface.density}: selection checkbox is at least 44px`, async ({
+    test.beforeEach(async ({ page }) => {
+      await stubMediaApis(page, {
+        movies: [movie({ id: 1 }), movie({ id: 2, title: "Second" })],
+      });
+    });
+
+    test(`${surface.name}: selection checkbox is at least 44px`, async ({
       page,
     }) => {
       await page.goto("/movies");
@@ -90,5 +103,5 @@ test.describe("QA-4 (#94) — selection checkbox tap target", () => {
         page.getByRole("region", { name: /1 selected/i }),
       ).toBeVisible({ timeout: 5_000 });
     });
-  }
-});
+  });
+}

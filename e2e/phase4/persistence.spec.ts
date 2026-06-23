@@ -13,7 +13,7 @@ import {
 
 test.use({
   storageState: "e2e/.auth/user.json",
-  viewport: { width: 1280, height: 800 }, // desktop → all four densities apply
+  viewport: { width: 1280, height: 800 }, // desktop → the table/poster densities apply
 });
 
 test.beforeEach(async ({ page }) => {
@@ -31,6 +31,22 @@ for (const surface of DENSITY_SURFACES) {
     });
   });
 }
+
+// #129 — "card" is no longer a desktop view. A previously-stored "card"
+// density must degrade gracefully to the cozy table on desktop (not get
+// the user stuck on a removed mode or a blank surface).
+test("a stored 'card' density falls back to the cozy table on desktop", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("rfn-density", "card");
+  });
+  await page.goto("/movies");
+  await expect(page.getByTestId("media-table-body")).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(page.getByTestId("media-card-list")).toBeHidden();
+});
 
 test("density persists across pages (movies → shows)", async ({ page }) => {
   await page.goto("/movies");

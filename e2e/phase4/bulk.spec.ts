@@ -128,13 +128,27 @@ test("C6: navigating away mid-bulk lands on the next page cleanly", async ({
 
 // C5 sibling — bulk works on the card + poster surfaces too, selecting
 // items via the per-item checkbox (those surfaces have no "select all").
+// The card list is the mobile rendering now (#129), so its case runs on a
+// mobile viewport (cozy density → card list there); the poster grid renders
+// on this file's desktop default.
 for (const surface of [
-  { density: "card", testid: "media-card-list" },
-  { density: "poster", testid: "media-poster-grid" },
+  {
+    name: "card",
+    density: "cozy",
+    testid: "media-card-list",
+    viewport: { width: 393, height: 852 } as { width: number; height: number },
+  },
+  {
+    name: "poster",
+    density: "poster",
+    testid: "media-poster-grid",
+    viewport: null as { width: number; height: number } | null,
+  },
 ]) {
-  test(`C5: per-item select + bulk-search queues the picked items (${surface.density})`, async ({
+  test(`C5: per-item select + bulk-search queues the picked items (${surface.name})`, async ({
     page,
   }) => {
+    if (surface.viewport) await page.setViewportSize(surface.viewport);
     await stubMediaApis(page, {
       movies: [movie({ id: 1 }), movie({ id: 2 }), movie({ id: 3 })],
     });

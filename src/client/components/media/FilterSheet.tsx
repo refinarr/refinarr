@@ -34,7 +34,7 @@ interface SectionProps {
   children: ReactNode;
 }
 
-function Section({ title, description, children }: SectionProps) {
+export function FilterSection({ title, description, children }: SectionProps) {
   return (
     <section className="space-y-2 p-4">
       <header className="space-y-0.5">
@@ -45,6 +45,102 @@ function Section({ title, description, children }: SectionProps) {
       </header>
       {children}
     </section>
+  );
+}
+
+// Count of filter axes currently mutating the media result set. Multi-select
+// axes count once (not per chip) so "Filters · N" reads as axes, not
+// individual chips. Shared by the mobile bar and desktop poster toolbar.
+export function countActiveFilters(f: MediaFilters): number {
+  let n = 0;
+  if (f.profileIds.length > 0) n += 1;
+  if (f.severities.length > 0) n += 1;
+  if (f.minScore !== null || f.maxScore !== null) n += 1;
+  if (f.minSize !== null || f.maxSize !== null) n += 1;
+  if (f.hasNegativeCfIds.length > 0) n += 1;
+  if (f.monitorStatus !== "all") n += 1;
+  return n;
+}
+
+export function clearFilterAxes(
+  onChange: (patch: Partial<MediaFilters>) => void,
+): void {
+  onChange({
+    profileIds: [],
+    severities: [],
+    minScore: null,
+    maxScore: null,
+    minSize: null,
+    maxSize: null,
+    hasNegativeCfIds: [],
+    hasNegativeCfMatch: "all",
+    monitorStatus: "all",
+  });
+}
+
+interface FilterFunnelStackProps {
+  profiles: QualityProfile[] | undefined;
+  cfOptions: { penalty: CfOption[] };
+  filters: MediaFilters;
+  onChange: (patch: Partial<MediaFilters>) => void;
+}
+
+export function FilterFunnelStack({
+  profiles,
+  cfOptions,
+  filters,
+  onChange,
+}: FilterFunnelStackProps) {
+  const t = useTranslations("filters");
+  const tMonitor = useTranslations("filters.monitorStatus");
+
+  return (
+    <div className="divide-y">
+      <FilterSection
+        title={t("severityHeading")}
+        description={t("severityColumnDescription")}
+      >
+        <SeverityFunnelBody filters={filters} onChange={onChange} />
+      </FilterSection>
+      <FilterSection
+        title={tMonitor("label")}
+        description={tMonitor("description")}
+      >
+        <MonitorFunnelBody filters={filters} onChange={onChange} />
+      </FilterSection>
+      <FilterSection
+        title={t("profileHeading")}
+        description={t("profileColumnDescription")}
+      >
+        <ProfileFunnelBody
+          profiles={profiles}
+          filters={filters}
+          onChange={onChange}
+        />
+      </FilterSection>
+      <FilterSection
+        title={t("scoreHeading")}
+        description={t("scoreColumnDescription")}
+      >
+        <ScoreFunnelBody filters={filters} onChange={onChange} />
+      </FilterSection>
+      <FilterSection
+        title={t("sizeHeading")}
+        description={t("sizeColumnDescription")}
+      >
+        <SizeFunnelBody filters={filters} onChange={onChange} />
+      </FilterSection>
+      <FilterSection
+        title={t("penaltyHeading")}
+        description={t("penaltyColumnDescription")}
+      >
+        <CfFunnelBody
+          options={cfOptions.penalty}
+          filters={filters}
+          onChange={onChange}
+        />
+      </FilterSection>
+    </div>
   );
 }
 
@@ -62,33 +158,8 @@ export function FilterSheet({
   onChange,
 }: Props) {
   const t = useTranslations("filters");
-  const tMonitor = useTranslations("filters.monitorStatus");
-  const cfFunnelOptions = cfOptions.penalty;
-  const cfTitle = t("penaltyHeading");
-  const cfDescription = t("penaltyColumnDescription");
-
-  const anyActive =
-    filters.profileIds.length > 0 ||
-    filters.severities.length > 0 ||
-    filters.minScore !== null ||
-    filters.maxScore !== null ||
-    filters.minSize !== null ||
-    filters.maxSize !== null ||
-    filters.hasNegativeCfIds.length > 0 ||
-    filters.monitorStatus !== "all";
-
-  const clearAll = () =>
-    onChange({
-      profileIds: [],
-      severities: [],
-      minScore: null,
-      maxScore: null,
-      minSize: null,
-      maxSize: null,
-      hasNegativeCfIds: [],
-      hasNegativeCfMatch: "all",
-      monitorStatus: "all",
-    });
+  const anyActive = countActiveFilters(filters) > 0;
+  const clearAll = () => clearFilterAxes(onChange);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -113,49 +184,12 @@ export function FilterSheet({
           {t("sheetDescription")}
         </SheetDescription>
 
-        <div className="divide-y">
-          <Section
-            title={t("severityHeading")}
-            description={t("severityColumnDescription")}
-          >
-            <SeverityFunnelBody filters={filters} onChange={onChange} />
-          </Section>
-          <Section
-            title={tMonitor("label")}
-            description={tMonitor("description")}
-          >
-            <MonitorFunnelBody filters={filters} onChange={onChange} />
-          </Section>
-          <Section
-            title={t("profileHeading")}
-            description={t("profileColumnDescription")}
-          >
-            <ProfileFunnelBody
-              profiles={profiles}
-              filters={filters}
-              onChange={onChange}
-            />
-          </Section>
-          <Section
-            title={t("scoreHeading")}
-            description={t("scoreColumnDescription")}
-          >
-            <ScoreFunnelBody filters={filters} onChange={onChange} />
-          </Section>
-          <Section
-            title={t("sizeHeading")}
-            description={t("sizeColumnDescription")}
-          >
-            <SizeFunnelBody filters={filters} onChange={onChange} />
-          </Section>
-          <Section title={cfTitle} description={cfDescription}>
-            <CfFunnelBody
-              options={cfFunnelOptions}
-              filters={filters}
-              onChange={onChange}
-            />
-          </Section>
-        </div>
+        <FilterFunnelStack
+          profiles={profiles}
+          cfOptions={cfOptions}
+          filters={filters}
+          onChange={onChange}
+        />
       </SheetContent>
     </Sheet>
   );

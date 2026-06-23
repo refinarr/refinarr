@@ -145,7 +145,8 @@ describe("PosterTile", () => {
       "/api/radarr/movies/poster?instanceId=3&mediaId=7",
     );
     expect(img).toHaveAttribute("loading", "lazy");
-    expect(screen.getByText("1982")).toBeInTheDocument();
+    // Year is shown in the combined meta line (year · size · profile).
+    expect(screen.getByText(/1982/)).toBeInTheDocument();
   });
 
   it("shows the profile score as current / cutoff", () => {
