@@ -496,6 +496,19 @@ function MediaListShellBulkBar() {
 const SORT_KEYS: SortKey[] = ["score", "title", "added", "size"];
 const SORT_ORDERS: MediaFilters["order"][] = ["asc", "desc"];
 
+function isSortKey(value: string): value is SortKey {
+  return (
+    value === "score" ||
+    value === "title" ||
+    value === "added" ||
+    value === "size"
+  );
+}
+
+function isSortOrder(value: string): value is MediaFilters["order"] {
+  return value === "asc" || value === "desc";
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // MediaListShellTopBar — private. Composes the per-page chrome that
 // fills AppShell's TopHeader slot on movies/shows pages: instance
@@ -673,7 +686,9 @@ function PosterDesktopControls({
           <DropdownMenuLabel>{t("sort.sortBy")}</DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={filters.sortBy}
-            onValueChange={(value) => onChange({ sortBy: value as SortKey })}
+            onValueChange={(value) => {
+              if (isSortKey(value)) onChange({ sortBy: value });
+            }}
           >
             {SORT_KEYS.map((key) => (
               <DropdownMenuRadioItem key={key} value={key}>
@@ -685,9 +700,9 @@ function PosterDesktopControls({
           <DropdownMenuLabel>{t("sort.direction")}</DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={filters.order}
-            onValueChange={(value) =>
-              onChange({ order: value as MediaFilters["order"] })
-            }
+            onValueChange={(value) => {
+              if (isSortOrder(value)) onChange({ order: value });
+            }}
           >
             {SORT_ORDERS.map((order) => (
               <DropdownMenuRadioItem key={order} value={order}>

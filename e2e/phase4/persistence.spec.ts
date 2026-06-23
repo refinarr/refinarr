@@ -38,8 +38,10 @@ for (const surface of DENSITY_SURFACES) {
 test("a stored 'card' density falls back to the cozy table on desktop", async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("rfn-density", "card");
+  });
   await page.goto("/movies");
-  await setDensity(page, "card");
   await expect(page.getByTestId("media-table-body")).toBeVisible({
     timeout: 10_000,
   });
