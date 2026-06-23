@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.4](https://github.com/refinarr/refinarr/compare/v0.8.4-rc.1...v0.8.4) (2026-06-23)
+
+
+### Miscellaneous Chores
+
+* promote v0.8.4 to stable ([#124](https://github.com/refinarr/refinarr/issues/124)) ([8c331e7](https://github.com/refinarr/refinarr/commit/8c331e7c1b1330248cf90a90d1456fce04b17bc4))
+
 ## [0.8.4-rc.1](https://github.com/refinarr/refinarr/compare/v0.8.3...v0.8.4-rc.1) (2026-06-23)
 
 
