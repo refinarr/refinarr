@@ -144,7 +144,8 @@ export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
           {hasFile && cutoff !== undefined && (
             <div
               role="progressbar"
-              aria-valuenow={score}
+              aria-valuemin={0}
+              aria-valuenow={Math.max(0, Math.min(score, cutoff))}
               aria-valuemax={cutoff}
               className="bg-muted h-1.5 w-full overflow-hidden rounded-full"
             >
@@ -164,16 +165,21 @@ export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
             {penalties.length > 0 && (
               <div className="flex items-center gap-1 overflow-hidden">
                 {penalties.slice(0, 2).map((cf) => (
+                  // Destructive tint (not bg-critical/15 text-critical): at
+                  // 10px the critical pair is only 4.17:1 in light mode (sub
+                  // AA, same class as #106). The destructive token was made
+                  // in-gamut in #106, so this pair clears AA both modes and
+                  // matches how CfBadge renders missing CFs.
                   <span
                     key={cf.id}
                     title={cf.name}
-                    className="bg-critical/15 text-critical min-w-0 truncate rounded-sm px-1 font-medium"
+                    className="bg-destructive/10 text-destructive min-w-0 truncate rounded-sm px-1 font-medium"
                   >
                     {cf.name}
                   </span>
                 ))}
                 {penalties.length > 2 && (
-                  <span className="text-critical shrink-0">
+                  <span className="text-destructive shrink-0">
                     +{penalties.length - 2}
                   </span>
                 )}
