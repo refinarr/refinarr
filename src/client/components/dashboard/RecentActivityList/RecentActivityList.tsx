@@ -78,10 +78,14 @@ export function RecentActivityList({ logs }: Props) {
               );
               return (
                 <li key={log.id} className="flex items-center gap-3 py-2">
-                  <div className="w-20 shrink-0">
+                  {/* Content-width (not fixed w-20/w-24): a long action label
+                      like "Season Search" overflowed the fixed box and
+                      overlapped the title. shrink-0 keeps each badge whole;
+                      the title's flex-1 truncate absorbs the rest (#126). */}
+                  <div className="shrink-0">
                     <ActionStatusBadge status={log.status} />
                   </div>
-                  <div className="w-24 shrink-0">
+                  <div className="shrink-0">
                     <ActionTypeBadge action={log.action} />
                   </div>
                   {titleNode}

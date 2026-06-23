@@ -156,8 +156,7 @@
       "instances": "Instances",
       "flaggedMovies": "Flagged movies",
       "flaggedSeries": "Flagged series",
-      "failed24h": "Failed (24h)",
-      "warming": "Loading from your library…"
+      "failed24h": "Failed (24h)"
     },
     "instances": "Instances",
     "recentActivity": "Recent activity",
