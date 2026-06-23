@@ -156,28 +156,35 @@ export function PosterTile<T extends MediaItem>({ item, ctx }: Props<T>) {
           )}
         </div>
 
-        {/* Penalties (negative CFs present) + a missing-format count — the
-            named detail lives in the drawer; the card surfaces the signal. */}
+        {/* Two fixed lines so every card aligns: penalties on one line
+            (truncated, with a +N overflow), the missing-format count on the
+            next. The named CF detail lives in the detail drawer. */}
         {(penalties.length > 0 || missing.length > 0) && (
-          <div className="mt-auto flex flex-wrap items-center gap-1 pt-0.5">
-            {penalties.slice(0, 2).map((cf) => (
-              <span
-                key={cf.id}
-                title={cf.name}
-                className="bg-critical/15 text-critical max-w-full truncate rounded-sm px-1 text-[10px]/4 font-medium"
-              >
-                {cf.name}
-              </span>
-            ))}
-            {penalties.length > 2 && (
-              <span className="text-critical text-[10px]/4">
-                +{penalties.length - 2}
-              </span>
+          <div className="mt-1 space-y-1 text-[10px]/4">
+            {penalties.length > 0 && (
+              <div className="flex items-center gap-1 overflow-hidden">
+                {penalties.slice(0, 2).map((cf) => (
+                  <span
+                    key={cf.id}
+                    title={cf.name}
+                    className="bg-critical/15 text-critical min-w-0 truncate rounded-sm px-1 font-medium"
+                  >
+                    {cf.name}
+                  </span>
+                ))}
+                {penalties.length > 2 && (
+                  <span className="text-critical shrink-0">
+                    +{penalties.length - 2}
+                  </span>
+                )}
+              </div>
             )}
             {missing.length > 0 && (
-              <span className="bg-muted text-muted-foreground rounded-sm px-1 text-[10px]/4">
-                {tCommon("missingCount", { count: missing.length })}
-              </span>
+              <div className="flex">
+                <span className="bg-muted text-muted-foreground rounded-sm px-1">
+                  {tCommon("missingCount", { count: missing.length })}
+                </span>
+              </div>
             )}
           </div>
         )}
