@@ -52,8 +52,18 @@ function isPickStrategy(v: string | null): v is AutoSearchPickStrategy {
   return v === "balanced" || v === "random";
 }
 
-function isAutoSearchScope(v: string | null): v is AutoSearchScope {
-  return v === "missing" || v === "upgrade" || v === "flagged" || v === "all";
+// Keep in sync with the AutoSearchScope union + the scope <Select> below.
+// "mixed" was added to the type, the zod schema, and the Select but was
+// missing here — so picking it failed this guard and onChange never fired
+// ("can't choose mixed"). Exported so the accept-list is unit-guarded.
+export function isAutoSearchScope(v: string | null): v is AutoSearchScope {
+  return (
+    v === "missing" ||
+    v === "upgrade" ||
+    v === "flagged" ||
+    v === "all" ||
+    v === "mixed"
+  );
 }
 
 interface IntervalDisplayUnit {

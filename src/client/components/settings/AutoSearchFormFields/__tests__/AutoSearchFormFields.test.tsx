@@ -2,9 +2,11 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent } from "@testing-library/react";
 import { useCronPreview } from "@/client/hooks/data/useAutoSearch";
+import type { AutoSearchScope } from "@/shared/types/models";
 import { renderWithProviders } from "@/test/render";
 import {
   AutoSearchFormFields,
+  isAutoSearchScope,
   type AutoSearchFields,
 } from "../AutoSearchFormFields";
 
@@ -27,6 +29,27 @@ const defaults: AutoSearchFields = {
   autoSearchPickStrategy: "balanced",
   autoSearchCooldownHours: 0,
 };
+
+describe("isAutoSearchScope", () => {
+  // Every scope the picker offers must pass the guard — otherwise the
+  // Select shows it but onChange never fires (the "can't choose mixed"
+  // bug, where "mixed" was in the type/schema/Select but not the guard).
+  const allScopes: AutoSearchScope[] = [
+    "missing",
+    "upgrade",
+    "flagged",
+    "all",
+    "mixed",
+  ];
+  test.each(allScopes)("accepts the '%s' scope", (scope) => {
+    expect(isAutoSearchScope(scope)).toBe(true);
+  });
+
+  test("rejects unknown values and null", () => {
+    expect(isAutoSearchScope("bogus")).toBe(false);
+    expect(isAutoSearchScope(null)).toBe(false);
+  });
+});
 
 describe("AutoSearchFormFields", () => {
   let onChange: (next: Partial<AutoSearchFields>) => void;
