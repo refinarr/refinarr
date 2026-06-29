@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.0](https://github.com/refinarr/refinarr/compare/v0.8.4...v0.9.0) (2026-06-29)
+
+
+### Features
+
+* remove the desktop "card" view mode, keep the card list mobile-only ([#129](https://github.com/refinarr/refinarr/issues/129)) ([#131](https://github.com/refinarr/refinarr/issues/131)) ([49a7226](https://github.com/refinarr/refinarr/commit/49a72260d98854c64f22ddad37778bab698e94e8))
+
+
+### Bug Fixes
+
+* dashboard recent-activity overlap + KPI loading height shift ([#126](https://github.com/refinarr/refinarr/issues/126), [#127](https://github.com/refinarr/refinarr/issues/127)) ([#130](https://github.com/refinarr/refinarr/issues/130)) ([1907e3f](https://github.com/refinarr/refinarr/commit/1907e3fa512abc03cbcc241bcdd5e7a17063583e))
+* **settings:** allow selecting the "mixed" auto-search scope ([#134](https://github.com/refinarr/refinarr/issues/134)) ([e37c644](https://github.com/refinarr/refinarr/commit/e37c6443dca91ca8370e62c30103079a8e2d8cda))
+
 ## [0.8.4](https://github.com/refinarr/refinarr/compare/v0.8.4-rc.1...v0.8.4) (2026-06-23)
 
 
