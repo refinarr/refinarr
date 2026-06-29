@@ -27,6 +27,7 @@ import type {
   AutoSearchScope,
   AutoSearchScheduleMode,
 } from "@/shared/types/models";
+import { AUTO_SEARCH_SCOPES } from "@/shared/types/models";
 
 export interface AutoSearchFields {
   autoSearchEnabled: boolean;
@@ -52,8 +53,12 @@ function isPickStrategy(v: string | null): v is AutoSearchPickStrategy {
   return v === "balanced" || v === "random";
 }
 
-function isAutoSearchScope(v: string | null): v is AutoSearchScope {
-  return v === "missing" || v === "upgrade" || v === "flagged" || v === "all";
+// Derives from AUTO_SEARCH_SCOPES (the single source of truth) so the
+// accept-list can't drift from the type / zod schema / Select — the cause
+// of the "can't choose mixed" bug (#134) when this was a hand-written ||
+// chain. Exported so the derivation is unit-guarded.
+export function isAutoSearchScope(v: string | null): v is AutoSearchScope {
+  return v !== null && (AUTO_SEARCH_SCOPES as readonly string[]).includes(v);
 }
 
 interface IntervalDisplayUnit {
@@ -390,11 +395,11 @@ export function AutoSearchFormFields({ value, onChange, disabled }: Props) {
                 <SelectValue>{scopeLabel[value.autoSearchScope]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="flagged">{t("scopeFlagged")}</SelectItem>
-                <SelectItem value="upgrade">{t("scopeUpgrade")}</SelectItem>
-                <SelectItem value="missing">{t("scopeMissing")}</SelectItem>
-                <SelectItem value="all">{t("scopeAll")}</SelectItem>
-                <SelectItem value="mixed">{t("scopeMixed")}</SelectItem>
+                {AUTO_SEARCH_SCOPES.map((scope) => (
+                  <SelectItem key={scope} value={scope}>
+                    {scopeLabel[scope]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </FormField>

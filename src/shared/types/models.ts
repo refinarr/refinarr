@@ -19,12 +19,18 @@ export const LogSource = {
 } as const;
 export type LogSource = (typeof LogSource)[keyof typeof LogSource];
 export type AutoSearchScheduleMode = "interval" | "cron";
-export type AutoSearchScope =
-  | "missing"
-  | "upgrade"
-  | "flagged"
-  | "all"
-  | "mixed";
+// Single source of truth for auto-search scopes — the zod schema, the
+// scope <Select>, the form's accept-guard, and its tests all derive from
+// this list, so adding a scope is one line here and can't drift out of one
+// of them (the "can't choose mixed" bug, #134). Order = picker display order.
+export const AUTO_SEARCH_SCOPES = [
+  "flagged",
+  "upgrade",
+  "missing",
+  "all",
+  "mixed",
+] as const;
+export type AutoSearchScope = (typeof AUTO_SEARCH_SCOPES)[number];
 export type AutoSearchPickStrategy = "balanced" | "random";
 export type ActionType =
   | "search"

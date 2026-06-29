@@ -2,9 +2,11 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent } from "@testing-library/react";
 import { useCronPreview } from "@/client/hooks/data/useAutoSearch";
+import { AUTO_SEARCH_SCOPES } from "@/shared/types/models";
 import { renderWithProviders } from "@/test/render";
 import {
   AutoSearchFormFields,
+  isAutoSearchScope,
   type AutoSearchFields,
 } from "../AutoSearchFormFields";
 
@@ -27,6 +29,20 @@ const defaults: AutoSearchFields = {
   autoSearchPickStrategy: "balanced",
   autoSearchCooldownHours: 0,
 };
+
+describe("isAutoSearchScope", () => {
+  // Drives off AUTO_SEARCH_SCOPES (the single source of truth) so any scope
+  // added to the type/schema/Select is automatically asserted to pass the
+  // guard — prevents the "can't choose mixed" drift (#134) from recurring.
+  test.each(AUTO_SEARCH_SCOPES)("accepts the '%s' scope", (scope) => {
+    expect(isAutoSearchScope(scope)).toBe(true);
+  });
+
+  test("rejects unknown values and null", () => {
+    expect(isAutoSearchScope("bogus")).toBe(false);
+    expect(isAutoSearchScope(null)).toBe(false);
+  });
+});
 
 describe("AutoSearchFormFields", () => {
   let onChange: (next: Partial<AutoSearchFields>) => void;
