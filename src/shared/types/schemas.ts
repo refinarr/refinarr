@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidCronExpression } from "@/shared/cron";
+import { AUTO_SEARCH_SCOPES } from "@/shared/types/models";
 
 export const credentialsSchema = z.object({
   username: z
@@ -43,9 +44,7 @@ const autoSearchFields = {
     .optional(),
   autoSearchBatchLimit: z.number().int().min(0).max(100).optional(),
   autoSearchMonitoredOnly: z.boolean().optional(),
-  autoSearchScope: z
-    .enum(["missing", "upgrade", "flagged", "all", "mixed"])
-    .optional(),
+  autoSearchScope: z.enum(AUTO_SEARCH_SCOPES).optional(),
   autoSearchPickStrategy: z.enum(["balanced", "random"]).optional(),
   autoSearchCooldownHours: z.number().int().min(0).max(8760).optional(),
   autoSearchPausedUntil: z.iso.datetime().nullable().optional(),

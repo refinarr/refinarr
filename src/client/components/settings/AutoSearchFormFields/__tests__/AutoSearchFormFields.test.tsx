@@ -2,7 +2,7 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { screen, fireEvent } from "@testing-library/react";
 import { useCronPreview } from "@/client/hooks/data/useAutoSearch";
-import type { AutoSearchScope } from "@/shared/types/models";
+import { AUTO_SEARCH_SCOPES } from "@/shared/types/models";
 import { renderWithProviders } from "@/test/render";
 import {
   AutoSearchFormFields,
@@ -31,17 +31,10 @@ const defaults: AutoSearchFields = {
 };
 
 describe("isAutoSearchScope", () => {
-  // Every scope the picker offers must pass the guard — otherwise the
-  // Select shows it but onChange never fires (the "can't choose mixed"
-  // bug, where "mixed" was in the type/schema/Select but not the guard).
-  const allScopes: AutoSearchScope[] = [
-    "missing",
-    "upgrade",
-    "flagged",
-    "all",
-    "mixed",
-  ];
-  test.each(allScopes)("accepts the '%s' scope", (scope) => {
+  // Drives off AUTO_SEARCH_SCOPES (the single source of truth) so any scope
+  // added to the type/schema/Select is automatically asserted to pass the
+  // guard — prevents the "can't choose mixed" drift (#134) from recurring.
+  test.each(AUTO_SEARCH_SCOPES)("accepts the '%s' scope", (scope) => {
     expect(isAutoSearchScope(scope)).toBe(true);
   });
 
