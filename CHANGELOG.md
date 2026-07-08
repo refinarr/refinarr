@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/refinarr/refinarr/compare/v0.9.0...v0.9.1) (2026-07-08)
+
+
+### Bug Fixes
+
+* dedup worker singletons in production to stop double-running ([#135](https://github.com/refinarr/refinarr/issues/135)) ([#136](https://github.com/refinarr/refinarr/issues/136)) ([4250180](https://github.com/refinarr/refinarr/commit/425018039bfc57e276413c1ab48c2f3db4913488))
+
 ## [0.9.0](https://github.com/refinarr/refinarr/compare/v0.8.4...v0.9.0) (2026-06-29)
 
 
