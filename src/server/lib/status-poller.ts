@@ -478,5 +478,8 @@ if (process.env.NODE_ENV !== "production") {
   if (previousStatusPoller && previousStatusPoller !== statusPoller) {
     previousStatusPoller.stop();
   }
-  globalForStatusPoller.statusPoller = statusPoller;
 }
+// Populate the global in BOTH dev and prod (was dev-only, #135) so repeated
+// module evaluations (Next.js instrumentation vs route bundles) reuse this
+// one poller instead of each context starting its own.
+globalForStatusPoller.statusPoller = statusPoller;

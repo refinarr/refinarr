@@ -845,9 +845,15 @@ const previousAutoRunner = globalThis.autoRunner;
 const isDev = process.env.NODE_ENV !== "production";
 export const autoRunner =
   previousAutoRunner && !isDev ? previousAutoRunner : new AutoRunner();
-if (isDev) {
-  if (previousAutoRunner && previousAutoRunner !== autoRunner) {
-    globalThis.autoRunnerStopPromise = previousAutoRunner.stop();
-  }
-  globalThis.autoRunner = autoRunner;
+// Dev-only: hand the previous runner's in-flight ticks off to the fresh HMR
+// instance via the stop promise (start() awaits it before scheduling).
+if (isDev && previousAutoRunner && previousAutoRunner !== autoRunner) {
+  globalThis.autoRunnerStopPromise = previousAutoRunner.stop();
 }
+// Populate the global in BOTH dev and prod (was dev-only, #135). Next.js
+// evaluates server modules in more than one context (instrumentation vs
+// route/server bundles); without this in prod, each context built AND
+// started its own runner → the scheduler fired twice and every auto-search
+// dispatched twice (duplicate grabs + history rows). The `previous && !isDev
+// ? previous : new` above then reuses this instance on later evaluations.
+globalThis.autoRunner = autoRunner;
