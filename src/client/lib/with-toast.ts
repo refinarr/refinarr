@@ -1,5 +1,7 @@
 import { toast } from "sonner";
 import type { UseMutationResult } from "@tanstack/react-query";
+import { ApiClientError } from "./api";
+import { reportClientError } from "./client-error-logger";
 
 type ToastMessage<TData, TVariables> =
   | string
@@ -32,6 +34,21 @@ interface ToastMessagesFor<TData, TError, TVariables> extends ToastMessages {
 //   2. Otherwise show no toast — the mutation still rejects, so callers
 //      that need a generic toast can pass `error: t("toast.genericError")`
 //      explicitly.
+// A mutation can reject in three ways: (1) ApiClientError — api.ts already
+// decides what to persist (network + 5xx beaconed; 4xx intentionally not);
+// (2) AbortError — the user cancelled, not a failure; (3) anything else —
+// an UNEXPECTED client-side throw (e.g. `crypto.randomUUID()` is undefined
+// on http:// LAN origins). The third kind never reached the network, so
+// nothing logged it — surface it to the AppLog so it's diagnosable instead
+// of an invisible toast.
+function reportUnexpectedMutationError(err: unknown): void {
+  if (err instanceof ApiClientError) return;
+  if (err instanceof Error && err.name === "AbortError") return;
+  const message = err instanceof Error ? err.message : String(err);
+  const stack = err instanceof Error ? err.stack : undefined;
+  reportClientError({ message, path: "(client mutation)", stack });
+}
+
 export function withToast<TData, TError, TVariables>(
   mutation: Pick<UseMutationResult<TData, TError, TVariables>, "mutateAsync">,
   messages: ToastMessagesFor<TData, TError, TVariables>,
@@ -69,6 +86,7 @@ export function withToast<TData, TError, TVariables>(
       toast.success(formatSuccess(data), sharedOpts);
       return data;
     } catch (err) {
+      reportUnexpectedMutationError(err);
       const errorMsg = formatError(err);
       if (errorMsg !== null) {
         toast.error(errorMsg, sharedOpts);

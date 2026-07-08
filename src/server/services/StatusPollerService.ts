@@ -369,14 +369,21 @@ export class StatusPollerService {
       // handle so History can show "what was grabbed" (#39). Only on
       // `grabbed` — later events (import/fail) don't carry a more specific
       // release identity than the grab already recorded.
-      const patch: Partial<ActionLog> =
-        next === "grabbed"
-          ? {
-              status: next,
-              sourceTitle: ev.sourceTitle,
-              downloadId: ev.downloadId ?? null,
-            }
-          : { status: next };
+      let patch: Partial<ActionLog>;
+      if (next === "grabbed") {
+        patch = {
+          status: next,
+          sourceTitle: ev.sourceTitle,
+          downloadId: ev.downloadId ?? null,
+        };
+      } else if (next === "failed") {
+        // A downloadFailed event lands here. Record the reason so History
+        // shows WHY (the command-sync path already sets one; this closes the
+        // history-sync gap that left downloadFailed rows with error=null).
+        patch = { status: next, error: ev.message ?? "Download failed" };
+      } else {
+        patch = { status: next };
+      }
       try {
         await logRepository.update(row.id, patch);
         updates += 1;

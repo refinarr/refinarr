@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/client/lib/api";
 import { withToast } from "@/client/lib/with-toast";
 import { runSerial } from "@/client/lib/run-serial";
+import { safeRandomUUID } from "@/client/lib/uuid";
 import type {
   BulkAction,
   BulkProgress,
@@ -84,7 +85,7 @@ export function useBulkMediaActions<T>(config: BulkActionsConfig<T>) {
   // post-filter count for delete (where non-deletable items get
   // dropped) and the raw items length for search/ignore.
   const groupIdForBulk = (isBulk: boolean, count: number) =>
-    isBulk && count > 1 ? crypto.randomUUID() : undefined;
+    isBulk && count > 1 ? safeRandomUUID() : undefined;
 
   const searchMutation = useMutation({
     mutationFn: ({ items, isBulk, signal }: BulkVars<T>) => {
