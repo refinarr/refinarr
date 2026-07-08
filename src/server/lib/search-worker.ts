@@ -256,5 +256,11 @@ if (process.env.NODE_ENV !== "production") {
   if (previousSearchWorker && previousSearchWorker !== searchWorker) {
     previousSearchWorker.stop();
   }
-  globalForSearchWorker.searchWorker = searchWorker;
 }
+// Populate the global in BOTH dev and prod (was dev-only, #135): Next.js
+// evaluates server modules in more than one context (the instrumentation
+// bundle vs the route/server bundle). Without a populated global in prod,
+// each context builds AND starts its own worker → the queue drains twice
+// and every search dispatches twice (duplicate grabs + history rows). The
+// `previous ?? new` above then collapses later evaluations onto this one.
+globalForSearchWorker.searchWorker = searchWorker;
