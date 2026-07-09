@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/refinarr/refinarr/compare/v0.9.1...v0.9.2) (2026-07-09)
+
+
+### Bug Fixes
+
+* batch actions silently failing over plain HTTP (crypto.randomUUID) ([#138](https://github.com/refinarr/refinarr/issues/138)) ([1cedd8e](https://github.com/refinarr/refinarr/commit/1cedd8ebc04c2730630e267b96682854f49e0261))
+
 ## [0.9.1](https://github.com/refinarr/refinarr/compare/v0.9.0...v0.9.1) (2026-07-08)
 
 
