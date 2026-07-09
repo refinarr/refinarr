@@ -180,6 +180,10 @@ export interface UpstreamHistoryRecord {
   date: string;
   sourceTitle: string | null;
   downloadId?: string | null;
+  // Servarr stows event detail in a loose string dictionary; for
+  // `downloadFailed` it carries the human-readable failure reason. Read
+  // it so a failed row can show WHY instead of a bare red tile.
+  data?: { message?: string | null } | null;
   movieId?: number;
   seriesId?: number;
   episodeId?: number;
@@ -437,6 +441,7 @@ export abstract class ArrClient {
           date: r.date,
           sourceTitle: r.sourceTitle,
           downloadId: r.downloadId ?? null,
+          message: r.data?.message ?? null,
         });
       }
     }
@@ -486,4 +491,7 @@ export interface UpstreamHistoryEvent {
   date: string;
   sourceTitle: string | null;
   downloadId?: string | null;
+  // Failure reason for `downloadFailed` events (from the record's `data`
+  // dictionary); null for events that don't carry one.
+  message?: string | null;
 }

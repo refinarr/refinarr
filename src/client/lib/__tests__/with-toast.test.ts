@@ -1,10 +1,16 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { withToast } from "@/client/lib/with-toast";
+import { ApiClientError } from "@/client/lib/api";
 
 const loadingSpy = vi.fn();
 const successSpy = vi.fn();
 const errorSpy = vi.fn();
 const dismissSpy = vi.fn();
+const reportSpy = vi.fn();
+
+vi.mock("@/client/lib/client-error-logger", () => ({
+  reportClientError: (...args: unknown[]) => reportSpy(...args),
+}));
 
 let nextLoadingId = 0;
 
@@ -25,6 +31,7 @@ beforeEach(() => {
   successSpy.mockReset();
   errorSpy.mockReset();
   dismissSpy.mockReset();
+  reportSpy.mockReset();
   nextLoadingId = 0;
 });
 
@@ -170,5 +177,50 @@ describe("withToast", () => {
     );
     await expect(run({ id: 9 })).rejects.toBeInstanceOf(Error);
     expect(errorSpy).toHaveBeenCalledWith("failed:9", undefined);
+  });
+
+  test("reports an unexpected client-side throw to the AppLog", async () => {
+    // e.g. `crypto.randomUUID()` undefined on an http:// LAN origin — thrown
+    // before any request, so nothing else would log it.
+    const run = withToast(
+      makeMutation(async () => {
+        throw new TypeError("crypto.randomUUID is not a function");
+      }),
+      { success: "ok", error: "Couldn't start search" },
+    );
+    await expect(run(undefined)).rejects.toBeInstanceOf(TypeError);
+    expect(reportSpy).toHaveBeenCalledTimes(1);
+    expect(reportSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "crypto.randomUUID is not a function",
+      }),
+    );
+  });
+
+  test("does NOT report ApiClientError (api.ts owns that decision)", async () => {
+    const run = withToast(
+      makeMutation(async () => {
+        throw new ApiClientError({
+          status: 400,
+          message: "Invalid",
+          path: "/x",
+          method: "POST",
+        });
+      }),
+      { success: "ok", error: "failed" },
+    );
+    await expect(run(undefined)).rejects.toBeInstanceOf(ApiClientError);
+    expect(reportSpy).not.toHaveBeenCalled();
+  });
+
+  test("does NOT report an aborted mutation (user cancellation)", async () => {
+    const run = withToast(
+      makeMutation(async () => {
+        throw new DOMException("Aborted", "AbortError");
+      }),
+      { success: "ok", error: "cancelled" },
+    );
+    await expect(run(undefined)).rejects.toBeInstanceOf(DOMException);
+    expect(reportSpy).not.toHaveBeenCalled();
   });
 });

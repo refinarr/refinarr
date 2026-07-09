@@ -945,6 +945,7 @@ describe("StatusPollerService.pollHistory (history sync)", () => {
             eventType: "downloadFailed",
             date: new Date().toISOString(),
             sourceTitle: null,
+            message: "Download client reported it as failed",
           },
         ],
       }),
@@ -952,6 +953,33 @@ describe("StatusPollerService.pollHistory (history sync)", () => {
     );
     const after = await logRepository.findById(row.id);
     expect(after?.status).toBe("failed");
+    // The failure reason is stamped on the row so History isn't a blank red
+    // tile — regression guard for downloadFailed rows landing with error=null.
+    expect(after?.error).toBe("Download client reported it as failed");
+  });
+
+  test("downloadFailed with no upstream message falls back to a generic reason", async () => {
+    const inst = await instanceService.create(baseInstance);
+    const row = await seedRow(inst, { mediaId: 100, status: "searched" });
+    await service.pollHistory(
+      inst,
+      mockClient({
+        history: [
+          {
+            id: 1,
+            mediaId: 100,
+            scope: "movie",
+            eventType: "downloadFailed",
+            date: new Date().toISOString(),
+            sourceTitle: null,
+          },
+        ],
+      }),
+      new Date(0),
+    );
+    const after = await logRepository.findById(row.id);
+    expect(after?.status).toBe("failed");
+    expect(after?.error).toBe("Download failed");
   });
 
   test("episode event matches search_episode rows, not search rows", async () => {
